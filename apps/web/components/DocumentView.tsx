@@ -8,6 +8,8 @@ interface Props {
   segments: readonly Segment[];
   activeId: string | null;
   onSelect: (ids: readonly string[]) => void;
+  /** Accessible name of the region (defaults to the pasted-text wording). */
+  label?: string;
 }
 
 /**
@@ -15,7 +17,7 @@ interface Props {
  * highlight elements around flagged stretches. One tab stop: inside it,
  * arrow keys move between highlights and Enter opens the suggestion.
  */
-export const DocumentView = memo(function DocumentView({ segments, activeId, onSelect }: Props) {
+export const DocumentView = memo(function DocumentView({ segments, activeId, onSelect, label }: Props) {
   const onClick = useCallback(
     (e: MouseEvent<HTMLElement>) => {
       const el = (e.target as HTMLElement).closest<HTMLElement>("[data-sids]");
@@ -50,7 +52,7 @@ export const DocumentView = memo(function DocumentView({ segments, activeId, onS
     <div
       className="doc"
       role="region"
-      aria-label="Your text, with highlighted suggestions"
+      aria-label={label ?? "Your text, with highlighted suggestions"}
       aria-describedby="doc-help"
       tabIndex={0}
       onClick={onClick}

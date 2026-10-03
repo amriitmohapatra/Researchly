@@ -1,15 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { AnalyzeResponse } from "@researchly/contract";
+import type { AnalyzeResponse, SourceInfo } from "@researchly/contract";
 import { CATEGORIES, CATEGORY_ORDER, countByCategory, sectionLabel } from "@/lib/categories";
 import { resolveSpans, segment } from "@/lib/segments";
+import { buildLocator, isMultiFile } from "@/lib/source";
 import { applyFilter, hiddenPreferenceCount, shownSuggestions, type Filter } from "@/lib/view";
 import { CategoryIcon } from "./CategoryIcon";
 import { DocumentView } from "./DocumentView";
 import { HealthBanner } from "./HealthBanner";
 import { MetricsPanel } from "./MetricsPanel";
-import { SuggestionCard } from "./SuggestionCard";
+import { SuggestionCard, type CardActions } from "./SuggestionCard";
 
 interface Props {
   data: AnalyzeResponse;
@@ -19,6 +20,10 @@ interface Props {
   stale: boolean;
   busy: boolean;
   onRevealPreferences: () => void;
+  /** Present when the text came from an uploaded file (read-only view). */
+  source?: SourceInfo | null;
+  /** Signed-in card actions (mute, add to dictionary). */
+  actions?: CardActions | null;
 }
 
 type FocusRequest = { id: string; target: "mark" | "card"; seq: number };
@@ -29,7 +34,9 @@ function prefersReducedMotion(): boolean {
   return typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 }
 
-export function Results({ data, submittedText, showPreferences, stale, busy, onRevealPreferences }: Props) {
+const lineFmt = new Intl.NumberFormat("en-GB");
+
+export function Results({ data, submittedText, showPreferences, stale, busy, onRevealPreferences, source, actions }: Props) {
   const [filter, setFilter] = useState<Filter>("all");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [focusReq, setFocusReq] = useState<FocusRequest | null>(null);
@@ -43,6 +50,11 @@ export function Results({ data, submittedText, showPreferences, stale, busy, onR
   const segments = useMemo(() => segment(submittedText, resolved), [submittedText, resolved]);
   const placeable = useMemo(() => new Set(resolved.map((r) => r.id)), [resolved]);
   const hidden = hiddenPreferenceCount(data, showPreferences);
+  // A multi-file upload (an Overleaf project): each card says which file and line it is in.
+  const locate = useMemo(
+    () => (source && isMultiFile(source.segments) ? buildLocator(source.text, source.segments) : null),
+    [source],
+  );
 
   useEffect(() => {
     if (!focusReq) return;
@@ -151,12 +163,17 @@ export function Results({ data, submittedText, showPreferences, stale, busy, onR
 
           <div className="results-grid">
             <div className="doc-col" ref={docColRef}>
-              <h3 className="col-title">Your text</h3>
+              <h3 className="col-title">{source ? "Your file, as Researchly read it" : "Your text"}</h3>
               <p id="doc-help" className="help">
-                Select a highlight to open its suggestion. Keyboard: Tab into the text, move with the arrow keys, press
-                Enter.
+                {source ? "Read-only. " : ""}Select a highlight to open its suggestion. Keyboard: Tab into the text, move
+                with the arrow keys, press Enter.
               </p>
-              <DocumentView segments={segments} activeId={activeId} onSelect={onSelectFromText} />
+              <DocumentView
+                segments={segments}
+                activeId={activeId}
+                onSelect={onSelectFromText}
+                label={source ? "Text read from your file, with highlighted suggestions" : undefined}
+              />
             </div>
             <div className="list-col">
               <h3 className="col-title">Suggestions</h3>
@@ -164,16 +181,21 @@ export function Results({ data, submittedText, showPreferences, stale, busy, onR
                 <p className="muted">No {CATEGORIES[effectiveFilter as keyof typeof CATEGORIES]?.plural.toLowerCase()} in this check.</p>
               ) : (
                 <ol className="cards" aria-label="Suggestions, in document order">
-                  {visible.map((s) => (
-                    <li key={s.id}>
-                      <SuggestionCard
-                        suggestion={s}
-                        active={s.id === activeId}
-                        placeable={placeable.has(s.id)}
-                        onShowInText={onShowInText}
-                      />
-                    </li>
-                  ))}
+                  {visible.map((s) => {
+                    const at = locate?.(s.span.start);
+                    return (
+                      <li key={s.id}>
+                        <SuggestionCard
+                          suggestion={s}
+                          active={s.id === activeId}
+                          placeable={placeable.has(s.id)}
+                          onShowInText={onShowInText}
+                          location={at ? `${at.path}, line ${lineFmt.format(at.line)}` : null}
+                          actions={actions}
+                        />
+                      </li>
+                    );
+                  })}
                 </ol>
               )}
             </div>

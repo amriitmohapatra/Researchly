@@ -9,6 +9,11 @@
  * text from anywhere but lib/engine.ts, persists anything but the format
  * preference, or loads third-party scripts/fonts.
  *
+ * S2 (accounts): supabase-js runs in the browser only. It may be loaded only
+ * by lib/supabase.ts, which must import 'client-only'; the server-side
+ * cookie helpers (@supabase/ssr) are refused; and app code may not log to
+ * the console, so neither text nor a token can end up in a log.
+ *
  * Usage: node scripts/check-boundary.mjs [appRoot]   (exit 1 on violations)
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -26,7 +31,8 @@ function walk(dir, root, out = []) {
     return out;
   }
   for (const name of entries) {
-    if (SKIP_DIRS.has(name)) continue;
+    // .next, and the e2e suite's second build output (.next-accounts).
+    if (SKIP_DIRS.has(name) || name.startsWith(".next")) continue;
     const full = path.join(dir, name);
     const st = statSync(full);
     if (st.isDirectory()) walk(full, root, out);
@@ -38,6 +44,15 @@ function walk(dir, root, out = []) {
 /** Strip comments so prose that *mentions* an API does not trip the check. */
 function code(src) {
   return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`])\/\/.*$/gm, "$1");
+}
+
+/** A runtime (non-type) import, dynamic import or require of supabase-js. */
+function valueImportsSupabase(src) {
+  const pkg = String.raw`["']@supabase\/[\w-]+(\/[\w./-]*)?["']`;
+  const staticImport = new RegExp(String.raw`(^|[\n;])\s*import\s+(?!type\b)[^;]*?from\s*${pkg}|(^|[\n;])\s*import\s*${pkg}`);
+  const reexport = new RegExp(String.raw`(^|[\n;])\s*export\s+(?!type\b)[^;]*?from\s*${pkg}`);
+  const dynamic = new RegExp(String.raw`\b(import|require)\s*\(\s*${pkg}`);
+  return staticImport.test(src) || reexport.test(src) || dynamic.test(src);
 }
 
 export function checkBoundary(root) {
@@ -76,11 +91,30 @@ export function checkBoundary(root) {
     if (/^(src\/)?(proxy|middleware)\.(t|j)s$/.test(f) && /\.(body|json|text|formData|arrayBuffer|blob)\s*(\(|\b)/.test(src.replace(/\.headers\b/g, ""))) {
       flag(f, "the proxy must not read request bodies");
     }
+    // S2 accounts: Supabase lives in the browser only. The server-side
+    // helpers would put sessions in cookies the Next.js server reads.
+    if (/["']@supabase\/(ssr|auth-helpers[\w-]*)["']/.test(src)) {
+      flag(f, "@supabase/ssr and auth-helpers are not allowed: sessions stay in the browser, never in server-read cookies");
+    }
+    if (f !== "lib/supabase.ts" && valueImportsSupabase(src)) {
+      flag(f, "supabase-js is loaded only by lib/supabase.ts (client-only); import types with `import type` elsewhere");
+    }
+    // Text and tokens must never reach a log the user did not ask for.
+    if (/\bconsole\s*\.\s*(log|info|debug|warn|error|trace|dir|table)\s*\(/.test(src)) {
+      flag(f, "no console logging in app code: document text and sign-in tokens must never reach a log");
+    }
   }
 
-  const engine = files.includes("lib/engine.ts") ? readFileSync(path.join(root, "lib/engine.ts"), "utf8") : "";
-  if (!/import\s+["']client-only["']/.test(engine)) {
-    problems.push("lib/engine.ts: must import 'client-only' so server code can never import the text-sending path");
+  for (const required of ["lib/engine.ts", "lib/supabase.ts"]) {
+    if (required === "lib/supabase.ts" && !files.includes(required)) continue; // a build without accounts code
+    const src = files.includes(required) ? readFileSync(path.join(root, required), "utf8") : "";
+    if (!/import\s+["']client-only["']/.test(src)) {
+      problems.push(
+        required === "lib/engine.ts"
+          ? "lib/engine.ts: must import 'client-only' so server code can never import the text-sending path"
+          : "lib/supabase.ts: must import 'client-only' so server code can never load supabase-js or see a session",
+      );
+    }
   }
   return problems;
 }

@@ -4,15 +4,32 @@
  * Next.js server never receives the text. `client-only` makes importing
  * this module from server code a build error, and scripts/check-boundary.mjs
  * fails the lint if any route handler or server action appears.
+ *
+ * S2: when signed in, requests carry `Authorization: Bearer <access token>`
+ * so the engine applies the account's settings (docs/s2-design.md §3). The
+ * token is read from supabase-js at call time and never stored here.
  */
 import "client-only";
-import type { AnalyzeRequest, AnalyzeResponse, Format } from "@researchly/contract";
+import type {
+  AnalyzeFileResponse,
+  AnalyzeRequest,
+  AnalyzeResponse,
+  Format,
+  RuleInfo,
+} from "@researchly/contract";
 import { ENGINE_URL } from "./config";
-import { badPayloadError, errorFromResponse, networkError, type CheckError } from "./errors";
+import {
+  badPayloadError,
+  errorFromResponse,
+  networkError,
+  refreshUnavailableError,
+  signedOutError,
+  type CheckError,
+} from "./errors";
 
 export const ANALYZE_TIMEOUT_MS = 120_000;
 
-export type CheckResult = { ok: true; data: AnalyzeResponse } | { ok: false; error: CheckError };
+export type CheckResult<T = AnalyzeResponse> = { ok: true; data: T } | { ok: false; error: CheckError };
 
 export interface CheckParams {
   content: string;
@@ -21,12 +38,59 @@ export interface CheckParams {
   signal?: AbortSignal;
 }
 
+/**
+ * Where a signed-in request gets its token. Implemented over supabase-js in
+ * lib/auth.ts; an interface so the retry logic is unit-testable.
+ */
+export interface EngineAuth {
+  /** The current access token (supabase-js refreshes it if it has expired), or null when signed out. */
+  token(): Promise<string | null>;
+  /**
+   * Force a refresh. `token: null` + `transient: true` means it could not be
+   * renewed for a passing reason (offline); `transient: false` means the
+   * session is dead.
+   */
+  refresh(): Promise<{ token: string | null; transient?: boolean }>;
+  /** Forget the session in this browser (no other device is affected). */
+  signOutLocally(): Promise<void>;
+}
+
+/**
+ * Run an engine call with the caller's bearer token, if any.
+ *
+ * On 401 `unauthorized` (expired or revoked token): refresh the session once
+ * and retry once. If that still fails, sign out locally and say so, rather
+ * than silently checking as an anonymous user (s2-design §3).
+ */
+export async function withBearer<T>(
+  auth: EngineAuth | null | undefined,
+  attempt: (token: string | null) => Promise<CheckResult<T>>,
+): Promise<CheckResult<T>> {
+  const token = auth ? await auth.token() : null;
+  const first = await attempt(token);
+  if (!auth || !token || first.ok || first.error.code !== "unauthorized") return first;
+
+  const fresh = await auth.refresh();
+  if (fresh.token) {
+    const second = await attempt(fresh.token);
+    if (second.ok || second.error.code !== "unauthorized") return second;
+  } else if (fresh.transient) {
+    return { ok: false, error: refreshUnavailableError() };
+  }
+  await auth.signOutLocally();
+  return { ok: false, error: signedOutError() };
+}
+
 export function buildRequest(p: Pick<CheckParams, "content" | "format" | "showPreferences">): AnalyzeRequest {
   return {
     content: p.content,
     format: p.format,
     options: { show_preferences: p.showPreferences },
   };
+}
+
+function authHeader(token: string | null): Record<string, string> {
+  return token ? { authorization: `Bearer ${token}` } : {};
 }
 
 /** Minimal structural check: enough to render safely, not a full schema validation. */
@@ -49,26 +113,52 @@ export function looksLikeAnalyzeResponse(body: unknown): body is AnalyzeResponse
   );
 }
 
-export async function analyze(p: CheckParams, engineUrl: string = ENGINE_URL): Promise<CheckResult> {
+export function looksLikeAnalyzeFileResponse(body: unknown): body is AnalyzeFileResponse {
+  if (!looksLikeAnalyzeResponse(body)) return false;
+  const d = (body as { document?: unknown }).document;
+  if (typeof d !== "object" || d === null) return false;
+  const doc = d as Record<string, unknown>;
+  return (
+    typeof doc.text === "string" &&
+    typeof doc.filename === "string" &&
+    Array.isArray(doc.segments) &&
+    doc.segments.every(
+      (g: unknown) =>
+        typeof g === "object" &&
+        g !== null &&
+        typeof (g as { path?: unknown }).path === "string" &&
+        typeof (g as { start?: unknown }).start === "number" &&
+        typeof (g as { end?: unknown }).end === "number",
+    )
+  );
+}
+
+/** One POST/GET to the engine with the shared timeout, error mapping and shape check. */
+async function call<T>(
+  url: string,
+  init: RequestInit,
+  signal: AbortSignal | undefined,
+  validate: (body: unknown) => body is T,
+  context: { upload?: boolean; engineUrl: string },
+): Promise<CheckResult<T>> {
   const timeout = new AbortController();
   const timer = setTimeout(() => timeout.abort(), ANALYZE_TIMEOUT_MS);
-  const signal = p.signal ? AbortSignal.any([p.signal, timeout.signal]) : timeout.signal;
+  const combined = signal ? AbortSignal.any([signal, timeout.signal]) : timeout.signal;
   let res: Response;
   try {
-    res = await fetch(`${engineUrl}/v1/analyze`, {
-      method: "POST",
-      headers: { "content-type": "application/json", accept: "application/json" },
-      body: JSON.stringify(buildRequest(p)),
-      // No cookies or credentials go to the engine in S1; no referrer either.
+    res = await fetch(url, {
+      ...init,
+      // No cookies go to the engine; a signed-in caller is identified by the
+      // Authorization header only. No referrer either.
       credentials: "omit",
       referrerPolicy: "no-referrer",
       cache: "no-store",
-      signal,
+      signal: combined,
     });
   } catch (e) {
     clearTimeout(timer);
-    if (p.signal?.aborted) throw e; // the user cancelled; caller handles it
-    return { ok: false, error: networkError(timeout.signal.aborted, engineUrl) };
+    if (signal?.aborted) throw e; // the user cancelled; caller handles it
+    return { ok: false, error: networkError(timeout.signal.aborted, context.engineUrl) };
   }
   let body: unknown = null;
   try {
@@ -78,15 +168,114 @@ export async function analyze(p: CheckParams, engineUrl: string = ENGINE_URL): P
   } finally {
     clearTimeout(timer);
   }
-  if (!res.ok) return { ok: false, error: errorFromResponse(res.status, body, res.headers) };
-  if (!looksLikeAnalyzeResponse(body)) {
+  if (!res.ok) return { ok: false, error: errorFromResponse(res.status, body, res.headers, { upload: context.upload }) };
+  if (!validate(body)) {
     return { ok: false, error: badPayloadError("The engine's answer was not in the expected shape.") };
   }
-  if (body.schema_version !== "1") {
+  const version = (body as { schema_version?: unknown }).schema_version;
+  if (version !== undefined && version !== "1") {
     return {
       ok: false,
-      error: badPayloadError(`The engine speaks API version ${String(body.schema_version)}; this page expects version 1.`),
+      error: badPayloadError(`The engine speaks API version ${String(version)}; this page expects version 1.`),
     };
   }
   return { ok: true, data: body };
+}
+
+/** Check pasted text: POST /v1/analyze. */
+export async function analyze(
+  p: CheckParams,
+  engineUrl: string = ENGINE_URL,
+  auth?: EngineAuth | null,
+): Promise<CheckResult> {
+  const body = JSON.stringify(buildRequest(p));
+  return withBearer(auth, (token) =>
+    call(
+      `${engineUrl}/v1/analyze`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", accept: "application/json", ...authHeader(token) },
+        body,
+      },
+      p.signal,
+      looksLikeAnalyzeResponse,
+      { engineUrl },
+    ),
+  );
+}
+
+export interface FileCheckParams {
+  file: File;
+  showPreferences: boolean;
+  signal?: AbortSignal;
+}
+
+/** A header can't carry "Kapitel_ü.docx" as-is: the engine expects encodeURIComponent (contract). */
+export function encodeFilename(name: string): string {
+  const base = name.replace(/\\/g, "/").split("/").pop()?.trim() || "upload";
+  const ext = /\.[A-Za-z0-9]{1,8}$/.exec(base)?.[0] ?? "";
+  let encoded: string;
+  try {
+    encoded = encodeURIComponent(base);
+  } catch {
+    // A lone surrogate (an unpaired half of an emoji) can't be UTF-8 encoded.
+    encoded = encodeURIComponent(`upload${ext}`);
+  }
+  // The engine uses the name only for its extension; keep the header well
+  // under its 1,024-character limit.
+  return encoded.length > 600 ? encodeURIComponent(`upload${ext}`) : encoded;
+}
+
+/** Everything /v1/analyze-file needs except the transport: unit-tested. */
+export function buildFileRequest(
+  file: Blob & { name: string },
+  opts: { showPreferences: boolean },
+  token: string | null,
+): { method: "POST"; headers: Record<string, string>; body: Blob } {
+  return {
+    method: "POST",
+    headers: {
+      "content-type": "application/octet-stream",
+      accept: "application/json",
+      "x-researchly-filename": encodeFilename(file.name),
+      "x-researchly-options": JSON.stringify({ show_preferences: opts.showPreferences }),
+      ...authHeader(token),
+    },
+    // The File itself: the browser streams its bytes. Nothing is read into
+    // this page's memory, and nothing goes to the Next.js server.
+    body: file,
+  };
+}
+
+/** Check an uploaded file: POST /v1/analyze-file with the raw bytes. */
+export async function analyzeFile(
+  p: FileCheckParams,
+  engineUrl: string = ENGINE_URL,
+  auth?: EngineAuth | null,
+): Promise<CheckResult<AnalyzeFileResponse>> {
+  return withBearer(auth, (token) =>
+    call(
+      `${engineUrl}/v1/analyze-file`,
+      buildFileRequest(p.file, { showPreferences: p.showPreferences }, token),
+      p.signal,
+      looksLikeAnalyzeFileResponse,
+      { engineUrl, upload: true },
+    ),
+  );
+}
+
+function looksLikeRules(body: unknown): body is { rules: RuleInfo[] } {
+  const rules = (body as { rules?: unknown } | null)?.rules;
+  return (
+    Array.isArray(rules) &&
+    rules.every((r: unknown) => typeof r === "object" && r !== null && typeof (r as { id?: unknown }).id === "string")
+  );
+}
+
+/** The rule registry (names and one-line descriptions) for the settings page: GET /v1/rules. No text is sent. */
+export async function listRules(engineUrl: string = ENGINE_URL, signal?: AbortSignal): Promise<CheckResult<RuleInfo[]>> {
+  const r = await call(`${engineUrl}/v1/rules`, { method: "GET", headers: { accept: "application/json" } }, signal, looksLikeRules, {
+    engineUrl,
+  });
+  return r.ok ? { ok: true, data: r.data.rules } : r;
 }

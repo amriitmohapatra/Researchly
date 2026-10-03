@@ -62,4 +62,38 @@ describe("confidentiality boundary (ADR-02): the Next.js app never receives docu
     const root = fixture({ "lib/engine.ts": "export const x = 1;" });
     expect(checkBoundary(root).join("\n")).toMatch(/client-only/);
   });
+
+  it("S2: supabase-js may be loaded only by lib/supabase.ts, which must be client-only", () => {
+    const supa = 'import "client-only";\nexport const c = () => import("@supabase/supabase-js");\n';
+    expect(checkBoundary(fixture({ "lib/supabase.ts": supa }))).toEqual([]);
+    expect(checkBoundary(fixture({ "lib/supabase.ts": 'export const c = () => import("@supabase/supabase-js");' })).join("\n")).toMatch(
+      /lib\/supabase\.ts: must import 'client-only'/,
+    );
+    const out = checkBoundary(
+      fixture({
+        "lib/supabase.ts": supa,
+        "app/page.tsx": 'import { createClient } from "@supabase/supabase-js";',
+        "components/A.tsx": 'const m = await import("@supabase/supabase-js");',
+        "components/B.tsx": 'import "@supabase/supabase-js";',
+      }),
+    ).join("\n");
+    expect(out).toMatch(/app\/page\.tsx: supabase-js is loaded only by lib\/supabase\.ts/);
+    expect(out).toMatch(/components\/A\.tsx: supabase-js/);
+    expect(out).toMatch(/components\/B\.tsx: supabase-js/);
+  });
+
+  it("S2: type-only imports are fine anywhere", () => {
+    const root = fixture({ "lib/auth.ts": 'import type { Session } from "@supabase/supabase-js";\nexport type S = Session;' });
+    expect(checkBoundary(root)).toEqual([]);
+  });
+
+  it("S2: refuses the server-side cookie helpers", () => {
+    const root = fixture({ "lib/x.ts": 'import type { X } from "@supabase/ssr";' });
+    expect(checkBoundary(root).join("\n")).toMatch(/@supabase\/ssr/);
+  });
+
+  it("S2: refuses console logging (text and tokens must never reach a log)", () => {
+    const root = fixture({ "components/C.tsx": "export const f = (t: string) => console.log(t);" });
+    expect(checkBoundary(root).join("\n")).toMatch(/no console logging/);
+  });
 });

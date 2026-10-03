@@ -6,26 +6,31 @@
  *   inlines its bootstrap scripts), so proxy.ts sets it using cspHeader().
  *
  * connect-src is the confidentiality control that matters most: even if a
- * script were injected, the browser could only send data to this origin and
- * to the engine.
+ * script were injected, the browser could only send data to this origin, to
+ * the engine and (in a build with accounts) to the Supabase project.
  */
 import { engineOrigin } from "./config";
 
 export interface CspOptions {
   nonce: string;
   engineUrl: string | undefined;
+  /** The validated Supabase origin, only when accounts are configured (config.supabaseConfig). */
+  supabaseUrl?: string | null;
   dev: boolean;
 }
 
-export function cspHeader({ nonce, engineUrl, dev }: CspOptions): string {
+export function cspHeader({ nonce, engineUrl, supabaseUrl, dev }: CspOptions): string {
   const engine = engineOrigin(engineUrl);
+  // Supabase (sign-in and the settings tables) is the only other origin the
+  // page may talk to, and only in a build that has accounts (S2).
+  const supabase = supabaseUrl ? new URL(supabaseUrl).origin : null;
   const directives: [string, string[]][] = [
     ["default-src", ["'self'"]],
     ["script-src", ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", ...(dev ? ["'unsafe-eval'"] : [])]],
     ["style-src", ["'self'", dev ? "'unsafe-inline'" : `'nonce-${nonce}'`]],
     ["img-src", ["'self'", "data:", "blob:"]],
     ["font-src", ["'self'"]],
-    ["connect-src", ["'self'", engine]],
+    ["connect-src", ["'self'", engine, ...(supabase && supabase !== engine ? [supabase] : [])]],
     ["manifest-src", ["'self'"]],
     ["worker-src", ["'self'"]],
     ["object-src", ["'none'"]],
@@ -35,7 +40,9 @@ export function cspHeader({ nonce, engineUrl, dev }: CspOptions): string {
   ];
   const parts = directives.map(([k, v]) => `${k} ${v.join(" ")}`);
   // Upgrading would turn a local http engine into an unreachable https one.
-  if (!dev && engine.startsWith("https:")) parts.push("upgrade-insecure-requests");
+  if (!dev && engine.startsWith("https:") && (!supabase || supabase.startsWith("https:"))) {
+    parts.push("upgrade-insecure-requests");
+  }
   return parts.join("; ");
 }
 
