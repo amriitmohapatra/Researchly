@@ -95,7 +95,7 @@ done and what's next*. Both the owner and Claude edit it.
 
 - [ ] Supabase project (region D3) **(Amriit: create project; docs/deploy.md step 8)**
 - [x] Schema: `user_settings`, `dictionary_words`, RLS per command, `my_config()` (s2-design §2) — afc3041. `profiles`, `usage_events`, `feedback_events` are **not** created until a feature reads them (collect only what's needed)
-- [x] Engine verifies JWT; `user_id` from token only; remote config layer in `config.py` — 2026-10-03, 8e82b7a: JWKS verification with the algorithm pinned to the key, settings read via PostgREST with the caller's own token (no secret key in the engine; it refuses to start with one); 32 token/settings tests, 2 new canary scenarios
+- [x] Engine verifies JWT; `user_id` from token only; remote config layer in `config.py` — 2026-10-03, 8e82b7a: JWKS verification with the algorithm pinned to the key, settings read via PostgREST with the caller's own token (no secret key in the engine; it refuses to start with one); 39 token/settings tests, 3 new canary scenarios
 - [x] `/v1/analyze-file` (raw bytes, filename never logged, 25 MiB cap, sign-in required when accounts are on) — 8e82b7a, 16 tests
 - [~] Two-user test (read/update/delete) automated in CI (Q7) — afc3041 + f5ac4b8: 85 tests on Postgres 16 with a Supabase shim, and all 19 deliberate weakenings of the migration caught (re-run independently by the lead). CI job `supabase-rls` added; tick when it has run green on GitHub
 - [x] LaTeX adapter on pylatexenc; multi-file `.zip` (`\input`/`\include`/`\subfile`) — 8dd7b00, 6488b8a: 106 + 38 tests; parse failure falls back to the regex masker with a visible warning; hostile zips (bomb, traversal, symlink, encrypted, fan-out) refused

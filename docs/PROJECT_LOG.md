@@ -1113,7 +1113,7 @@ Every branch was reviewed, re-tested and merged by the lead.
 - Core 475 tests (adapters: LaTeX 106, zip 38, docx 37, with seeded random
   offset round trips and hostile inputs: zip bombs, traversal, symlinks,
   XXE, billion laughs).
-- Engine service 145 (tokens and settings 32, uploads 21, three new canary
+- Engine service 145 (tokens and settings 39, uploads 20, three new canary
   scenarios: filename, uploaded text, adapter warnings, token and user id
   never reach a log).
 - Database 90 on Postgres 16 with a Supabase shim; all 19 deliberate
