@@ -186,6 +186,16 @@ patterns of good research writing across disciplines, not just epidemiology.
 - [ ] W5 knowledge re-mine of `Notes_On_Writing/` → authored questions, rules, Learn cards (paraphrased + cited, never reproduced) — now the primary knowledge source (D7); schedule alongside S4
 - [ ] Wire `document_type` / `aggressiveness` config into behaviour (stored but unused today)
 - [ ] LaTeX parsing (pylatexenc) costs ~5.7 s per 1M characters vs 0.23 s for the regex masker (~0.3 s per chapter); the LSP re-checks a large `.tex` on every change — measure in VS Code before S3
+- [ ] **Known gaps from S2 (2026-10-03), not yet fixed:**
+  - [ ] LaTeX footnote text is now checked and is spliced into the sentence it interrupts; watch for false positives (e.g. a lower-case "sentence start" after the footnote) once real chapters are uploaded
+  - [ ] Overleaf `.zip`: a child file is joined without TeX's implicit end of line, which only matters when text follows `\input{x}` on the same line and `x` ends in a `%` comment with no final newline
+  - [ ] `.docx`: Strict OOXML, and a main part not named `word/document.xml`, are untested; comments, footnotes, headers and text boxes are ignored (by design in S2)
+  - [ ] Account deletion: "Delete my data" removes settings and dictionary rows; deleting the sign-in itself needs the owner (Supabase dashboard → Authentication → Users). Add a self-service route before public beta (PDPA/GDPR)
+  - [ ] Per-user rate limits (ARCHITECTURE.md §9): the engine still limits per IP only
+  - [ ] A token naming an unknown key id makes the engine re-fetch Supabase's public keys; bounded by the per-IP rate limit today, add a re-fetch cooldown with the per-user limits
+  - [ ] Verify on the real Supabase project after step 8: run a quick two-user check through the REST API (the CI test uses a Postgres stand-in for Supabase's roles), and confirm `service_role` grants are as expected
+  - [ ] Real users need a custom email sender (Supabase's built-in one only reaches the project team, ~2 emails/hour) — S6
+  - [ ] Fold the S2 decisions from `docs/s2-design.md` into ARCHITECTURE.md when S2 closes
 - [ ] Muting a rule while viewing an uploaded file re-sends the whole file to re-check; filtering the shown results in the browser would be instant (web, S2 follow-up)
 - [ ] Upload is hidden when accounts are not configured, so local development without Supabase has no upload; consider a dev-only switch
 - [ ] Q2: run spaCy and LanguageTool in parallel inside `api.analyze()` (chapter 6.9 s engine time on Cloud Run vs 6 s target); deferred by the owner 2026-10-03
@@ -197,5 +207,5 @@ patterns of good research writing across disciplines, not just epidemiology.
 - [ ] PubMed-RCT declares no licence — decide before training anything shippable on it (S5)
 - [ ] `_to_delete/` holds tarballs that include thesis text; owner to confirm deletion **(Amriit)**
 - [ ] Pallas citation year: the book says © 2023; the repo says 2022 throughout — fix in one pass (code + docs)
-- [ ] `ng5001_getting_started_on_critical_reading.pdf` and `Writing conference abstract_compressed.pdf` are scans with no text layer, so the third-party scan can't see them; OCR them (or confirm nothing derives from them)
+- [ ] Four course PDFs are scans with no text layer (`…ng5001_getting_started_on_critical_reading.pdf`, `Week 2 Reading.pdf`, `Writing conference abstract.pdf` and its `_compressed` copy), so the third-party scan can't see them; OCR them (or confirm nothing derives from them)
 - [ ] `docs/rule-inventory.md` may still quote old why-texts / Pallas frames — re-sync with the paraphrased versions
