@@ -17,7 +17,7 @@ done and what's next*. Both the owner and Claude edit it.
   slice until the previous slice's exit check is ticked.
 - Substantive work still gets a dated entry in `docs/PROJECT_LOG.md`.
 
-**Current slice: S0 — Foundation.** All owner decisions are made; S0 is ready to start.
+**Current slice: S0 — Foundation** (started 2026-10-03, in PR amriitmohapatra/Researchly#1).
 
 ---
 
@@ -46,17 +46,19 @@ done and what's next*. Both the owner and Claude edit it.
 
 ## S0 — Foundation (one repo, green CI; no user-visible change)
 
-- [ ] Create monorepo skeleton: `apps/ services/ packages/ ml/ docs/adr/ legacy/` — *done when* layout exists and README explains it
-- [ ] `git mv` baseline tree (D4) into `packages/core` + `apps/word-addin`; others into `legacy/` — *done when* history preserved (`git log --follow`)
-- [ ] Merge P19–P21 entries into root `docs/PROJECT_LOG.md`
-- [ ] Fix the Linux-only test failure (`test_jdk_found_with_a_finder_launch_environment`)
-- [ ] GitHub Actions: ruff + pytest + noise-floor gate + secret scan — *done when* all baseline tests green in CI on a PR
-- [ ] `ml/datasets.yaml` registry: every corpus with source, licence, permitted use, hash — including the papers/theses the owner will add (D7)
-- [ ] Remove thesis-derived exemplars from shippable data (per D6); re-source from CC-BY PMC-OA with per-sentence licence
-- [ ] Replace `move_clf.joblib` loading with a non-pickle format (or quarantine it to `ml/` until S5)
-- [ ] Add S001 lexicon gaps: `estimand(s)`, `urbanicity`, `prespecified`, `lockdowns`, `serotypic`, `tradeoff`, `exergy`
-- [ ] Update CLAUDE.md repo map + test counts to the new layout
-- [ ] **Exit check:** CI green on `main`; no third-party text in `packages/` or `services/`
+- [x] Create monorepo skeleton: `apps/ services/ packages/ ml/ docs/adr/ legacy/` — 2026-10-03; README in each folder
+- [x] `git mv` baseline tree (D4) into `packages/core` + `apps/`; others into `legacy/` — 2026-10-03, d13255d; 260 passed / 1 skipped after the move (same as before)
+- [x] Merge P19–P21 entries into root `docs/PROJECT_LOG.md` — 2026-10-03, 83421b5
+- [x] Fix the Linux-only test failure (`test_jdk_found_with_a_finder_launch_environment`) — already fixed in the baseline tree (P19); passes on Linux
+- [~] GitHub Actions: ruff + pytest + noise-floor gate + third-party scan + secret scan — workflows written; gitleaks clean locally over full history. *Done when* green on PR #1
+- [x] `ml/datasets.yaml` registry: 41 entries, licence + verified flag + permitted use + hash — 2026-10-03, 83421b5. Many licences unverifiable from the sandbox (proxy-blocked); marked unverified and narrowed
+- [x] Thesis-derived exemplars are not in shippable code — they stayed in `legacy/experiment-p21/` (verified by the registry audit)
+- [~] Remove third-party text found *inside* `packages/core` (Pallas exemplar abstract + frames, Endo lecture quotes in why-texts, ChenY thesis fragments, an NG5001 fixture): paraphrase-and-cite + synthetic fixtures; `ml/tools/check_third_party.py` in CI
+- [x] Quarantine `move_clf.joblib` — it stays in `legacy/experiment-p21/`, not loaded by the engine, until the S5 bake-off
+- [x] Add S001 lexicon gaps: `estimand(s)`, `urbanicity`, `prespecified`, `lockdown(s)`, `serotypic`, `tradeoff(s)`, `exergy` — 2026-10-03, ee0057d; regression test fails without, passes with
+- [x] Update CLAUDE.md / AGENTS.md / README repo map + commands to the new layout — 2026-10-03
+- [x] Noise-floor gate: `ml/dogfood/noise_gate.py` + `baseline.json` — measured **14.84/1000w** all tiers (12.5 ex-S001; 12.8 ex-LT001). Fails on a rise > 0.3 *or* a busy rule going silent (dead tier)
+- [ ] **Exit check:** CI green on PR #1; `check_third_party.py` exits 0; owner merges PR #1
 
 ## S1 — Engine online (paste text at a private URL → suggestions)
 
@@ -102,6 +104,21 @@ done and what's next*. Both the owner and Claude edit it.
 
 ## S5 — Critic bake-off (Laya vs ModernBERT)
 
+### S5a — Open-access training corpus (owner request, 2026-10-03)
+
+Build a broad, high-quality, **licence-clean** corpus so the critics learn
+patterns of good research writing across disciplines, not just epidemiology.
+
+- [ ] Write a corpus spec: target disciplines (life sciences, medicine, public health, physical sciences, engineering, social sciences, humanities), journals (Nature family, Lancet family, PLOS, eLife, BMJ, Science Advances, PNAS OA…), article types, size target, de-duplication
+- [ ] Harvest with the connectors — **PubMed** (search + `get_copyright_status` per article), **bioRxiv/medRxiv**, **Scholar Gateway**, **Consensus** — plus web search for publisher OA pages
+- [ ] **Licence filter at intake:** keep CC BY / CC0 only (shippable); CC BY-NC(-ND) goes to evaluation only (D2); anything unclear is dropped. Every article gets a `ml/datasets.yaml` item with its licence evidence
+- [ ] Extract structure for free labels: section headings → section roles; structured abstracts → sentence roles (Background/Methods/Results/Conclusions); figure/limitation/contribution sentences
+- [ ] Store outside the repo (object storage or the owner's machine) with a manifest + hashes in `ml/`; never commit full texts
+- [ ] Hold out a test split per discipline; report results per discipline, not just overall
+- [ ] *Done when* ≥ N licence-verified articles across ≥ 6 disciplines are registered and the S5 training scripts read them (N set in the spec)
+
+### S5b — Bake-off
+
 - [ ] `Critic` interface in `packages/core/critics/`
 - [ ] Laya zero-shot spike with `laya-evals` on ~50 labelled paragraphs (expect near-chance; learn the harness)
 - [ ] Task A — flag re-ranker (accept/dismiss data): Laya vs ModernBERT-large
@@ -127,3 +144,9 @@ done and what's next*. Both the owner and Claude edit it.
 - [ ] Harper (WASM grammar) as an alternative to LanguageTool for the private mode
 - [ ] W5 knowledge re-mine of `Notes_On_Writing/` → authored questions, rules, Learn cards (paraphrased + cited, never reproduced) — now the primary knowledge source (D7); schedule alongside S4
 - [ ] Wire `document_type` / `aggressiveness` config into behaviour (stored but unused today)
+- [ ] Reach Q3: bring the noise floor from 14.84 to ≤ 11/1000w (top contributors: G101 779, S001 676, G106 648, LT001 592 flags)
+- [ ] Clean the 20 cosmetic ruff findings (17 unused imports, 3 placeholder-less f-strings) in a dedicated change, then widen `ruff.toml`
+- [ ] `language_tool_python` client is GPL-3.0-only: fine server-side; check before bundling it into any distributed desktop installer
+- [ ] Correct `docs/eval-corpora.md`: JFLEG and CWEB *do* declare CC BY-NC-SA 4.0 (registry audit, 2026-10-03)
+- [ ] PubMed-RCT declares no licence — decide before training anything shippable on it (S5)
+- [ ] `_to_delete/` holds tarballs that include thesis text; owner to confirm deletion **(Amriit)**

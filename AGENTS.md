@@ -1,37 +1,39 @@
 # AGENTS.md — Researchly
 
 Operational guide for AI coding agents. Fuller context in `CLAUDE.md`;
+production design in `ARCHITECTURE.md`; the shared checklist in `PLAN.md`;
 complete history in `docs/PROJECT_LOG.md`. **Read those two files before
 asking the user what to change** — the answer to "what is this and where
 are we" is written down.
 
 ## Project
 
-Researchly: a local-first, explainable writing assistant for scientific
-writing (epidemiology/modelling focus). One Python engine, five surfaces
-(CLI, Word add-in, LSP/VS Code, macOS menu-bar app, Windows scaffold).
+Researchly: an explainable writing coach for research students — advice on
+correctness, craft and narrative, never drafting. One Python engine
+(`packages/core`), several surfaces (CLI, Word add-in, LSP/VS Code; macOS and
+Windows apps in maintenance-only), moving to a hosted web app (PLAN.md).
 
 ## Setup
 
 ```bash
-cd prototype
-pip install -r requirements.txt          # spacy, symspellpy, pygls, pytest
+cd packages/core
+pip install -r requirements.txt          # spacy, symspellpy, pygls, pytest, language-tool-python
 python -m spacy download en_core_web_sm
-# optional grammar tier: pip install language-tool-python  (needs Java 17+)
+# grammar tier needs a real Java 17+ runtime (not the macOS stub)
 ```
 
 ## Commands
 
 ```bash
-python3.10 -m pytest tests/ -q           # ~177 tests; must be green
+python3.10 -m pytest tests/ -q           # ~260 tests (from packages/core); must be green
 python3.10 -m researchly check FILE      # the checker
 python -m researchly polish "text"       # deterministic rewrite
 python -m researchly review --file F     # critical-reader report
 python -m researchly abstract --file F   # six-part abstract lens
 python -m researchly rules|explain|stats|dict
-python word-addin/server.py              # Word add-in backend (:3517)
+python ../../apps/word-addin/server.py   # Word add-in backend (:3517)
 python -m researchly.lsp                 # language server (stdio)
-python desktop-mac/researchly_app.py     # macOS app (macOS only)
+python ../../apps/desktop-mac/researchly_app.py   # macOS app (maintenance-only)
 ```
 
 ## Hard constraints (user decisions — never violate silently)
@@ -43,7 +45,14 @@ python desktop-mac/researchly_app.py     # macOS app (macOS only)
   taggers/classifiers proposing **minimal token-level edits**, confidence-
   scored, gated off inside masked spans, never auto-applied, labelled
   `tier="gec"`. Rewriting itself stays deterministic (`transform.py`).
-- **No text leaves the machine.** Local-first is a compliance requirement.
+- **Confidential by design** *(amended 2026-10-03; was "no text leaves the
+  machine")*. Document text is processed in memory, never stored, logged,
+  shared or trained on without a per-feature opt-in; no cloud LLM sees it;
+  a local mode stays available. Still a compliance requirement.
+- **No third-party text in `packages/`, `apps/`, `services/`** (theses,
+  course PDFs, book passages — fixtures included). Paraphrase and cite;
+  `ml/tools/check_third_party.py` runs in CI. Nothing trained on a source
+  ships unless `ml/datasets.yaml` permits it.
 - **Python 3.10 compatible** (user's Homebrew Python): no bare `tomllib`,
   no multiline/backslashed f-string expressions. Run tests with
   `python3.10` — bare `python3` is a 3.14 with no dependencies installed.
@@ -80,7 +89,8 @@ python desktop-mac/researchly_app.py     # macOS app (macOS only)
 - Convention-type rules that can fire often should set `aggregate=True`.
 - Every bug fix ships with a regression test; run the full suite before
   handing anything back. Precision changes also get a corpus run:
-  `python3.10 dogfood/run_dogfood.py` — baseline 10.4/1000w ex-S001.
+  `ml/dogfood/run_dogfood.py` then `noise_gate.py` — S0 baseline 14.84/1000w
+  all tiers (target ≤ 11). CI blocks regressions and silent tiers.
 - Append a dated entry to `docs/PROJECT_LOG.md` after substantive work
   (standing user requirement).
 
@@ -95,7 +105,7 @@ python desktop-mac/researchly_app.py     # macOS app (macOS only)
   raw text by regex, not tokens. Don't "simplify" that back.
 - macOS AX layer cannot be tested off-device: write defensively, expect a
   traceback-driven session with the user. (Windows hardware IS now
-  available — `desktop-win/` is due a real bring-up, not blind hardening.)
+  available, but the desktop apps are maintenance-only since D5.)
 - Word has no offset-addressable API: the taskpane re-finds each span by
   searching. Hand it the **full** span and make it verify what it matched
   before replacing — a truncated needle or a bare `items[0]` fallback
