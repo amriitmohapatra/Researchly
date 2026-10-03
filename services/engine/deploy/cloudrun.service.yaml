@@ -1,17 +1,18 @@
 # Cloud Run service: Researchly engine + LanguageTool sidecar (ADR-03).
 #
-# Placeholders, filled by the deploy workflow with envsubst:
+# Placeholders, filled by the deploy workflow (deploy/render_service.py):
 #   ${ENGINE_IMAGE}     asia-southeast1-docker.pkg.dev/${PROJECT_ID}/researchly/engine@sha256:...
 #   ${ALLOWED_ORIGINS}  comma-separated browser origins (the Vercel app)
 #   ${PROJECT_ID}       GCP project id
 #
-#   envsubst < services/engine/deploy/cloudrun.service.yaml > /tmp/svc.yaml
+#   python3 services/engine/deploy/render_service.py < cloudrun.service.yaml > /tmp/svc.yaml
 #   gcloud run services replace /tmp/svc.yaml --region asia-southeast1
 #
 # The browser calls the engine directly (S1 has no accounts), so the service
-# must be publicly invokable: grant roles/run.invoker to allUsers once
-# (bootstrap-gcp.sh). Abuse is bounded by the per-IP rate limit, the body
-# cap and maxScale below.
+# must be publicly invokable: .github/workflows/deploy-engine.yml grants
+# roles/run.invoker to allUsers after each deploy (the service does not exist
+# yet when bootstrap-gcp.sh runs). Abuse is bounded by the per-IP rate limit,
+# the body cap and maxScale below.
 #
 # Region is pinned to Singapore (owner decision D3; ADR-02 "pinned region").
 
