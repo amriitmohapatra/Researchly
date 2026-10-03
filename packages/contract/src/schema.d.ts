@@ -126,6 +126,11 @@ export interface components {
             signed_in: boolean;
             /** Suggestions */
             suggestions: components["schemas"]["Suggestion"][];
+            /**
+             * Warnings
+             * @description What was skipped or approximated while reading the text, e.g. LaTeX that could not be parsed and was read with a simpler method. May quote the caller's own text; never logged.
+             */
+            warnings?: string[];
         };
         /** AnalyzeOptions */
         AnalyzeOptions: {
@@ -191,6 +196,11 @@ export interface components {
             signed_in: boolean;
             /** Suggestions */
             suggestions: components["schemas"]["Suggestion"][];
+            /**
+             * Warnings
+             * @description What was skipped or approximated while reading the text, e.g. LaTeX that could not be parsed and was read with a simpler method. May quote the caller's own text; never logged.
+             */
+            warnings?: string[];
         };
         /**
          * Category
@@ -490,7 +500,7 @@ export interface components {
             state: string;
             /**
              * Tier
-             * @description parser | spelling | grammar | gec | account (account: whether a signed-in caller's settings could be loaded)
+             * @description parser | spelling | grammar | gec | files | account (files: the LaTeX/.docx readers, shown only when one is missing; account: whether a signed-in caller's settings could be loaded)
              */
             tier: string;
         };

@@ -15,6 +15,7 @@ Contract:
 
 from __future__ import annotations
 
+from bisect import bisect_right
 from pathlib import PurePosixPath
 
 from ..document import Document, Segment
@@ -61,6 +62,31 @@ def from_text_file(filename: str, data: bytes, kind: str) -> Document:
     doc.path = filename
     doc.segments = [Segment(path=filename, start=0, end=len(text))]
     return doc
+
+
+def source_position(segments: list[Segment], text: str,
+                    offset: int) -> tuple[str, int, int]:
+    """(path, 1-based line, 1-based column) of `offset` in its source file.
+
+    A file split around its `\\input`s appears as several segments; the
+    pieces of the same file before this one (same path, abutting source
+    ranges) supply the lines above it.
+    """
+    if not segments:
+        before = text[:offset]
+        return "", before.count("\n") + 1, offset - before.rfind("\n")
+    i = max(0, bisect_right([s.start for s in segments], offset) - 1)
+    seg = segments[i]
+    pieces = [text[seg.start:offset]]
+    want = seg.source_start
+    for s in reversed(segments[:i]):
+        if want <= 0:
+            break
+        if s.path == seg.path and s.source_start + (s.end - s.start) == want:
+            pieces.append(text[s.start:s.end])
+            want = s.source_start
+    before = "".join(reversed(pieces))
+    return seg.path, before.count("\n") + 1, len(before) - before.rfind("\n")
 
 
 def load_bytes(filename: str, data: bytes) -> Document:

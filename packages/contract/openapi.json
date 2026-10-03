@@ -71,6 +71,14 @@
             },
             "title": "Suggestions",
             "type": "array"
+          },
+          "warnings": {
+            "description": "What was skipped or approximated while reading the text, e.g. LaTeX that could not be parsed and was read with a simpler method. May quote the caller's own text; never logged.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
           }
         },
         "required": [
@@ -199,6 +207,14 @@
               "$ref": "#/components/schemas/Suggestion"
             },
             "title": "Suggestions",
+            "type": "array"
+          },
+          "warnings": {
+            "description": "What was skipped or approximated while reading the text, e.g. LaTeX that could not be parsed and was read with a simpler method. May quote the caller's own text; never logged.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
             "type": "array"
           }
         },
@@ -808,7 +824,7 @@
             "type": "string"
           },
           "tier": {
-            "description": "parser | spelling | grammar | gec | account (account: whether a signed-in caller's settings could be loaded)",
+            "description": "parser | spelling | grammar | gec | files | account (files: the LaTeX/.docx readers, shown only when one is missing; account: whether a signed-in caller's settings could be loaded)",
             "title": "Tier",
             "type": "string"
           }
