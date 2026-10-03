@@ -843,3 +843,81 @@ CLAUDE.md now marks #2 as under revision.
 - **D8:** Laya is adopted only via the bake-off.
 
 ARCHITECTURE.md is now v1.2. Slice S0 is unblocked.
+
+## 2026-10-03 — P23: S0 Foundation (one repo, CI, licences, clean engine)
+
+**What.** The first build slice of the production plan (PLAN.md S0). It
+delivers no user-visible change: one repository, automated checks, and an
+engine with no third-party text in it.
+
+**Shipped:**
+- **Monorepo (ADR-01, D4).** `Researchly_Updated_14082026` became the
+  baseline:
+  - engine → `packages/core/`;
+  - Word add-in, VS Code extension and desktop apps → `apps/`;
+  - `eval/` and `dogfood/` → `ml/`;
+  - the other two trees → `legacy/`.
+
+  All moves used `git mv`, so history follows. Test, server, build-script
+  and VS Code paths were repointed. Result: 260 passed, 1 skipped, identical
+  to before the move.
+- **Spelling gaps.** Seven words from the first S001 corpus run were added,
+  with a test that fails without them. While writing it I found that
+  capitalised words are skipped as possible proper nouns. A test that puts
+  the word at the start of a sentence would therefore pass for the wrong
+  reason.
+- **`ml/datasets.yaml`.** 41 sources, each with a licence, whether that
+  licence was seen first-hand, and its permitted use under D2, D6 and D7.
+- **`ml/tools/check_third_party.py`.** An 8-word shingle scan of
+  `packages/`, `apps/` and `services/` against the theses, the paper corpus
+  and Notes_On_Writing. It found **19 hits inside the engine**:
+  - Pallas's exemplar abstract and frames;
+  - Endo lecture quotes in why-texts;
+  - thesis sentences used as test fixtures.
+
+  All were replaced with paraphrases (attribution kept) or synthetic
+  fixtures, and the scan now reports 0 hits. Rule logic was proven unchanged
+  by comparing each module's syntax tree with strings blanked.
+- **CI** (`.github/workflows/`). Four jobs on every PR:
+  - ruff (bug-class rules only);
+  - engine tests on Python 3.10 with Java 21;
+  - the third-party scan;
+  - gitleaks (clean over the full history).
+
+  A separate, path-filtered noise-floor workflow runs on engine changes.
+
+**Measured: the real noise floor.**
+
+| Tiers on | flags/1000 words |
+|---|---|
+| All | **14.84** |
+| All except S001 (spelling) | 12.5 |
+| All except LT001 (grammar) | 12.8 |
+
+The "12.5" quoted in P18 excluded S001, so the all-tier figure had never
+been written down. The target (Q3) is ≤ 11.
+
+`noise_gate.py` fails on a rise of more than 0.3, and also when a rule that
+fired at least 20 times drops to zero. A quieter run is how a dead tier
+looks. I found this by testing the gate against a run without LanguageTool:
+the first version passed it.
+
+**Lessons:**
+- Licence audits find things code review doesn't. Course and book wording
+  had crept into rule explanations and test fixtures one quote at a time.
+- Some old fixtures passed for the wrong reason:
+  - C301's hedges were outside the window, so the clause-boundary guard was
+    never reached.
+  - E703's fixture followed a short sentence, so the noun check never ran.
+
+  Swapping in synthetic fixtures exposed both. Both tests are now stricter.
+
+**Open (PLAN.md Inbox):**
+- reach Q3;
+- 20 cosmetic lint findings;
+- the GPL-3.0 LanguageTool client before any desktop bundle;
+- `docs/eval-corpora.md` licence corrections;
+- PubMed-RCT's undeclared licence;
+- the Pallas year (2022 vs 2023);
+- two scanned PDFs the scan can't read;
+- `_to_delete/` (owner).
