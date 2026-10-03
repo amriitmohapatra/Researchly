@@ -30,9 +30,10 @@ access = logging_setup.get("researchly.access")
 
 # Paths that may appear in logs verbatim. Anything else is logged as
 # "other": a raw path is client-chosen and could carry text.
-KNOWN_ROUTES = {"/v1/analyze", "/v1/health", "/v1/rules", "/docs",
+KNOWN_ROUTES = {"/v1/analyze", "/v1/analyze-file", "/v1/health", "/v1/rules", "/docs",
                 "/openapi.json", "/redoc"}
 UNLIMITED_PATHS = {"/v1/health"}
+UPLOAD_PATHS = {"/v1/analyze-file"}
 BODY_METHODS = {"POST", "PUT", "PATCH"}
 
 
@@ -154,7 +155,9 @@ class RequestContextMiddleware:
 
                 # 2. body size, decided before the body is read
                 if method in BODY_METHODS:
-                    cap = self.settings.max_body_bytes
+                    cap = (self.settings.max_upload_bytes
+                           if path in UPLOAD_PATHS
+                           else self.settings.max_body_bytes)
                     too_big = too_large_message(cap)
                     raw_len = _header(scope, b"content-length")
                     if raw_len is not None:
@@ -200,8 +203,9 @@ class RequestContextMiddleware:
                 "route": route, "status": status_box["status"],
                 "latency_ms": int(round((time.perf_counter() - t0) * 1000)),
             }
+            # Never the filename, the token or the user id.
             for key in ("content_chars", "format", "suggestions", "counts",
-                        "hidden_preferences"):
+                        "hidden_preferences", "upload_bytes", "signed_in"):
                 if key in state:
                     fields[key] = state[key]
             if "error_code" in state:

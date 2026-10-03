@@ -1,6 +1,7 @@
 """Fill the Cloud Run spec's placeholders from the environment.
 
     ENGINE_IMAGE=... ALLOWED_ORIGINS=... PROJECT_ID=... \\
+    [SUPABASE_URL=... SUPABASE_PUBLISHABLE_KEY=...] \\
         python3 render_service.py < cloudrun.service.yaml > service.yaml
 
 Only the three named placeholders are replaced. Any other ${...} left in the
@@ -13,6 +14,9 @@ import re
 import sys
 
 NAMES = ("ENGINE_IMAGE", "ALLOWED_ORIGINS", "PROJECT_ID")
+# May be empty: no Supabase project yet means the engine runs without
+# accounts, exactly as in S1 (docs/s2-design.md §1).
+OPTIONAL = ("SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY")
 
 
 def render(template: str, env) -> str:
@@ -22,6 +26,11 @@ def render(template: str, env) -> str:
     out = template
     for name in NAMES:
         out = out.replace("${%s}" % name, env[name])
+    for name in OPTIONAL:
+        value = env.get(name) or ""
+        if '"' in value or "\\" in value or "\n" in value:
+            raise SystemExit(f"{name} contains characters a URL or key never has")
+        out = out.replace("${%s}" % name, value)
     # Comments may mention placeholders; the spec itself must not keep any.
     body = "\n".join(line for line in out.splitlines()
                      if not line.lstrip().startswith("#"))

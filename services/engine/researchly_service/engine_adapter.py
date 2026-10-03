@@ -20,7 +20,7 @@ from __future__ import annotations
 import hashlib
 import threading
 import time
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from . import _core  # noqa: F401  (import path + isolation first)
 from . import __version__ as SERVICE_VERSION
@@ -30,7 +30,8 @@ from .schemas import (AnalyzeOptions, AnalyzeResponse, Category, EngineInfo,
 
 import researchly
 from researchly import api
-from researchly.config import Config
+from researchly.config import Config, apply_remote
+from researchly.document import Document
 from researchly.engine import REGISTRY
 
 ENGINE_LOCK = threading.Lock()
@@ -63,14 +64,23 @@ def engine_info() -> EngineInfo:
 
 
 def build_config(options: Optional[AnalyzeOptions],
-                 grammar_enabled: bool = True) -> Config:
-    """Defaults + this request's options. Never reads a file."""
+                 grammar_enabled: bool = True,
+                 account: Optional[dict] = None) -> Config:
+    """Defaults, then the caller's account settings, then this request's
+    options. Never reads a file.
+
+    A request can only ADD to what the account says: its disabled_rules are
+    added to the stored ones and show_preferences is stored OR requested
+    (docs/s2-design.md §3), so a rule muted anywhere stays muted.
+    """
     cfg = Config()
     if not grammar_enabled:
         cfg.grammar_tier = False           # the deployment runs no grammar
+    if account is not None:
+        apply_remote(cfg, account)
     if options is not None:
-        cfg.show_preferences = bool(options.show_preferences)
-        cfg.disabled = set(options.disabled_rules)
+        cfg.show_preferences = cfg.show_preferences or bool(options.show_preferences)
+        cfg.disabled = set(cfg.disabled) | set(options.disabled_rules)
     return cfg
 
 
@@ -124,22 +134,48 @@ def to_metrics(m) -> Optional[Metrics]:
     return Metrics(**m.to_dict())
 
 
-def run_analysis(content: str, fmt: str, options: Optional[AnalyzeOptions],
-                 grammar_enabled: bool = True) -> AnalyzeResponse:
-    """One analysis, serialised. Times the whole call including lock wait."""
+# What the `account` tier says when a signed-in caller's settings could not
+# be loaded. `kind` is from accounts.SettingsUnavailable: text-free.
+def account_tier(error_kind: Optional[str]) -> TierHealth:
+    if error_kind is None:
+        return TierHealth(tier="account", label="Your settings", ok=True,
+                          state="ready", detail="", remedy="")
+    return TierHealth(
+        tier="account", label="Your settings", ok=False, state="error",
+        detail=f"Your saved settings could not be loaded ({error_kind}).",
+        remedy="This check used the defaults: your muted rules and dictionary "
+               "were not applied. Try again in a minute.")
+
+
+def run_analysis(source: Union[str, Document], fmt: str,
+                 options: Optional[AnalyzeOptions],
+                 grammar_enabled: bool = True,
+                 account: Optional[dict] = None,
+                 signed_in: bool = False,
+                 account_error: Optional[str] = None,
+                 response_cls=AnalyzeResponse, **extra) -> AnalyzeResponse:
+    """One analysis, serialised. Times the whole call including lock wait.
+
+    `source` is pasted text (with `fmt`) or a Document from researchly.ingest.
+    """
     t0 = time.perf_counter()
-    cfg = build_config(options, grammar_enabled)
+    cfg = build_config(options, grammar_enabled, account)
     with ENGINE_LOCK:
-        a = api.analyze(content, kind=fmt, cfg=cfg)
-    out = AnalyzeResponse(
+        a = api.analyze(source, kind=fmt, cfg=cfg)
+    health = [to_tier(t) for t in a.health]
+    if signed_in:
+        health.append(account_tier(account_error))
+    out = response_cls(
+        signed_in=signed_in,
         suggestions=[to_suggestion(s) for s in a.suggestions],
         counts=dict(a.counts),
         hidden_preferences=a.hidden_preferences,
         metrics=to_metrics(a.metrics),
         sections_detected=list(a.sections_detected),
-        health=[to_tier(t) for t in a.health],
+        health=health,
         engine=engine_info(),
         elapsed_ms=0,
+        **extra,
     )
     out.elapsed_ms = int(round((time.perf_counter() - t0) * 1000))
     return out

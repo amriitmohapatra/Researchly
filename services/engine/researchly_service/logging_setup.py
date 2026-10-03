@@ -42,6 +42,8 @@ ALLOWED_FIELDS = (
     "code", "error_type", "frames", "rules_loaded", "tiers", "grammar",
     "warmup_ms", "lt_url_set", "allowed_origins", "rate_limit_per_min",
     "service_version", "core_version", "category", "where",
+    # S2. Never the filename, the token, the user id or any setting value.
+    "upload_bytes", "signed_in", "accounts", "anon_max_words",
 )
 
 _SEVERITY = {"DEBUG": "DEBUG", "INFO": "INFO", "WARNING": "WARNING",

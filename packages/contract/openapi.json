@@ -1,6 +1,91 @@
 {
   "components": {
     "schemas": {
+      "AnalyzeFileResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "description": "Shown suggestions per category.",
+            "title": "Counts",
+            "type": "object"
+          },
+          "document": {
+            "$ref": "#/components/schemas/SourceInfo"
+          },
+          "elapsed_ms": {
+            "minimum": 0.0,
+            "title": "Elapsed Ms",
+            "type": "integer"
+          },
+          "engine": {
+            "$ref": "#/components/schemas/EngineInfo"
+          },
+          "health": {
+            "description": "Every surface must show a degraded tier (CLAUDE.md: no silent tiers).",
+            "items": {
+              "$ref": "#/components/schemas/TierHealth"
+            },
+            "title": "Health",
+            "type": "array"
+          },
+          "hidden_preferences": {
+            "minimum": 0.0,
+            "title": "Hidden Preferences",
+            "type": "integer"
+          },
+          "metrics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metrics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "const": "1",
+            "default": "1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "sections_detected": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sections Detected",
+            "type": "array"
+          },
+          "signed_in": {
+            "default": false,
+            "description": "True when a valid account token came with the request and its settings were looked up.",
+            "title": "Signed In",
+            "type": "boolean"
+          },
+          "suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/Suggestion"
+            },
+            "title": "Suggestions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "suggestions",
+          "counts",
+          "hidden_preferences",
+          "sections_detected",
+          "health",
+          "engine",
+          "elapsed_ms",
+          "document"
+        ],
+        "title": "AnalyzeFileResponse",
+        "type": "object"
+      },
       "AnalyzeOptions": {
         "additionalProperties": false,
         "properties": {
@@ -414,6 +499,100 @@
         "title": "RulesResponse",
         "type": "object"
       },
+      "Segment": {
+        "additionalProperties": false,
+        "description": "A stretch of `document.text` that came from one source file.\n`text[start:end]` equals that file's `[source_start : source_start + (end - start)]`.",
+        "properties": {
+          "end": {
+            "minimum": 0.0,
+            "title": "End",
+            "type": "integer"
+          },
+          "path": {
+            "description": "Path inside the upload, e.g. sections/methods.tex.",
+            "title": "Path",
+            "type": "string"
+          },
+          "source_start": {
+            "description": "Offset in the source file, in code points.",
+            "minimum": 0.0,
+            "title": "Source Start",
+            "type": "integer"
+          },
+          "start": {
+            "minimum": 0.0,
+            "title": "Start",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "path",
+          "start",
+          "end",
+          "source_start"
+        ],
+        "title": "Segment",
+        "type": "object"
+      },
+      "SourceFormat": {
+        "description": "How an uploaded file was read.",
+        "enum": [
+          "latex",
+          "docx",
+          "markdown",
+          "plain"
+        ],
+        "title": "SourceFormat",
+        "type": "string"
+      },
+      "SourceInfo": {
+        "additionalProperties": false,
+        "properties": {
+          "filename": {
+            "description": "Echoed back to the caller; never logged.",
+            "title": "Filename",
+            "type": "string"
+          },
+          "format": {
+            "$ref": "#/components/schemas/SourceFormat"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/Segment"
+            },
+            "title": "Segments",
+            "type": "array"
+          },
+          "structure": {
+            "items": {
+              "$ref": "#/components/schemas/StructureItem"
+            },
+            "title": "Structure",
+            "type": "array"
+          },
+          "text": {
+            "description": "The text suggestions' spans index into: the source itself for .tex/.md/.txt, the expanded project for a .zip, the extracted paragraphs for .docx.",
+            "title": "Text",
+            "type": "string"
+          },
+          "warnings": {
+            "description": "Things skipped or approximated while reading the file; never document text.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "filename",
+          "format",
+          "text",
+          "segments"
+        ],
+        "title": "SourceInfo",
+        "type": "object"
+      },
       "Span": {
         "additionalProperties": false,
         "properties": {
@@ -449,6 +628,52 @@
           "col"
         ],
         "title": "Span",
+        "type": "object"
+      },
+      "StructureItem": {
+        "additionalProperties": false,
+        "description": "A figure, table, equation, caption or citation found in the source.\nKept as structure for the consistency and cross-reference checks (S2b).",
+        "properties": {
+          "end": {
+            "minimum": 0.0,
+            "title": "End",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "figure",
+              "table",
+              "equation",
+              "caption",
+              "citation"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "\\label key or Word bookmark, if any.",
+            "title": "Label"
+          },
+          "start": {
+            "minimum": 0.0,
+            "title": "Start",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "start",
+          "end"
+        ],
+        "title": "StructureItem",
         "type": "object"
       },
       "Suggestion": {
@@ -611,6 +836,26 @@
       "post": {
         "description": "Check one document and return typed, explained suggestions.",
         "operationId": "analyze",
+        "parameters": [
+          {
+            "description": "`Bearer <Supabase access token>` when signed in. Omit for anonymous use.",
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "`Bearer <Supabase access token>` when signed in. Omit for anonymous use.",
+              "title": "Authorization"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -641,6 +886,16 @@
               }
             },
             "description": "Malformed request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign-in invalid or expired (unauthorized), or this needs an account (sign_in_required)"
           },
           "413": {
             "content": {
@@ -681,9 +936,184 @@
               }
             },
             "description": "Engine error (no document text in the body)"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign-in could not be checked (auth_unavailable)"
           }
         },
         "summary": "Analyze",
+        "tags": [
+          "analysis"
+        ]
+      }
+    },
+    "/v1/analyze-file": {
+      "post": {
+        "description": "Check an uploaded file: .docx, .tex, an Overleaf .zip, .md/.qmd/.Rmd\nor .txt. The body is the raw file; it is read in memory and discarded.",
+        "operationId": "analyzeFile",
+        "parameters": [
+          {
+            "description": "The file's name, percent-encoded (encodeURIComponent). Only its extension is used; it is never logged.",
+            "in": "header",
+            "name": "x-researchly-filename",
+            "required": true,
+            "schema": {
+              "description": "The file's name, percent-encoded (encodeURIComponent). Only its extension is used; it is never logged.",
+              "maxLength": 1024,
+              "title": "X-Researchly-Filename",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional JSON AnalyzeOptions.",
+            "in": "header",
+            "name": "x-researchly-options",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional JSON AnalyzeOptions.",
+              "title": "X-Researchly-Options"
+            }
+          },
+          {
+            "description": "`Bearer <Supabase access token>` when signed in. Omit for anonymous use.",
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "`Bearer <Supabase access token>` when signed in. Omit for anonymous use.",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            }
+          },
+          "description": "The file's bytes.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyzeFileResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Malformed request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign-in invalid or expired (unauthorized), or this needs an account (sign_in_required)"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Document too large"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not a supported file type (unsupported_file)"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request failed validation"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limited"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Engine error (no document text in the body)"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign-in could not be checked (auth_unavailable)"
+          }
+        },
+        "summary": "Analyze File",
         "tags": [
           "analysis"
         ]
