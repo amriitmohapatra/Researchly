@@ -22,23 +22,23 @@ def test_e701_fires_on_empty_value_phrase():
 
 
 def test_e701_quiet_on_concrete_statement():
-    assert "E701" not in ids("This study explains multi-serotype dengue "
-                             "dynamics driven by cross-reacting immunity.")
+    assert "E701" not in ids("This study estimates that school holidays "
+                             "halve the daily contact rate of children.")
 
 
 # --- E702 adversative runs --------------------------------------------------
 
 def test_e702_fires_on_consecutive_howevers():
-    t = ("All models are wrong. However, they can be useful when caveats "
-         "are kept in mind. However, model outputs are sometimes oversold "
-         "as solid predictions.")
+    t = ("Serological surveys are expensive. However, they detect "
+         "infections that case reporting misses. However, assay "
+         "cross-reactivity can inflate the estimates.")
     assert "E702" in ids(t)
 
 
 def test_e702_quiet_on_single_however():
-    t = ("All models are wrong. However, they can be useful when caveats "
-         "are kept in mind. Guidelines are being developed to prevent "
-         "miscommunication.")
+    t = ("Serological surveys are expensive. However, they detect "
+         "infections that case reporting misses. Careful assay validation "
+         "limits cross-reactivity.")
     assert "E702" not in ids(t)
 
 
@@ -46,37 +46,39 @@ def test_e702_quiet_on_single_however():
 
 def test_e703_fires_on_naked_this():
     # long preceding sentence = multiple candidate referents (Endo's caveat)
-    t = ("Mean contact rates among participants fell substantially after "
-         "distancing was implemented and remained strongly correlated with "
-         "the intensity of the intervention throughout the study period. "
-         "This suggests that the reproduction number was lowered by the "
-         "policy.")
+    t = ("Hospital admissions in the northern districts rose for six "
+         "consecutive weeks while testing capacity stayed flat and the "
+         "share of positive tests doubled across every age group. "
+         "This suggests that case counts understated the epidemic.")
     assert "E703" in ids(t)
 
 
 def test_e703_quiet_when_this_has_a_noun():
-    t = ("Contact rates fell after distancing began and remained low. "
-         "This decline suggests that the reproduction number was lowered "
-         "by the policy.")
+    t = ("Hospital admissions in the northern districts rose for six "
+         "consecutive weeks while testing capacity stayed flat and the "
+         "share of positive tests doubled across every age group. "
+         "This divergence suggests that case counts understated the "
+         "epidemic.")
     assert "E703" not in ids(t)
 
 
 def test_e703_quiet_after_short_clear_sentence():
     # after a short simple sentence the referent is unambiguous — stay quiet
-    t = "Contact rates fell sharply. This suggests the policy worked."
+    t = "Admissions rose sharply. This suggests the wave was underway."
     assert "E703" not in ids(t)
 
 
 # --- E704 uncited consensus -------------------------------------------------
 
 def test_e704_fires_without_citation():
-    assert "E704" in ids("Vaccine-derived immunity is considered to be "
-                         "lifelong in most settings.")
+    assert "E704" in ids("Seasonal forcing is considered to be the main "
+                         "driver of the winter peak.")
 
 
 def test_e704_quiet_with_citation():
-    assert "E704" not in ids("Vaccine-derived immunity is considered to be "
-                             "lifelong in most settings (Smith et al, 2019).")
+    assert "E704" not in ids("Seasonal forcing is considered to be the main "
+                             "driver of the winter peak (Smith et al, "
+                             "2019).")
 
 
 # --- E705 absolute novelty --------------------------------------------------
@@ -102,13 +104,13 @@ def test_e706_fires():
 # --- E707 display-first openers ---------------------------------------------
 
 def test_e707_fires_in_results():
-    t = "Results\n\nFigure 1 shows the estimated Rt values in the city."
+    t = "Results\n\nFigure 2 presents the weekly case counts by district."
     assert "E707" in ids(t)
 
 
 def test_e707_quiet_when_finding_leads():
-    t = ("Results\n\nEstimated Rt showed a stable trend across the study "
-         "period (Figure 1).")
+    t = ("Results\n\nWeekly case counts peaked in July in every district "
+         "(Figure 2).")
     assert "E707" not in ids(t)
 
 
@@ -134,8 +136,8 @@ def test_ab801_quiet_when_results_stated():
 # --- L901 serial-summary openers --------------------------------------------
 
 def test_l901_fires_on_catalogue_opener():
-    assert "L901" in ids("There are many studies dealing with the effect "
-                         "of knowledge management on performance.")
+    assert "L901" in ids("There are many studies examining how rainfall "
+                         "affects mosquito abundance.")
 
 
 def test_l901_quiet_on_synthesis_opener():

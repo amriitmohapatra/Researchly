@@ -7,8 +7,8 @@ are a trust feature (research/04).
 """
 
 # --- W201: single grand words → plain alternatives -------------------------
-# (employ/leverage/elucidate added from Endo's avoid-list: "just a bit
-#  bombastic when you can just say 'use'")
+# (employ/leverage/elucidate added from Endo's avoid-list, which treats
+#  them as needlessly grand where plain 'use' or 'clarify' would do)
 GRAND_WORDS = {
     "utilize": "use", "utilizes": "uses", "utilized": "used",
     "utilizing": "using", "utilization": "use", "utilisation": "use",
@@ -183,7 +183,8 @@ TRAILING_QUALIFIERS = (
 
 # --- E7xx: rules mined from Dr Akira Endo's scientific-writing lecture ------
 
-# E701: "empty sentences sounding as if you're saying something but aren't"
+# E701: low-information phrases that sound substantive but say nothing
+# (Endo lecture, 'Information density')
 EMPTY_PHRASES = (
     "holistic understanding",
     "comprehensive understanding of the complex",

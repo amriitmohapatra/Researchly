@@ -8,32 +8,37 @@ from researchly.engine import check
 
 NLP = spacy.load("en_core_web_sm")
 
-# Pallas's own exemplar abstract (Doctoral Student Skills, ch. 7)
-PALLAS = (
-    "Existing scholarship shows that international donors reducing foreign "
-    "aid to a country frequently seek to devolve responsibility for funding "
-    "local NGOs to the national government. However, the outcomes of this "
-    "transition vary widely between contexts; some funding transitions "
-    "result in a successful government-NGO relationship while others result "
-    "in an antagonistic relationship. Scholarship on aid reduction has yet "
-    "to explain this variation. In this paper, we ask, what factors explain "
-    "a government's willingness to fund local NGOs during aid reduction? "
-    "To answer this question, we generate hypotheses using NGO-government "
-    "relations theory and test them using case study data from the HIV/AIDS "
-    "sectors in Thailand and Vietnam. We find that NGO-government relations "
-    "theory provides a convincing explanation for the outcomes of the "
-    "sector's transition. These findings suggest that donors need to pay "
-    "attention to the underlying attitudes of NGOs and government when "
-    "planning funding transitions."
+# A synthetic exemplar written for this suite. It follows the six-move
+# structure of the worked example in Pallas (2022, ch. 7) — conventional
+# wisdom, problematization, question, design, findings, significance — but
+# none of her wording (her text is all-rights-reserved; see PLAN.md S0).
+EXEMPLAR = (
+    "Published reviews of school-based influenza vaccination agree that "
+    "immunising children protects older members of their households. "
+    "However, the size of this indirect benefit differs sharply between "
+    "countries, and some programmes report almost no spillover to "
+    "grandparents. The literature has not explained why the indirect "
+    "effect is so variable. In this paper, we ask which features of "
+    "household structure determine how much protection children pass on "
+    "to older relatives. To answer this question, we build an "
+    "age-structured transmission model and calibrate it to household "
+    "survey data from Japan and Italy. We find that the share of "
+    "three-generation households explains most of the difference in "
+    "indirect protection between the two settings. These findings suggest "
+    "that vaccination planners should weigh household composition when "
+    "they forecast the benefit of school programmes."
 )
 
 
 def test_pallas_exemplar_has_all_six_moves():
-    assert missing_moves(PALLAS) == []
-    a = analyze(PALLAS)
+    assert missing_moves(EXEMPLAR) == []
+    a = analyze(EXEMPLAR)
     assert all(a[m]["present"] for m in MOVES)
-    assert "Existing scholarship" in a["background"]["evidence"]
+    assert "Published reviews" in a["background"]["evidence"]
     assert "However" in a["gap"]["evidence"]
+    assert "we ask" in a["aim"]["evidence"]
+    assert "We find" in a["findings"]["evidence"]
+    assert "These findings suggest" in a["significance"]["evidence"]
 
 
 def test_methods_only_abstract_missing_five():
@@ -46,7 +51,7 @@ def test_methods_only_abstract_missing_five():
 
 
 def test_cold_open_flags_missing_background():
-    t = "We ask whether income shapes contact patterns. " + PALLAS
+    t = "We ask whether income shapes contact patterns. " + EXEMPLAR
     a = analyze(t)
     assert not a["background"]["present"]     # first sentence is the aim
 
@@ -80,7 +85,7 @@ def test_ab802_rule_fires_on_incomplete_abstract():
 
 
 def test_ab802_quiet_on_complete_abstract():
-    doc = Document.from_text("Abstract\n\n" + PALLAS, "plain")
+    doc = Document.from_text("Abstract\n\n" + EXEMPLAR, "plain")
     hits = [s for s in check(doc, NLP, disabled={"LT001"},
                              show_preferences=False)
             if s.rule_id == "AB802"]

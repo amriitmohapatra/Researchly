@@ -1,0 +1,9 @@
+# Allow-list for ml/tools/check_third_party.py
+#
+# One phrase per line, followed by `# reason`. A matching 8-word window is
+# ignored only when it lies wholly inside an allow-listed phrase.
+#
+# Keep this empty or near-empty. It exists for generic academic phrasing
+# that happens to run to 8+ words (e.g. a stock statistical formula), never
+# for a real passage from a thesis, paper or course document. If the checker
+# flags a passage, rewrite the passage instead of listing it here.

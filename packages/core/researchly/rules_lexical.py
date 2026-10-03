@@ -302,12 +302,13 @@ def g108_stress_position(doc, document: Document):
 
 @rule("E701", "empty-phrase", Category.CONVENTION,
       "Low-information phrase ('sheds light on', 'holistic understanding').",
-      "Information density: minimise 'empty' sentences sounding as if you're "
-      "saying something but aren't. 'This study provides holistic "
-      "understanding of the complex dynamics of dengue' adds no information; "
-      "'This study explains multi-serotype dengue dynamics driven by "
-      "cross-reacting immunity' does. Say specifically what the work shows. "
-      "(Endo lecture, 'Information density'.)",
+      "Information density: Endo's lecture warns against sentences that "
+      "sound substantive but carry no information. A claim that a study "
+      "offers 'a holistic understanding' of a system could describe any "
+      "paper; a sentence naming the mechanism or estimate the study "
+      "actually produced tells the reader what was learned. Say "
+      "specifically what the work shows. (Endo lecture, 'Information "
+      "density'.)",
       source="Endo", aggregate=True)
 def e701_empty_phrase(doc, document: Document):
     for phrase in lx.EMPTY_PHRASES:
@@ -320,11 +321,12 @@ def e701_empty_phrase(doc, document: Document):
 
 @rule("E704", "uncited-consensus", Category.CONVENTION,
       "'Is known/considered to be…' — who says? Cite it or own it.",
-      "Distinguish facts from opinions: 'XX is considered to be…', 'XX is "
-      "known to be…' — who says that? If it's an established fact you should "
-      "be able to cite it; if it's your judgement, own it ('we consider…'). "
-      "(Endo lecture, 'Facts vs opinions'; also NG5001 Unit 1 on warranting "
-      "every claim.)",
+      "Endo's lecture asks writers to keep facts and opinions apart. A "
+      "passive consensus formula ('X is considered/known to be…') hides "
+      "whose view it is: if the point is established, cite the evidence; "
+      "if it is your judgement, own it ('we consider…'). (Endo lecture, "
+      "'Facts vs opinions'; also NG5001 Unit 1 on warranting every "
+      "claim.)",
       source="Endo", aggregate=True)
 def e704_uncited_consensus(doc, document: Document):
     for sent in doc.sents:
@@ -345,11 +347,12 @@ def e704_uncited_consensus(doc, document: Document):
 
 @rule("E705", "absolute-novelty", Category.CONVENTION,
       "'Has not been studied' — risky absolute claim; soften and cite.",
-      "Unless you are sure it has never been done, don't take the risk — "
-      "you may simply have missed the literature (reviewers love finding "
-      "the counterexample). Soften with 'to our knowledge' and cite the "
-      "closest existing attempts. (Endo lecture, avoid-list; the CARS "
-      "literature makes the same move safely: 'few studies have…'.)",
+      "Endo's lecture advises against claiming that something has never "
+      "been done unless you are certain: the literature is large, and a "
+      "reviewer who knows one counterexample will discount the claim. "
+      "Soften with 'to our knowledge' and cite the closest existing "
+      "attempts. (Endo lecture, avoid-list; the CARS literature makes the "
+      "same move safely: 'few studies have…'.)",
       source="Endo", aggregate=True)
 def e705_absolute_novelty(doc, document: Document):
     for sent in doc.sents:
@@ -369,10 +372,11 @@ def e705_absolute_novelty(doc, document: Document):
 
 @rule("E706", "missing-comparator", Category.CONVENTION,
       "'Relatively' — compared with what?",
-      "Phrases like 'additional', 'increase', 'relatively', 'proportion' "
-      "only make sense with a comparator or reference. 'Relatively high': "
-      "relative to WHAT? Specify the reference, or make sure it is uniquely "
-      "identifiable from context — otherwise drop the word. (Endo lecture, "
+      "Words such as 'additional', 'increase', 'relatively' and "
+      "'proportion' are incomplete without a reference point: 'relatively "
+      "high' leaves the reader asking 'relative to what?'. Endo's lecture "
+      "advises naming the comparator, or checking that the context allows "
+      "only one reading — otherwise drop the word. (Endo lecture, "
       "'Implicit comparator/reference'.)",
       source="Endo", aggregate=True)
 def e706_missing_comparator(doc, document: Document):
@@ -384,11 +388,11 @@ def e706_missing_comparator(doc, document: Document):
 
 @rule("AB801", "vague-forward-reference", Category.CONVENTION,
       "'Results will be discussed' — say what the results are.",
-      "Vague abstracts with little scientific substance are unattractive to "
-      "committees and readers: they cannot risk a presentation devoid of "
-      "content. Be specific about at least some results in the abstract "
-      "rather than promising them. (Pallas 2022 ch.7 / Schultz, Eloquent "
-      "Science, via NG5001 Unit 2.)",
+      "An abstract that promises results without stating any gives a "
+      "programme committee nothing to judge and readers no reason to "
+      "attend. State at least one concrete finding instead of deferring "
+      "it. (Pallas 2022 ch.7 / Schultz, "
+      "Eloquent Science, via NG5001 Unit 2.)",
       sections_only=("abstract",),
       source="NG5001-U2", aggregate=True)
 def ab801_vague_forward(doc, document: Document):
@@ -402,8 +406,8 @@ def ab801_vague_forward(doc, document: Document):
 @rule("L901", "serial-summary-opener", Category.IMPROVEMENT,
       "'There are many studies on…' — catalogue opener, not an argument.",
       "A literature review should be a conversation that leads to your gap, "
-      "not a catalogue: 'There are many studies dealing with X. A claimed… "
-      "B claimed…' restates instead of synthesizing. Open with the "
+      "not a catalogue: 'Many studies have looked at X. A reported… B "
+      "reported…' restates instead of synthesizing. Open with the "
       "synthesis point ('Evidence consistently links X to Y'), then use the "
       "sources as support — and let the review build toward a clear gap "
       "statement. (NG5001 Unit 1, critical literature review; Week 2 key "
@@ -420,9 +424,10 @@ def l901_serial_summary(doc, document: Document):
 
 @rule("D902", "missing-niche-signal", Category.IMPROVEMENT,
       "Introduction has no detectable gap statement (CARS Move 2).",
-      "The gap is the hinge of an Introduction: it connects 'what has been "
-      "done' to 'what this study is about' and builds demand for your "
-      "contribution — a 'mini-critique', often one sentence, signalled by a "
+      "The gap statement is the turn on which an Introduction pivots: it "
+      "links what is already known to what this study sets out to do, and "
+      "creates the need for your contribution. It is usually one short "
+      "critical sentence, signalled by a "
       "contrastive turn (however, although, yet) plus a gap word (limited, "
       "few, little, remains unclear, has not been…). No signal detected "
       "here — either the niche is missing, or it's phrased so gently the "
@@ -464,8 +469,9 @@ from . import abstract_lens  # noqa: E402,F401
 @rule("W210", "variant-consistency", Category.CONVENTION,
       "Mixed UK/US spellings of the same word (modelling AND modeling).",
       "One term, one meaning — and one spelling. Rephrasing or re-spelling "
-      "the same term reads as if you mean different things (Endo: 'by "
-      "default, different terms = different things'; guide §6; the "
+      "the same term reads as if you mean different things (Endo's "
+      "lecture: readers assume a changed term signals a changed meaning; "
+      "guide §6; the "
       "critical-reader checklist asks whether authors are consistent in "
       "their key terms). Pick the variant your venue prefers and use it "
       "throughout — co-authored drafts drift into mixtures without anyone "

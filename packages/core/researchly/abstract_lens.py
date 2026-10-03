@@ -12,8 +12,12 @@ SciQua abstract contains six moves —
 
 This lens detects each move by signal lexicons and reports what's missing:
 as a single aggregate rule (AB802) on abstracts, and in full detail via
-`researchly abstract`, which offers Pallas's fill-in sentence frames for
-the missing moves. Deterministic and explainable, like everything else.
+`researchly abstract`, which offers a fill-in sentence frame for each
+missing move. Deterministic and explainable, like everything else.
+
+The frames below are Researchly's own wording. The idea of giving the
+writer one fill-in frame per move is Pallas's (2022, ch. 7); her frames
+are not reproduced (all rights reserved — see PLAN.md S0).
 """
 
 from __future__ import annotations
@@ -95,19 +99,21 @@ SIGNALS: dict[str, list[str]] = {
     ],
 }
 
+# Fill-in frames, one per move (structure after Pallas 2022, ch. 7; the
+# wording is original to Researchly).
 FRAMES = {
-    "background": "“Existing research on [topic] argues/claims…”",
-    "gap": "“However, [new data/theory/analysis] indicates…” or "
-           "“Scholarship on [topic] has yet to explain [variation].”",
-    "aim": "“To address this problem, this paper asks: [research "
-           "question]”",
-    "methods": "“This paper answers this question using [research design "
-               "or data source]…”",
-    "findings": "“These [data/analyses] indicate… [state the actual "
-                "finding, with a number if you have one]”",
-    "significance": "“These findings suggest that [literature/practice on "
-                    "topic] must [change/adapt/reconsider]…” or “…the best "
-                    "solutions to [problem] involve…”",
+    "background": "“Studies of [topic] generally find that [current "
+                  "consensus]…”",
+    "gap": "“Yet [that account] cannot explain [observation], because "
+           "[reason].” or “What remains unclear is [specific unknown].”",
+    "aim": "“We therefore set out to determine [research question].”",
+    "methods": "“We [fitted/analysed/surveyed] [model, design or data] "
+               "from [setting, period]…”",
+    "findings": "“[Main outcome] was [value, with uncertainty] in [group], "
+                "compared with [comparator].”",
+    "significance": "“This means that [field/practice] should [specific "
+                    "change]…” or “[Decision-makers] could use this to "
+                    "[action].”",
 }
 
 _SENT_SPLIT = re.compile(r"(?<=[.!?])\s+")
@@ -152,10 +158,11 @@ def missing_moves(text: str) -> list[str]:
 
 @rule("AB802", "abstract-completeness", Category.IMPROVEMENT,
       "Abstract is missing one of the six moves (Belcher/Pallas).",
-      "A strong SciQua abstract is a microcosm of the paper: background "
-      "(conventional wisdom) → gap (problematization) → research question "
-      "→ methods → findings → significance. Reviewers scan for exactly "
-      "these; a missing move reads as a missing part of the argument. "
+      "A strong SciQua abstract compresses the whole paper into six moves: "
+      "background (conventional wisdom) → gap (problematization) → research "
+      "question → methods → findings → significance. Reviewers scan for "
+      "exactly these; a missing move reads as a missing part of the "
+      "argument. "
       "Run `researchly abstract` for the full breakdown with fill-in "
       "sentence frames for whatever is missing. (Belcher 2021; Pallas 2022 "
       "ch.7, via NG5001 Unit 2.)",

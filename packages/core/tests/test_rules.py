@@ -286,24 +286,28 @@ def test_g107_quiet_on_et_al():
 
 def test_g101_quiet_on_plain_long_subject_np():
     # long but uninterrupted subject NP — ordinary academic register
-    t = ("The coefficient for a classification of the upper risk decile of "
-         "operational capacity is presented below.")
+    # (12 words between subject and verb, but no comma/clause/apposition)
+    t = ("The proportion of cases in the oldest age band of the rural "
+         "cohort is shown below.")
     assert "G101" not in ids(t)
 
 
 def test_g104_quiet_on_method_by_phrase():
-    t = "Results\n\nThe power spectrum values are categorised by decile."
+    # by-phrase names a criterion, not a doer
+    t = "Results\n\nThe weekly incidence rates are stratified by region."
     assert "G104" not in ids(t)
 
 
 def test_g104_quiet_on_pronoun_topic_subject():
-    t = "Results\n\nIt is transmitted by the Aedes mosquitoes in urban areas."
+    # proper-noun agent, but the pronoun subject marks topic continuity
+    t = ("Results\n\nIt is distributed by the Ministry of Health in rural "
+         "districts.")
     assert "G104" not in ids(t)
 
 
 def test_g107_quiet_on_technical_proper_compound():
-    t = ("The posterior distribution was estimated using Markov chain "
-         "Monte Carlo simulations.")
+    t = ("Parameters were sampled with Markov chain Monte Carlo methods "
+         "in Stan.")
     assert "G107" not in ids(t)
 
 
@@ -314,7 +318,7 @@ def test_c303_quiet_on_purpose_infinitive():
 
 
 def test_c303_quiet_on_modal_calibrated():
-    t = "Discussion\n\nControl measures might lead to different outcomes."
+    t = "Discussion\n\nEarlier school closures might lead to fewer infections."
     assert "C303" not in ids(t)
 
 
@@ -334,13 +338,14 @@ def test_c303_aggregates_repeats():
 
 
 def test_c301_quiet_on_reporting_verb_plus_complement_modal():
-    t = "This suggests that a school closure policy may reduce burden."
+    # hedges within the window but split by the 'that' clause boundary
+    t = "This suggests that earlier testing may shorten outbreaks."
     assert "C301" not in ids(t)
 
 
 def test_f601_quiet_in_allcaps_title_zone():
-    t = ("MODELLING ENDEMIC DISEASES IN SPACE AND TIME FOR THE DEGREE OF "
-         "DOCTOR OF PHILOSOPHY")
+    t = ("SPATIAL MODELS OF RAIN AND DENGUE RISK IN CITY PARKS FOR THE "
+         "DEGREE OF DOCTOR OF PHILOSOPHY")
     assert "F601" not in ids(t)
 
 

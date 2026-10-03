@@ -34,11 +34,12 @@ def _is_heading_line(document: Document, start: int) -> bool:
       source="§5.2.1")
 def g101_subject_verb(doc, document: Document):
     # Dogfooding tune (8 theses, v0.1): plain long subject noun phrases
-    # ("The coefficient for a classification of the upper risk decile is…")
-    # are ordinary academic register and flagging them at gap>=8 produced
-    # ~5.5 flags/1000 words. G&S's target is the *interruption* — so we now
-    # require an interrupting structure (comma-bounded clause, relative
-    # clause, apposition, parenthesis) in the gap, and a gap of >= 10.
+    # (a head noun trailed by a chain of of/for/in prepositional phrases,
+    # with no comma or clause inside) are ordinary academic register, and
+    # flagging them at gap>=8 produced ~5.5 flags/1000 words. G&S's target
+    # is the *interruption* — so we now require an interrupting structure
+    # (comma-bounded clause, relative clause, apposition, parenthesis) in
+    # the gap, and a gap of >= 10.
     GAP = 10
     INTERRUPT_DEPS = {"relcl", "appos", "acl", "advcl", "parataxis"}
     for tok in doc:
@@ -176,11 +177,12 @@ def g103_nominalization_density(doc, document: Document):
       sections_excluded=("methods", "appendix"),
       source="§6")
 def g104_passive_agent(doc, document: Document):
-    # Dogfooding tunes: (1) "categorised by decile" — a by-phrase naming a
-    # method/criterion, not a doer — is not an agent-ful passive; require a
-    # proper-noun (or person-like) agent. (2) A pronoun subject ("It is
-    # transmitted by Aedes...") marks topic continuity — exactly the case
-    # where the guide says the passive is RIGHT — so we stay quiet.
+    # Dogfooding tunes: (1) a by-phrase naming a method or grouping
+    # criterion ("stratified by region"), not a doer, is not an agent-ful
+    # passive; require a proper-noun (or person-like) agent. (2) A pronoun
+    # subject ("It is distributed by X...") marks topic continuity — exactly
+    # the case where the guide says the passive is RIGHT — so we stay
+    # quiet.
     PERSON_LIKE = {"author", "authors", "researcher", "researchers",
                    "investigator", "investigators", "we"}
     for tok in doc:
@@ -427,12 +429,13 @@ def c303_causal(doc, document: Document):
 
 @rule("E702", "adversative-run", Category.IMPROVEMENT,
       "Consecutive sentences opening with However/Nevertheless — whiplash.",
-      "Use conjunctions effectively but not excessively, especially "
-      "adversatives: 'All models are wrong. However, they can be useful. "
-      "However, sometimes outputs are oversold.' Each 'However' reverses "
-      "direction; twice in a row and the reader loses the thread. Combine "
-      "with 'although', or restructure so one contrast carries the turn. "
-      "(Endo lecture, conjunctions.)",
+      "Endo's lecture advises using conjunctions deliberately, and "
+      "adversatives sparingly. Each 'However' reverses direction; two in "
+      "quick succession ('Surveys are costly. However, they find hidden "
+      "infections. However, assays cross-react.') leave the reader unsure "
+      "which way the argument points. Fold one contrast into an 'although' "
+      "clause, or restructure so a single turn carries it. (Endo lecture, "
+      "conjunctions.)",
       source="Endo")
 def e702_adversative_run(doc, document: Document):
     ADV = re.compile(r"^\s*(However|Nevertheless|Nonetheless|Yet|"
@@ -453,12 +456,12 @@ def e702_adversative_run(doc, document: Document):
 
 @rule("E703", "naked-this", Category.IMPROVEMENT,
       "Sentence-initial 'This' with no noun — what does it refer to?",
-      "This/that/it/which: what does it refer to? In a long preceding "
-      "sentence there may be multiple candidates. It looks clear to you "
-      "because you (only you) know what it is. Give 'This' a noun — 'This "
-      "assumption…', 'This discrepancy…', 'This 3-fold difference…' — and "
-      "the reference becomes checkable. (Endo lecture, ambiguous "
-      "reference.)",
+      "Endo's lecture flags this/that/it/which as a common source of "
+      "ambiguity: after a long sentence several referents are possible, and "
+      "the writer, who knows the intended one, does not notice the gap. "
+      "Give 'This' a noun — 'This assumption…', 'This discrepancy…', 'This "
+      "3-fold difference…' — and the reference becomes checkable. (Endo "
+      "lecture, ambiguous reference.)",
       source="Endo")
 def e703_naked_this(doc, document: Document):
     # Precision guard (Endo's own caveat): the reference is ambiguous when
@@ -487,12 +490,13 @@ def e703_naked_this(doc, document: Document):
 
 @rule("E707", "display-first-opener", Category.IMPROVEMENT,
       "'Figure 1 shows…' — lead with the finding, cite the figure after.",
-      "Results can still carry a narrative: instead of opening with 'Fig 1 "
-      "shows the estimated Rt values in city X', first summarise what the "
-      "results imply — 'Estimated Rt in city X showed a stable trend… "
-      "(Fig 1).' The reader gets the finding in the topic position and the "
-      "pointer in parentheses. (Endo lecture, Results section; kin to the "
-      "stress-position principle, guide §5.2.2.)",
+      "Endo's lecture recommends that Results keep a narrative: rather "
+      "than opening with what a display shows ('Figure 2 shows the weekly "
+      "incidence…'), state what the results mean and cite the display at "
+      "the end ('Weekly incidence peaked in July in every district "
+      "(Figure 2).'). The reader gets the finding in the topic position and "
+      "the pointer in parentheses. (Endo lecture, Results section; kin to "
+      "the stress-position principle, guide §5.2.2.)",
       sections_only=("results",),
       source="Endo", aggregate=True)
 def e707_display_first(doc, document: Document):

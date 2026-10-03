@@ -53,7 +53,7 @@ done and what's next*. Both the owner and Claude edit it.
 - [~] GitHub Actions: ruff + pytest + noise-floor gate + third-party scan + secret scan — workflows written; gitleaks clean locally over full history. *Done when* green on PR #1
 - [x] `ml/datasets.yaml` registry: 41 entries, licence + verified flag + permitted use + hash — 2026-10-03, 83421b5. Many licences unverifiable from the sandbox (proxy-blocked); marked unverified and narrowed
 - [x] Thesis-derived exemplars are not in shippable code — they stayed in `legacy/experiment-p21/` (verified by the registry audit)
-- [~] Remove third-party text found *inside* `packages/core` (Pallas exemplar abstract + frames, Endo lecture quotes in why-texts, ChenY thesis fragments, an NG5001 fixture): paraphrase-and-cite + synthetic fixtures; `ml/tools/check_third_party.py` in CI
+- [x] Remove third-party text found *inside* `packages/core` (Pallas exemplar abstract + frames, Endo lecture quotes in why-texts, ChenY thesis fragments, an NG5001 fixture) — 2026-10-03: paraphrased with attribution kept, original frames, synthetic fixtures. `check_third_party.py`: 19 hits → 0. Rule logic unchanged (string-blanked AST identical); tests 261 passed / 1 skipped. Several swapped fixtures now test their guard *more* strictly (C301, E703)
 - [x] Quarantine `move_clf.joblib` — it stays in `legacy/experiment-p21/`, not loaded by the engine, until the S5 bake-off
 - [x] Add S001 lexicon gaps: `estimand(s)`, `urbanicity`, `prespecified`, `lockdown(s)`, `serotypic`, `tradeoff(s)`, `exergy` — 2026-10-03, ee0057d; regression test fails without, passes with
 - [x] Update CLAUDE.md / AGENTS.md / README repo map + commands to the new layout — 2026-10-03
@@ -150,3 +150,6 @@ patterns of good research writing across disciplines, not just epidemiology.
 - [ ] Correct `docs/eval-corpora.md`: JFLEG and CWEB *do* declare CC BY-NC-SA 4.0 (registry audit, 2026-10-03)
 - [ ] PubMed-RCT declares no licence — decide before training anything shippable on it (S5)
 - [ ] `_to_delete/` holds tarballs that include thesis text; owner to confirm deletion **(Amriit)**
+- [ ] Pallas citation year: the book says © 2023; the repo says 2022 throughout — fix in one pass (code + docs)
+- [ ] `ng5001_getting_started_on_critical_reading.pdf` and `Writing conference abstract_compressed.pdf` are scans with no text layer, so the third-party scan can't see them; OCR them (or confirm nothing derives from them)
+- [ ] `docs/rule-inventory.md` may still quote old why-texts / Pallas frames — re-sync with the paraphrased versions
