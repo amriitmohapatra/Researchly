@@ -41,7 +41,7 @@ def service_mode() -> bool:
 
 @dataclass
 class TierStatus:
-    tier: str          # parser | spelling | grammar | gec
+    tier: str          # parser | spelling | grammar | gec | files
     label: str         # human name for the UI
     ok: bool           # is this tier contributing suggestions right now?
     state: str         # ready | missing | disabled | error | unstarted
@@ -498,6 +498,26 @@ def _gec_status(cfg: Optional[Config]) -> TierStatus:
         f"local edit tagger ({gec.get_backend().version}) — {where}")
 
 
+def _files_status() -> Optional[TierStatus]:
+    """The file readers (researchly.ingest). Reported only when degraded:
+    every surface reads LaTeX, but most never read a file, so a "ready"
+    line would be noise in Word's status bar. Degraded is news everywhere:
+    without pylatexenc LaTeX falls back to the regex masker, and without
+    defusedxml .docx cannot be read at all."""
+    missing = [m for m in ("pylatexenc", "defusedxml") if not _installed(m)]
+    if not missing:
+        return None
+    effects = []
+    if "pylatexenc" in missing:
+        effects.append("LaTeX markup is masked by a simpler fallback")
+    if "defusedxml" in missing:
+        effects.append(".docx files cannot be read")
+    return TierStatus("files", "File reading", False, "missing",
+                      f"{' and '.join(missing)} not installed: "
+                      f"{'; '.join(effects)}",
+                      "pip install " + " ".join(missing))
+
+
 def engine_status(cfg: Optional[Config] = None, nlp=None,
                   probe: bool = False) -> list[TierStatus]:
     """Status of every checking tier. Never raises; never downloads unless
@@ -506,12 +526,15 @@ def engine_status(cfg: Optional[Config] = None, nlp=None,
     for fn in (lambda: _parser_status(nlp),
                _spelling_status,
                lambda: _grammar_status(cfg, probe),
-               lambda: _gec_status(cfg)):
+               lambda: _gec_status(cfg),
+               _files_status):
         try:
-            out.append(fn())
+            status = fn()
         except Exception as e:                       # health must never fail
-            out.append(TierStatus("unknown", "Unknown", False, "error",
-                                  f"{type(e).__name__}: {e}"))
+            status = TierStatus("unknown", "Unknown", False, "error",
+                                f"{type(e).__name__}: {e}")
+        if status is not None:
+            out.append(status)
     return out
 
 
