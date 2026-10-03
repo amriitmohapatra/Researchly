@@ -25,10 +25,10 @@ const OFFLINE = "Could not reach your account. Check your connection and try aga
 /** A database or network failure as a sentence. Postgres's own text is for developers, not shown. */
 export function accountErrorMessage(err: DbError | null | undefined): string {
   switch (err?.code) {
-    case "23514": // check constraint: word length or whitespace
-      return "That word can't be added: words are 1 to 64 characters with no spaces.";
-    case "P0001": // the per-user word limit trigger
-      return "Your dictionary is full (5,000 words). Remove a word to add another.";
+    case "23514": // check_violation: the 5,000-word cap trigger, or the word-shape check
+      return /full/i.test(err.message ?? "")
+        ? "Your dictionary is full (5,000 words). Remove a word to add another."
+        : "That word can't be added: words are 1 to 64 characters with no spaces.";
     case "42501":
     case "PGRST301":
     case "PGRST303":
@@ -69,7 +69,8 @@ export function saveSettings(patch: Partial<UserSettings>): Promise<AccountResul
   return run(async (sb) => {
     const { data, error } = await sb
       .from("user_settings")
-      .upsert({ ...patch, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
+      // user_id defaults to auth.uid(); updated_at is set by a trigger.
+      .upsert(patch, { onConflict: "user_id" })
       .select("disabled_rules, show_preferences, locale")
       .maybeSingle();
     return error ? { ok: false, message: accountErrorMessage(error) } : { ok: true, data: normaliseSettings(data) };

@@ -122,6 +122,17 @@ export function Results({ data, submittedText, showPreferences, stale, busy, onR
 
       <HealthBanner health={data.health} />
 
+      {!source && (data.warnings?.length ?? 0) > 0 ? (
+        <div className="notice notice-quiet read-warnings" data-testid="read-warnings">
+          <p className="notice-title">Read with approximations</p>
+          <ul className="file-warning-list">
+            {data.warnings!.map((w, i) => (
+              <li key={i}>{w}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       {shown.length === 0 ? (
         <>
           {hiddenNote}

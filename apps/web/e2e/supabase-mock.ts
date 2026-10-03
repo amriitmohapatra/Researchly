@@ -133,7 +133,8 @@ export async function mockSupabase(page: Page, init: Partial<SupabaseState> = {}
       if (req.method() === "GET") return reply(route, 200, state.settings ? [state.settings] : []);
       if (req.method() === "POST") {
         const patch = JSON.parse(req.postData() || "{}") as Record<string, unknown>;
-        const base = state.settings ?? { disabled_rules: [], show_preferences: false, locale: "en-GB" };
+        // The table's defaults (supabase/migrations): locale en-US.
+        const base = state.settings ?? { disabled_rules: [], show_preferences: false, locale: "en-US" };
         const next = { ...base, ...patch } as Record<string, unknown>;
         delete next.updated_at;
         delete next.user_id;

@@ -7,6 +7,8 @@ import { formatLabel, isMultiFile } from "@/lib/source";
 interface Props {
   name: string;
   source: SourceInfo | null;
+  /** AnalyzeFileResponse.warnings (normally the same as source.warnings). */
+  extraWarnings?: readonly string[];
   words: number | null;
   loading: boolean;
   problem: string | null;
@@ -37,6 +39,7 @@ const nf = new Intl.NumberFormat("en-GB");
 export function FilePanel({
   name,
   source,
+  extraWarnings = [],
   words,
   loading,
   problem,
@@ -50,7 +53,7 @@ export function FilePanel({
 }: Props) {
   const ids = { title: useId(), prefs: useId(), note: useId() };
   const files = source ? new Set(source.segments.map((s) => s.path)).size : 0;
-  const warnings = source?.warnings ?? [];
+  const warnings = source ? [...new Set([...(source.warnings ?? []), ...extraWarnings])] : [];
   const meta = source
     ? [
         isMultiFile(source.segments) ? `${formatLabel(source.format)} project, ${files} files` : formatLabel(source.format),

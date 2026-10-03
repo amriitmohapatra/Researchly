@@ -38,16 +38,17 @@ describe("dictionary limits (as the database enforces them)", () => {
 
 describe("settings rows", () => {
   it("a missing row means defaults", () => {
-    expect(normaliseSettings(null)).toEqual({ disabled_rules: [], show_preferences: false, locale: "en-GB" });
+    // The table's defaults (locale en-US), so the page and the engine agree.
+    expect(normaliseSettings(null)).toEqual({ disabled_rules: [], show_preferences: false, locale: "en-US" });
   });
   it("drops values the table would not hold", () => {
     expect(
       normaliseSettings({ disabled_rules: ["G101", "bad id", "G101", 7], show_preferences: "yes", locale: "fr-FR" }),
-    ).toEqual({ disabled_rules: ["G101"], show_preferences: false, locale: "en-GB" });
-    expect(normaliseSettings({ disabled_rules: ["C120"], show_preferences: true, locale: "en-US" })).toEqual({
+    ).toEqual({ disabled_rules: ["G101"], show_preferences: false, locale: "en-US" });
+    expect(normaliseSettings({ disabled_rules: ["C120"], show_preferences: true, locale: "en-GB" })).toEqual({
       disabled_rules: ["C120"],
       show_preferences: true,
-      locale: "en-US",
+      locale: "en-GB",
     });
   });
   it("rule ids match the table's check", () => {
@@ -65,8 +66,11 @@ describe("settings rows", () => {
 
 describe("account error messages", () => {
   it("explain constraint and limit failures without Postgres's own words", () => {
-    expect(accountErrorMessage({ code: "23514", message: "new row violates check constraint" })).toContain("64 characters");
-    expect(accountErrorMessage({ code: "P0001", message: "dictionary limit" })).toContain("5,000");
+    expect(accountErrorMessage({ code: "23514", message: 'new row violates check constraint "dictionary_words_word_shape"' })).toContain(
+      "64 characters",
+    );
+    // The cap trigger raises check_violation too (supabase/migrations, researchly_dictionary_cap).
+    expect(accountErrorMessage({ code: "23514", message: "dictionary is full (5000 words)" })).toContain("5,000");
     expect(accountErrorMessage({ code: "PGRST301", message: "JWT expired" })).toContain("Sign in again");
     expect(accountErrorMessage({ message: "TypeError: Failed to fetch" })).toContain("connection");
     expect(accountErrorMessage({ code: "XX000", message: "internal detail" })).not.toContain("internal detail");

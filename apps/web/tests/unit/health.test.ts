@@ -38,6 +38,12 @@ describe("health banner logic", () => {
     expect(shouldBanner(t("parser", false, "missing"))).toBe(true);
   });
 
+  it("banners the files tier: it is only reported when degraded (S2)", () => {
+    const files = { ...t("files", false, "missing", "pylatexenc not installed: LaTeX markup is masked by a simpler fallback", "pip install pylatexenc"), label: "File reading" };
+    expect(shouldBanner(files)).toBe(true);
+    expect(healthBanners([files])[0]!.title).toBe("File reading is limited on this engine");
+  });
+
   it("builds calm titles with the engine's detail and remedy", () => {
     const banners = healthBanners([
       t("parser", true, "ready"),

@@ -4,8 +4,8 @@
  * Runs in the "chromium" project (playwright.config.ts).
  */
 import { expect, test } from "@playwright/test";
-import { SAMPLE_TEXT } from "./fixtures";
-import { check, mockEngine, paste } from "./helpers";
+import { happyResponse, SAMPLE_TEXT } from "./fixtures";
+import { check, json, mockEngine, paste } from "./helpers";
 
 test("without Supabase config there is no sign-in, upload or settings page", async ({ page, baseURL }) => {
   const sent = await mockEngine(page);
@@ -37,4 +37,17 @@ test("without Supabase config there is no sign-in, upload or settings page", asy
 
   const res = await page.goto(`${baseURL}/settings`);
   expect(res?.status()).toBe(404);
+});
+
+test("what was approximated while reading pasted text is shown quietly", async ({ page }) => {
+  await mockEngine(page, (_r, route) =>
+    json(route, 200, { ...happyResponse, warnings: ["The LaTeX could not be fully parsed; it was read with a simpler method."] }),
+  );
+  await page.goto("/");
+  await paste(page, SAMPLE_TEXT);
+  await check(page);
+  const note = page.getByTestId("read-warnings");
+  await expect(note).toContainText("Read with approximations");
+  await expect(note).toContainText("read with a simpler method");
+  await expect(page.getByTestId("suggestion-card")).toHaveCount(8);
 });

@@ -12,16 +12,16 @@ export interface UserSettings {
   locale: Locale;
 }
 
-/** A missing settings row means these (no row is created at sign-up). */
+/** A missing settings row means these (no row is created at sign-up); they match the table defaults. */
 export const DEFAULT_SETTINGS: Readonly<UserSettings> = {
   disabled_rules: [],
   show_preferences: false,
-  locale: "en-GB",
+  locale: "en-US",
 };
 
 export const LOCALES: readonly { value: Locale; label: string; example: string }[] = [
-  { value: "en-GB", label: "British English", example: "analyse, colour, modelling" },
   { value: "en-US", label: "American English", example: "analyze, color, modeling" },
+  { value: "en-GB", label: "British English", example: "analyse, colour, modelling" },
 ];
 
 export const MAX_WORD_CHARS = 64;

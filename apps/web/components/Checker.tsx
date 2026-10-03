@@ -380,6 +380,7 @@ export function Checker() {
           <FilePanel
             name={(pendingFile ?? fileChecked?.file)?.name ?? "Your file"}
             source={fileChecked?.data.document ?? null}
+            extraWarnings={fileChecked?.data.warnings}
             words={fileChecked?.data.metrics?.words ?? null}
             loading={loading}
             problem={fileProblem}
