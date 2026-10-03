@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Draft v1 for owner review — nothing here is built yet |
+| **Status** | Draft v1.1 — owner decisions D2–D8 recorded 2026-10-03; D1 (privacy wording) pending. Nothing built yet |
 | **Date** | 2026-10-03 |
 | **Owner** | Amriit (product owner, supervising) |
 | **Author** | Claude, acting as lead engineer, with staff-engineer, ML-research and platform sub-agent reports |
@@ -18,7 +18,7 @@ This document answers four questions:
 
 It is a map, not a build log. The build history stays in `docs/PROJECT_LOG.md`.
 
-Section 13 lists the decisions only the owner can make. The parts of this document that depend on them are marked **⟨OWNER⟩**.
+Section 13 records the owner's decisions. Anything still open is marked **⟨OWNER⟩**.
 
 ---
 
@@ -243,7 +243,7 @@ FastAPI wrapping `researchly-core`.
 - **Container image** includes spaCy plus the model, SymSpell dictionaries and ONNX models.
 - **LanguageTool runs as a sidecar container** in the same Cloud Run service, reached on localhost. That keeps the JVM out of the Python image.
 - **Settings.** It verifies Supabase JWTs and reads the caller's settings (mutes, dictionary, locale) from Postgres. These become the "remote" layer in `config.py`, so *a rule muted anywhere is muted everywhere*, in the cloud as well (this keeps `test_surface_parity.py`'s principle).
-- **Placement and scaling.** Region pinned to `asia-southeast1` ⟨OWNER: or EU⟩. It scales to zero; `min-instances=1` in term time is about $10–15/month to avoid cold starts.
+- **Placement and scaling.** Region pinned to `asia-southeast1` (Singapore; D3). It scales to zero; `min-instances=1` in term time is about $10–15/month to avoid cold starts.
 
 ### 5.3 Web app (`apps/web`)
 
@@ -283,7 +283,7 @@ The prototype's surfaces live on as the **maximum-privacy option**:
 - `pip install researchly`
 - `researchly check` / LSP for VS Code and Positron
 
-The **macOS menu-bar app and the Windows scaffold go into maintenance-only** ⟨OWNER⟩. The web app and Word add-in replace their purpose, and they cost the most to sign, notarise and package.
+The **macOS menu-bar app and the Windows scaffold go into maintenance-only** (D5). The web app and Word add-in replace their purpose, and they cost the most to sign, notarise and package.
 
 ### 5.7 ML workbench (`ml/`)
 
@@ -471,7 +471,7 @@ Each record follows the ch. 23.1 format: context, options, decision, and consequ
 - **Consequences:**
   - Two deploy targets instead of one.
   - CORS has to be configured between `app.` and `api.` domains.
-  - The Vercel **Hobby plan is non-commercial**. Moving to Pro ($20/month) is required the moment Researchly charges, takes donations or runs ads ⟨OWNER⟩.
+  - Researchly is **free** (D2), so Vercel's non-commercial Hobby plan is allowed, which saves $20/month. Hobby has no data-processing agreement (DPA). That is acceptable only because, by design, **no document text ever reaches Vercel**: it holds UI code and account settings only. Moving to Pro becomes mandatory the moment Researchly charges, takes donations or runs ads.
 
 ### ADR-04 — Formats via adapters to one `SourceDocument`
 
@@ -503,7 +503,7 @@ Each record follows the ch. 23.1 format: context, options, decision, and consequ
 
   The *explanation* always comes from the authored question and its source, never from the model.
 - **Outputs to the student** are a **Narrative map**, a per-section strip showing which moves are present, missing or out of order, plus a list of **missing links** (from `argument.py`). Each missing link has a lesson and, optionally, a **Pallas-style fill-in frame**: fixed, human-written templates such as "Although X has been studied, little is known about Y". These are curated text, not generated text, and are already part of the prototype.
-- **Exemplars** (example sentences from real papers) are kept **only from licence-clean sources**: CC-BY PMC-OA papers, with the licence recorded per sentence. The 1,539 thesis-derived exemplars are removed from shipped data unless permission is obtained ⟨OWNER⟩.
+- **Exemplars** (example sentences from real papers) are kept **only from licence-clean sources**: CC-BY PMC-OA papers, with the licence recorded per sentence. The 1,539 thesis-derived exemplars are removed from shipped data unless permission is obtained (D6).
 
 ### ADR-06 — Learned models: non-generative, calibrated, swappable; Laya gets a bake-off
 
@@ -548,9 +548,11 @@ Each record follows the ch. 23.1 format: context, options, decision, and consequ
   | **Owner-provided data** (the offer): own drafts with supervisor comments, annotated paragraphs, accept/dismiss logs | Highest value: in-domain and consented | Yes, if it's the owner's own text, or other people's with their consent |
   | PubMed RCT, CSAbstruct | Sentence roles | ⟨verify licences⟩ |
   | CaRS-50, RAAMove | Rhetorical moves | ⟨verify licences⟩ |
-  | AESW | Grammar evaluation only | **No** (CC BY-NC-SA) unless the product stays non-commercial ⟨OWNER⟩ |
+  | AESW | Grammar evaluation only | **Not by default** (CC BY-NC-SA). Researchly is free (D2), but a model trained on NC data would lock the product into staying free, so shipped models stay licence-clean unless the owner explicitly accepts that lock-in |
   | W&I+LOCNESS, NUCLE, FCE, JFLEG | Grammar evaluation only | **No** (non-commercial) |
   | The 8 sample theses | Private evaluation and noise floor only | **No**, without the authors' permission |
+
+  **`Notes_On_Writing/`** (D7) is the *knowledge* source, not training data. It contains course units (NG5001), Endo's lecture, Pallas, Shehzad, Omodan and the abstract-writing guides. They become **authored questions, rules and Learn cards**, each cited to its unit (the W5 re-mine). They are not suitable as training examples: they are *advice about* writing, not labelled writing, and they are third-party copyright, so Learn cards paraphrase and cite and never reproduce passages. The **papers and theses the owner adds later** go into `ml/datasets.yaml` with their licence. Open-access (CC-BY) papers can supply exemplars and training sentences; theses need their authors' permission before anything trained on them ships.
 
   The owner's offer of more training data is most valuable as **annotations**, for example 300–500 paragraphs labelled "states its point first? yes/no" or "gap stated? yes/no". The ML lead will produce a labelling guide and a small annotation tool in the web app's admin area.
 - **Consequences:**
@@ -615,20 +617,18 @@ Each slice ends with something the owner can **use**, not just a component (ch. 
 
 ---
 
-## 13. Decisions only the owner can make
+## 13. Owner decisions
 
-| # | Question | Recommendation |
+| # | Question | Decision (2026-10-03) |
 |---|---|---|
-| D1 | Wording of the amended non-negotiable #2 (ADR-02) | Accept the "Confidential by design" text, which keeps a local mode |
-| D2 | Free, or paid (now or later)? | Decide before S6. Paid means Vercel Pro, DPAs, Stripe, and no non-commercial-licensed data or models in shipped artefacts |
-| D3 | Hosting region | Singapore (`sin1` + `asia-southeast1` + Supabase SG). Add EU later if the user base needs it |
-| D4 | Baseline tree (ADR-01) | `Researchly_Updated_14082026`, with Experiment features ported behind flags |
-| D5 | Fate of the macOS app and Windows scaffold | Maintenance-only; CLI and LSP remain as local mode |
-| D6 | The 8 sample theses | Keep for private evaluation only. Remove thesis-derived exemplars from anything shipped, unless the authors grant permission |
-| D7 | Training data you can provide | Most valuable: your own drafts with supervisor comments, plus a few hundred labelled paragraphs, using a labelling guide we'll write |
-| D8 | Laya | Adopt **only** via the S5 bake-off; never zero-shot |
-
----
+| D1 | Wording of the amended non-negotiable #2 (ADR-02) | **Pending.** The owner asked for clarification |
+| D2 | Free or paid? | **Free.** Vercel Hobby is allowed (no document text reaches Vercel). NC-licensed data stays out of shipped models so the decision can be revisited |
+| D3 | Hosting region | **Singapore**: Vercel `sin1`, Cloud Run `asia-southeast1`, Supabase Singapore |
+| D4 | Baseline tree (ADR-01) | **`Researchly_Updated_14082026`**. Experiment features are ported behind flags |
+| D5 | macOS app and Windows scaffold | **Maintenance-only.** CLI and LSP remain as local mode |
+| D6 | The 8 sample theses | **Private evaluation only.** Thesis-derived exemplars are removed from shipped data |
+| D7 | Training data | **`Notes_On_Writing/`** is the knowledge source (rules, questions, Learn cards via the W5 re-mine). Research papers and theses the owner adds later go through the dataset registry with licences |
+| D8 | Laya | **Adopt only via the S5 bake-off**; never zero-shot |
 
 ## 14. How the work is organised (the "one-person company")
 

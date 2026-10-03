@@ -17,20 +17,20 @@ done and what's next*. Both the owner and Claude edit it.
   slice until the previous slice's exit check is ticked.
 - Substantive work still gets a dated entry in `docs/PROJECT_LOG.md`.
 
-**Current slice: S0 — Foundation** (blocked on owner decisions D1–D8 below)
+**Current slice: S0 — Foundation.** D2–D8 are decided. D1 only blocks work that would send text to a server (S1 onward), so S0 can start.
 
 ---
 
-## Owner decisions (block S0) — see ARCHITECTURE.md §13
+## Owner decisions — see ARCHITECTURE.md §13
 
-- [ ] **D1** Approve/edit the new non-negotiable #2 wording ("Confidential by design", ADR-02) **(Amriit)**
-- [ ] **D2** Free or paid — now or later? **(Amriit)**
-- [ ] **D3** Hosting region — Singapore recommended **(Amriit)**
-- [ ] **D4** Baseline tree — `Researchly_Updated_14082026` recommended **(Amriit)**
-- [ ] **D5** macOS app & Windows scaffold → maintenance-only? **(Amriit)**
-- [ ] **D6** Sample theses: private evaluation only; strip thesis exemplars from shipped data? **(Amriit)**
-- [ ] **D7** What training data / annotation time can you provide? **(Amriit)**
-- [ ] **D8** Laya: adopt only via the S5 bake-off? **(Amriit)**
+- [ ] **D1** Approve/edit the new non-negotiable #2 wording ("Confidential by design", ADR-02) **(Amriit)** — clarification sent 2026-10-03
+- [x] **D2** Free — 2026-10-03. Vercel Hobby OK; shipped models stay licence-clean
+- [x] **D3** Singapore — 2026-10-03
+- [x] **D4** `Researchly_Updated_14082026` is the baseline — 2026-10-03
+- [x] **D5** macOS app & Windows scaffold → maintenance-only — 2026-10-03
+- [x] **D6** Sample theses: private evaluation only; thesis exemplars stripped from shipped data — 2026-10-03
+- [x] **D7** `Notes_On_Writing/` = knowledge source (W5 re-mine); papers/theses added later via the dataset registry — 2026-10-03
+- [x] **D8** Laya only via the S5 bake-off — 2026-10-03
 
 ---
 
@@ -40,8 +40,9 @@ done and what's next*. Both the owner and Claude edit it.
 - [x] Codebase audit, Laya identification, hosting research (3 sub-agents) — 2026-10-03
 - [x] Write `ARCHITECTURE.md` draft v1 — 2026-10-03
 - [x] Create `PLAN.md` — 2026-10-03
-- [ ] Owner reviews ARCHITECTURE.md and answers D1–D8 **(Amriit)**
-- [ ] Revise ARCHITECTURE.md to v1.1 with the answers; amend CLAUDE.md non-negotiable #2
+- [~] Owner reviews ARCHITECTURE.md and answers D1–D8 **(Amriit)** — D2–D8 answered 2026-10-03
+- [x] Revise ARCHITECTURE.md to v1.1 with D2–D8 — 2026-10-03
+- [ ] Amend CLAUDE.md non-negotiable #2 once D1 is signed off
 
 ## S0 — Foundation (one repo, green CI; no user-visible change)
 
@@ -50,7 +51,7 @@ done and what's next*. Both the owner and Claude edit it.
 - [ ] Merge P19–P21 entries into root `docs/PROJECT_LOG.md`
 - [ ] Fix the Linux-only test failure (`test_jdk_found_with_a_finder_launch_environment`)
 - [ ] GitHub Actions: ruff + pytest + noise-floor gate + secret scan — *done when* all baseline tests green in CI on a PR
-- [ ] `ml/datasets.yaml` registry: every corpus with source, licence, permitted use, hash
+- [ ] `ml/datasets.yaml` registry: every corpus with source, licence, permitted use, hash — including the papers/theses the owner will add (D7)
 - [ ] Remove thesis-derived exemplars from shippable data (per D6); re-source from CC-BY PMC-OA with per-sentence licence
 - [ ] Replace `move_clf.joblib` loading with a non-pickle format (or quarantine it to `ml/` until S5)
 - [ ] Add S001 lexicon gaps: `estimand(s)`, `urbanicity`, `prespecified`, `lockdowns`, `serotypic`, `tradeoff`, `exergy`
@@ -124,5 +125,5 @@ done and what's next*. Both the owner and Claude edit it.
 
 - [ ] Browser "Private mode" (Pyodide core + ONNX parser) — revisit after S4
 - [ ] Harper (WASM grammar) as an alternative to LanguageTool for the private mode
-- [ ] W5 knowledge re-mine of `Notes_On_Writing/` → new authored questions
+- [ ] W5 knowledge re-mine of `Notes_On_Writing/` → authored questions, rules, Learn cards (paraphrased + cited, never reproduced) — now the primary knowledge source (D7); schedule alongside S4
 - [ ] Wire `document_type` / `aggressiveness` config into behaviour (stored but unused today)
