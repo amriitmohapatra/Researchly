@@ -117,8 +117,12 @@ is merged, `main` still has the old prototype layout: no `apps/web`, no
    with no trailing slash or path.
 4. If you added yourself as a reviewer, approve the run.
 5. When it turns green, open the run's **Summary**. It shows the engine
-   URL, for example `https://researchly-engine-abc-as.a.run.app`, and the
-   health of every tier.
+   URL, for example
+   `https://researchly-engine-123456789012.asia-southeast1.run.app`, and the
+   health of every tier. **Use this URL.** The Cloud Run console may also
+   show an older-style address (`…-xxxxxxxxxx-as.a.run.app`). The owner's
+   first build used that one and the page could not reach the engine until
+   it was switched to the Summary URL (2026-10-03).
 
 ## 6. Connect the two (about 3 minutes)
 
@@ -127,20 +131,39 @@ is merged, `main` still has the old prototype layout: no `apps/web`, no
    **Config**, for Production and Preview, and no trailing slash. If the old
    placeholder was saved as Secret, delete it and add it again (see the note
    in step 4.3).
-2. Go to **Deployments**, open the latest one, choose **⋯ → Redeploy**. The
-   engine address is built into the page and its security policy, so a
-   redeploy is needed.
+2. Go to **Deployments**, open the latest one, choose **⋯ → Redeploy**, and
+   make sure the environment is **Production**, not Preview. The engine
+   address is built into the page and its security policy, so a redeploy is
+   needed.
+
+   > **Why did my address change after redeploying?** Every deployment gets
+   > its own address (`researchly-abc123-you.vercel.app`). Your stable
+   > address, for example `researchly-chi.vercel.app`, moves to a new
+   > deployment only when it is a **Production** one. A **Preview** redeploy
+   > leaves the stable address on the old build, and its own address is
+   > blocked by the engine (see "Previews can't reach the production engine"
+   > below). If you redeployed as Preview, open it and choose **⋯ → Promote
+   > to Production**. (The owner hit this, 2026-10-03.)
 
 ## 7. Check it works (2 minutes)
 
-1. Open your Vercel address, click **Insert an example draft**, then
-   **Check**.
+1. Open your **stable** Vercel address (the one under **Domains** on the
+   project page, e.g. `researchly-chi.vercel.app`), click **Insert an
+   example draft**, then **Check**. The **Visit** button on a deployment
+   opens that deployment's own address instead, which the engine rejects.
 2. You should see suggestions, highlights and no warning banner. The first
    check after a quiet period can take about 10 seconds while the engine
    wakes up; later ones take well under a second.
 3. Tell me the two addresses (website and engine). I'll run the latency
    measurements against the real deployment and tick the S1 boxes in
    `PLAN.md`.
+
+> **"Could not reach the checking engine"?** The message names the engine
+> address it tried. If that address is not the one from step 5.5, the site
+> was built with an old value: fix `NEXT_PUBLIC_ENGINE_URL` (step 6.1) and
+> redeploy **to Production** (step 6.2). If the address is right, check you
+> are on the stable address (step 7.1), and that the engine's
+> `allowed_origins` (step 5.3) is exactly that address.
 
 ---
 

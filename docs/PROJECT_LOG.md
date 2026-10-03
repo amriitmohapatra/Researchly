@@ -1026,3 +1026,65 @@ takes 74 s and 2.8 GiB.
 **Waiting on the owner:** `docs/deploy.md` steps 1–6 (GCP project, bootstrap,
 repository variables, Vercel, first deploy). After that, the latency
 measurements on the real deployment and the S1 exit check.
+
+## 2026-10-03 (later) — P25: S1 live — deployed, measured, and what the live check found
+
+**What:** the owner deployed the engine (Cloud Run, Singapore, with the
+LanguageTool sidecar) and the web app (Vercel, `researchly-chi.vercel.app`)
+by following `docs/deploy.md`. Claude then checked the live site end to end
+and measured it.
+
+**Evidence:**
+- Live headless-Chromium run against the production alias: HTTP 200,
+  suggestions rendered, no console or CSP errors. The owner confirmed it in
+  their own browser.
+- Parity: the live engine and the local engine returned the same 63
+  suggestions on a synthetic 10,316-word chapter.
+- Latency (`bench.py --url`, warm, measured from Claude's cloud sandbox):
+
+| Request | Engine time (p50) | Wall time from sandbox (p95) | Target |
+|---|---|---|---|
+| 311-word paragraph | 484 ms | 2.02 s | 800 ms |
+| 10,228-word chapter | 6.89 s | 9.35 s | 6 s |
+
+  The paragraph meets Q1 on engine time; wall time includes about 1.4 s of
+  network from the sandbox and needs re-measuring from Singapore. The
+  chapter misses Q2 even on engine time: Cloud Run's CPU is slower than the
+  local container (4.68 s there). Running spaCy and LanguageTool in
+  parallel is now an S1 task, not an Inbox idea.
+
+**Deployment snags the owner hit (now in `docs/deploy.md`):**
+- `apps/web` was missing from Vercel's Root Directory picker until the PR
+  was merged; setting it afterwards under Settings worked.
+- A `NEXT_PUBLIC_` variable saved as Secret can't be changed to Config;
+  delete and re-add it.
+- A **Preview** redeploy doesn't move the stable address, and its own
+  address is refused by the engine's origin allow-list. Redeploy (or
+  promote) to **Production**.
+- The first build used the Cloud Run console's older-style engine address;
+  the page couldn't reach the engine until it used the deploy Summary's URL.
+
+**Fixed from the live check (4187ded):**
+- **The reading key taught false categories.** It showed "seven day window"
+  as a Convention (no rule flags it) and "utilize" as a Preference (W201
+  calls it an Improvement). The specimens now live in
+  `packages/contract/reading-key.json`, exported to the web app as
+  `READING_KEY`, and `packages/core/tests/test_reading_key.py` runs each one
+  through `api.analyze` and checks the exact span gets the stated category.
+  New specimens: "proven" (C302) and "very" (W204). The test also caught
+  that "In order to fit the model" on its own reads as a heading and is
+  skipped, so the specimen became a full sentence.
+- The "Could not reach the checking engine" message now names the engine
+  host it tried, which would have diagnosed the stale-URL build at once.
+- `bench.py --n-chapter 0` crashed on NaN; a 0 count now skips that size.
+
+**Lessons:**
+- **Anything the UI teaches about the engine needs a test against the
+  engine.** The key's examples were written from memory of the rules, and
+  two of four were wrong. Shared data plus an engine-side test makes the
+  drift a red build.
+- **Error messages should carry the one fact that separates causes.** A
+  wrong build-time address and a dropped connection looked identical.
+
+**Open:** Q2 latency on Cloud Run; the owner's real-chapter exit check
+(paste a chapter on the live site, compare with the CLI).
