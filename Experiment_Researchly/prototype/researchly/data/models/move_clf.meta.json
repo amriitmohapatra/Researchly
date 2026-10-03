@@ -1,0 +1,56 @@
+{
+ "version": "moves-v0-tfidf-logreg-20260814",
+ "corpus": "PubMed 20k RCT (Dernoncourt & Lee 2017)",
+ "labels": [
+  "BACKGROUND",
+  "CONCLUSIONS",
+  "METHODS",
+  "OBJECTIVE",
+  "RESULTS"
+ ],
+ "seed": 20260814,
+ "trained": "2026-08-16",
+ "sklearn": "1.8.0",
+ "n_train": 180040,
+ "n_test": 30135,
+ "max_features": 75000,
+ "test_accuracy": 0.8255,
+ "abstention_curve": [
+  {
+   "threshold": 0.0,
+   "coverage": 1.0,
+   "accuracy": 0.8255
+  },
+  {
+   "threshold": 0.4,
+   "coverage": 0.9813,
+   "accuracy": 0.8343
+  },
+  {
+   "threshold": 0.5,
+   "coverage": 0.9309,
+   "accuracy": 0.8532
+  },
+  {
+   "threshold": 0.6,
+   "coverage": 0.8446,
+   "accuracy": 0.8827
+  },
+  {
+   "threshold": 0.7,
+   "coverage": 0.7603,
+   "accuracy": 0.9087
+  },
+  {
+   "threshold": 0.8,
+   "coverage": 0.6599,
+   "accuracy": 0.9335
+  },
+  {
+   "threshold": 0.9,
+   "coverage": 0.5205,
+   "accuracy": 0.958
+  }
+ ],
+ "notes": "Linear v0. 'gap' has no labelled corpus and stays lexicon-detected. Swap point: researchly/moves.py."
+}

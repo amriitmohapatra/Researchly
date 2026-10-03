@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+  <title>Researchly</title>
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <link rel="stylesheet" href="taskpane.css" />
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="logo">R</span>
+      <div>
+        <h1>Researchly</h1>
+        <p class="tagline">section-aware suggestions for scientific writing</p>
+      </div>
+    </div>
+    <div id="status" class="status">connecting to local server…</div>
+  </header>
+
+  <div class="controls">
+    <button id="checkBtn" class="primary" disabled>Check document</button>
+    <button id="polishBtn" class="primary alt" disabled>Polish selection</button>
+    <label class="toggle">
+      <input type="checkbox" id="autoChk" />
+      <span>re-check as I type</span>
+    </label>
+  </div>
+
+  <div id="polishPanel" class="polish hidden">
+    <div class="polish-head">
+      <b>Polish — rule-composed rewrite</b>
+      <span class="dim-note">every change traceable, no AI generation</span>
+    </div>
+    <div id="polishDiff" class="polish-diff"></div>
+    <div id="polishEdits" class="polish-edits"></div>
+    <div class="actions polish-actions">
+      <button id="polishInsert" class="apply">Insert (tracked)</button>
+      <button id="polishDiscard">Discard</button>
+    </div>
+  </div>
+
+  <div class="controls secondary-row">
+    <label class="toggle small">
+      <input type="checkbox" id="trackChk" checked />
+      <span>apply fixes as tracked changes</span>
+    </label>
+    <label class="toggle small">
+      <input type="checkbox" id="prefChk" />
+      <span>show preferences</span>
+    </label>
+  </div>
+
+  <div id="summary" class="summary hidden"></div>
+  <div id="tiers" class="tiers hidden"></div>
+  <div id="muted" class="muted-line hidden"></div>
+
+  <main id="results">
+    <div class="empty">
+      <p>Start the local server, then click <b>Check document</b>.</p>
+      <p class="dim">Your text is analysed on this computer only — nothing
+      is uploaded anywhere.</p>
+    </div>
+  </main>
+
+  <footer id="metrics" class="metrics hidden"></footer>
+
+  <script src="taskpane.js"></script>
+</body>
+</html>

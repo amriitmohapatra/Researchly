@@ -1,0 +1,325 @@
+# Inferring change points in the spread of COVID-19 reveals the effectiveness of interventions
+# Dehning et al. · Science 2020 · user-provided PDF (OCR)
+
+Science
+
+RESEARCH ARTICLES
+
+Inferring change points in the spread of COVID-19 reveals the effectiveness of interventions
+
+Jonas Dehning"™, Johannes Zierenberg', F. Paul Spitzner™, Michael Wibral’, Joao Pinheiro Neto’,
+
+Michael Wilczek'**, Viola Priesemann!'***+}
+
+1Max Planck Institute for Dynamics and Self-Organization, Am FaBberg 17, 37077 Gottingen, Germany. Campus Institute for Dynamics of Biological Networks, University of
+Gottingen, Hermann-Rein-StraBe 3, 37075 Gottingen, Germany. “Institute for the Dynamics of Complex Systems, University of Géttingen Friedrich-Hund-Platz 1, 37077
+Gottingen, Germany. “Bernstein Center for Computational Neuroscience, Hermann-Rein-Str. 3, 37075 Gottingen, Germany.
+
+*These authors contributed equally to this work.
+
+}Corresponding author. E-mail: viola.priesemann@ds.mpg.de
+
+As COVID-19 is rapidly spreading across the globe, short-term modeling forecasts provide time-critical information for decisions on containment and mitigation strategies. A major challenge for short-term forecasts is the assessment of key epidemiological parameters and how they change when first interventions show an effect. By combining an established epidemiological model with Bayesian inference, we analyze the time dependence of the effective growth rate of new infections. Focusing on COVID-19 spread in Germany, we detect change points in the effective growth rate that correlate well with the times of publicly announced interventions. Thereby, we can quantify the effect of interventions, and we can incorporate the corresponding change points into forecasts of future scenarios and case numbers. Our code is freely available and can be readily adapted to any country or region.
+
+During the initial outbreak of an epidemic, reliable shortterm forecasts are key to estimate medical requirements and capacities, and to inform and advise the public and decision makers (7). During this initial phase, three tasks are important to provide time-critical information for crisis mitigation: (i) establishing central epidemiological parameters, such as the basic reproduction number, that can be used for short-term forecasting; (ii) simulating the effects of different possible interventions aimed at the mitigation of the outbreak; (iii) estimating the actual effects of the measures taken not only to make rapid adjustments but also to adapt shortterm forecasts. Tackling these tasks is challenging due to the large statistical and systematic errors that occur during the initial stages of an epidemic when case numbers are low. This is further complicated by the fact that mitigation measures are taken rapidly while the outbreak unfolds, but they take effect only after an unknown delay. To obtain reasonable parameter estimates for short-term forecasting and policy evaluation despite these complications, any prior knowledge available needs to be integrated into modeling efforts to reduce uncertainties. This includes knowledge about basic mechanisms of disease transmission, recovery, as well as preliminary estimates of epidemiological parameters from other countries, or from closely related pathogens. The integration of prior knowledge, the quantitative assessment of the remaining uncertainties about epidemiological parameters, and the principled propagation of these uncertainties into forecasts is the domain of Bayesian modeling and inference (2, 3).
+
+Here, we draw on an established class of models for epidemic outbreaks: The Susceptible-Infected-Recovered (SIR) model (4-7) specifies the rates that population compartments change over time, i.e., when susceptible people become infectious, and when infectious people recover. This simple model can be formulated in terms of coupled ordinary differential equations (in mean field), which enable analytical treatment (8, 9) or fast evaluation (ideally suited for Bayesian inference). Accordingly, SIR-like models have been used to model epidemic spreads, from Bayesian Markov Chain Monte Carlo (MCMC) parameter estimation (10-12) to detailed scenario discussions (13-16). This family of models has played a dominant role in the analyses of the coronavirus (SARS-CoV-2) pandemic, from inference (17-19) through scenario forecasting (20-27) to control strategies (28, 29).
+
+We combine the SIR model (and generalizations thereof) with Bayesian parameter inference and augment the model by a time-dependent spreading rate. The time dependence is implemented via potential change points that reflect changes in the spreading rate driven by governmental interventions.
+Based on three distinct measures taken in Germany, we detect three corresponding change points in the reported
+COVID-19 case numbers. by April 1, 2020 we reported evidence for the first two change points, and predicted the third (30). Now, with data until April 21, we have evidence for all three change points. First, the spreading rate decreased from
+
+ (Page numbers not final at time of first release) 1
+[0.20,0.30] ), with this decrease initiated around March 7 (CI
+
+[3, 10]). This matches the cancellation of large public events, such as trade fairs and soccer matches. Second, the spreading
+ rate decreased further to 0.15 (CI [0.12,0.20]) initiated
+ around March 16 (CI [14, 18]). This matches closure of schools, childcare facilities, and non-essential stores. Third,
+ the spreading rate decreased further to 0.09 (CI [0.06,0.13])
+ initiated around March 24 (CI [21, 26]). This corresponds to the strict contact ban, which was announced on March 22.
+While the first two change points were not sufficient to trigger a shift from the growth of novel cases to a decline, the third change point brought this crucial reversal.
+
+Our framework is designed to infer the effectiveness of past measures and to explore potential future scenarios along with propagating the respective uncertainties. In the following, we demonstrate the potential impact of timing and magnitude of change points, and report our inference about the three past governmental interventions in Germany. Our framework can be readily adapted to any other country or region. The code (already including data sources from many other countries), as well as the figures are all available on
+Github (3D).
+
+Basic inference of central epidemiological parameters during the initial phase of the outbreak in Germany
+To assess the general effect of different possible interventions on the spread of COVID-19 in Germany, we first focus on the initial phase of the outbreak when no serious mitigation measures were implemented. In the absence of interventions, an epidemic outbreak can be described by SIR models with constant spreading rate (Methods). In Germany, the first serious interventions occurred around March 9, 2020 and affected the case reports after an observation delay (a combination of incubation period with a median 5-6 days (32)) and a test delay (time until doctor is visited plus testevaluation time that we assumed to be both about 2-3 days).
+Hence, to infer central epidemiological parameters, we considered the initial phase to be March 2 to March 15. The central epidemiological parameters estimated here will also be estimated under the full model with change points on the data records up to April 21, allowing for a consistency check.
+We perform Bayesian inference for the central epidemiological parameters of an SIR model using Markov-Chain
+Monte Carlo (MCMC) sampling (Fig. 1). The central parameters are the spreading rate 2 , the recovery rate u , the reporting delay D and the number of initially infected people /, .
+We chose informative priors based on available knowledge for 2, » and D , and we chose uninformative priors for the
+ remaining parameters (Methods). Also, we intentionally kept the informative priors as broad as possible, such that the data
+
+ would constrain the parameters (Fig. 1).
+
+As median estimates, we obtain for the spreading rate the posterior distributions and the 95% credible intervals).
+Converted to the basic reproduction number Rk, =2/, we with previous reports that find median values between 2.3 and 3.3 (18, 33, 34). Overall, the model shows good agreement with both new cases (Fig. 1 A) and cumulative cases (Fig. 1 B), which show the expected exponential growth (linear in loglin plot). The observed data are clearly informative about 2 ,
+1, and o (indicated by the difference between the priors (gray line) and posteriors (histograms) in Fig. 1, D to F). However, » and D are largely determined by our prior choice of parameters (histograms match gray line in Fig. 1, C and H).
+This is to be expected for the initial phase of an epidemic outbreak, which is dominated by exponential growth.
+
+To quantify the impact of possible interventions, we concentrate on the effective growth of active infections before and after the intervention. As long as the number of infections and recoveries are small compared to the population size, the number of active infections per day can be approximated by an exponential growth (Fig. 1, A and B) with effective growth rate 1 = 2-4 (see Methods). As a consequence,
+> and » cannot be estimated independently. This is further supported by a systematic scan of the model’s log-likelihood in the (4 -» )-space that shows an equipotential line for the maximum likelihood (Fig. 11). This strongly suggests that the growth rate 1° is the relevant free parameter with a median
+2% = 28% (Fig. 1G). The control parameter of the dynamics in the exponential phase is thus the (effective) growth rate: If the growth rate is larger than zero (4 >» ), case numbers grow exponentially; if the growth rate is smaller than zero (
+2% <p ), recovery dominates and new cases decrease. The two different dynamics (supercritical and subcritical, respectively) are separated by a critical point at 1 =0 (4 = » ) (35).
+
+Magnitude and timing of interventions matter for the mitigation of the outbreak
+
+To simulate the effect of different possible interventions, we model the effects of interventions as change points in the spreading rate (Methods). We consider different, hypothetical interventions following the initial phase to show that both, the amount of change in behavior (leading to a change in spreading rate 2; Fig. 2A) and the exact timing of the change (Fig. 2B) determine future development. Hypothetical interventions build on the inferred parameters from the initial phase (in particular median 2, =0.41 and median
+ (Page numbers not final at time of first release) 2 u = 0.12 ; Fig. 1) and were implemented as change points in the spreading rate from the inferred 1, to a new value 4,.
+
+With such a change point, we model three potential scenarios of public behavior:
+ (i) No social distancing: Public behavior is unaltered and spread continues with the inferred rate (2, = 2, with median
+ (ii) Mild social distancing: The spreading rate decreases
+ people effectively reduce the number of contacts by a factor of two in this second scenario, the total number of reported cases continues to grow alongside scenario (i) for the time period of the reporting delay D (median D = 8.6 from initial phase, see below for a more constrained estimation). Also, we still observe an exponential increase of new infections after the intervention becomes effective, because the growth rate
+ (iii) Strong social distancing: Here, the spreading rate decreases to 10% , (a, =a, /10 with median a, = 0.04 <u ). The
+ assumptions here are that contacts are severely limited, but even when people stay at home as much as possible, some contacts are still unavoidable. Even under such drastic policy changes, no effect is visible until the reporting delay Dis over. Thereafter, a quick decrease in daily new infections manifests within two weeks (delay plus change point duration), and the total number of cases reaches a stable plateau.
+Only in this last phase is a plateau reached, because here the growth rate becomes negative, »° < 0 , which leads to decreasing numbers of new infections.
+
+In this, the timing of an intervention matters: Apart from the strength of an intervention, its onset time has great impact on the total case number (Fig. 2, B and C). For example, focusing on the strong intervention (iii), by which a stable plateau is reached, the effect of advancing or delaying the change point by just five days leads to more than a three-fold difference in cumulative cases.
+
+While we find that the timing of an intervention has a great effect on case numbers, the duration over which the change takes place has only minor effect if the intervals of change are centered around the same date. In Fig. 2C we illustrate the adjustment of 2, > a, for mild social distancing with durations of
+14, 7 and 1 day(s). The change point duration is a simple way to incorporate variability in individual behavior, and is not linked to the reporting delay p . As an interesting effect, a sudden change in the spreading rate can lead to a temporary decrease of new case numbers, despite the fact that the effective growth rate remains positive at all times.
+
+Change point detection for the spread of COVID-19 in
+
+Germany
+To model real-world data, we further refined the SIR model.
+
+Most importantly, we account for systematic variations of case reports throughout the week, in particular lower case numbers on the weekend, by explicitly modeling a weekly reporting modulation (see Methods). Indeed, comparisons confirm that models with this correction outperform those without (see table S2). In the supplemental material, we further generalize our model to include an explicit incubation period (as in SEIR models; fig. $3) that yields results consistent with our main model.
+
+We incorporate the effect of governmental interventions into our models by introducing flexible change points in the spreading rate (see Methods). During the COVID-19 outbreak in Germany, governmental interventions occurred in three stages from (i) the cancellation of large events with more than 1000 participants (around March 9), through (ii) closing of schools, childcare facilities and the majority of stores (in effect March 16), to (iii) the contact ban and closing of all non-essential stores (in effect March 23). The aim of all these interventions was to reduce the (effective) growth rate
+2» =2%-,. As soon as the growth rate becomes negative (
+
+2 <0), the number of new confirmed infections decreases after the respective reporting delay.
+
+Detecting change points in the spreading rate and quantifying the amount of change as quickly as possible becomes a central modeling challenge when short-term forecasts are required. To address this challenge, we assume an initial spreading rate 1, (the exponential growth phase; Fig. 1) and up to three potential change points motivated by German governmental interventions: In our modelling the first change point (a, > 2, ) is expected around March 9 (:,) asa
+ result of the official recommendations to cancel large events.
+A second change point (1, > 2, ) is expected around March
+16 (1, ), when schools and many stores were closed. A third change point (2, > 2,) is expected around March 23 (1, ), when all non-essential stores were closed, and a contact ban was enacted. We model the behavioral changes that are introduced at these change points to unfold over a few days (
+At,), but the changes in duration can be partly compensated
+ by changes in the onset time (:,) (see Fig. 2C, scenarios). We
+ chose priors for all parameters based on the information available to us up to March 28 (see Methods). In addition, we performed a sensitivity analysis by employing wider priors in the supplemental material (figs. S5 to S7 and table $2), which yielded consistent results. On March 28, the data were already informative about the first change point, and thereby helped to inform our forecast scenarios.
+
+The inferred parameters for the models with change points are consistent with the inferred parameters from the exponential onset phase (Figs. 1 and 3 and figs. S1 and S2). In
+ (Page numbers not final at time of first release) 3 particular, all estimated 2, -values from models with multiple change points are compatible with the value of the model without change points (during the exponential onset phase,
+
+March 15; Fig. 1E). Also the scale factor « and the number of initial infections 7, for the models with change points are
+ consistent with the initial model inference during the exponential onset phase (Fig. 1, D to F).
+
+Models with two or three change points fit the observed data better
+
+The models with three change points describe the data better than models with fewer change points, as indicated by the leave-one-out (LOO) cross-validation-based Bayesian model comparison (36) (lowest LOO-score in Table 1). However, the
+LOO-scores of the model with two and three change points differ by less than one standard error. This originates from an extended duration of the second change point in the twochange-point model, which partially captures the effect of the third intervention. As expected, the models with none or a single change point have LOO-scores that are at least one standard deviation higher (worse) than those of the best models, and we will not consider them further.
+
+When comparing our inference based on three change points to the number of confirmed cases, we find them to largely match (Fig. 3, B and C). The dominant periodic change in the daily new reported cases (Fig. 3B) is well described by the weekday modulation. In addition to the periodic change, the daily new case numbers also reflect the fairly sudden change of the spreading rate at the change points (cf. Fig. 2 and fig. S4 for the effect of change points without the modulation). Most importantly, the cumulative effect of change points manifests in an overarching decay in new case numbers that is visible after April 5 and follows the third change point (with reporting delay).
+
+Change point detection quantifies the effect of governmental interventions
+
+Ideally, detected changes can be related to specific mitigation measures, so that one gains insights into the effectiveness of different measures (Fig. 3). Indeed, we found clear evidence for three change points in the posterior distributions of the
+ model parameters: First, .(+) decreased from i, = 0.43
+
+[0.20, 0.30]). The date of the change point was inferred to be
+March 7 (CI [3, 10])]; this inferred date matches the timing of the first governmental intervention which included cancellations of large events, as well as increased awareness. After this first intervention, the (effective) growth rate
+ x (t)=2%(t)- decreased by more than a factor of 2, from
+
+ second change point (r) decreased from 1, =0.25 to
+
+2, = 0.15 (CI [0.12, 0.20]), which is larger than our prior assumption. The date of this change point was inferred to be
+March 16 (CI [14, 18])]; this inferred date matches the timing of the second governmental intervention including closing schools and some stores. After this second intervention, the median growth rate became 2 (r)=%,-y = 0.02 0 and is
+ thus in the vicinity of the critical point, yet still positive. The first two interventions thereby mitigated spread of COVID-19 in Germany by drastically reducing the growth rate, but the spread remained exponential. A third change point, when
+ was inferred on March 24 (CI [21, 26])]; this inferred date matches the timing of the third governmental intervention including contact ban and closing of all non-essential stores.
+Only after this third intervention, the median (effective) of new infections. We can thus clearly relate the change points to the governmental interventions and quantify their effect.
+
+Discussion
+
+We presented a Bayesian approach for monitoring of the effect of non-pharmaceutical governmental interventions on the epidemic spread of an infectious respiratory disease. Using the example of the COVID-19 outbreak in Germany, we applied this approach to infer the central epidemiological parameters and three change points in the spreading rate from the number of reported cases. We showed that change points in the spreading rate affect the confirmed case numbers with a delay of about two weeks (median reporting delay of
+D =11.4 days plus a median change-point duration of 3
+ days). Thereby, we were able to relate the inferred change points to the three major governmental interventions in Germany: We found a clear reduction of the spreading rate related to each governmental intervention and the concurring adaptation of individual behavior (Fig. 3), (i) the cancellation of large events with more than 1000 participants (around
+March 9), (ii) the closing of schools, childcare centers and the majority of stores (in effect March 16), and (iii) the contact ban and closing of all non-essential stores (in effect March
+
+Our results indicate that the full extent of interventions was necessary to stop exponential growth. The first two interventions brought a reduction of the growth rate » from
+30% to 12% and down to 2% , respectively. However, these numbers still implied exponential growth. Only with the
+ (Page numbers not final at time of first release) 4 third intervention, the contact ban, we found that the epidemic changed from growth to decay. However, the decay rate of about -3% (CI [-5%,-2%]) remains close to zero.
+
+Hence, even a minor increase in the spreading rate may again switch the dynamics to the unstable regime with exponential growth.
+
+We used a formal Bayesian model comparison to validate the presence of change points. Our model comparison ruled out models with fewer than two change points (Table 1 and table S2). While this may seem trivial, it has important consequences for making short-term forecasts that decision makers rely on. Demonstrating and quantifying the effect of past change points can be used to formulate priors for the effects of future, similar change points. These priors help to project the effects of more recent change points into future forecasts, even when these change points are not yet apparent in the reported case numbers. Consequently, it is important to look out for and identify potential change points as early as possible to incorporate them into forecasts.
+
+The detection of change points and their interpretation depend crucially on an accurate estimate of the reporting delay D . Therefore, the validity of its estimate should be evaluated. In our model, D contains at least three distinct factors: the biological incubation period (median 5-6 days) (32), an additional delay from first symptoms to symptoms motivating a test (1-3 days) and a possible delay before a testing results come in (1-4 days). The sum of these delays seems compatible with our inferred median delay of p = 11.4 days, especially given the wide range of reported incubation periods.
+
+We chose to keep our main model comparatively simple, because of the small number of data points initially available during an epidemic outbreak. With few data points, only a limited number of parameters can be effectively constrained.
+Hence, we chose to approximate a time-dependent spreading
+ rate 4(1) by episodes of constant spreading rates 2, that are
+ separated by three change points where a transition occurs.
+Our results show that this main model is currently sufficient for Germany. While we introduced fairly broad priors on the spreading rates, we obtained comparably narrow posterior distributions for each spreading rate 1, (Fig. 3). We addition-
+ ally evaluated extensions of our main model with three change points, e.g., by explicitly taking into account the incubation period (fig. $3). These models yield consistent results for the three change points, and all have LOO scores within one standard error of each other. Thus, we consider our main model to be sufficient for case numbers in Germany at present.
+
+Our framework can be easily adapted to other countries and enables incorporation of future developments. For other countries, or for forecasts within smaller communities (e.g.,
+
+ federal states or cities), additional details may become important, such as explicit modeling of incubation time distributions (17, 37) (ie., as in fig. $3), spatial heterogeneity (17,
+21), isolation effects (20, 37), subsampling effects hiding undetected cases even beyond the reporting delay (38, 39), or the age and contact structure of the population (26). In countries where major changes in test coverage are expected, this will have to be included as well. The methodology presented here is capable in principle of incorporating such details. It also lends itself to modeling of continuous drifts in the spreading rate, e.g., reflecting reactions of the public to news coverage of a catastrophic situation, or people growing tired of mitigation measures. Such further adaptations, however, can only be performed on a per-country basis by experts with an intimate knowledge of the local situation. Our code provides a solid and extensible base for this. For Germany, several developments in the near future may have to be included in the model. First, people may have transiently changed their behavior over the Easter holidays; second, we expect a series of change points, as well as continuous drifts, with governments trying to ease and calibrate mitigation measures.
+Third, extensions to hierarchical models will enable regional assessments, e.g., on the level of federal states.
+
+Even after the three major governmental interventions in
+Germany, effective growth rates remain close to zero and warrant careful consideration of future measures. At present, estimates of effective growth rates dropped to -3% and thereby remain close to zero - the watershed between exponential growth or decay. Together with the delay of approximately two weeks between infection and case report this warrants caution in lifting restrictions for two reasons. First, lifting restrictions too much will quickly lead to renewed exponential growth and second, we would be effectively blind to this worsened situation for nearly two weeks in which it transmission will be uninhibited. This may result in a growth in case numbers beyond the level that the health system can cope with, especially if active cases are not close to zero before lifting restrictions. Therefore, it is important to consider lifting restrictions only when the number of active cases are so low that a two-week increase will not pose a serious threat to healthcare infrastructure.
+
+In conclusion, our Bayesian approach allows detection and quantification of the effect of governmental interventions and, combined with potential subsequent interventions, forecasting future case number scenarios. Our analysis highlights the importance of precise timing and magnitude of interventions for future case numbers. It also stresses the importance of including the reporting delay p between the date of infection and the date of the confirmed case in the model. The reporting delay, D , together with the time required to implement interventions means that changes in our behavior today can only be detected in confirmed cases in two
+ (Page numbers not final at time of first release) 5 weeks time. Thus, this delay, combined with a current spreading rate that is still close to zero, indicates extremely careful planning of future measures is essential.
+
+Materials and methods
+
+As a basis for our Bayesian inference and the forecast scenarios, we use the differential equations of the well-established
+SIR (Susceptible-Infected-Recovered) model. We also test the robustness of our results by means of more sophisticated models, in particular an SEIR-like model that explicitly incorporates an incubation period (fig. $3). While the SIR modeldynamics is well understood in general, here our main challenge is to estimate model parameters specifically for the
+COVID-19 outbreak, and to use them for forecasting. To that end, we combined a Bayesian approach — to incorporate prior knowledge — with Markov Chain Monte Carlo (MCMC) sampling — to compute the posterior distribution of the parameters and to sample from it for forecasting. Put simply, we first estimate the parameter distribution that best describes the observed situation, and then we use many samples from this parameter distribution to evolve the model equations and thus forecast future developments.
+
+The data used comes from the Johns Hopkins University
+Center for Systems Science and Engineering (JHU CSSE) dashboard (40). The JHU CSSE provides up-to-date data on
+COVID-19 infections, usually a few days ahead of official German sources. The exact version of the data and code is available at (32). Data were incorporated until April 21. Note that after this cutoff date, additional modeling of the effects of behavioral changes over the Easter holidays becomes necessary.
+
+Simple model: SIR model with stationary spreading rate
+
+We consider a time-discrete version of the standard SIR model. In short, we assume that the disease spreads at rate
+» from the infected population compartment (/ ) to the susceptible compartment (s ), and that the infected population compartment recovers (& ) at rate » . This well-established model for disease spreading can be described by the following set of (deterministic) ordinary differential equations (see,
+ ds SI eo BE
+ dt N
+ dl SI
+ dt N
+ dR
+
+ dt
+As a remark, during the onset phase of an epidemic only a very small fraction of the population is infected (7 ) or recovered (& ),and thus s » N * 7 suchthat S/N ~1.Therefore, the differential equation for the infected reduces to a
+
+ simple linear equation, exhibiting an exponential growth dl
+ dt
+Because our data set is discrete in time (Ar = 1 day), we solve the above differential equations with a discrete time step (d//dr ~ AI/ At ), Such that
+
+Sy
+N (, Sia) new pa
+N
+
+Importantly, 7, models the number of all (currently) ac-
+ tive infected people, while 7’ is the number of new infections that will eventually be reported according to standard
+WHO convention. Importantly, we explicitly include a reporting delay D between new infections /"““ and newly reported cases (C,) as
+We begin our simulations at time += 0 with 1, infected
+ cases and start including real-word data of reported cases C, from day : > D (see below for a parameterization).
+
+In our model we do not explicitly incorporate the inflow of additional infected people by travel for two reasons. First, we implicitly model the initial surge of infections with 1,.
+Second, previous work showed that travel during the outbreak has only modest effects on the dynamics, e.g., travel restrictions in China merely delayed the exponential spread if not combined with reductions of spreading (41).
+
+Full model: SIR model with weekly reporting modulation and change points in spreading rate
+
+Our change point detection builds on a generalization of the simple SIR model with stationary spreading rate. We now assume that the spreading rate 1,, i=1,...,., may change at certain time points +, from 2,, to 4,, linearly over a time window of Ar, days. Thereby, we account for policy changes to reduce 2, which were implemented in Germany step by step. Thus, the parameters :,, Ar,, and 4, are added to the parameter set of the simple model above, and the differential equations are augmented by the time-varying 4, .
+
+In addition, we include a weekly modulation to account for lower case reports around the weekend which subsequently accumulate during the week. To model the systematic variation of case reports during the week, we adapted the newly reported cases by a reporting fraction
+ (Page numbers not final at time of first release) 6
+
+1 tp with
+
+ where /, and ©, will also be constrained by the data.
+
+Estimating model parameters with Bayesian MCMC
+We estimate the set of model parameters
+
+0 = {h,,t,,u.D.6,1,.f,.0,} using Bayesian inference with
+Markov-chain Monte-Carlo (MCMC). The parameter o is the scale factor for the width of the likelihood P(C, |) between
+ observed data and model (see below). Our implementation relies on the python package PyMC3 (42) with NUTS (No-U-
+Turn Sampling) (43) using multiple, independent Markov chains. The structure of our approach is the following:
+
+Initialization of the Markov chains via variational inference
+
+The posterior is approximated by Gaussian distributions ignoring correlations between parameters through automatic differentiation variational inference (ADVI) (44), which is implemented in PyMC3. From this distribution, four starting points for four chains are sampled.
+
+Burn-in phase
+
+Each chain performs 1000 burn-in (tuning) steps using
+NUTS, which are not recorded. This serves as equilibration in order to sample from an equilibrium distribution in the next step.
+
+Sampling phase
+
+Each chain performs 4000 steps, which are used to approximate the posterior distribution. To ensure that the chains are equilibrated and sampled from the whole posterior distribution (ergodicity), we verified that the R-hat statistic is below
+1.05, which is implemented in PyMC3. The rank normalized
+R-hat diagnostic tests for lack of convergence by comparing the variances within chains and between chains: For identical within-chain and between-chain variances R-hat becomes
+1, indicating convergence. For well-converged chains the resulting samples will describe the real-world data well, so that consistent forecasts are possible in the forecast phase.
+
+Forecast using Monte Carlo samples
+
+For the forecast, we take all samples from the MCMC step and continue time integration according to different forecast scenarios explained below. Note that the overall procedure yields an ensemble of forecasts — as opposed to a single forecast that would be solely based on one set of (previously optimized) parameters.
+
+MCMC sampling details
+Each MCMC step requires to propose a new set of parameters
+6 , to generate a (fully deterministic) time series of new in-
+ fected cases c(0)={c,(0)} of the same length as the ob-
+ served real-world data ¢ = {c,} , and to accept or reject 6 . In
+ our case, the NUTS implementation (in PyMC3) first proposes a new set of parameters 0 based on an advanced gradient-based algorithm and subsequently accepts or rejects it such that the resulting samples reflect the posterior distribu-
+ tion p(@|C) < p(C1)p(e), where p(C |6) is the likelihood for the data given the parameters and p (0) is the prior dis-
+ tribution of the parameters (see below). The likelihood quantifies the similarity between model outcome and the available real-world time series. Here, the likelihood is the product over local likelihoods
+
+ quantifying the similarity between the model outcome for one time point :, c,(0), and the corresponding real-world
+ data point C,. We chose the Student’s t-distribution because it resembles a Gaussian distribution around the mean but features heavy tails, which make the MCMC more robust with respect to outliers (45), and thus reporting noise. The casenumber-dependent width is motivated by observation noise through random subsampling (38), resulting in a variance proportional to the mean. Our likelihood neglects any noise in the dynamic process, as the SIR model is deterministic, but could be in principle extended to incorporate typical demographic noise from stochastic spreading dynamics (35, 46).
+
+Priors that constrain model parameters
+
+As short-term forecasts are time-critical at the onset of an epidemic, the available real-world data are typically not informative enough to identify all free parameters, or to empirically find their underlying distributions. We therefore chose informative priors on initial model parameters where possible and complemented them with uninformative priors otherwise. Our choices are summarized in Table 2 for the simple model, i.e., the SIR model with stationary spreading rate for the exponential onset phase, and in Table 3 for the full model with change points, and are discussed in the following.
+
+Priors for the simple model (Table 2)
+
+In order to constrain our simple model, an SIR model with stationary spreading rate for the exponential onset phase, we chose the following informative priors. Because of the ambiguity between the spreading and recovery rate in the exponential onset phase (see description of simple model), we
+ (Page numbers not final at time of first release) 7 chose a narrow log-normal prior for the recovery rate ph ~ LogNormal(log(1/8),0.2) with median recovery time of 8
+ days (20). Note that our implementation of » accounts for the recovery of infected people and isolation measures because it describes the duration during which a person can infect others. For the spreading rate, we assume a broad log-
+ normal prior distribution 4 ~ LogNormal(log(0.4),0.5) with median 0.4. This way, the prior for 4- has median 0.275
+ and the prior for the base reproduction number (R, = 2/1 )
+ has median 3.2 , consistent with the broad range of previous estimates (18, 33, 34). In addition, we chose a log-normal
+ prior for the reporting delay D ~ LogNormal(log(8),0.2) to
+ incorporate both the incubation time between 1-14 days with median 5 (32) plus a delay from infected people waiting to contact the doctor and get tested.
+
+The remaining model parameters are constrained by uninformative priors, in practice the Half-Cauchy distribution (47). The half-Cauchy distribution
+
+HalfCauchy (x,B) = 2/ B[1+ (/B)" | is essentially a flat prior
+ from zero to 0(p) with heavy tails beyond. Thereby, p
+ merely sets the order of magnitude that should not be exceeded for a given parameter. We chose for the number of initially infected people in the model (16 days before first data
+ point) 7, ~ HalfCauchy (100) assuming an order of magnitude o (100) and below. In addition, we chose the scale factor of the width of the likelihood function as o ~ HalfCauchy (10);
+ this choice means that the variance in reported numbers may be up to a factor of 100 larger than the actual reported number.
+
+Priors for the full model (Table 3)
+In order to constrain our full model, an SIR model with weekly reporting modulation and change points in the spreading rate, we chose the same priors as for the simple model but added the required priors associated with the change points. In general, we assume that each set of governmental interventions (together with the increasing awareness) leads to a reduction (and not an increase) of » ata change point. As we cannot know yet the precise reduction factor, we adhere to assume a reduction by ~ 50% , but always with a fairly wide uncertainty, so that in principle even an increase at the change point would be possible. We model the time dependence of 1 as change points, and not as continuous changes because the policy changes were implemented in three discrete steps, which were presumably followed by the public in a timely fashion.
+
+For the spreading rates, we chose log-normal distributed
+
+ priors as in the simple model. In particular, we chose for the initial spreading rate the same prior as in the simple model,
+
+2, ~ LogNormal(log(0.4),0.5) ; after the first change point
+
+2, ~ LogNormal(log(0.2),0.5), assuming the first interven-
+ tion to reduce the spreading rate by so% from our initial estimates (2, ~ 0.4) with a broad prior distribution; after the
+ second change point 2, ~ LogNormal(log(1/8),0.5) , assum-
+ ing the second intervention to reduce the spreading rate to the level of the recovery rate, which would lead to a stationary number of new infections. This corresponds approximately to a reduction of 2 at the change point by 50% ; and after the
+ third change point 1, ~ LogNormal(log(1/16),0.5) , assuming
+ the third intervention to reduce the spreading rate again by
+50% , With that intervention, 2, is smaller than the recovery rate » , causing a decrease in new case numbers and a saturation of the cumulative number of infections.
+
+For the timing of change points, we chose normally distributed priors. In particular, we chose
+ cause on the weekend of March 8, large public events, like soccer matches or fairs, were cancelled. For the second
+
+ on March 15, the closing of schools and other educational institutions along with the closing of non-essential stores were announced and implemented on the following day. Restaurants were allowed to stay open until 6 pm. For the third
+ on March 23, a far-reaching contact ban (Kontaktsperre), which includes the prohibition of even small public gatherings as well as complete closing of restaurants and non-essential stores was imposed by the government authorities.
+Further policy changes may occur in future; however, for now, we do not include more change points.
+
+The change points take effect over a certain time period
+
+At, for which we choose Ar, ~ LogNormal(log(3),0.3) witha
+ median of 3 days over which the spreading rate changes continuously as interventions have to become effective. The precise duration of the transition has hardly any effect on the cumulative number of cases (Fig. 2, E and F). We assumed a duration of three days, because some policies were not announced at the same day for all states within Germany; moreover, the smooth transition also can absorb continuous changes in behavior.
+
+The number of tests that are performed and reported vary regularly over the course of a week and are especially low during weekends. To account for this periodic variation, we modulated the number of inferred cases by the absolute value
+ (Page numbers not final at time of first release) 8 of a sine function with in total a period of 7 days. We chose this function as it is a non-symmetric oscillation, fitting the weekly variation of cases on a phenomenological level. For the amplitude of the modulation we chose a weakly informative Beta prior: f, ~ Beta(mean = 0.7,std =0.17) and for the phase a nearly flat circular distribution:
+
+Model comparison
+
+Since change point detection entails evaluating models with different numbers of parameters, some form of fair model comparison is needed. This is necessary to compensate for the higher flexibility of more complex models, as this flexibility carries the risk of overfitting and overconfident forecasts.
+The standard approach to avoid over-fitting in machine learning is cross-validation, and cross validation has recently also been advocated for Bayesian model comparison (e.g., (3,
+36)), especially for models employed for predictions and forecasts. Thus, one would ideally like to compare the models with different numbers of change points by the probability they assign to previously unobserved data points. Technically this is measured by their out-of-sample prediction accuracy, ie., their log pointwise predictive density (Ippd):
+
+ where the vector [ Ve ey, ] is a an out-of-sample dataset of
+ posterior distribution of the parameters, given the in-sample
+ data y and the model ™ . In practice, the integral is approxi-
+ mated using a sufficient amount of samples from p,,,, (0) . How-
+ ever, this approach is only reasonable if a sufficient amount of out-of-sample data are available, which is not the case in the early stages of a disease outbreak. Therefore, the pointwise outof-sample prediction accuracy was approximated using Leaveone-out cross-validation (LOO) in PyMC3 to compute Eq. 6 individually for each left out data point based on the model fit to the other data points. The sum of these values, multiplied by a factor of -2 then yields the leave-one-out cross-validation (LOO-CV) score. Thus, lower LOO-CV scores imply better models.

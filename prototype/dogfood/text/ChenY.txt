@@ -1,0 +1,955 @@
+
+
+MODELLING ENDEMIC DISEASES IN SPACE AND TIME
+
+CHEN YIRONG
+
+A THESIS SUBMITTED
+
+FOR THE DEGREE OF DOCTOR OF PHILOSOPHY
+
+SAW SWEE HOCK SCHOOL OF PUBLIC HEALTH
+
+NATIONAL UNIVERSITY OF SINGAPORE
+
+Associate Professor Alex Richard Cook
+
+Associate Professor David John Nott
+
+Dr Yi Siyan
+
+Associate Professor Aronrag Cooper Meeyai, Mahidol University
+
+Declaration
+
+I hereby declare that this thesis is my original work and it has been written by me in its entirety. I have duly acknowledged all the sources of information which have been used in this thesis. This thesis has also not been submitted for any degree in any university previously.
+
+Chen Yirong
+
+Acknowledgements
+
+There is rarely any easy PhD journey, and I am not luckier than the majority. I am extremely grateful for everyone who has helped me throughout and made this journey possible. First and foremost, I am truly indebted to my supervisor for his guidance, support and encouragement. Alex Cook has been a tremendous mentor for me, the best indeed I can ever imagine having. He has generously shared his passion and knowledge in biostatistics which allows me to grow as a researcher. I would also like to thank my committee members, A/Prof Choi Hyungwon and Dr Tan Chuen Seng, my examiners, and all other professors and researchers who have given me valuable comments and suggestions on the work I have done. A special thanks to my colleagues and friends in the School of Public Health. Thanks for the encouragement, support and friendship you have given me. I could not possibly have done this without your kindness. I owe a special thanks to my parents, for guiding me in the right direction, and providing unconditional love and support for my various decisions in life. Finally but most importantly, I am grateful for the support, patience, and endless understanding from my husband Zeng Wei during the entire process. Many thanks to my lovely children Jiaxiang and Jiaqi who bring endless joy to my life.
+
+Table of Contents
+
+Chapter 3: The Utility of LASSO-based Models for Real Time Forecasts of Endemic
+
+Chapter 4: Neighbourhood Level Real-time Forecasting of Dengue Cases in Chapter 5: The Effect of School Closure on Hand, Foot and Mouth Disease
+
+Summary
+
+With public health advancement in areas including vaccination, antibiotics and overall improvement of living conditions across the world, vaccine preventable infectious diseases are gradually being eradicated in many parts of the world, infections with many pathogens can now be treated better, and the general conditions that lead to reduced transmission of infectious diseases have improved globally. In many less-developed countries in the world where people have limited access to medical resources, however, infectious disease still poses sizable disease burden. This has been made worse with several emerging and re-emerging infectious diseases spreading to many parts of the world in the past decade, causing deaths and additional burden to public health systems. The rapid process of globalisation and urbanisation enables these emerging and re-emerging infectious diseases to spread at an incredible speed to any parts of the world, making control of infectious diseases a global rather than local effort. While the response to endemic infectious diseases may be less urgent, the burden caused by pathogens such as influenza and malaria is high, and due to their endemicity, many countries have long standing surveillance systems or are in the process of building up their surveillance systems to track outbreaks and guide response. Control of endemic infectious diseases can therefore have a large impact in reducing the burden of infectious diseases in less developed countries. Even for developed countries, comprehensive surveillance systems that give timely warning of potential outbreaks will help from planning hospital bed utilisation to vector control implementations.
+
+Modelling of endemic infectious diseases in space and time is a powerful tool to help understand the dynamics of disease transmission, forecast future outbreaks, and evaluate potential control policies, taking advantage of the data streams each country’s surveillance systems can offer. The search for faster, more accurate, and more easily automated methods for forecast is never ending, so is the constant evaluation of existing and potential control policies as circumstances change and new pieces of information made available. In this thesis, we develop novel methods for forecasts and to evaluate potential policies for control. Specifically, Chapter 1 provides an overview on infectious diseases, including the current situation and burden, and the importance of modelling infectious diseases and modelling control measures to evaluate their effect on infectious diseases. Chapter 2 explores the need of using potential risk factors especially climatic variables to explain the timing of large endemic infectious disease outbreaks in a tropical setting. The study implements an idea from a psychological study about the performance of basketball players on the trends of dengue outbreaks to show that in tropical Singapore, randomness alone is sufficient to explain the apparent epidemics of dengue. Chapter 3 proposes a novel machine-learning based method for forecasting various endemic infectious diseases in countries with different climates. The machine learning LASSO method has been applied to provide forecasts for different pathogens in various countries and accuracies of the prediction models are assessed. Short term predictions generally perform better than longer term predictions, suggesting public health agencies may need the capacity to respond to short-notice to early warnings. Chapter 4 further develops
+
+the method proposed in Chapter 3 to forecast endemic infectious disease at a finer spatial resolution by including spatial autocorrelation, to allow spatiotemporal predictions, giving insights to resource planning in terms of carrying out control measures. The adaptation of the LASSO method to spatio-temporal model for forecast of dengue outbreaks in Singapore gives insights to future spatially-resolved forecasts of geographically structured diseases at a neighbourhood level. The forecast precision is suitable to guide control efforts, and the same method can be adapted to other areas, with appropriate adjustment to the grid size and shape. Chapter 5 examines the effectiveness of one public health control measure in response to an endemic infectious disease outbreak using a modelling approach, helping relevant stakeholders to make evidence-based decisions. The effect of school closure policy for hand, foot and mouth disease outbreaks are modelled separately for public holiday effects, school vacation effects and school closure effects. Despite the positive effect in reducing transmission, the effect of school closure is relatively small, but the disruption to families and parents is sizable especially for institutional outbreaks. Finally, Chapter 6 concludes the thesis and suggest for future research.
+
+List of Tables
+
+Table 2. Fraction of 95% projection intervals that cover the eventual value Table 3. Mean Absolute Percentage Error for full models for all diseases at Table 4. Percentage of our prediction model correctly classify a predicted Table 5. Groups of variables and their respective types that are included in Table 6. Average Matthew’s correlation coefficient for all 12 forecast
+
+Table 22. Parameters used in the school closure during outbreak effect Table 24. Observed number of cases one week before and 1/2/3 weeks after the public holidays and posterior mean and 95% confidence interval derived from posterior distribution of the public holiday effect for models based on 1 week before and the first (day 1-7), second (day 8-14), and third week (day Table 25. Number of HFMD outbreaks and number of school closures each
+
+List of Figures
+
+Figure 1. Weekly trends for observed and simulated dengue incidence, Figure 2. Comparison of observed dengue incidence and incidence from the Figure 4. Comparison of observed dengue incidence and the simulated Figure 5. Incidence and climatic (temperature and humidity) patterns of four Figure 6. Incidence and climatic (temperature and humidity) patterns of four Figure 11. Number of variables from different variable categories that were Figure 12. Parameter coefficient of all climatic variables at all lags for all Figure 14. Cumulative density functions (CDF) for observed time series for all diseases and the CDF for predicted time series at various forecast
+
+Figure 15. Relative prediction error for Japan and Singapore models of different complexity as compared to the simplest incidence only model and Figure 16. Relative prediction error for Taiwan and Thailand models of different complexity as compared to the simplest incidence only model and Figure 17. Illustration of two tiers of neighbourhoods of the grid of interest. Figure 18. Time series and spatial density of selected predictors in the Figure 19. Spatial average time series and temporal average density of the Figure 20. Spatial average time series and temporal average density of the Figure 21. Spatial average time series and temporal average density of the Figure 22. Spatial average time series and temporal average density of the Figure 23. Spatial average time series and temporal average density of the Figure 24. Actual distribution of cases and four-week ahead forecasts of Figure 25. Average Mathew’s correlation coefficient for all 12 forecast Figure 26. Aggregate average ROC curves for forecast windows at 1 week, 2 weeks, 4 weeks, 8 weeks and 12 weeks for classification of actual high and Figure 27. Histogram of the distribution and effect size on one-week ahead
+
+Figure 28. Distribution of climatic parameter and parameter effect in excess of mean effect at two different time lags (time lag 2 and 4) for 1-week ahead Figure 29. Distribution of parameters without time lags and parameter effect Figure 30. Comparisons of forecast and actual scenario for one-week ahead Figure 31. Comparisons of forecast and actual scenario for two-weeks ahead Figure 32. Comparisons of forecast and actual scenario for three-weeks Figure 33. Comparisons of forecast and actual scenario for four-weeks ahead Figure 34. Comparisons of forecast and actual scenario for five-weeks ahead Figure 35. Comparisons of forecast and actual scenario for six-weeks ahead Figure 36. Comparisons of forecast and actual scenario for seven-weeks Figure 37. Comparisons of forecast and actual scenario for eight-weeks Figure 38. Comparisons of forecast and actual scenario for nine-weeks ahead Figure 39. Comparisons of forecast and actual scenario for ten-weeks ahead Figure 40. Comparisons of forecast and actual scenario for eleven-weeks Figure 41. Comparisons of forecast and actual scenario for twelve-weeks
+
+Figure 43. Temporally structured distribution of residuals in the one-week Figure 46. Modelled percentage of cases avoided from school closure for all Figure 47. Total number of cases one week before public holidays and total Figure 48. Total number of cases one week before public holidays and total Figure 49. Total number of cases one week before public holidays and total Figure 50. Actual observed time series of HFMD cases and one week ahead forecast based on school vacation effect model posterior parameter
+
+Abbreviations
+
+AUC: area under the curve. CDC: Centers for disease control and prevention. CDF: cumulative density function. CI: confidence interval. DALYs: disability-adjusted life years. HFMD: hand, foot and mouth disease. JAGS: Just Another Gibbs Sampler. LASSO: least absolute shrinkage and selection operator. MAPE: mean absolute percentage error. MCC: Matthew’s correlation coefficient. MERS-CoV: Middle East respiratory syndrome coronavirus. NEA: National Environment Agency. NDVI: Normalized Difference Vegetation Index. PH: public holiday. RMSE: root mean squared error. ROC: receiver operating characteristic. SARIMA: seasonal autoregressive integrated moving average.
+
+SARS-CoV: severe acute respiratory syndrome coronavirus. SIR: susceptible-infected-recovered disease model. Telco: mobile telephone company.
+
+Infectious diseases
+
+In the past decades, several emerging and re-emerging infectious diseases have been seen to spread to many parts of the world, causing deaths and sizable burden to the public health system locally and globally. The Severe Acute Respiratory Syndrome Coronavirus (SARS-CoV) (1), the influenza A(H1N1)pdm09 pandemic of 2009 (2), the novel Middle East Respiratory Syndrome Coronavirus (MERSCoV) that emerged in Saudi Arabia (3), the more recent Ebola crisis in Western Africa (4) and the Zika outbreak in the Americas and Asia (5) have demonstrated the high potential risk for infectious diseases to spread within and between countries. With public health advancement in areas including vaccination and antibiotics, and overall improvement of living conditions across the world, prevention and treatment of infectious disease have improved globally, especially in high-income countries (6), despite the more frequent recent outbreaks caused by emerging and re-emerging viruses. Overall, the burden of disease has been shifting from communicable disease to non-communicable diseases (7). In the Southeast Asia region, where the majority of countries are less developed (8), however, infectious diseases still pose a high disease burden (9). According to a WHO study on the global burden of diseases, infectious and parasitic diseases and respiratory infections contributed about 18% of the total disability-adjusted life
+
+years (DALYs) lost in this region, which is comparable to the 19% global average, but is substantially higher than the 5% in European regions (9). Increased international travel that facilitates transmission of infectious diseases across borders, social and environmental conditions that provide new opportunities for infection, and the antimicrobial resistance that makes treatments less effective, among other changes, make the prevention and control of infectious diseases a global concern rather than any one country’s problem (10). A national surveillance and response system that aims to detect and respond in a timely manner to infectious disease outbreaks is essential to keep infectious diseases under control at a national level (11). Collaborations between countries and global surveillance can potentially slow down global transmission of diseases (12) and benefit countries without the capacity for national responses (13).
+
+Endemic infectious disease in Singapore and the region
+
+Endemic refers to the constant presence and/or usual prevalence of a disease or infectious agent in a population within a geographic area (14). Endemic infectious diseases can be seasonal in temperate countries, because pathogens only survive and transmit under certain climatic conditions, and people as hosts have different behaviour and contact pattern at different times of the year (15,16). Other endemic diseases in sub-tropical and tropical countries where there is less climatic variation throughout the year, however, show less cyclicity (17). Regionally, many communicable diseases stay endemic in this region, including some vaccine-preventable diseases, such as diphtheria, measles and pertussis (18).
+
+With the rapid economic, social and environmental change undergoing in Southeast Asia region, the region is facing challenges including increased migration and urbanization and a concentration of persons and economic activity (19,20). As a result, regional countries now face new challenges in endemic infectious disease control and prevention (21). Meanwhile, economic development widens health inequalities and results in poorer parts of the population still suffering from vaccine-preventable infectious diseases while the richer experience the burden of non-communicable diseases, leaving the country facing the double burden of both communicable and non-communicable disease (6). While the response to endemic diseases may be less urgent, the burden caused by pathogens such as influenza and malaria, which are endemic in the region, is high (22–24), and due to their endemicity, many countries have long standing surveillance systems to track outbreaks and guide response, from vector control to hospital bed utilisation (25–27). While regional countries continue to strive to eliminate vaccine preventable diseases in the region, they should, in the meantime, build up early warning systems for endemic diseases, making use of the rich data streams if available, to predict epidemics as soon as possible to allow control methods to be carried out rapidly and increase their chance of success (28).
+
+Modelling of endemic infectious diseases
+
+Mathematical and statistical modelling has become a useful way to understand the dynamics of infectious diseases and to forecast infectious disease outbreaks in the future.
+
+The very first attempt to use modelling approach to tackle infectious diseases problems was a model of smallpox vaccine and transmission in England to evaluate the benefit of inoculation against the virus in 1766 (29), a model that actually preceded Jenner’s development of the first smallpox inoculation in 1796 (30). Since then, various modifications to the smallpox model and different other types of infectious diseases models have been proposed. Siettos and Russo (31) summarised these models into three broad categories. The first category includes statisticalbased methods including regression models (32), seasonal autoregressive integrated moving average (SARIMA) models or a simpler ARIMA variation (33), and spatial models to incorporate the spatial autocorrelation (34). The second category includes mathematical-mechanistic state space models including the SIR models (35), and complex network models (36). Their third category consists of machine learning-based models like the web-based data mining (37). Retrospectively, infectious diseases modelling helps to characterise, summarise and explain why and when epidemics happen, what the nature of the diseases is, and how diseases transmit within the host populations (31). The use of mathematical models and simulations overcomes the disadvantage of being generally not ethical to perform experiments in infectious disease transmission. Measurements of disease transmission dynamics like the basic reproduction number or the force of infections are easily derived from models (38,39). In addition, by studying past outbreak data and constructing relevant models, threshold for outbreaks can be identified to inform surveillance and control in the future (40,41).
+
+Prospectively, forecast of infectious disease provides valuable insights for relevant resources planning to achieve their best efficiency. Conventional epidemiological studies and past infectious disease models focus more on attempting to understand the risk factors for outbreaks and the underlying transmission dynamics, but not so much on constructing forecasting models to predict the potential disease situation in both the near and far future. The importance of infectious disease forecasts has gradually been recognised by relevant stakeholders and researchers have started to explore various possibilities to set up real-time forecasts. For example, the US Centers for Disease Control and Prevention (CDC) launched the “Predict the Influenza Season Challenge” to call for institutions and agencies for innovation in influenza modelling and prediction (42).
+
+Forecasting of endemic infectious diseases
+
+Countries generally have surveillance systems to monitor endemic infectious diseases (43). Warnings are given when the number of cases hit the pre-determined threshold level, and thus controls are carried out accordingly (44,45). Commonly used control measures include social distancing, identification and isolation (both mandatory and voluntary) of cases, and monitoring international travel and enforcing entry/exit screening in a pandemic setting (46,47). While these control measures have proven to be effective, accurate forecasting of endemic infectious diseases enables countries to predict the number of cases in the future and to carry out prevention measures to minimise the outbreak size, transforming the control approach into a preventive approach. Prevention measures, although not as
+
+commonly practiced as control measures, include ensuring immunisation coverage and vaccine availability before the outbreak, stocking up prophylaxis to prepare for surge in demand, and preparing more manpower for vector control and public area disinfection (48). Predictive models are constructed to serve the purpose of making accurate and timely forecasts into the near or far future. The fundamental difference between a predictive model and an epidemiological model or mechanistic model lies in the interpretability of the models. To attempt to explain the mechanism or the risk factors behind a disease or an observed epidemiological phenomenon, and the transmission dynamics are the emphasis when mechanistic models are constructed (49,50). In contrast, accuracy and efficiency of the models are the primary concern when constructing predictive models (51,52). There is, however, always a trade-off between model accuracy and efficiency (53). In general, depending on the nature of the data, more variation in the data can potentially be explained by the model with larger number of variables, up to a cutoff value, beyond which overfitting issues might occur to discount the value of the model for forecasting (54). This complicates the model, which normally results in longer computational time and more resources to acquire the additional data streams for model building, and reducing overall efficiency. Predictive models are repeated multiple times because they are meant to be run on a regular basis to forecast the number of cases in the future, which is used as the basis to inform control policies and planning, and thus to find the optimal balance between model accuracy and efficiency is particularly important.
+
+Spatial and spatiotemporal modelling of endemic infectious diseases
+
+Conventional epidemiological and predictive models for infectious diseases are temporal in nature, aiming to understand or make forecast into the future for the region of interest as a whole (55). Limitations in the availability of detailed georeferenced infectious diseases data and information on risk factors at sub-zone level in the past hindered the possibility of involving spatial correlation in the models to consider the composite space-time variation of disease features (56). In addition, limited amount of population mobility and international travel makes it a reasonable assumption not to consider the spatial autocorrelation between regions (57). As information become available at a more detailed geographic resolution, and interactions within and across localities increase and show distinct patterns, researchers strive to construct new models to account for these new features, and spatial and spatiotemporal forecasts have gradually become available (56,58–60). Spatial correlations and potential associations between space and time are considered in addition to the variation in temporal models. Refining existing temporal forecasting models into spatiotemporal models lead to predictions at a finer resolution based on current and past situation at sub-zone levels, which potentially improves the accuracy of forecasts into the future and shed light on targeted sub-zone specific control and prevention measures (61). On the other hand, spatiotemporal models can also be set up at continent and even global level, to understand and forecast the infectious disease situation and burden across countries, especially in times of pandemic infectious disease outbreaks (60). Compared to a simple addition of individual-country based models, spatial and spatiotemporal
+
+models take into consideration of interactions between countries, which completes the transmission dynamics globally (62).
+
+Control and prevention of infectious diseases
+
+Ultimately, the reason for understanding the dynamics of infectious diseases and forming accurate and timely forecast of the number of cases of endemic infectious diseases is to inform or provide a reasonable basis for control and allow adequate time for control measures to be carried out to achieve their intended effects (63). In addition, being able to identify the plausible size of the outbreak and even localities at risk for a particular infectious disease enables relevant stakeholders to plan and allocate resources accordingly (64). Vaccination has been shown to be effective in control and prevention of various infectious diseases including influenza (65,66). Vector control is one of the most cost-effective approach for vector-borne diseases like malaria (67) and dengue (68), but vector control must be done in a thorough, comprehensive and sustained manner (69). On top of the control measures that are carried out regularly, special control measures are to be carried out in the circumstance of an epidemic or a pandemic. Based on the World Health Organization guideline on pandemic preparedness (70), countries are to develop plans that suit their needs to mitigate transmission of infectious diseases. As for influenza pandemic preparedness, WHO recommends a whole-of-society approach that involves the health sector, individuals, families and communities to mitigate the effects of a pandemic (71). Pharmaceutical interventions like the use of antiviral drugs for treatment and prophylaxis and social distancing intervention including
+
+school closure and community contact reduction, or a mix of both are commonly found in countries’ pandemic preparedness plans (72–74). The effectiveness of these measures need to be evaluated constantly and interventions updated accordingly, not only using model-based simulation data (72), but empirical observed data streams, where available. While the importance and effectiveness of control measures have been discussed extensively in the literature, when it comes to models to predict future outbreaks, the potential effect of interventions are usually not considered most commonly due to the difficulties of finding suitable data streams to quantify the effect of interventions. In this thesis, when it comes to modelling of future outbreaks, the effect of interventions is captured in the error terms, but model accuracies will likely to be improved if these effects can be incorporated in the models.
+
+Specific aims of this thesis
+
+The central questions to be addressed within this thesis are: how to construct temporal and spatiotemporal statistical models for forecasts and policy evaluation to provide evidence for relevant stakeholders who seek to control and prevent the spread of endemic infectious diseases in Singapore and in the region. Despite the recent rapid advancement of infectious diseases modelling worldwide, there has been limited studies conducted in the region (75,76). Taking into consideration the sizable burden of endemic infectious disease across the region, it is critical to develop suitable models for these countries to aid public health policy making and evaluation.
+
+This thesis will start by discussing the need to explain patterns of an endemic disease (dengue) by potential risk factors including climatic variables using regression models. We then continue to propose and evaluate a novel prediction model (least absolute shrinkage and selection operator) for forecast of a spectrum of endemic infectious diseases at different climatic zones in the region. Prediction models will then add in information in the spatial aspect and zoom in to a finer resolution to forecast the spatiotemporal risk of an endemic infectious disease (dengue) in Singapore, which can potentially be modified for other regions. The last part of the thesis will focus on using statistical models to evaluate the effectiveness of control policies for an endemic infectious disease in Singapore (hand, foot and mouth disease). This thesis aims to provide a complete package of building temporal/spatiotemporal models for forecasting of endemic infectious diseases to aid policy making for control measures and constructing statistical models to evaluate effectiveness of such policies.
+
+Chapter 2: Randomness and Dengue Outbreaks on the Equator This work has been published as: Chen Y, Cook AR, Lim AXL. Randomness and dengue outbreaks on the equator. Emerg Infect Dis. 2015 Sep. http://dx.doi.org/10.3201/eid2109.141030.
+
+Abstract
+
+Dengue imposes a substantial burden on health in tropical and subtropical areas and the recent expansion of its range makes it of considerable public health concern worldwide. Explanations, especially climatic, have been identified to understand the timing of large dengue outbreaks and thereby predict future outbreaks to inform control. In the city state of Singapore, like other equatorial countries, seasonality is indistinct and thus ostensibly chaotic dengue epidemics occur. We assessed whether a simple statistical model–with no additional seasonal forcing–is sufficient to capture the patterns of epidemic magnitude and period in Singapore. Observed dengue time series from 2003 to 2012 was fitted using a simple autoregressive model, and the fitted model was used to simulate synthetic datasets that are governed purely by randomness and short-term contagion but no other drivers. Here we show through a series of tests that the apparent pattern of epidemics and endemics of dengue in the city state are indistinguishable from chance. These tests were inspired by the sports randomness study but adapted to the context of dengue time series, including comparing the autocorrelation function, the cumulative probabilities, the conditional probability of a rise, the yearly number of cases, the maximum weekly number of cases over 10 years, and the number of runs. These novel tests showed that the observed dengue time series was no different from the
+
+simulated thousands of time series driven by only chance and contagion but no other drivers. This implies that public policy makers in Singapore, and by extension other equatorial countries, need to lessen their dependence on explanations of dengue outbreaks, and accept the role of chance therein.
+
+Introduction
+
+Dengue, a vector-borne infectious disease, has complex epidemiological dynamics (77) and the recent expansion of its range makes it a disease of considerable public health concern worldwide (78). In the city state of Singapore, the number of dengue cases has increased dramatically from the 1990s (79), and all four serotypes are endemic (80). In other tropical and subtropical countries where there is distinct seasonality (81), dengue epidemics occur at distinct and predictable times in the year (82). Studies have shown that rainfall, temperature, relative humidity were significantly correlated with dengue incidences in Thailand, Taiwan, and Brazil (83–85). However, Singapore's proximity to the equator lends it an aseasonal climate, and the timing of dengue epidemics there is irregular (86,87). Many factors have been postulated to contribute to the spread of dengue in Singapore, such as her consistently warm and humid climate which favour year round vector proliferation, her high urbanisation and the proximity between humans and vectors (88). The extent to which these factors drive dengue epidemics in aseasonal Singapore, if they do at all, is, however, unclear. Competing explanations for the timing of large dengue outbreaks can be found in the literature – one paper
+
+attributing epidemics to conducive temperatures and precipitation variations (89), and another to relative humidity (90). In probabilistic models, chance is represented by error terms which encompass all the many complicating factors, or noise, which are not worth including in the systematic signal. Past models for dengue in Singapore have accounted for chance alongside systematic effects of the weather and other factors (89,90), but no past models assessed if chance alone is sufficient to explain the frequent, large but ostensibly chaotic outbreaks we observe. The objective of this study is to evaluate whether the rise and fall of dengue outbreaks from week to week come in flushes or are indistinguishable from random noise and thereby whether the current postulations regarding the causes of dengue epidemics in Singapore are necessary.
+
+Methods
+
+We reviewed data on the weekly incidence of clinically diagnosed dengue in Singapore during the decade 2003-2012, obtained from the Weekly Infectious Disease Bulletin published by the Ministry of Health Singapore (91). We compared the number of dengue cases per week to a simple simulation model, which belongs to a group of regression models called autoregressive models. In these models, the number of dengue cases during one week is regressed upon the incidence in preceding weeks, with no environmental drivers. The order of the model (i.e., the number of preceding weeks to autoregress upon) is selected to ensure that there are no further correlations between the model “errors”, or differences between observed and predicted numbers of cases. This was done by using the Portmanteau,
+
+or Ljung-Box, statistical test (92). To account for incidence necessarily being positive, we used the standard approach of natural logging the number of dengue cases before modelling them; this approach had a secondary benefit of making the variability more stable. The fitted model was used to simulate synthetic datasets that, because the model contains no seasonal forcing, are governed purely by randomness (the 𝑒𝑒𝑡𝑡 terms) and short-term contagion but by no other drivers.
+
+From these simulated data, which covered thousands of hypothetical decades of dengue in Singapore, summaries were extracted that could be compared to the analogous summary from reality. These summaries provide a way to falsify the aseasonality model if the actual summary falls outside the range from the simulations. The summaries were inspired by metrics used in the sports randomness study (93) but adapted to the context of weekly case counts of dengue. These metrics included the following: 1. The autocorrelation function. This function is the correlation between the (log transformed) number of cases for 1 week against the number 𝑘𝑘 weeks later (i.e., between 𝑦𝑦𝑡𝑡 and 𝑦𝑦𝑡𝑡+𝑘𝑘 ). This function
+
+drops from 1 for small lags 𝑘𝑘 to 0 for large lags. The speed at which it drops indicates the degree of memory in the dengue time series
+
+(e.g., if there is a high incidence of dengue 1 week, there should be a high incidence during the following). Each simulation yielded a single curve, over which the curve for the data was overlaid.
+
+2. The cumulative probabilities. For a particular number of cases, say 𝐷𝐷, this metric is the proportion of weeks with 𝐷𝐷 or fewer cases.
+
+It therefore captures the overall distribution of dengue incidence but
+
+more smoothly than a histogram would. Again, each simulation yielded a single curve, over which the curve for the data was overlaid.
+
+The conditional probability of a rise in the number of dengue
+
+cases from 1 week to the next (𝑡𝑡 to 𝑡𝑡 + 1), given that a rise occurred
+
+between week 𝑡𝑡 − 1 and week 𝑡𝑡. Similar probabilities given 2 or 3
+
+successive rises, or 1 to 3 falls, were also considered. These
+
+probabilities were calculated directly from the simulations, summarized with a 95% confidence interval, and the corresponding proportions in the historical time series overlaid. 4. The yearly number of cases. The distribution from simulations was summarized by using the statistical technique called kernel density estimation, and the 10 yearly counts from the data were overlaid. 5. The maximum weekly number of cases over 10 years. Again, simulated maxima were summarized by using kernel density estimation, with the maximum weekly incidence observed over the decade in question overlaid as a point. We also created a further statistical test that counted the number of runs (i.e., the number of weeks of successive rises or falls in dengue incidence). The distribution of the number of runs was obtained from the set of simulated datasets and used to
+
+generate a p value for the hypothesis that the aseasonal model generated the observed dataset. The rationale for these summaries is that they capture more complex properties that emerge from the simple aseasonal model described above but that should not concord with the data if seasonal drivers were needed to explain the patterns observed. For instance, with clear seasonal epidemics, following a run of week-onweek rises in incidence, a further rise would be noticeably more likely than 50%, whereas a random process (like the aseasonal model) would see this probability much closer to 50%. In tropical Singapore where there is indistinct seasonality, the aforementioned summaries were meant to emphasize the role of chance as the major driver of dengue epidemics, which is currently under appreciated. In places with clear seasonality, however, the role of climatic variables is critical. For instance, in Taiwan, there is clear seasonality and apparent cycles in dengue epidemics. A comparison was made by applying a similar aseasonal model and simulation procedure to dengue time series in subtropical Taiwan, where there is clear seasonality. The same five measures we developed were applied to Taiwan dengue time series and simulations as well. Weekly number of dengue cases from 2011 to 2014 were extracted from Taiwan National Infectious Disease Statistics System (94).
+
+Results
+
+Figure 1 shows the actual observed dengue time series in Singapore (panel A) and three examples of the simulated trajectories from the aseasonal model (panels B-D). Although the peaks are not synchronized, similar patterns can be discerned: large and small outbreaks of similar scale and frequency occur in all four scenarios.
+
+Figure 1. Weekly trends for observed and simulated dengue incidence, 2003-2012, Singapore.A) Weekly trends for the actual scenario of observed dengue incidence. B-D) 3 simulated scenarios from the aseasonal model.
+
+For all the characteristics considered, the historic data were consistent with every metric we devised to test the aseasonal model: 1. For the autocorrelation function (Figure 2A), the actual autocorrelation falls near the middle of the distribution of simulations under the aseasonal model for all weeks considered, up to the point when the autocorrelation reached 0 (around 6 months).
+
+This autocorrelation indicates that the random aseasonal model
+
+exhibits the same degree of memory as the actual time series; that is,
+
+following an epidemic peak, the outbreak reverts to endemic levels at the correct pace, but from a trough, epidemics occur at the correct speed. 2. Similarly, the observed cumulative probability function (Figure 2B) falls near the middle of the distribution of model predictions for all values of the weekly incidence up to the maximum weekly incidence observed. This function indicates that the aseasonal model gives the correct frequency and size of endemic and epidemic phases.
+
+The conditional probabilities of rises in the weekly number of cases
+
+from 1 week to the next given runs of rises or falls (Figure 2C) was also consistent between data and model and in the opposite direction to what would be expected given seasonal forcing, with a fall more likely to follow a rise and vice versa. With seasonal forcing, we would expect positive correlations in weather conditions from 1 week to the next to translate to positive correlations in epidemic growth or decline. 4. The 10 annual incidences (Figure 2D) were fully consistent with the distribution from the model predictions. These incidences indicate that the aseasonal model gives annual tallies that are consistent with those we observed. 5.
+
+The peak number of weekly cases over 10 years (Figure 2E) is similarly
+
+within the range of plausible scenarios under the aseasonal model.
+
+Figure 2. Comparison of observed dengue incidence and incidence from the simulated aseasonal models, 2003–2012, Singapore.A) Distribution of actual and simulated autocorrelation functions at different lags. B) Distribution of cumulative density function of the simulated weekly number of dengue cases and cumulative density function of the actual numbers of cases. C) Conditional probabilities of an increase in number of dengue cases and 95% CIs for simulated scenario and actual data, given 1–3 consecutive decreases or increases. D) Density plot of simulated and actual annual number of dengue cases. E) Density plot of simulated 10-year maximum number of cases and actual 10-year number of cases.
+
+The test for the number of runs did not find any deviation from the aseasonal model (p = 0.18), indicating that the consistency of epidemic rise and fall from 1 week to the next also agrees with the absence of seasonality.
+
+In subtropical Taiwan where there is clear seasonality, which is reflected in cycles in dengue epidemics (Figure 3A). Simulations from the aseasonal model (Figure 3, panels B-D) fail to capture both the seasonality and size of dengue outbreaks. The five measures we developed were able to indicate clear discrepancies between the data and the simulations (Figure 4, panels A and C).
+
+Figure 3. The aseasonal model applied to Taiwan (2011–2014).A) Dengue trend over 3 years in Taiwan. Clear seasonality can be observed that epidemics tend to appear at year end. B–D) Aseasonal simulation models. The timing and size of outbreaks differ markedly from the actual scenario of observed dengue incidence.
+
+Figure 4. Comparison of observed dengue incidence and the simulated aseasonal model in Taiwan. A) Distribution of simulated autocorrelation functions and actual autocorrelation functions at different lags. B) Distribution of cumulative density function of the simulated weekly number of cases and cumulative density function of the actual numbers. C) Conditional probabilities of an increase in number of dengue cases and 95% CIs for simulated scenario and actual data, given 1–3 consecutive decreases or increases. D) Density plot of simulated yearly number of cases and actual number. E) Density plot of simulated 10-year maximum and actual number.
+
+Discussion
+
+Through comparisons of the actual observed dengue time series in Singapore and the simulated trajectories from the aseasonal model, similar patterns can be discerned. In addition, for all the characteristics considered, the actual data were
+
+consistent with the aseasonal model for every metric we tested. This indicated that randomness alone is sufficient to explain the apparent epidemics of dengue. On the contrary, in subtropical Taiwan, the aseasonal model failed to capture the seasonality and size of dengue outbreaks. The five measures also indicated clear discrepancies between the data and the simulations. It is well recognised that we see patterns where there are none. When two things happen contemporarily and when there is a plausible story connecting the two, the tendency to assume one causes the other is strong (95). Cancer cases cluster around mobile phone masts, not because the radiation from the mast is carcinogenic at typical exposures, but because lots of masts exist, and occasionally cancers cluster in space, in the same way as do spilt grains of rice (96). The field of sports is notorious for concocting stories around essentially chance outcomes. Basketball fans, coaches and pundits believe players have streaks with the 'hot hand' when they have a run of good form, making many shots in succession and playing above their usual level during a match. In a famous study (93) in the heuristics and biases programme, a series of statistical tests showed that the patterns of actual hits and misses was consistent with mere chance – analogous to sequences of coin tosses rather than an illusory hot hand. Many events are unpredictable, but lead to observers subsequently to search for explanations or construct stories that make them seem inevitable. The assassination of Franz Ferdinand led inexorably to the first world war, but was caused by a series of chance events – the driver making a wrong turn, the assassin leaving a café at just the right moment (97). The attack on Pearl Harbour was only found imminent
+
+in retrospect when several clues such as the movement of Japanese warships towards Indochina and Malaysia (98) and the total radio silence of Japanese military transmissions (99) were uncovered. Prior evidence, for example of Islamic extremists travelling to Afghanistan in greater numbers, before the September 11 bombings (100) was discovered only after the incidence but could not be pieced together before. As such, when we are bound closely to an infectious disease outbreak, for professional or personal reasons, we strive to find reasons for why it happened, or why it peaked when it did, and can construct stories to explain away the unpredictability. Singapore's people come from three main origins: China and India, which lie north of the equator, and the Malay archipelago around the equator (101). The traces of Chinese, Indian and Western seasons can still be found in people who have lived for generations on the equator: Chinese children celebrate the "Autumn Festival" by carrying paper lanterns and eating moon cakes; Tamil Hindus celebrate the rice harvest by piercing themselves for Thaipusalam; Students and teachers in schools and universities talk about their plans for the "Summer" holidays; The shopping thoroughfare of Orchard Road is bedecked by plastic snow decorations every Christmas and clothes shops announce new season ranges, despite average monthly temperatures that never fall below 23 degrees Celsius. In this context, where temperate norms trump tropical reality, perhaps it is not so surprising that random sequences might assume the form of the seasonal outbreaks found in temperate or subtropical regions, such as wintry influenza.
+
+There are several limitations to this study. The study used summary metrics inspired by the sports randomness study to try to falsify the aseasonal model if the actual summary falls outside the range of the simulations. A statistical test could also have been implemented to formally test the hypothesis. A further limitation is that, although we concluded that factors other than random chance played a role in the dengue epidemics of Taiwan, no additional analysis was conducted to investigate which are those factors.
+
+Conclusions
+
+In equatorial Singapore, randomness alone is sufficient to explain the apparent epidemics of dengue. Although seasonal factors may have a role, as explained in introduction, seasonality or other temporal drivers such as fluctuation in the intensity of the country’s vector control program are not necessary to explain the qualitative and quantitative patterns of dengue in this equatorial city-state.
+
+Motivation for next chapter
+
+Unlike equatorial Singapore and potentially in other tropical countries, in subtropical and temperate regions, where seasonality is observed throughout the year, seasonal factors and other temporal drivers may play a vital role in explaining the patterns of infectious diseases. This has been extensively elaborated in the literature (102–107).
+
+Moving on from seeking for explanations for the patterns of infectious diseases epidemics and acknowledging the importance of various risk factors in driving disease transmission, the next step will be to attempt to construct infectious disease models for forecasts to potentially improve public health response. The ultimate goal in infectious disease forecasts is to be able to explain as much variation and make as accurate predictions as possible, and as such, seasonal factors might need to be included in models even for tropical regions. Climatic variables have been identified as important predictors in models for infectious disease forecast and various approaches have been proposed in the literature. A novel approach for forecast will be proposed in the next chapter, which has the flexibility of changing the model complexity and assessing the importance of different sets of predictors for settings from the tropics, subtropics and temperate regions, for different pathogens.
+
+Chapter 3: The Utility of LASSO-based Models for Real Time Forecasts of Endemic Infectious Diseases: a cross country comparison This work has been published as: Chen Y, Chu CW, Chen MIC, Cook AR.
+
+The utility of LASSO-based models for real time forecasts of endemic
+
+infectious diseases: a cross country comparison. J Biomed Inform. 2018 May. https://doi.org/10.1016/j.jbi.2018.02.014.
+
+Abstract
+
+Accurate and timely prediction for endemic infectious diseases is vital for public health agencies to plan and carry out any control methods at an early stage of disease outbreaks. Climatic variables have been identified as important predictors in models for infectious disease forecast. Various approaches have been proposed in literature trying to produce accurate and timely predictions and potentially improve public health response. We assessed how the machine learning LASSO method may be useful in providing forecasts for different pathogens in countries with different climates. Separate LASSO models were constructed for different disease (dengue, malaria, hand foot and mouth disease, and chickenpox)/country (Japan, Taiwan, Thailand, and Singapore)/forecast window (1-week ahead to 6-months ahead forecasts) with different model complexity by including different sets of predictors, using data from 2001 to 2014. Different sets of predictors were included to build models of different complexity to assess the importance of different predictors under various conditions.
+
+There was a more apparent cyclicity for both climatic variables and incidence in regions further away from the equator. For most diseases, predictions made beyond 4 weeks ahead were increasingly discrepant from the actual scenario. Prediction models were more accurate in capturing the outbreak but less sensitive to predict the outbreak size. In different situations, climatic variables have different levels of importance in prediction accuracy. For LASSO models used for prediction, including different sets of predictors has varying effect in different situations. Short term predictions generally perform better than longer term predictions, suggesting public health agencies may need the capacity to respond at short-notice to early warnings.
+
+Introduction
+
+Outbreaks such as those caused by the severe acute respiratory syndrome
+
+coronavirus (SARS-CoV), the influenza A(H1N1)pdm09 pandemic of 2009, and more recently the Middle East respiratory syndrome coronavirus (MERS-CoV), Ebola virus and Zika virus have demonstrated the high potential risk of emerging and re-emerging infectious diseases to spread within and between countries (5,108– 111). These in turn cause increasing challenges for public health systems, including the increasing burden of infectious disease, and the need to build a surveillance and response system that is able to identify newly emerging disease rapidly, both regionally and internationally which calls for international collaboration, and need for drug and vaccine research and production (112–114). While the response to endemic diseases may be less urgent, the burden caused by pathogens such as
+
+influenza (the per capita cost of a case of influenza illness ranged from $30 to $64, and approximately 10-20% of the world’s population is infected with influenza viruses every year) or malaria (there are 300 to 500 million clinical cases every year, and between one and three million deaths) is high (115–118), and due to their endemicity, many countries have long standing surveillance systems to track outbreaks and guide response, from vector control to hospital bed utilization (26,119–121). Early warning systems aiming to predict epidemics as soon as possible can allow control methods to be carried out rapidly and increase their chance of success (122,123). To do so, decision makers need to be able to make accurate forecasts of incidence and to automate this forecasting process based on routinely collected notification data (124). If accurate forecasts were available in both the near and far future, effective policies can then be targeted to the expected future needs. Existing approaches to real-time forecasting include generalized linear regression, SARIMA model or a simpler ARIMA form of it, phenomenological models like the logistic growth model and Richards model, and mechanistic models like the SIR models (51,52,55,125–127). Often such approaches involve the challenge of integrating environmental factors including temperature, humidity and rainfall, which may influence pathogen transmission directly or affect the vector activities (for vector borne diseases), especially in temperate regions (75,102,103,128,129). For instance, influenza virus is more transmissible in low temperature and low humidity conditions (130,131), while the primary vector of dengue, the yellow fever mosquito Aedes aegypti, favors higher temperature (132,133). The availability of real time data streams on seasonal
+
+variation and climatic variability therefore holds the potential to lead to more accurate prediction algorithms, potentially improving public health response. Least Absolute Shrinkage and Selection Operator (LASSO) regression is a machine learning method that can find patterns within large datasets while avoiding the problem of over-fitting (134). Estimation and variable selection are simultaneously carried out using the LASSO method, and as such it is commonly used in studies in fields with large numbers of explanatory variables to reduce the variable space. This algorithm trades off model accuracy with model parsimony by introducing a penalty term into the objective function (which in standard linear regression is the sum of squares of residuals). The penalty term can, for linear regression models, be made equivalent to a constraint on the sum of the absolute parameter coefficients. This constraint imposed by LASSO regression has the effect of shrinking some estimated coefficients towards zero (135), while simultaneously producing some parameter estimates that are exactly 0, so that the covariate associated with this coefficient is not associated with the outcome variable in that model. The optimal balance between model accuracy and complexity is typically obtained through cross-validation: repeatedly partitioning the data into training and validation sets, varying the degree of penalty, optimizing the regression parameters for each penalty value, then selecting the penalty that minimizes out of sample predictive accuracy. Computationally efficient methods to explore the penalty and parameter space exist (136), making it feasible to use LASSO as part of a ‘real-time’ forecasting pipeline for routinely collected health data such as infectious disease notifications. This computational speed allows the forecasting to adapt to changes
+
+in the underlying disease dynamics by permitting refitting of the model each time new data are reported, which may be important for diseases in which the severity changes between outbreaks, such as influenza (137). Forecasts at different time horizons can be obtained through splicing together separate LASSO models, each trained on the data available at the time of the forecast, but tailored to predict at different windows into the future. The LASSO method has previously been used in dengue outbreak prediction in Singapore, where it is now routinely used to guide vector control policy (138). While various methods have been proposed in the literature for the forecast of infectious diseases, there has not been any systematic study on a general approach which is applicable with modifications to various diseases in countries with different climatic patterns. The objective of this paper is to apply the LASSO method in infectious disease forecast and assess more generally in which situations LASSO models will provide useful forecasts. Unlike conventional use of the LASSO method to variable selection, the primary interest of our application of the LASSO-based method on infectious disease data is to make forecast of incidences in the future, rather than to identify the potential risk factors to explain the epidemics of these infectious diseases. In particular, we assess for diseases with different transmission modalities, in different climatic zones, how accurate short to medium time forecasts can be, and what data streams are necessary for accurate forecasts. We apply the method to four countries from different latitudes—Japan, Taiwan, Thailand and Singapore—to cover temperate, sub-tropical and tropical settings.
+
+Methods
+
+Sources of data
+
+Four representative countries with distinct climates were selected for analysis based on Köppen-Geiger climate classification(139) – Japan with humid continental and subtropical climate; Taiwan with humid subtropical and oceanic climate; Thailand with tropical wet and savannah climate and Singapore with tropical rainforest climate. Four representative infectious diseases were included in the study: two mosquito-borne infections (Dengue and Malaria) and two infections that are spread from person to person (Hand Foot and Mouth Disease (HFMD) and Chickenpox). For all four pathogens, a relationship has previously been found between incidence and climatic variables (140–142) or for there to be a seasonality to incidence (143). Not all four pathogens were considered for each country: some are not present in each country while others are not captured in routine infectious disease surveillance systems. The notified numbers of chickenpox, HFMD cases in Japan were collected by the National Institute of Infectious Diseases (144). Both were reported as average cases per week per sentinel reporting, to accommodate varying reporting rates. We extracted weekly data from 2001 to 2012. Monthly reported cases of chickenpox, dengue, and malaria in Thailand for the period 2003–2013 was obtained from the Bureau of Epidemiology, Department of Disease Control, Ministry of Public Health, Thailand (145). The number of incident
+
+cases were collected from government hospitals, public health offices and health centers by the National Disease Surveillance (146) and were reported online. Ministry of Health, Singapore, actively monitors and publishes the incidence of dengue and HFMD in Singapore, both being notifiable diseases. Weekly number of incidences for the period 2003 and 2014 were obtained from the Weekly Infectious Diseases Bulletin (144). Weekly number of dengue cases from 2003 to 2014 were extracted from Taiwan National Infectious Disease Statistics System (145). Both indigenous and imported cases were included in the count. Epidemiological week as per US Centers for Disease Control and Prevention was used in our analysis using the EpiWeek package in R (147). Climatic data for Taiwan, Thailand and Singapore were obtained from the Weather Underground (148) which documented among other variables, historical temperature, humidity, sea level pressure, and visibility. Only temperature (daily highest, average and lowest) and relative humidity (daily highest, average and lowest) were used in our models due to insufficient historical data of other climatic variables. Climatic data for Japan were obtained from the Japan Meteorological Agency (149), which provides and archives various weather information. Weekly mean temperature, relative humidity and rainfall information were used in our model. For all locations, the weather data at the capital (Tokyo, Taipei, Bangkok and Singapore) was used to represent overall national weather.
+
+Statistical analysis
+
+Wavelet analyses were done to explore periodicity of all endemic diseases and climatic variables in four countries. The wavelet approach was based on a wavelet function which analyses locality in time and frequency (57). Wavelet transformation ( 𝑊𝑊𝑡𝑡 (𝑠𝑠) ) as the convolution of the time series 𝑥𝑥𝑡𝑡 with Morlet function 𝜓𝜓0 (𝜂𝜂) at scale 𝑠𝑠 was conducted: 𝑇𝑇−1
+
+−2𝜋𝜋𝜋𝜋𝜋𝜋𝜋𝜋/𝑇𝑇 where 𝑥𝑥�𝑘𝑘 is the discrete Fourier transform of 𝑥𝑥𝑡𝑡 : 𝑥𝑥�𝑘𝑘 = ∑𝑇𝑇−1 , 𝑘𝑘 = 𝑡𝑡=0 𝑥𝑥𝑡𝑡 𝑒𝑒 𝑇𝑇
+
+0, … , 𝑇𝑇 − 1 the frequency index, and 𝜓𝜓�(𝑠𝑠𝑠𝑠) the Fourier transform of Morlet
+
+function: 𝜓𝜓�(𝑠𝑠𝑠𝑠) = 𝜋𝜋 −4 𝐻𝐻(𝜔𝜔)𝑒𝑒 −(𝑠𝑠𝑠𝑠−𝜔𝜔0 ) /2 , where 𝜔𝜔0 refers to the nondimensional frequency and is set to 6 to satisfy the admissibility condition (150).
+
+The wavelet transformation 𝑊𝑊𝑡𝑡 (𝑠𝑠) can be divided into amplitude, |𝑊𝑊𝑡𝑡 (𝑠𝑠)|, and phase, tan−1 [ℑ{𝑊𝑊𝑛𝑛 (𝑠𝑠)}/ℜ{𝑊𝑊𝑛𝑛 (𝑠𝑠)}] , where ℜ{𝑊𝑊𝑛𝑛 (𝑠𝑠)} is the real part of the
+
+transform and ℑ{𝑊𝑊𝑛𝑛 (𝑠𝑠)} the imaginary part. The wavelet power spectrum is defined as |𝑊𝑊𝑡𝑡 (𝑠𝑠)|2 (151).
+
+Least Absolute Shrinkage and Selection Operator (LASSO) regression (134) is
+
+used for the prediction models. As incidence data were generally right skewed and with increased stochasticity during epidemics, we controlled for skewness and heteroscedasticity by log-transforming (after adding one to) the observed number of cases for all analyses, or mean number of cases per sentinel for Japan.
+
+We build separate LASSO models for each disease, in each country, and for each forecast window based on similar sets of candidate predictors (adapting the approach used in Ref.(138)). Each candidate predictor appeared several times in each model, at different historical lags. To allow for contagion and typical epidemic duration, we used past incidence of up to a half year (26 weeks for Japan, Taiwan and Singapore; 6 months for Thailand) as autocovariates. We accommodated nonlinearities in the relationship between past and future incidence by using the quadratic of past incidence (again, up to one half year in the past) as a potential covariate; the inclusion of additional polynomial terms did not improve the results and hence were omitted. We used climatic variables (minimum, maximum and average temperature, humidity and rainfall) of up to 4 weeks (one month for Thailand). We also used a month indicator that associated each epidemiological week with a single calendar month to represent potential seasonal variation beyond those governed by the climatic data. Wavelet transformations of the covariates and outcomes were not used, to ensure that only data available at the time of the forecast were used to make the forecast. For each forecast window (from 𝑘𝑘 = 1 time unit to 6, for Thailand (the data being
+
+monthly) or 26, for Japan, Taiwan and Singapore (weekly)), a separate LASSO model was developed which used data available at the time of the forecast only. The selection of the time window was dependent on the resolution of notification
+
+data for each disease. Each LASSO model is as follows:
+
+𝑦𝑦𝑡𝑡+𝑘𝑘 = 𝛼𝛼𝑡𝑡𝑘𝑘 + 𝛽𝛽𝑡𝑡𝑘𝑘 𝑦𝑦𝑡𝑡 + 𝛽𝛽𝑡𝑡𝑘𝑘−1 𝑦𝑦𝑡𝑡−1 + ⋯ + 𝛽𝛽𝑡𝑡𝑘𝑘−25 𝑦𝑦𝑡𝑡−25 + 𝛾𝛾𝑡𝑡𝑘𝑘 𝑦𝑦𝑡𝑡2 + 𝛾𝛾𝑡𝑡𝑘𝑘−1 𝑦𝑦𝑡𝑡−1 +⋯
+
++ 𝛿𝛿𝑡𝑡𝑘𝑘 𝑐𝑐𝑡𝑡 + ⋯ + 𝛿𝛿𝑡𝑡𝑘𝑘−3 𝑐𝑐𝑡𝑡−3 + 𝜃𝜃𝑘𝑘1 Jan𝑡𝑡+𝑘𝑘 + 𝜃𝜃𝑘𝑘2 Feb𝑡𝑡+𝑘𝑘 + 𝛾𝛾𝑡𝑡𝑘𝑘−25 𝑦𝑦𝑡𝑡−25
+
+where 𝑦𝑦𝑡𝑡 is the log number of cases at time 𝑡𝑡, 𝑦𝑦𝑡𝑡2 the square of the log number of cases at time 𝑡𝑡, 𝑐𝑐𝑡𝑡 the climatic variable at time 𝑡𝑡, and Jan𝑡𝑡 , Feb𝑡𝑡 , …, Dec𝑡𝑡 are indicator variables for the month at time 𝑡𝑡.
+
+This was subject to the constraint ∑25 𝑖𝑖=0�𝛽𝛽𝑡𝑡𝑘𝑘−𝑖𝑖 � + ∑𝑖𝑖=0�𝛾𝛾𝑡𝑡𝑘𝑘−𝑖𝑖 � + ∑𝑖𝑖=0�𝛿𝛿𝑡𝑡𝑘𝑘−𝑖𝑖 � +
+
+∑12 𝑖𝑖=1�𝜃𝜃𝑘𝑘𝑖𝑖 � ≤ 𝑝𝑝. The 𝑝𝑝 and penalty term λ have a one-to-one correspondence in
+
+LASSO, which can equivalently be formulated as a constraint to the total absolute size of the parameters, or as a penalty to the log-likelihood determined by their total
+
+absolute size. The choice of the optimal 𝑝𝑝 in this study was based on ten-fold cross
+
+validation for that dataset (country, disease, forecast length combination). Ten-fold cross validation was carried out by partitioning the total data set into 10 approximately equal-sized subsamples. Each subsample was used in turn as the validation set while the rest were used as the training set, the performance was measured through the mean squared error (of the difference between the forecast and the data) on each validation set and averaged over the ten folds. The constraint (or equivalently, penalty term) that optimized the out of sample performance was then used to refit the model and make projections. In this way, the optimal complexity of the model—from the perspective of out of sample prediction—can be determined via the constraint. We developed both (a) ‘real time’ forecasts, in which both the parameters and the predictions were regenerated based on available
+
+data at that time, and (b) one set of ‘retrospective’ forecasts, which used the last of the real time forecasts, to summarize effects of covariates. Following standard practice, covariates were z-scored prior to estimation and the coefficients rescaled afterwards. As the models were built separately for each forecast window, the variables selected and their lags and parameter magnitude and sign may differ substantially.
+
+Sensitivity analysis
+
+Eight models with different combination of predictor types were used for each disease/country/forecast length to assess the importance of including each data stream in the predictive algorithm. Details of the components in each model are shown in Table 1.
+
+Models
+
+Incidence
+
+Model 1 Model 2 Model 3 Model 4 Model 5 Model 6 Model 7 Model 8
+
+Squared
+
+Climatic
+
+Monthly
+
+Table 1. Sets of predictors in different models.
+
+Accuracy
+
+To assess prediction accuracy of the models, we made out-of-sample forecasts and compared with data observed. For each time point and each prediction window, a 95% projection interval—which we define here as an interval derived from the best fitting model with random errors overlaid, but excluding parametric uncertainty—
+
+was derived and the percentage of such intervals successfully capturing the actual value was calculated. To assess if the prediction models were able to detect early signs of elevated levels of transmission—which we defined to be time windows (weeks or months) in which the number of cases is more than the 75th percentile of what has been observed in the preceding year—we calculated the fraction of predictions in which the projection correctly classified the data as being above or below that threshold. This was calculated separately for each length of forecast window. An accuracy of 75% is expected for a poorly predictive model. One-sided binomial tests were done to all prediction windows and those that significantly identify the early signs at an accuracy of more than 75% were identified. Prediction accuracy was measured by the mean absolute percentage error (MAPE), root mean squared error (RMSE), and R-squared, for each forecast window. Relative prediction error as compared to the simplest incidence only model at all forecast windows were calculated to assess model complexity and accuracy. All statistical analysis were performed using R Statistical Software (152).
+
+Results
+
+Climatic and incidence patterns of the diseases are presented in Figure 5 and Figure 6. At further distances from the equator, temperature and humidity show more obvious annual cycles, and there is concomitantly more cyclicity in disease incidence, as indicated in the power spectra illustrated in Figure 7. Power spectra of average temperature and humidity are presented in Figure 8 and Figure 9.
+
+Temperature in all countries have a period of one year but the cyclic effect is more marked in temperate and subtropical regions, and less so in equatorial Singapore. Average humidity displays one-year cycle in temperate and subtropical regions, but again not Singapore, although the effect is not as obvious as with average temperature. Although in temperate regions, there is an apparent synchronicity between incidence and climatic factors, in tropical regions like equatorial Singapore, there was little variation in either temperature or humidity, and similarly no observed cycle of disease incidence. In addition, there was no correlation observable between cases and climate, either in incidence itself or the change in incidence (reflecting transmissibility).
+
+Figure 5. Incidence and climatic (temperature and humidity) patterns of four representative diseases. (a) chickenpox in Japan; (b) HFMD in Japan; (c) chickenpox in Thailand; (d) HFMD in Singapore.
+
+Figure 6. Incidence and climatic (temperature and humidity) patterns of four representative diseases. (a) malaria in Thailand; (b) dengue in Thailand; (c) dengue in Singapore; (d) dengue in Taiwan.
+
+Figure 7. Wavelet power spectrum for four representative diseases. (a) chickenpox in Japan; (b) HFMD in Japan; (c) chickenpox in Thailand; (d) HFMD in Singapore. For each panel, the power spectrum values are categorised by decile prior to plotting.
+
+Figure 8. Wavelet power spectrum for average temperature. (a) Japan; (b) Taiwan; (c) Thailand; (d) Singapore. For each panel, the power spectrum values are categorised by decile prior to plotting.
+
+Figure 9. Wavelet power spectrum for average humidity. (a) Japan; (b) Taiwan; (c) Thailand; (d) Singapore. For each panel, the power spectrum values are categorised by decile prior to plotting.
+
+Figure 10 shows the actual incidences as well as forecasts at four prediction points for the four diseases presented in Figure 5 using the model with all variable sets. At each time point, up to six months’ ahead predictions are shown in the figure, using data available at the time the prediction was made. The number of variables from each category that were selected by our LASSO models are presented in Figure 11 and the effect size of each climatic variable at different lags for all forecast windows are shown in Figure 12. Generally, the 95% projection interval of the forecast captured the actual scenario more than 80% of the time, indicating slight under-coverage. Coverage rates for the full models are tabulated in Table 2. MAPE for full models at all prediction windows are shown in Table 3. For most diseases, predictions made beyond 4 weeks ahead were increasingly discrepant from the actual scenario.
+
+Figure 10. Actual incidence and forecasts. Actual incidence (orange line) and forecast (blue dots, dark red 95% projection interval, pink 70% projection interval) at four time points for each of the representative diseases.
+
+Figure 11. Number of variables from different variable categories that were selected by the full prediction models. The initial number of potential variables in the models for Thailand were smaller than that for other countries due to incidence data being monthly.
+
+Figure 12. Parameter coefficient of all climatic variables at all lags for all forecast windows. Effect sizes were comparable for each disease in each country, red colour indicates positive effect and blue colour indicates negative effects and grey indicates variables not selected at that lag for that forecast window. The shades of the colours indicate the effect size.
+
+Japan
+
+Predictio
+
+Window
+
+Singapore
+
+Taiwa
+
+Thailand
+
+HFM
+
+HFM
+
+Table 2. Fraction of 95% projection intervals that cover the eventual value for full models for all diseases at all prediction windows.
+
+Japan
+
+Predictio
+
+Window
+
+Singapore
+
+Taiwa
+
+Thailand
+
+HFM
+
+HFM
+
+Table 3. Mean Absolute Percentage Error for full models for all diseases at all prediction windows.
+
+Predicted cases against actual cases at 1 week, 2 weeks, 4 weeks and 8 weeks for all prediction period for all diseases were plotted in Figure 13. For all diseases, as the prediction window gets longer, the magnitude of the error grows, especially for the largest sizes of outbreaks where there is likely to be more stochastic variability. Cumulative density functions of the observed time series of all diseases and predicted time series at various forecast windows are shown in Figure 14: those derived from predictions are generally close to that from the observed time series. Short term predictions generally performed better than longer term predictions.
+
+Table 4 shows the classification accuracy of our prediction models being able to correctly classify one week/month to be an epidemic week/month. A percentage above 75% suggested that the prediction model performed better than a random guess. Models that passed the binomial test of having accuracy significantly higher than 75% were marked with the asterisk. Predictions for HFMD epidemic were generally accurate even at long prediction windows; for most other diseases, prediction within 5 weeks were above 75%. However, for chickenpox in Japan and dengue in Singapore, only predictions within 3 and 4 weeks were significantly above 75% from the Binomial test. This suggests that the approach can predict the timing of periods of elevated transmission at about one month in advance but that the absolute magnitude is hard to predict accurately, given the larger errors at high levels exhibited in Figure 13.
+
+Predictio
+
+Window
+
+Japan
+
+Singapore
+
+Taiwan
+
+Thailand
+
+HFM
+
+HFM
+
+Table 4. Percentage of our prediction model correctly classify a predicted future week/month being an epidemic week/month. An epidemic week/month is defined as when the number of cases is more than the 75th percentile of the level in the past year. Percentage above 75% is shown bold. Models that had significantly higher accuracy than 75% are marked with an asterisk.
+
+Figure 13. Predicted cases against actual incidence. Predicted cases against actual incidence at 1 week, 2 weeks, 4 weeks (1 month), and 8 weeks (2 months) for all prediction period for all diseases.
+
+Figure 14. Cumulative density functions (CDF) for observed time series for all diseases and the CDF for predicted time series at various forecast windows.
+
+The trade-off between model complexity and efficiency was assessed by
+
+constructing models with different groups of variables and comparing the forecasts based on these models (Figure 15 and Figure 16). The prediction errors arising from each model were then compared with the simplest incidence only model. A ratio substantially less than 1 shows prediction accuracy increased by including the set(s) of variables. For some diseases like chickenpox in Thailand, dropping some variables affected prediction accuracy by a large extent, indicating the importance of including monthly effect to achieve greater accuracy in predictions. For other diseases like dengue in Taiwan, dropping the climatic variables had only minimal effect on the accuracy of the predictions, which suggests that the features in those sets are not necessary for routine predictions. Panels in the second column in Figure 15 and Figure 16 showed prediction error for all diseases for different prediction
+
+windows. Prediction error was quantified by the mean absolute percentage error. In line with our previous observations, as the prediction window gets longer, prediction error increases. More complicated models show less prediction error but the improvements varied by diseases and countries.
+
+Figure 15. Relative prediction error for Japan and Singapore models of different complexity as compared to the simplest incidence only model and absolute prediction error measured by MAPE for all models.
+
+Figure 16. Relative prediction error for Taiwan and Thailand models of different complexity as compared to the simplest incidence only model and absolute prediction error measured by MAPE for all models.
+
+Discussion
+
+Applying the LASSO method to data on recent incidence and climate leads to around 20% or lower prediction error for short term predictions, even for an aseasonal, tropical country like Singapore in which the presence of randomness in outbreak occurrence may be strongly felt (17). Most of the variation in incidence was explained by the autoregressive terms as there was no or minimal improvement in forecast accuracy by including more variables other than autoregressive terms in the prediction model shown in Figure 15 and Figure 16. Long term predictions were not accurate, even when we include multiple climatic variables as candidate features. We believe this reflects the difficulty in using weather data relating to current conditions to predict disease levels in several months—in contrast, most other analyses use climate data from near the time point being forecast (75,153), which is typically not available in real time. Hence the utility of predictive analytics for infectious disease policy making is mostly for immediate response over the next few weeks rather than months. This LASSO-based method we proposed for forecast provides an insight into the potential utilization of LASSO regression outside its usual application in the area of variable selection, for real time forecasting. This approach can readily be automated to run on routinely collected case data, but the accuracy of the prediction is very much dependent on the timeliness at which such data become available. This calls for a comprehensive regional and country level infectious diseases surveillance system, whether using clinician/laboratory driven case notification, or mining of electronic medical records. Weather data, in contrast, are widely posted
+
+to sources like the Weather Underground which can be mined in real-time. An example of this in practice can be found in Singapore, where the National Environment Agency has a weekly dengue forecast, as described elsewhere (138). The LASSO model building process involves identifying the model complexity through optimal out of sample predictive performance, and as such it is naturally suited to making forecasts. By fitting separate models at each forecast window, variables whose predictive performance is expressed differently at different lags can be efficiently exploited: this might be particularly beneficial for vector borne diseases in which the effect of weather on transmission is mediated through one or more generations of vectors. In large countries, and in particular those that span multiple latitudes, we anticipate that the accuracy of the predictions will improve if regional information rather than aggregated country-level data streams is used. The aggregation averages the whole country and thus attenuates regional differences in both climate and incidence. Future work could assess the impact of disaggregation for countries like Japan for which prefectural level data are available. By using past disease incidence and seasonal terms, LASSO has many of the characteristics of traditional time series models (e.g. the SAR in SARIMA) which have frequently been used for prediction of infectious disease time series (55,154– 157). What is less clear is how to incorporate structural information about outbreak data, such as the typical Gaussian incidence curve that is seen in both empirical data (158) and theoretical transmission dynamic models (159), or the known impact of changing herd immunity levels (160). This may also help predict atypical
+
+outbreaks, such as the 2009 influenza pandemic which occurred in the Northern Hemisphere’s summer (161), and for which extrapolating approaches like LASSO may break down. There are several limitations to this study. Regression models, including those built using LASSO, may be effective in providing accurate predictions, but differ from traditional epidemic models such as susceptible-infected-removed compartmental models, network models (36) or individual based simulation (162), which seek to describe the transmission dynamics of contagious diseases, and can therefore be used to predict the effect of interventions or novel scenarios. A further limitation is that, for simplicity, only weather information from the capitals were used in the study, but for countries like Japan, Thailand and Taiwan, there are great variation between climatic conditions in the North and the South. Prediction accuracy might improve if incidence and weather information can be collected at a finer resolution. We suspect that even the accuracy of short term forecasts may be reduced should new epidemiological conditions replace those that the model was trained on. Examples of this would be the emergence of a new strain or variant, such as an influenza pandemic (163), more virulent strain of the virus (164), or a virus moving into a new population (165). It would also break down in the presence of changing control efforts such as school closure (72) or novel vector control (166). In such situations, a mechanistic modelling approach (167) may be better able to predict the epidemic dynamics until sufficient training data are available.
+
+Conclusions
+
+Regression models using LASSO were built to forecast incidence for four endemic diseases in four countries. For some diseases including one set of variables may improve predictive accuracy substantially while for other diseases, the simpler models give similar results as more complex models. For all diseases, short-term prediction was generally much better than longer term predictions, which suggests that public health agencies may need the capacity to respond at short-notice to early warnings of possible infectious disease outbreaks should models based on this approach be implemented routinely.
+
+Motivation for next chapter
+
+The novel regression based forecast model proposed in this chapter is temporal in nature, which provides forecasts into the future without considering any potential spatial variation and spatial correlation involved. Insights from this proposed forecast model will be able to inform public health responses at a national or regional level. One possible next step to improve forecasts of infectious diseases is to incorporate potential spatial correlation to the model and refine the model to produce spatiotemporal predictions. Spatial correlation plays a vital role in the process of infectious disease transmission, which is not considered in the current chapter. With the addition of spatial information, planning of control and prevention of infectious diseases can be made at smaller spatial resolutions and is likely to be more effective and efficient. Planning of healthcare resources, including hospital
+
+beds and emergency room capacities can also be more accurate if high resolution spatiotemporal forecasts can be developed.
+
+Chapter 4: Neighbourhood Level Real-time Forecasting of Dengue
+
+Cases in Tropical Urban Singapore
+
+This work has been published as: Chen Y, Ong JHY, Rajarethinam J, Yap G, Lee CN, Cook AR. Neighbourhood level real-time forecasting of dengue cases in tropical urban Singapore. BMC Med. 2018 06;16(1):129.
+
+Abstract
+
+Dengue, a vector-borne infectious disease caused by the dengue virus, has spread through tropical and sub-tropical regions of the world. All four serotypes of dengue viruses are endemic in the equatorial city state of Singapore, and frequent localised outbreaks occur, sometimes leading to national epidemics. Vector control remains the primary and most effective measure for dengue control and prevention. For better planning of vector control and efficiency of resource utilization, accurate forecast of dengue epidemics is necessary at a neighbourhood level. The objective of this study is to develop a novel framework for spatiotemporal dengue forecast at a neighbourhood level spatial resolution, which can be routinely used by Singapore’s government agencies for planning of vector control for best efficiency. The forecasting algorithm uses a mixture of purely spatial, purely temporal, and spatiotemporal data to derive dynamic risk maps for dengue transmission. LASSO based regression was used for the prediction models and separate sub-models were constructed for each forecast window. Data were divided into training and testing sets for out of sample validation. Neighbourhoods were categorised as high or low risk based on the forecast number of cases within the cell. Predictive accuracy of the categorisation is measured.
+
+Close concordance between the projections and the eventual incidence of dengue were observed. The average Matthew’s correlation coefficient for a classification of the upper risk decile (operational capacity) is similar to the predictive performance as the optimal 30% cut-off. The quality of the spatial predictive algorithm as a classifier shows area under the curve (AUCs) at all forecast windows being above 0.75 and above 0.80 within the next month. Spatially-resolved forecasts of geographically structured diseases like dengue can be obtained at a neighbourhood level in highly urban environments at a precision that is suitable to guide control efforts. The same method can be adapted to other urban and even rural areas, with appropriate adjustment to the grid size and shape.
+
+Introduction
+
+Dengue, a vector-borne infectious disease caused by the dengue virus (DENV, four serotypes DENV1-4), has spread through tropical and sub-tropical regions of the world in recent decades (168). It is transmitted by the Aedes mosquitoes, and in urban areas, primarily by the anthropophilic Ae. aegypti. Total dengue infections globally have been estimated to be 390 million per year (78), of which 96 million manifest clinically, the majority of which (70%) are found in Asia. It has been estimated that 3.97 billion people from 128 countries are at risk for dengue infection (169), and as urbanisation continues across much of Asia (170), the incidence is liable to grow (79). Dengue fever usually leads to self-limiting symptoms including fever, headaches, pain behind the eyes, nausea, vomiting, swollen glands, rash, and joint, bone or muscle pains (171). However, when dengue fever develops into
+
+severe dengue, plasma leaking, severe bleeding, severe organ impairment, and even death may occur (172), making dengue control an important public health problem. In the equatorial city state of Singapore, from the 1990s, there is a dramatic increase in the number of notified dengue cases, and all four serotypes are endemic (173). Singapore’s favourable climatic condition (average monthly temperature varying from 26 to 28°C), its highly urbanized environment, and it being a hub for international travel and transition (88) make it ideal for the breeding of Aedes mosquitoes and transmission of dengue. Since 2013, dengue incidence of more than 150 per 100 000 population has been reported (174) and this has been related to sizable disease burden to Singapore (175). Although a new dengue vaccine, Dengvaxia® (CYD-TDV), first licensed in Mexico in 2015 (176), has been approved by the Health Science Authority in Singapore for persons aged 12 to 45, and has been available commercially since 2017, the vaccine is primarily effective against DENV3 and DENV4 but less so against DENV1 and DENV2 (177), which are the predominant serotypes in Singapore (178). The vaccine is more effective for individuals with a prior exposure to dengue virus (176), but increases the risk of severity in subsequent infection for immune naïve individuals (179). It is thus not recommended for Singapore where endemicity and seroprevalence are low (180,181). At present, vector control remains the primary and most effective measure for dengue control and prevention (25). The National Environment Agency (NEA) of Singapore deploys officers to inspect premises, eliminate potential breeding grounds and outreach to remind residents to remove sources of stagnant water. Such
+
+resource-intensive vector control measures could be optimised by targeting areas of greater risk of transmission. As well as providing an indication of where dengue transmission is ongoing, incident case data also foreshadows where future outbreaks are most likely, and hence provides a guide to which areas to be prioritised for preventive efforts. To do so requires quantifying the likely number of cases in different areal units, which can be addressed through short-term forecasting. In the literature, various models have been proposed for the prediction of dengue cases. Machine learning methods including the support vector regression algorithm, gradient boosted regression tree algorithm, and regression or auto-regression models have been used at national (182), sub-national (183) and urban levels (184), using incidence and climatic variables, including temperature, relative humidity, rainfall, and solar radiation. Examples from Singapore (185–187) have provided forecasts at a national level, with the Environment Health Institute in Singapore currently relying on LASSO based models incorporating recent case data, meteorological data, vector surveillance data, and population-based national statistics, to derive up to 3-month national forecasts to guide vector control (187). In the past 5 years, extensive work has been done in many dengue-affected areas in the world on dengue forecast, including Thailand, Indonesia, Ecuador and Pakistan (188–192), to create early warnings to potential dengue outbreaks. In addition to the conventionally used meteorological or disease epidemiological information as predictors (104,186,193), recent forecast models have begun to incorporate human mobility information (194,195), land use (196), frequency of social media mentions
+
+and appearances on online search engines (197,198) and spatial dynamics (199– 201) to provide additional information for accurate predictions. Even within a small city state such as Singapore, spatial variations in risk may be profound, reflecting differences in urban density, presence of natural areas, such as rainforest and reservoirs, and differential age profiles of different housing estates, and as such, a finer resolution forecast, if one were available, would potentially allow better targeting of response. The objective of this study is, therefore, to develop a new approach for spatiotemporal dengue forecast at a finer spatial resolution, which can be routinely used by Singapore’s government agencies for planning of vector control for best efficiency, and may potentially be adapted to other settings.
+
+Methods
+
+Modelling objectives
+
+Our objective is to develop a suite of models, each to forecast at one specified window into the future, based on the data available at the time the forecast is made. Each model will predict for each neighbourhood the number of cases within a oneweek interval, which will then be used to rank neighbourhoods according to projected risk. This ranking can then be used to identify those areas to be prioritised for interventions, subject to resource availability. Accuracy will be assessed by correlating observed and actual numbers of cases and calculating the receiver operating characteristics when neighbourhoods are classified as high or low risk.
+
+Source of data
+
+The forecasting algorithm uses a mixture of purely spatial, purely temporal, and spatiotemporal data to derive dynamic risk maps for dengue transmission. Spatiotemporal: Ministry of Health, Singapore, continuously monitors the incidence of dengue through mandatory notification of virologically confirmed or laboratory confirmed cases. Residential address and date of onset of each case in Singapore are recorded. We aggregated individual level data into weekly number of cases in 315 spatial units of size 1km×1km (henceforth, neighbourhoods), from 2010 to 2016, spanning the major residential areas of the country. Movement patterns of mobile subscribers were derived by analysing their cell phones’ network activities among subscribers of StarHub Ltd, one of the three major mobile telephone companies (telcos) in Singapore. The mobile data comprises all the post-paid subscribers of StarHub Ltd, which constitutes approximately 30% coverage of total mobile subscribers in Singapore. GRID360 – a geo-location product developed by StarHub Ltd to anonymize and aggregate island-wide geolocation-related data onto a regular grid of size 165m for business purposes – was deployed by StarHub to detect dwelling points of individual subscribers and subsequently their origin and destination of travel by analysing their cell phones’ network activities. The GRID360 origin-destination engine detects a dwelling point (origin or destination) when the subscriber has stayed in a neighbourhood for 30 minutes or longer. The location data are generated when the following occur:
+
+1. Whenever there are activities on the phone which engage a service of the telco, such as usage of mobile data, including of applications running in the background, calls or short message services. 2. Whenever the phone moves into another location area code. 3. Periodically, there is a location update (roughly once every 2 to 3 hours) if there is no activity or movement to another location area code. These location-time data are then aggregated to yield the total number of subscribers traveling to and from each pair of grids. To this end, whenever an individual moved from a location in neighbourhood 𝑖𝑖 to neighbourhood 𝑗𝑗, spending
+
+longer than 30 minutes there, this was counted as a trip between the two neighbourhoods. The time threshold of 30 minutes was chosen to ensure that the individual was not just passing through the neighbourhood en route to another. From the set of such trips, we constructed an origin-destination connectivity matrix, 𝑛𝑛11 � ⋮ 𝑛𝑛𝑁𝑁1
+
+where 𝑛𝑛𝑖𝑖𝑖𝑖 denotes the total number of subscribers traveling from grid 𝑗𝑗 to grid 𝑖𝑖.
+
+We then derived a variable, connectivity-weighted transmission potential, by weighting the cases with the telco data using the formula: 𝑥𝑥𝑖𝑖𝑖𝑖 =
+
+where 𝑥𝑥𝑖𝑖𝑖𝑖 is the weighted number of dengue cases from all other grids cells, weighted by their connectivity, for grid 𝑖𝑖 at time 𝑡𝑡; and 𝐶𝐶𝑗𝑗𝑗𝑗 is the total number of
+
+dengue cases from grid 𝑗𝑗 at time 𝑡𝑡 . Note that although the connectivity
+
+measurement, 𝑛𝑛𝑖𝑖𝑖𝑖 , is spatial but non-temporal, the derived variable, connectivity-
+
+weighted transmission potential, is spatiotemporal through its relationship with the
+
+number of cases per cell at each time point. This variable captures the future risk to a neighbourhood from other neighbourhoods with current dengue cases. Building age was obtained from the Housing Development Board and the Urban Redevelopment Authority and averaged over all buildings within a neighbourhood. Previous studies have shown that the quality of buildings can impact the presence of potential breeding habitats (202), thus increasing the risk of dengue transmission. Because building practices have evolved over time and newer buildings are designed to reduce vector breeding sites, building age is a plausible risk factor for transmission, and as preliminary analyses showed a high association with both Aedes mosquito and dengue incidence, this was used as a predictor in the model. Meteorological data are incorporated to account for the important role that climate has in the mosquito life-cycle. Despite Singapore’s small size, there are some systematic differences in climate across the country (203), and to accommodate that, meteorological data were estimated for each neighbourhood using weekly mean, maximum and minimum temperature, and average relative humidity from the nearest (of 21) weather stations across the island managed by the Meteorological Services Singapore. Temporal: Other than weekly incidence in the cells, individual level dengue incidence data were aggregated into weekly national cases as a proxy for the general epidemic level.
+
+Spatial: The vegetation index refers to the Normalized Difference Vegetation Index (NDVI), which is an index of plant viridescence or photosynthetic activity. NDVI is based on the observation that different surfaces reflect different types of light differently. NDVI data was obtained from the Centre for Remote Imaging, Sensing and Processing in the National University of Singapore after processing the satellite image. Travel history data derived from trips made using EZLink cards (a card to pay for public transport fares in Singapore) were used to measure how connected each neighbourhood is to other parts of the country by public transport. Aggregate movement patterns were extracted from a database of public transport card utilisation by the Future Cities Laboratory. The original data contain the time and location at which passengers on the bus, train or monorail systems enter and leave the network, together with the route used. Locations were identified with the grid cell containing the station or bus stop, and the “connectivity” of each cell was determined by summing the number of trips originating from, or terminating at, each cell over a one-month period. Cells were then percentile ranked from most (100) to least (0) connected. The ranked connectivity differs from the mobile telephony data by capturing transits (for instance, from one bus to another, or from the train to a bus) rather than sojourns (due to for instance spending prolonged time in an office building) and thus potentially captures an alternative facet of mobility. The Institutional Review Board of the National University of Singapore provided the ethical approval for this study.
+
+Statistical analysis
+
+LASSO regression was used for the prediction models (204). In contrast to standard linear regression in which parameters are estimated by minimizing the sum of squares of residuals, LASSO regression imposes an extra constraint that the sum of the absolute value of the regression coefficients be less than a fixed value which is selected for optimal out-of-sample predictive performance. This algorithm shrinks coefficients towards zero, with some becoming exactly zero and hence the covariates associated with these coefficients are not associated with the outcome variable in the model. Compared to a simple regression, which gives a pre-specified set of predictors estimated coefficients, a LASSO regression allows all covariates, at multiple lags, to be included as potential predictors, despite the usual concerns about the size of the variable space or the presence of collinearities. The optimal balance between model accuracy and complexity is obtained by varying the constraint and optimizing out-of-sample predictive accuracy over the data not used in the model building process, which is inherently well suited to the problem of forecasting, as described in earlier, non-spatial work (187,205). Separate LASSO sub-models were constructed for each forecast window, which was defined as the number of weeks ahead the sub-model is predicting, and all 315 (approximate) squares of size 1km×1km covering residential areas of Singapore were included in each sub-model. For each sub-model, information for all 315 grid neighbourhoods at all time points in the training set were included. Each candidate predictor appeared several times in each sub-model, at different historical lags. To allow for contagion and typical epidemic duration, we used past incidence of up to
+
+8 weeks, and to accommodate non-linearities, we also used past incidence squared, cubic, and square root, up to 8 weeks in the past. Polynomials are commonly used to approximate any non-linearity in the relationship between the covariate and outcome, and thus we allow (but do not force) polynomial terms to account for potential non-linearities between future number of cases and autoregressive terms. In addition, the total number of cases in nearby areas were included at up to 8 weeks lag. Two tiers of nearby areas were used: within 1km radius, within 1km and 2km ring, from the centroid of the neighbourhood of interest. These are depicted in Figure 17. Climatic variables (average, minimum, and maximum temperature, and humidity) of up to 5 weeks lag were included. Cells were included in the analysis if the centroid falls within a residential area of Singapore; some cells near the boundary are truncated to the part on the main island, Pulau Ujong.
+
+Figure 17. Illustration of two tiers of neighbourhoods of the grid of interest.
+
+For each forecast window (from 𝑘𝑘 = 1 to 12 weeks), a separate LASSO sub-model
+
+was developed which used data available at the time of the forecast only. Each LASSO sub-model is as follows:
+
+𝛾𝛾𝑘𝑘𝑐𝑐 ,𝑙𝑙 𝑊𝑊𝑡𝑡−𝑙𝑙,𝑖𝑖,𝑐𝑐 + 𝜆𝜆𝑘𝑘 𝑇𝑇𝑡𝑡,𝑖𝑖 + 𝜃𝜃𝑘𝑘 𝐴𝐴𝑡𝑡,𝑖𝑖 + 𝛿𝛿𝑘𝑘 𝑁𝑁𝑡𝑡 + ω𝑘𝑘 𝑉𝑉𝑖𝑖
+
+where 𝑦𝑦𝑡𝑡,𝑖𝑖 is the number of cases (natural log-transformed, with 1 added to avoid
+
+logging 0) in neighbourhood 𝑖𝑖 in week 𝑡𝑡, 𝑦𝑦𝑡𝑡,𝑖𝑖 , 𝑦𝑦𝑡𝑡,𝑖𝑖 , and �𝑦𝑦𝑡𝑡,𝑖𝑖 the square, cubic and
+
+square root of the number of cases. Similarly, 𝑛𝑛𝑡𝑡,𝑖𝑖,1 and 𝑛𝑛𝑡𝑡,𝑖𝑖,2 are the total number of cases (similarly, natural log-transformed, with 1 added to avoid logging 0)
+
+from all neighbourhoods whose centroids are within 1km radius and within 1km to 2km ring from the centroid of neighbourhood 𝑖𝑖, in week 𝑡𝑡, respectively. 𝑊𝑊𝑡𝑡,𝑖𝑖,𝑐𝑐
+
+represents the climatic variable (average, minimum, maximum temperature and average relative humidity, respectively) at time 𝑡𝑡 in neighbourhood 𝑖𝑖. 𝑇𝑇𝑡𝑡,𝑖𝑖
+
+measures the number of cases moving into neighbourhood 𝑖𝑖 in week 𝑡𝑡, deriving
+
+from a one-time telco data measuring movement of users. 𝐴𝐴𝑡𝑡,𝑖𝑖 measures average
+
+building age in neighbourhood i in week t. Nt is the national total number of cases
+
+(natural log-transformed, with 1 added) in week t. Vi and Ui measure the
+
+vegetation and connectivity index of neighbourhood i. Detailed information on the type of each set of variables are documented in
+
+Past cases
+
+Past cases squared
+
+Past cases cubic
+
+Past cases square root
+
+Neighbouring cases
+
+Average, minimum, and maximum temperature
+
+Average relative humidity
+
+Movement derived from telco data
+
+National cases
+
+Type of Variable
+
+Temporal
+
+Spatial
+
+Spatial
+
+Table 5. Groups of variables and their respective types that are included in the LASSO model.
+
+Covariates in LASSO regression were z-scored prior to estimation and the coefficients were rescaled afterwards. Parameter estimation was subject to the LASSO constraint ∑4𝑗𝑗=1 ∑7𝑙𝑙=0 �𝛽𝛽𝑘𝑘𝑗𝑗,𝑙𝑙 � +
+
+fold cross validation was performed and the constraint term that optimized the out of sample performance was chosen as the optimal 𝑝𝑝 for the forecast model.
+
+As the models were built separately for each forecast window, the variables included in the final forecast model and their lags and parameter magnitude and sign may differ substantially. LASSO models were built using all data from the training dataset comprising of information from year 2010 to 2015. Out of sample validation were performed on the testing data set consisting of data from year 2016.
+
+Effect Size
+
+Effect size of each predictor at different time lags and for different forecast windows and corresponding 95% confidence intervals were derived by taking 1000 bootstrap samples and fitting LASSO models to them. We used a standard bootstrap algorithm to derive 95% confidence intervals from the lower and upper 2.5 percentiles of the bootstrap sampling distribution of the LASSO estimates. Ranges and distributions of all predictor values were derived based on the training set and the effect size obtained by multiplying the LASSO coefficient and values within the range.
+
+Forecast
+
+As well as the forecast number of cases per neighbourhood, we categorized neighbourhoods as being low or high risk, as follows. Predicted number of cases for each neighbourhood were derived by using only the information up to the time when predictions were made. Model parameters were derived from model fitting using only the training dataset. At each forecast time point, neighbourhoods were ordered by the predicted number of cases and categorised as high risk if they were in the upper decile (i.e. top 32 neighbourhoods out of 315 residential areas) for that time point. The choice of dichotomizing at 10% was taken in light of operating capacity of the NEA for vector control. Predicted cases during the validation period (2016) constitute a genuine out of sample forecast. During the training period (2010-2015), the full time span was used to estimate parameters, but only covariates available at the time of the forecast were used to make the forecast. As such, predictive accuracy may be slightly overstated for the training period.
+
+Accuracy
+
+In the model building, predictive accuracy is measured using root mean square error. Subsequently, we assessed the predictive accuracy by evaluating the accuracy of their categorization of high risk areas for the validation dataset. For each forecast window, a Receiver Operating Characteristic (ROC) curve —frequently used to evaluate
+
+Predictions
+
+classifications at all 40 prediction time points were aggregated to derive one ROC curve for each forecast window. Given the actual classification of high and low risk neighbourhoods based on observed actual incidences (i.e. the 10% of neighbourhoods with the greatest number of cases were classified as high risk) and our forecast models, the ROC curve demonstrates relative trade-offs between true positives and false positives. The area under the ROC curve (AUC), a commonly used measurement to summarize the two-dimensional ROC performance as a single value between 0 and 1 (207), was derived for each forecast window. ROC, AUC and their respective confidence intervals were obtained using 50 bootstrap samples. A baseline level AUC was also derived by using the temporal average of the number of cases from all previous years as the prediction for all 40 prediction time points, and computed AUC by comparing this “prediction” with the actual observed distribution of cases. To assess the robustness of the findings to the choice of the 10% cut-off we currently adopted for the categorization, average Matthew’s correlation coefficient was calculated for each forecast window at 14 different cut-off points (1%, 3%, 5%, 10%, 15%, 20%, 25%, 30%, 40%, 50%, 60%, 70%, 80% and 90%). This measures
+
+the correlation coefficient between the observed and predicted binary classification, and thus the quality of binary classifications (208), and takes a value from -1 to 1 with 1 indicating perfect agreement, 0 indicating no better than random, and -1 indicating total disagreement. Matthew’s correlation coefficient was computed for each forecast window at all prediction time points and averaged over time to derive an average coefficient for each forecast window. All statistical analysis were performed using R Statistical Software (209).
+
+Results
+
+Selected independent variables in the prediction model are presented in Figure 18. A mix of spatial and temporal independent variables are shown in figures from Figure 19 to Figure 23. There is no strong annual cycles in either case counts (Figure 18A) or climatic variables (Figure 18B, Figure 21). The geographic distribution of greenery is shown in Figure 18C, while case movement data at a random week derived from the telco information on movement of the general population is shown similarly on a heat map in Figure 18D.
+
+Figure 18. Time series and spatial density of selected predictors in the LASSO model. Panel (A) shows the time series of weekly national number of cases from 2010 to 2016. Panel (B) shows the time series of average temperature for one arbitrarily selected residential neighbourhood from 2010 to 2016. Panels (C) and (D) show the density of vegetation and movement for one arbitrarily selected time point for all 315 residential neighbourhoods.
+
+Figure 19. Spatial average time series and temporal average density of the number of cases in the grid of interest.
+
+Figure 20. Spatial average time series and temporal average density of the number of cases in neighbouring grids. Panel (A) shows the distribution of the number of cases in the 1-km neighbouring grids. Panels (B) shows the distribution of the number of cases in the between 1 and 2 km neighbouring grids.
+
+Figure 21. Spatial average time series and temporal average density of the climatic variables in the model. Panels (A-D) shows the distribution of average, maximum, minimum temperature and average relative humidity of the grid of interest, respectively.
+
+Figure 22. Spatial average time series and temporal average density of the human movement derived from telco data.
+
+Figure 23. Spatial average time series and temporal average density of the average age of buildings within the grid cell.
+
+Figure 24 shows the forecast and actual distribution of dengue incidence at four distinct time points (eweek 1, 14, 27, and 40 of year 2016) for four-week ahead forecasts. These demonstrate the close concordance between the projections and the eventual incidence. The average Matthew’s correlation coefficient for all 12 forecast windows at 14 different risk classification cut-offs are shown in Figure 25 (and tabulated in Table 6). For most of the forecast windows, a classification of the upper risk decile – the operational capacity – as high risk had similar predictive performance as the optimal (30%).
+
+Cut-off
+
+Table 6. Average Matthew’s correlation coefficient for all 12 forecast windows at 14 different cut-offs. Cut-offs are set at different levels so that different percentages of the cells are classified as higher risk areas.
+
+Figure 24. Actual distribution of cases and four-week ahead forecasts of density at four time points. Actual cases are shown as dark blue dots. Yellow colour indicates neighbourhoods with relatively less predicted number of cases and dark red colour indicates those with relatively more predicted number of cases.
+
+Figure 25. Average Mathew’s correlation coefficient for all 12 forecast windows at 14 different cut-offs. Cut-offs are set at different levels so that different percentages of the neighbourhoods are classified as higher risk areas.
+
+The quality of the spatial predictive algorithm as a classifier is measured by ROC curves and the respective AUCs. ROC curves for prediction windows at 1 week, 2 weeks, 4 weeks, 8 weeks and 12 weeks are presented in Figure 26 (bootstrap confidence intervals are very narrow and are not shown in the figure). All AUCs at forecast windows up to 12 weeks are above 0.75 and within 5 weeks AUCs are above 0.80, indicating adequate performance in attributing neighbourhoods to be at high risk of imminent or ongoing transmission. The baseline AUC that uses the average of all past years’ cases as “prediction” for out-of-sample forecast is derived to be 0.78, which is better than guessing (i.e. the AUC is greater than 0.5) but which
+
+demonstrates that there is substantial gains in short-term predictive performance resulting from using updated data streams within our framework. Predictions for six weeks ahead and beyond revert to baseline risk.
+
+Figure 26. Aggregate average ROC curves for forecast windows at 1 week, 2 weeks, 4 weeks, 8 weeks and 12 weeks for classification of actual high and low risk neighbourhoods. Respective AUC are marked. Only average ROC curves are shown since bootstrap confidence intervals are very narrow.
+
+The effect of risk factors on local dengue risk are shown in Figures 27 to 29. Figure 27 shows the effects of case counts within the neighbourhood and in proximate neighbourhoods for the one-week ahead forecast model at three different time lags. The number of cases in a neighbourhood has larger effect over short time lags as
+
+compared to longer time lags, while the number of proximate cases has effect size close to 0 at all lags. Although the relationship is allowed to be non-linear through the polynomial terms, the estimated effect is approximately linear. Climatic variables and their effects are shown in Figure 28 (at time lag 2 and 4 for one-week ahead forecast). Maximum temperature, minimum temperature and relative humidity had larger effect at longer time lags than the week immediately preceding the prediction, but relative to incidence, the effect is negligible. Figure 29 shows the effects of parameters without time lags. As expected, the greater number of national weekly number of cases, and the less greenery, older the buildings, greater connectivity to other areas, and the greater number of incoming travellers to the area implied more cases. These parameters generally had bigger effect than climatic variables, after adjusting for incidence and all other independent variables in the model. For each forecast window, the probability of each parameter being included in the final model, the estimated parameter coefficient, and respective confidence interval is shown in from Table 7 to Table 18, based on 1000 bootstrap samples. Incidence and neighbouring incidence at shorter lags were more likely to be included in the final model while climatic variables had relatively smaller probability of being included and smaller effect size.
+
+Figure 27. Histogram of the distribution and effect size on one-week ahead forecast of count parameters. Case count in one neighbourhood and total number of cases in the immediate vicinity at three time lags (time lag 2, 4, and 8) are shown. Histograms of the distribution are shown in lower panels. Parameter effect in excess of mean effect for these parameters are shown in upper panels. Confidence intervals were derived using bootstrap sampling.
+
+Figure 28. Distribution of climatic parameter and parameter effect in excess of mean effect at two different time lags (time lag 2 and 4) for 1-week ahead forecasts. Upper panels show the effect and lower panels show the distribution of parameters. Confidence intervals were derived using bootstrap sampling.
+
+Figure 29. Distribution of parameters without time lags and parameter effect in excess of mean effect. Upper panels show the effect and lower panels show the distribution of parameters. Confidence intervals were derived using bootstrap sampling.
+
+0.09 (0.07, 0.11) Table 7. Summary of parameters included in LASSO forecast model for 1-week ahead forecast. Inclusion probabilities, average estimated parameter value, 95%
+
+0.71 (-0.03, 0.03) -0.25 (-0.28, -0.22) 0.78 0.1 (0.08, 0.12) Table 8. Summary of parameters included in LASSO forecast model for 2-week ahead forecast. Inclusion probabilities, average estimated parameter value, 95%
+
+-0.3 (-0.33, -0.26) 0.76 0.75 0.09 (0.07, 0.11) Table 9. Summary of parameters included in LASSO forecast model for 3-week ahead forecast. Inclusion probabilities, average estimated parameter value, 95%
+
+0.09 (0.07, 0.12) Table 10. Summary of parameters included in LASSO forecast model for 4-week ahead forecast. Inclusion probabilities, average estimated parameter value, 95%
+
+(-0.02, 0.05) (-0.01, 0.05) (0.04, 0.05) -0.36 (-0.39, -0.33) (0.03, 0.05) (-0.01, 0.02) -0.05 (-0.06, -0.04) 0.09 (0.07, 0.11) Table 11. Summary of parameters included in LASSO forecast model for 5-week ahead forecast. Inclusion probabilities, average estimated parameter value, 95%
+
+(0.02, 0.04) -0.39 (-0.42, -0.35) (0.03, 0.05) -0.06 (-0.08, -0.05) (-0.02, -0.01) (0.06, 0.1) Table 12. Summary of parameters included in LASSO forecast model for 6-week ahead forecast. Inclusion probabilities, average estimated parameter value, 95%
+
+(-0.02, -0.01) (-0.02, 0.03) (-0.01, -0.01) (0.06, 0.11) Table 13. Summary of parameters included in LASSO forecast model for 7-week ahead forecast. Inclusion probabilities, average estimated parameter value, 95%
+
+(-0.02, 0.05) (-0.01, 0.05) (-0.02, 0.05) (0.02, 0.04) -0.44 (-0.47, -0.4) (0.04, 0.07) (-0.04, -0.01) -0.07 (-0.08, -0.06) (-0.01, -0.01) (0.06, 0.1) Table 14. Summary of parameters included in LASSO forecast model for 8-week ahead forecast. Inclusion probabilities, average estimated parameter value, 95%
+
+-0.46 (-0.5, -0.42) (0.05, 0.07) (-0.04, -0.02) -0.07 (-0.09, -0.06) (-0.01, -0.01) (0.06, 0.1) Table 15. Summary of parameters included in LASSO forecast model for 9-week ahead forecast. Inclusion probabilities, average estimated parameter value, 95%
+
+(0.02, 0.04) (-0.01, -0.01) 0.1 (0.08, 0.12) Table 16. Summary of parameters included in LASSO forecast model for 10-week ahead forecast. Inclusion probabilities, average estimated parameter value, 95%
+
+(-0.01, 0.06) (0.01, 0.07) (0.01, 0.08) (-0.03, 0.05) -0.49 (-0.53, -0.46) (0.04, 0.07) (-0.05, -0.02) -0.09 (-0.11, -0.08) (0.02, 0.04) (-0.01, -0.01) 0.1 (0.07, 0.12) Table 17. Summary of parameters included in LASSO forecast model for 11-week ahead forecast. Inclusion probabilities, average estimated parameter value, 95%
+
+-0.5 (-0.53, -0.47) (0.05, 0.07) -0.04 (-0.06, -0.03) -0.1 (-0.11, -0.09) (0.02, 0.04) (0.03, 0.05) (-0.01, -0.01) (0.06, 0.11) Table 18. Summary of parameters included in LASSO forecast model for 12-week ahead forecast. Inclusion probabilities, average estimated parameter value, 95%
+
+An overall view of the one-week ahead prediction model is shown in Figure 30 (summaries for other all other forecast windows are shown from Figure 31 to Figure 41). Panel (A) showed yearly sum of one-week ahead predicted number of cases and actual observed number of cases in all neighbourhoods. The relative sizes of the discrepancies were generally larger for smaller numbers, where accuracy may be less important, but the majority of predictions were accurate. Panel (B) shows
+
+the average risk over all prediction points for one-week ahead forecast. Neighbourhoods in the east of Singapore had higher risk than the other regions.
+
+Figure 30. Comparisons of forecast and actual scenario for one-week ahead forecast model. Panel (A) shows the actual and predicted yearly total number of cases for all neighbourhoods for both within sample prediction (blue dots) and out of sample prediction (dark red dots). Panel (B) shows the average risk over all prediction points (both within sample and out of sample) for one-week ahead forecast.
+
+Figure 31. Comparisons of forecast and actual scenario for two-weeks ahead forecast model. Panel (A) shows the actual and predicted yearly total number of cases for all neighbourhoods for both within sample prediction (blue dots) and out of sample prediction (dark red dots). Panel (B) shows the average risk over all prediction points (both within sample and out of sample) for two-week ahead forecast.
+
+Figure 32. Comparisons of forecast and actual scenario for three-weeks ahead forecast model. Panel (A) shows the actual and predicted yearly total number of cases for all neighbourhoods for both within sample prediction (blue dots) and out of sample prediction (dark red dots). Panel (B) shows the average risk over all prediction points (both within sample and out of sample) for three-week ahead forecast.
+
+Figure 33. Comparisons of forecast and actual scenario for four-weeks ahead forecast model. Panel (A) shows the actual and predicted yearly total number of cases for all neighbourhoods for both within sample prediction (blue dots) and out of sample prediction (dark red dots). Panel (B) shows the average risk over all prediction points (both within sample and out of sample) for four-week ahead forecast.
+
+Figure 34. Comparisons of forecast and actual scenario for five-weeks ahead forecast model. Panel (A) shows the actual and predicted yearly total number of cases for all neighbourhoods for both within sample prediction (blue dots) and out of sample prediction (dark red dots). Panel (B) shows the average risk over all prediction points (both within sample and out of sample) for five-week ahead forecast.
+
+Figure 35. Comparisons of forecast and actual scenario for six-weeks ahead forecast model. Panel (A) shows the actual and predicted yearly total number of cases for all neighbourhoods for both within sample prediction (blue dots) and out of sample prediction (dark red dots). Panel (B) shows the average risk over all prediction points (both within sample and out of sample) for six-week ahead forecast.
+
+Figure 36. Comparisons of forecast and actual scenario for seven-weeks ahead forecast model. Panel (A) shows the actual and predicted yearly total number of cases for all neighbourhoods for both within sample prediction (blue dots) and out of sample prediction (dark red dots). Panel (B) shows the average risk over all prediction points (both within sample and out of sample) for seven-week ahead forecast.
+
+Figure 37. Comparisons of forecast and actual scenario for eight-weeks ahead forecast model. Panel (A) shows the actual and predicted yearly total number of cases for all neighbourhoods for both within sample prediction (blue dots) and out of sample prediction (dark red dots). Panel (B) shows the average risk over all prediction points (both within sample and out of sample) for eight-week ahead forecast.
+
+Figure 38. Comparisons of forecast and actual scenario for nine-weeks ahead forecast model. Panel (A) shows the actual and predicted yearly total number of cases for all neighbourhoods for both within sample prediction (blue dots) and out of sample prediction (dark red dots). Panel (B) shows the average risk over all prediction points (both within sample and out of sample) for nine-week ahead forecast.
+
+Figure 39. Comparisons of forecast and actual scenario for ten-weeks ahead forecast model. Panel (A) shows the actual and predicted yearly total number of cases for all neighbourhoods for both within sample prediction (blue dots) and out of sample prediction (dark red dots). Panel (B) shows the average risk over all prediction points (both within sample and out of sample) for ten-week ahead forecast.
+
+Figure 40. Comparisons of forecast and actual scenario for eleven-weeks ahead forecast model. Panel (A) shows the actual and predicted yearly total number of cases for all neighbourhoods for both within sample prediction (blue dots) and out of sample prediction (dark red dots). Panel (B) shows the average risk over all prediction points (both within sample and out of sample) for eleven-week ahead forecast.
+
+Figure 41. Comparisons of forecast and actual scenario for twelve-weeks ahead forecast model. Panel (A) shows the actual and predicted yearly total number of cases for all neighbourhoods for both within sample prediction (blue dots) and out of sample prediction (dark red dots). Panel (B) shows the average risk over all prediction points (both within sample and out of sample) for twelve-week ahead forecast.
+
+Discussion
+
+In Singapore, the average annual economic impact of dengue has been estimated to be around US$100 million, of which 42%-59% is attributable to the cost of control (175). Routine surveillance identifies residential and workplace addresses for all notified cases, which leads to dengue “clusters” being identified, namely localities
+
+with putatively active transmission where NEA’s vector control intervention are targeted (210). A cluster is formed when two or more cases have onset within 14 days and are located within 150m of each other based on the addresses as well as movement history. Three alert levels, depending on the number of cases in the cluster, lead to efforts to mobilise the community to check their premises for mosquito breeding, and guide the extent of NEA’s vector control intervention. However, these alert levels are based on current or recent infections, rather than the areas most likely to see further transmission. Being able to focus control on where new cases are most likely to arise, rather than where they are currently, could allow preemptive mitigation and potentially yield greater efficiencies and reduce costs accordingly. To this end, in this study we developed a novel method to forecast spatial risk within an urban environment at a neighbourhood resolution up to three months in advance, using a LASSO based prediction model. The method gave rather accurate forecasts (AUCs>0.8 within the next month), with a high correlation with the subsequent incidence data, though at longer forecast windows, the risk reverted to a baseline risk profile for the neighbourhood. By implementing it as part of our standing vector control programme, the spatiotemporal prediction model can potentially change the current dengue control paradigm into a dengue prevention approach by forecasting dengue risk at a finer resolution in the urbanized environments in which the dengue vectors proliferate, to allow targeted public health control measures to be carried out for best efficiency of resources. The system was robust to changes in the baseline incidence over time (illustrated in
+
+Figure 18), as demonstrated in the high correlation between observed and predicted incidence (Figure 30). As such, secular changes in the detection rates due to better diagnosis, or to incidence due to changes in immunity or dominant serotypes, may not matter unless the change is large. This approach can readily be automated to run on routinely collected notification data, but the accuracy of the prediction is dependent on the timeliness at which notification data become available and the accuracy of such data. The approach does not require that all infections be notified or lab-confirmed – the low rate of symptomatic dengue presentation is well known (211) – so long as the rate remains relatively stable over space and time. The training data set used in this modelling framework, however may need to be updated regularly. In the current approach, the performance when applied to the year 2016 – not used in training – was good (AUC above 0.75 for all forecast windows), and so we recommend retraining the algorithm on a yearly basis. Through regular evaluation of all the parameter effect size, variables with constant minimal effect in the forecast model may be eliminated potentially, reducing the cost of obtaining them. Other potential parameters may be added to the model in a similar way. The frequent modification of the model to allow additional data streams to be incorporated will ensure the model continues to enjoy a high predictive performance. We expect that the same method can be adapted to other urban and even rural areas, though in the latter, the grid size determining ‘neighbourhoods’ may need to be adjusted. We used a regular grid, but the framework lends itself to other
+
+tessellations, for instance, administrative boundaries. Future research could investigate these potential extensions in terms of grid sizes and shapes. We anticipate that such regional or neighbourhood level forecasts will have improved accuracy and utility than predictions of aggregate national-level data streams. In Singapore, work is ongoing to translate the method into real-time operational guidelines which will benefit future dengue control efficiencies. There are several limitations of the approach outlined herein. The forecast is phenomenological rather than mechanistic, and as such may break down in the presence of changes to the underlying epidemic process and changes to interventions. A previous non-spatial forecast (described in Ref. (187)) struggled to reproduce the magnitude of the record-breaking outbreak of 2013, for instance, although the timing of the outbreak was heralded in advance. Fundamental changes such as the take up of vaccination, or the introduction of a new serotype to the population, may require the retraining of the algorithm if the accuracy is not to be deleteriously affected. Further mechanistic modelling could be valuable to provide additional insight into the spatial structure of dengue transmission in Singapore, if challenges about non-notified infections and the paucity of data on historic exposures to each serotype could be overcome. The multiple lags and forecast windows allows highly predictive combinations of variables to be selected, but has the effect of obscuring relationships, and as a result, the approach is not suitable to identify why particular neighbourhoods are predicted to be at risk of future or imminent transmission. The most important limitation to the work is its high reliance on a rich dataset of georeferenced case identifications being available in
+
+near real time. This is possible in Singapore’s comprehensive case notification system, but may be less feasible in jurisdictions that do not enjoy Singapore’s small size and the clear demarcation of the city population. The effectiveness of vector control measures based on the forecast is not evaluated in the current model, and to predict the impact would require additional data streams that capture the details of the ongoing vector control efforts. This would be an avenue for further work.
+
+Conclusions
+
+In conclusion, this report demonstrates that spatially-resolved forecasts of geographically structured diseases like dengue can be obtained at a neighbourhood level in highly urban environments at a precision that is suitable to guide control efforts.
+
+Motivation for next chapter
+
+The previous two chapters started from temporal infectious disease forecast model and evolved to a more precise spatiotemporal model, with the objective of making accurate and timely forecasts of infectious diseases. With these forecasts, either temporal or spatiotemporal, relevant control and prevention measures can be carried out accordingly. Control and prevention measures might be effective towards one disease but not the other, or effective in one region but not the other and there is no universal rule to the formulation of such measures. Even within the same region, when the herd immunity or climatic conditions change over time, control and prevention measures
+
+might lead to different outcomes. As such, the details of such measures need to be constantly re-evaluated and modified to ensure their effectiveness. Evaluation of the effectiveness of control and prevention policies can also be achieved through constructing statistical models. The insights from these models can be used as evidence and a guideline for relevant stakeholders to make decisions for future policies. The next chapter discusses an example of this, namely models to assess the impact of school closure for control of hand, foot and mouth disease outbreaks.
+
+Chapter 5: The Effect of School Closure on Hand, Foot and Mouth Disease Transmission in Singapore: a modelling study This work has been published as: Chen Y, Badaruddin H, Lee VJ, Cutter J, Cook AR. The effect of school closure on hand, foot and mouth disease transmission in Singapore: a modelling approach. Am J Trop Med Hyg. 2018 Dec;99(6):1625–32.
+
+Abstract
+
+In Singapore, hand, foot and mouth disease (HFMD) is endemic. The disease burden of HFMD estimated from a modelling study is 259 annual disabilityadjusted life-year (DALY). Singapore implements school closure policy for institutional HFMD outbreaks, but there is a lack of empirical evidence on the effect of closure on HFMD transmission. We conducted a retrospective analysis of 197,207 cases of HFMD over the period 2003—2012 at the national level, and of 57,502 cases in 10,080 institutional outbreaks over the period 2011—2016, in Singapore. The effects of school closure due to (i) institutional outbreaks, (ii) public holidays, and (iii) school vacations were assessed using Bayesian time series modelling approach. School closure was associated with a reduction in HFMD transmission rate. During public holidays, average numbers of secondary cases having onset the week after dropped by 53% (95% credible interval 44% to 62%), and during school vacations, the number of secondary cases dropped by 7% (95% credible interval 3% to 10%). Schools being temporarily closed in response to an institutional outbreak reduced the average number of new cases of 1204 (95% credible interval 1140 to 1297).
+
+Despite the positive effect in reducing transmission, the effect of school closure is relatively small, but the disruption to families and parents is sizable. The small positive effect may not justify the routine use of this measure.
+
+Introduction
+
+Hand, foot, and mouth disease (HFMD) is a common paediatric disease that is endemic in East and Southeast Asia (212,213) and increasingly found in North America (214,215) and Europe (216). When caused by Coxsackie viruses, HFMD usually leads to relatively mild infections with symptoms that are self-limiting (217). However, HFMD caused by human enterovirus 71 may lead to complications involving the nervous system and resulting in reduced cognitive function, delayed neurodevelopment, and motor impairment, or death (218–220); in China, an estimated 350—900 children die of HFMD annually (221). Because of this potential severity, the Ministry of Health in Singapore imposes strict control policies especially in preschools. In preschools, daily routine health checks for all children and isolation of suspected cases are implemented for early detection and control of outbreaks (222). Should transmission continue within an outbreak, school closure is enforced (223). This policy was implemented following an outbreak in 2000 in which seven children died from enterovirus 71 complications (224,225). The details of the policy have evolved over time, but until recently, if a school has more than 16 cases or an attack rate more than 23% with a transmission period more than 24 days, the school will be required to close for a period of 10 days (226). In the most updated guideline, the policy has been relaxed
+
+somewhat, and MOH will consider the predominant circulating strain when assessing closure in addition to the trigger. This change provides an avenue to assess the impact of this policy. School closure as a form of social distancing intervention to mitigate transmission during an infectious disease outbreak (227) is often found in countries’ pandemic preparedness plans (228). The influenza literature shows that school closure may effectively reduce the spread (72,229,230), and school vacations have significant impact in limiting transmission (231,232). Analyses also suggest that school closure combined with the use of antiviral agents is cost effective and is a justifiable strategy for mitigating influenza pandemics (73,74). There is however, a lack of empirical evidence on the effect of school closure on HFMD transmission: one exception is a review of HFMD in Hong Kong that revealed fewer HFMD consultations than expected during the 2003 SARS and 2009 influenza (H1N1) pandemics, which was attributed to various control measures including school closure (233). This paper aims to assess the effect of school closure on HFMD transmission. We exploit the facts that, in Singapore, HFMD is endemic with year-round transmission and is legally notifiable by physicians and childcare teachers, as well as actively screened for in preschool-aged children, to obtain three sources of information on the effect of school closure: (i) the reduction in the numbers of cases after a public holiday, when childcare centres and schools close, (ii) the reduction during school vacations, and (iii) the impact within childcare centres of school closure in response to an on-going outbreak. Singapore’s school closure policy for HFMD, which has
+
+been implemented for over a decade, in tandem with a comprehensive HFMD surveillance system, therefore provides a unique opportunity to assess the impact of this important method of outbreak control.
+
+Methods
+
+Source of data
+
+Ministry of Health, Singapore, actively monitors and publishes the incidence of HFMD, which was made a notifiable disease in the year 2000 (234). Two sets of data on HFMD were extracted from the Ministry’s records for this study. The first dataset contains aggregate reported HFMD cases from year 2003 to 2012, with the number of daily cases with onset of symptoms, stratified by age. The second data set contains information on all HFMD outbreaks in childcare centres and kindergartens in Singapore, during the period 2011 to 2016. This provides cumulative number of cases per day in each preschool with an outbreak, together with the school type (childcare centres or kindergarten), enrolment size, whether the school were closed due to the outbreak, and if so, dates of closure and reopening. Data were retained at a daily resolution for two analyses but aggregated to weekly for the analysis of vacations. Data were collected under Singapore’s Infectious Disease Act and because aggregate non-identifiable data were used, institutional review board approval was not deemed necessary for this study.
+
+Statistical analysis
+
+Separate statistical analyses were performed to investigate the (i) public holiday effect, (ii) school vacation effect, and the (iii) school closure effect on HFMD transmission, as described below.
+
+Public Holiday Effect
+
+There are typically 11 public holidays in Singapore each year, as detailed in Table 19; these are a mix of secular and religious holidays, some of which rotate around the year following the lunar calendar. If a public holiday falls on Sunday, the following Monday will be a public holiday. We derived the dates of all public holidays from year 2003 to 2012 from the official listing of the Ministry of Manpower.
+
+Public holiday
+
+Chinese New Year
+
+Good Friday
+
+Labour Day
+
+Vesak Day
+
+Hari Raya Puasa
+
+National Day
+
+Hari Raya Haji
+
+Deepavali
+
+Christmas Day
+
+Date
+
+January
+
+2 days in January or February 1 day in March or April
+
+May
+
+1 day in May or June 1 day all year round
+
+August
+
+1 day about three months after Hari Raya Puasa 1 day in October or November
+
+December
+
+Table 19. Dates of public holidays in Singapore. If a public holiday falls on Sunday, the following Monday will be a public holiday.
+
+The effect of public holiday on HFMD transmission was measured by quantifying the reduction attributable to the public holiday. Because time points not immediately preceding or following a public holiday contribute little information to the effect of the public holiday, rather than consider a time series model, we
+
+developed a Bayesian model of the time points surrounding the public holidays. The number of cases in the week before the holiday 𝑖𝑖 is modelled as
+
+𝑥𝑥𝑖𝑖 ~Poisson(𝛼𝛼𝑖𝑖 × 7𝜇𝜇), and the number the week after as 𝑦𝑦𝑖𝑖 ~Poisson(𝛼𝛼𝑖𝑖 × [6𝜇𝜇 + 𝜃𝜃𝜃𝜃]) , or 𝑦𝑦𝑖𝑖 ~Poisson(𝛼𝛼𝑖𝑖 × [5𝜇𝜇 + 2𝜃𝜃𝜃𝜃]) for two day long holidays. Here, 𝜇𝜇
+
+represents the average number of cases on a typical day, estimates of 𝜃𝜃 and a 95%
+
+credible interval provide a measure of the public holiday effect (i.e. 1 − 𝜃𝜃 is the
+
+reduction in the number of infections on a public holiday compared to a normal day)
+
+and 𝛼𝛼𝑖𝑖 ~Γ(𝑎𝑎, 𝑎𝑎) is an individual week effect which has an expected value of 1 and allows for autocorrelation in the time series. The window length of one week was
+
+selected to ensure balance in the number of weekdays in each window, and to correspond roughly to the assumed incubation period of HFMD of around 3-7 days (213). This model assumes that the difference between number of cases prior or after the public holidays is purely due to the difference in the number of infections happening on the public holiday, which is unobservable but indirectly represented by the change in the number of symptomatic cases in the following weeks. To assess whether there was any longer term impact, we repeated the analysis comparing incidence in the second week (days 8 to 14) following the holiday to the week before it, as well as in the third week (days 15 to 21). The main analysis does not treat public holidays that were less than 7 days apart specially. In sensitivity analysis, we removed data corresponding to both holidays from the fitting procedure if they were less than 7 days apart. Sensitivity analysis was also conducted by applying different forms of the non-informative prior distributions for the parameters to test the robustness of the inference.
+
+Non-informative priors were adopted and summarised in Table 20.
+
+Parameter
+
+Individual week parameter
+
+Individual week dispersion
+
+Daily cases parameter
+
+Public holiday parameter
+
+Notation
+
+Prior Density
+
+Table 20. Parameters used in the public holiday effect model.
+
+School Vacation Effect
+
+In Singapore, kindergartens, primary schools and secondary schools have school vacations in March for one week, in June for four weeks, in September for one week, and in November and December for five to six weeks. To measure the effect of school vacations on HFMD transmission, we built time series models, fit Bayesianly, for the weekly number of HFMD cases aged 12 and below. This has some similarities with an autoregressive time series, but the Bayesian approach afforded greater flexibility in the model specification. We assumed a negative binomial distribution for the number, 𝑌𝑌𝑡𝑡 , of HFMD cases observed in week 𝑡𝑡, with mean
+
+and shape parameter 𝑝𝑝, where 𝐻𝐻𝑡𝑡 = 1 if week 𝑡𝑡 is a school holiday and 0 otherwise, and 𝑎𝑎, 𝑏𝑏, 𝑑𝑑, 𝑝𝑝 are model parameters that needed to be estimated: 𝑏𝑏 accounts for
+
+autocorrelation while 𝑑𝑑 determines the effect of school vacation. A negative
+
+binomial distribution is used to allow more flexibility to capture the observed variability in the data than the Poisson model originally considered. A constant 𝑏𝑏
+
+that does not vary with time was used because Singapore has very little seasonality that would add forcing to the timing of epidemics of HFMD (235), and because it would hamper identifiability of the vacation effect. The adequacy of using a constant 𝑏𝑏 was assessed and confirmed by examining the distribution of the
+
+residual of one-week ahead model forecasts. The model was fit using Bayesian methods (Markov chain Monte Carlo) with non-informative prior distributions summarised in Table 21.
+
+Parameter
+
+Baseline parameter
+
+Autocorrelation parameter
+
+School vacation parameter
+
+Shape parameter
+
+Notation
+
+Prior Density
+
+Table 21. Parameters used in the school vacation effect model.
+
+For each draw from the posterior distribution, we iteratively derived the median number of cases for the following week based on the number of cases in the current week using the formula in the model above. The number of cases in the first week of the simulations was taken to be the observed average weekly number of cases across the time horizon. This was done for 104 weeks (2 years) and only the latter 52 weeks were kept as the number of weekly cases for a typical year. For each set of posterior values, 1000 such simulations were performed. Based on these 1000 simulations of typical year scenario using each of the 10,000 sets of posterior values, 95% prediction and credible intervals were derived for each of the 52 time points. Median values for all 1000 simulated numbers for each set of posterior values (10,000 median values in total) were calculated.
+
+School Closure during Outbreaks Effect
+
+For each preschool that had an outbreak during the time horizon 2011 to 2016, a period of 50 days from the first day of case onset was considered; this was enough to span the duration of most outbreaks. The number of incident cases on day 𝑗𝑗 in outbreak 𝑖𝑖, 𝑥𝑥𝑖𝑖,𝑗𝑗 , was modelled by:
+
+𝑥𝑥𝑖𝑖,𝑗𝑗 ~Poisson(𝜆𝜆𝑐𝑐𝑖𝑖,𝑗𝑗 × 𝑠𝑠𝑖𝑖,𝑗𝑗−1 × 𝑝𝑝𝑤𝑤𝑖𝑖,𝑗𝑗−1 )
+
+where 𝑐𝑐𝑖𝑖,𝑗𝑗 is the cumulative number of cases within 1 week prior to day 𝑗𝑗 in
+
+outbreak 𝑖𝑖; 𝑠𝑠𝑖𝑖,𝑗𝑗 is the number of children not yet symptomatically infected during
+
+the current outbreak by day 𝑗𝑗 of outbreak 𝑖𝑖; and 𝑤𝑤𝑖𝑖,𝑗𝑗 is the indicator for school
+
+closure on day 𝑗𝑗 in outbreak 𝑖𝑖 (𝑤𝑤𝑖𝑖,𝑗𝑗 = 1 if the school were closed on day 𝑗𝑗 in
+
+outbreak 𝑖𝑖, and 0 otherwise). We smoothed the effect 𝜆𝜆𝑘𝑘 of current outbreak size 𝑘𝑘
+
+Non-informative priors were adopted and summarised in Table 22.
+
+Parameter
+
+School closure parameter
+
+Smoothing parameter
+
+Notation
+
+Prior density
+
+Table 22. Parameters used in the school closure during outbreak effect model.
+
+The posterior samples were used to project the number of cases that were avoided by forcing schools to close when they hit the trigger. For each draw from the posterior, 100 simulations were performed to each of the schools with closures in our study period. In each simulation, number of new incident cases on each day
+
+after the closure day were calculated using the model formulation and set 𝑤𝑤𝑖𝑖,𝑗𝑗 to be
+
+0. Total number of cases were then compared with the observed number of cases when schools close and the total number of additional cases due to not closing schools for each simulation/set of posterior values were recorded. Median values for all 100 simulated numbers for each set of posterior values (10,000 median values in total) were calculated.
+
+The posterior distribution was estimated using Markov chain Monte Carlo
+
+simulations, which was implemented using Just Another Gibbs Sampler (JAGS) within the R statistical environment (209) using 10 000 iterations with a burn-in period of 1000 iterations using the rjags package. Trace plots and density plots of the posterior samples were plotted to confirm adequate convergence of the posterior samples. Model convergence was evaluated formally by the Gelman diagnostic tests (236) and model validity assessed by comparing posterior predictions or simulations with the actual observed data. The posterior samples were then used to obtain posterior distributions of derived quantities. Posterior mean and equal tailed 95% credible intervals were calculated for the public holiday effect parameters. All posterior samples were used in the simulations in school vacation and school closure during outbreak analyses.
+
+Results
+
+A total of 197,207 HFMD cases were notified to the Ministry of Health, Singapore, from 2003 to 2012. Table 23 shows the demographics of all notified cases. Children under 12 years old accounted for about 90% of all HFMD cases, and about 70% of
+
+all HFMD cases were age 5 and below; 57% of cases were male, while 74% were ethnic Chinese, 15% Malay, 3% Indian, and 8% others: The Indian ethnic group is substantially under-represented among cases compared to the general population (11% of Singapore residents under 12 having Indian ethnicity).
+
+Demographic
+
+Gender
+
+Female
+
+Male
+
+Ethnicity
+
+Chinese
+
+Malay
+
+Indian
+
+Other
+
+Table 23. Demographics of all HFMD cases during year 2003 to 2012.
+
+Table 24 shows summary statistics for the Bayesian models for the public holiday effect: the average of 50 HFMD cases a day was reduced by 53% (95% confidence interval: (44%, 62%)) in the one week following a public holiday but only by 34% (95% CI: (25%, 43%)) in the second week, while there was no reduction in the third week (0%, 95% CI: (-10%, 9%)). Alternative forms of non-informative prior distribution did not affect the results (not shown).
+
+Estimates
+
+Cases one week before
+
+(median, IQR) Cases 1/2/3 weeks after (median, IQR) Ratio: number of infections on PH to number of infections on typical day (posterior mean and 95% credible interval)
+
+First week
+
+Second week
+
+Third week
+
+Table 24. Observed number of cases one week before and 1/2/3 weeks after the public holidays and posterior mean and 95% confidence interval derived from posterior distribution of the public holiday effect for models based on 1 week before and the first (day 1-7), second (day 8-14), and third week (day 15-21) after public holiday.
+
+During school vacations, weekly number of cases were modelled to be reduced to 93% (95% CI: (0.90, 0.97)) relative to non-school holidays for all children below 12 years old; 94% (95% CI: (0.90, 0.98)) for age 0 to 2; 93% (95% CI: (0.88, 0.97)) for age 3 to 5; and 90% (95% CI: (0.84, 0.96)) for age 6 to 11. Figure 42 shows simulations for a typical year based on the modelled effects of school vacations on HFMD transmission, using typical timing of school holidays. Both overall analysis and separate models for different age groups showed similar results, and are consistent with the patterns of the data for the ten year period. The temporally structured distribution of residuals in the one-week ahead model forecasts is shown in Figure 43. No trends were observed, suggesting that the model with constant b
+
+Figure 42. Regular school holiday effect. Effect of school vacations on HFMD transmission for school-age children is shown in the figure. Panel (A) shows the overall effect for all children below 12 years old. Panels (B)-(D) show effect for infants (age 0 to 2), preschool children (age 3 to 5), and primary school children (age 6 to 11) respectively. Grey bars indicate typical school vacations in a year. Grey lines are observed incident cases for years from 2003 to 2012. Dark blue lines are simulated average weekly incidents in a typical year, light blue lines and orange lines are 95% confidence interval and 95% prediction interval, respectively.
+
+Figure 43. Temporally structured distribution of residuals in the one-week ahead model forecast with loess curve overlaid. Blue line shows temporally structured residuals and orange line shows the loess curve.
+
+From 2011 to 2016, there were total 10,080 school-level outbreaks involving a total of 57,502 HFMD cases in childcare centres and kindergartens, of which 105 led to closure (Table 25). 9903 outbreaks including 100 closures were included in our model. A total of 177 schools were removed from the complete list, of which 175 did not contain information on school size, while 2 had inaccurate school size information (size 5 and 7 respectively, both smaller than outbreak size). Out of these 177 schools, one school was closed due to outbreak in 2012. Among all schools with closure, four schools had closures falling beyond 50 days after the first day of outbreak (51, 69, 56 and 52 days specifically). These four schools were categorized as having no closure in our analysis.
+
+Year
+
+Total
+
+Table 25. Number of HFMD outbreaks and number of school closures each year from 2011 to 2016.
+
+The Bayesian Poisson model shows that the expected number of new cases
+
+decreases to 26% (95% CI: 21 to 32%) if school was closed on that day compared to a normal school day, after adjusting for size and duration of the outbreak. Oneday-ahead predictions based on the previous day’s observed number of cases, shown in Figure 44 for arbitrarily selected outbreaks, both with and without shortterm school closure, demonstrate that the fitted model adequately captures the observed outbreak patterns. Figure 45 show the effect of school closure by showing the cumulative number of cases if there were no school closure for four arbitrarily selected outbreaks with closure. The percentage of cases avoided from school closure for all closures are shown in Figure 46. The majority of school closure events (>80%) were associated with a less than 5% difference between observed and modelled cases, regardless of outbreak size at closure. Closures that prevented more than 10% of total school size were generally in bigger schools (of size more than 200). Overall, the modelled number of infections prevented through the school closure policy from 2011 to 2016 was 1204 (95% CI: (1140, 1297)), i.e. an average 2% reduction compared to total number of cases during that period.
+
+Figure 44. School closure during outbreaks effect. Panels (A)-(D) show one day ahead prediction on the cumulative number of cases for four randomly selected outbreaks (one with closure) based on model. Grey bar means school is closed during that period. Blue dots are observed cumulative number of cases. Orange line shows model fitting and light and dark pink shades shows 95% and 70% confidence intervals, respectively.
+
+Figure 45. School closure during outbreaks effect. Panels (A)-(D) present modelled cumulative number of cases if there were no school closure for outbreaks with school closure. Grey bars show the period when school closes. Blue dots are observed cumulative number of cases. Orange line shows the cumulative number of cases if school were not closed during the closure period. Light pink and dark pink shades are 95% and 80% confidence intervals, respectively.
+
+Figure 46. Modelled percentage of cases avoided from school closure for all outbreaks with closures. The black dots indicate the percentage of absolute number of cases avoided compared to school size and the lines are 95% confidence intervals. The red diamond indicates the overall number of cases avoided compared to total enrolment size of schools with closures and its confidence interval.
+
+Convergence of all Bayesian models used were achieved according to the Gelman diagnostic test. Model validity assessed by comparing posterior predictions or simulations with the actual observed data is shown in Figure 44, Figure 47 to Figure
+
+Figure 47. Total number of cases one week before public holidays and total number of cases the first week after the public holidays. The left panel shows actual data points; the right panel shows simulated number of cases based on model posterior parameter distribution.
+
+Figure 48. Total number of cases one week before public holidays and total number of cases the second week after the public holidays. The left panel shows actual data points; the right panel shows simulated number of cases based on model posterior parameter distribution.
+
+Figure 49. Total number of cases one week before public holidays and total number of cases the third week after the public holidays. The left panel shows actual data points; the right panel shows simulated number of cases based on model posterior parameter distribution.
+
+Figure 50. Actual observed time series of HFMD cases and one week ahead forecast based on school vacation effect model posterior parameter distribution. Blue lines show the one week ahead forecasts based on posterior parameter distribution; orange line shows actual observed time series.
+
+Discussion
+
+School closure is a common control measure in pandemic preparedness plans and in response to actual outbreaks, which may possibly be a high impact method of controlling an outbreak of a severe or potentially severe infectious disease. Its effectiveness has been assessed in modelling studies (72,230,232), which posit that since children have closer social networks and high contact rates in schools (237),
+
+closing schools may substantially reduce transmission, if they do not compensate by having greater contact outside of school during a closure. The burden of school closure on families which may need to make alternative childcare arrangements means that it is imperative to have real-world evidence supporting its effectiveness. Relatively little such evidence is available from Japan, France and the US on school closures in response to influenza outbreaks (229,238). In light of this, the evidence on the effect of closure from Singapore’s long-standing routine school closures to control HFMD may prove valuable. This study demonstrated a consistent reduction in average numbers of HFMD cases when schools were closed, regardless of the reason for the closure. There was an estimated reduction of 7% in the number of cases in the week after a public holiday than the week before it, corresponding to a reduction in the number of infections that occur on the holiday itself of 53%, though the effect of the holiday declines in the weeks following as infections return to baseline levels. A similar reduction in the number of infections during school vacations was also estimated (also about 7%). This may be an underestimate of the actual effect size, because many preschool aged children still attend preschools during school holidays. This hypothesis is supported by the slightly accentuated effect in children who have started formal schooling, with a reduction in risk around 10% for children age 6 and above. Although the reduction was statistically significant for all age groups, the difference in effect between age groups was not statistically significant. The data on school closure in response to outbreaks allowed a quasi-experimental analysis, because recently the school closure policy has been reinterpreted to allow
+
+more discretion by the Ministry of Health whether to close the affected school or not. This led to a decrease in the number of school closures in the later periods of the study (Table 25). Although not randomized, this change allowed some overlap in the exposure (closure) and response (outbreak growth). Analysis showed that, as with holidays and public holidays, school closure during an outbreak had the intended effect of mitigating transmission, but the effect was relatively small, and we estimated that only ~1200 cases were averted over the 6 years analysed. The high asymptomatic rate (239,240) and seroprevalence of the main causative viruses (241) may mean that a substantial fraction of children are no longer susceptible by the time of closures in response to large outbreaks, which is currently triggered when more than 16 cases or 23% of children are symptomatic. The fraction of cases prevented by outbreak-induced closure was modelled to be small in general, but larger for the larger preschools, which we attribute to the structure of the thresholds for closure: this is effected when either the fraction or the number of children in the school are notified, meaning that closure of larger schools occurs when the threshold for the number of cases is hit but the fraction is still low. Given the disruptions to parents/families from unplanned closures (222,242), outbreak driven closures may therefore cause more problems than closure due to holidays. In light of the limited effect, it is not clear that this policy should be continued to be used routinely for HFMD outbreaks, but the effect of closures due to holidays suggests that a school closure policy may still be valuable for pandemic preparedness plans and to be carried out when there are serious outbreaks or when the outbreak is due to novel pathogens of unknown severity.
+
+Although this was a retrospective study, with HFMD being a legally notifiable disease in Singapore, incident data were collected in a standard way through preschools, clinics and hospitals, and as such, the data used for this study is a largely reliable indicator of symptomatic cases. However, some other limitations exist. Several assumptions were made in the modelling process: the public holiday effect analysis assumed that the observed difference in the number of cases before and after the public holiday was solely attributable to the public holiday. In temperate countries, this assumption may not be tenable due to seasonal changes that drive transmission. Singapore, however, lies close to the equator and has almost no seasonality—having year round high temperature and humidity—with the effect that some virus transmission is effectively aseasonal (17). For the same reason, the assumption that there are no other temporal effects in the school vacation analysis may be more robust than it would in a temperate setting.
+
+Conclusions
+
+These three analyses provide evidence that school closure—whether in response to an outbreak, or due to a public holiday or longer school vacation—reduces transmission of HFMD. Although we found that school closure in response to outbreaks does have a positive effect in reducing transmission, the effect is small, and given the high incidence and the fact that the majority of cases of HFMD are mild and self-limiting, the evidence from this study suggests that policy makers in Singapore should evaluate whether routine use of school closure outside of public health emergencies justifies the impact on families.
+
+The school closure policy in response to HFMD outbreak in Singapore is analysed in this chapter, but the insights might not be applicable to outbreaks of other endemic infectious diseases in Singapore or HFMD outbreaks in other regions and countries. Control policies need to be re-evaluated and updated so as to account for country and disease specific characteristics, and any potential changes in the underlying epidemiological conditions over time. With temporal and spatiotemporal infectious disease forecast models, including those proposed in the earlier chapters, control and even prevention measures could potentially be carried out at the very early stage of outbreaks, or even before outbreaks, to increase the chance of success and to alleviate the burden of infectious diseases.
+
+Chapter 6: Conclusions Infectious disease transmission models, in their various forms and complexities, have been constructed to explain the unobservable dynamics behind transmission. Research to improve the models to achieve better description of dynamics of actual unobservable transmission and more accurate forecasts is likely to continue over the years ahead (62,243). While no models are correct, there are always better models that are able to describe and explain the actual scenario, and therefore inform policy making. Much work has already been done in the field of infectious disease modelling in terms of explaining, prediction, and informing policy making (103,129,244), but there are still parts of the system that are not perfect or neglected, including how to integrate and utilise information from different sources (245), how to improve longer term forecast accuracy, how to strengthen modelling using big data (246), and many more. This thesis aimed to fill some of the gaps in this field. In this chapter, I will summarise the thesis, and highlight the areas worthy of future exploration.
+
+Summary of findings and implications for future work
+
+Chapter 2 of this thesis examines the risk factors needed to explain the timing of epidemics. We examined an endemic disease (dengue) in a tropical setting (Singapore) and showed that in equatorial Singapore, randomness alone is sufficient to explain the epidemics of dengue, although climatic factors can play a role. In contrast, the same findings was not found in a temperate country, suggesting the existence of underlying systematic variation that needs further study. In addition,
+
+it might be possible that the observed trend of epidemics of dengue in Singapore is related to the effective control of dengue. Future studies should be carried out to understand the patterns of dengue outbreaks in isolation of the effect of control measures. In Chapter 3, a novel machine-learning based method that is easily implementable is proposed for forecasting of endemic infectious diseases. The LASSO-based machine learning method we proposed and implemented in this study has been shown to be able to achieve satisfying accuracies for short-term forecasts for various pathogens in countries with different climates. When it comes to each condition in a particular country, however, studies in the literature suggested that other machine learning algorithms may lead to better accuracy (183). While LASSO-based method is easily implemented, it is worth future investigation to identify the most suitable forecasting method for each disease. These methods can potentially be incorporated in countries’ surveillance systems to provide an early warning to possible outbreaks. Control measures carried out at the earlier stage stand a higher chance of mitigating the transmission of infectious diseases (247), which can be more effective. The need to make more accurate and timely forecasts into the future will be always of great interest to modellers and epidemiologist, which can be done by building up new models or modifying existing models to suit local context better. Chapter 4 of this work further develops the prediction model described in Chapter 3 to include spatial correlation within the region of interest. Instead of making national level forecast, this chapter developed a dengue forecast in Singapore at a
+
+neighbourhood level to identify high risk regions to roll out vector control measures to achieve better efficiency as compared to a national level vector control programme. Although regular size neighbourhoods are considered in our analysis, the algorithm can easily be extended to deal with irregular shape neighbourhoods and even rural areas. In addition, the algorithm is made such that new variables such as control measures, severity of dengue cases, and other potential datastream can be added in and variables with little effects can be removed. Furthermore, modifications to the existing LASSO model should be considered for better forecast accuracies. Adaptive LASSO might provide greater sparsity and induce less bias in estimation of large signals. Having separate shrinkage parameters for different groups of predictors can also be implemented. Finally in Chapter 5, we move on from forecasting the timing of epidemics to evaluate whether one of the control policies (school closure policy) to mitigate transmission in an outbreak situation (HFMD outbreak) achieves the intended effect. Control policies and pandemic preparedness plans can be made based on literature and modelling studies or previous episodes, the usefulness or costeffectiveness requires constant re-evaluation due to change of pathogens, environmental conditions, or even changes of lifestyles. A universal guideline can be proposed but the implementation depends largely on each individual country and even type of pathogens involved. This chapter focuses on one disease in Singapore but the implications may be more general, as school closure is a widely used measure to control emerging infections (248,249).
+
+The current trend of extending the conventional infectious disease modelling to incorporate spatial aspects (250) is beneficial in providing more accurate solution with improved resolution, but little has been done to evaluate the cost involved in order to acquire data in such resolution. In under developed countries, especially, additional resources may be required to build up surveillance system up to the required resolution. Some form of formal analysis on the cost-effectiveness of extending to spatiotemporal modelling is needed in the future. Machine learning based methods have seen their more frequent uses in infectious disease forecast recently, but they are generally not able to predict the size of the outbreaks, especially the more serious ones because the training data the models based on does not have that kind of information (138,183). Similarly, when there is an outbreak with a novel pathogen or when the underlying epidemiological condition changes, machine learning methods may struggle to make use of the limited volume of information in a timely manner to inform forecasts. It is, however, equally important, if not more, to make accurate forecasts in such situations. A combination of the machine learning based methods and other compartmental models may provide a solution to these problems.
+
+Final statement
+
+The chapters of this thesis provide a comprehensive set of modelling studies to expand what has currently been done in the field of modelling endemic infectious diseases, from models trying to explain and predict when epidemics will occur to models evaluating responses in times of outbreaks, and serve as a guideline of future endemic disease modelling for prediction and control.
