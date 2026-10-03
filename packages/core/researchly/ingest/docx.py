@@ -242,6 +242,7 @@ class _Reader:
             masked[offs[i] + a:offs[i] + b] = " " * (b - a)
             structure.append(StructureItem("equation", offs[i] + a,
                                            offs[i] + b))
+            doc.atoms.append((offs[i] + a, offs[i] + b))
         doc.masked = "".join(masked)
 
         def span(i: int) -> tuple[int, int]:

@@ -1236,3 +1236,15 @@ misreads on technical prose.
 **Lesson:** the corpus measures the plain-text path only. One real LaTeX
 document found more LaTeX bugs in ten minutes than the suite had; every
 format needs a real-document check, not just synthetic fixtures.
+
+**Addendum (P28, same day):** the real-document bench (P29) caught a
+regression in this fix before merge. The first `touches_masked` counted
+*every* masked character, so `\emph{`, `\textbf{` and Markdown `**`
+silenced real errors beside them ("an \emph{large} increase" was no longer
+flagged; on two eLife articles with italic gene names LT001 fell from 135
+to 12). `Document.atoms` now records only the masked spans that stood for
+a word (maths, citations, references, code, URLs, Word equations), filled
+by each reader; the guard checks those. Five new tests fail on the first
+version and pass now; the owner's `.tex` result is unchanged (117 flags).
+Lesson: "masked" is not one thing. Formatting is masked because it is
+noise; maths is masked because it is content we cannot read.

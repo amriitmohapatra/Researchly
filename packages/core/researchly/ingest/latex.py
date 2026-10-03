@@ -29,7 +29,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
-from ..document import Heading, StructureItem, _mask_latex, classify_heading
+from ..document import (Heading, StructureItem, _mask_latex, classify_heading,
+                        inline_atoms)
 
 HEADING_MACROS = frozenset({"part", "chapter", "section", "subsection",
                             "subsubsection", "paragraph", "subparagraph"})
@@ -85,6 +86,12 @@ def code_macros_in(preamble: str) -> set[str]:
     return found
 
 
+# Masked macros that stand for a word in the sentence ("see Fig.~\ref{f}",
+# "at \url{...}"), unlike \label or \vspace, which stand for nothing.
+ATOM_MACROS = frozenset({
+    "ref", "eqref", "autoref", "cref", "Cref", "vref", "pageref", "nameref",
+    "url", "verb", "lstinline", "footnotemark"})
+
 # Macros whose text is their LAST argument only (`\textcolor{red}{text}`).
 LAST_ARG_ONLY = frozenset({"textcolor", "colorbox", "fcolorbox"})
 # Escaped characters stay as written ("50\%", "R\&D"), as the regex masker
@@ -113,6 +120,9 @@ class LatexMask:
     headings: list[Heading]
     structure: list[StructureItem] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    # Spans that stood for a word in the sentence (maths, citations,
+    # references, code, URLs): see Document.atoms.
+    atoms: list[tuple[int, int]] = field(default_factory=list)
 
 
 def mask_latex(text: str,
@@ -137,7 +147,8 @@ def mask_latex(text: str,
                   "with a simpler reader; some markup may be checked as "
                   "prose.")
     masked, headings = _mask_latex(text)
-    return LatexMask(masked, headings, [], [reason])
+    return LatexMask(masked, headings, [], [reason],
+                     inline_atoms(text, "latex"))
 
 
 def _line_of(text: str) -> Callable[[int], str]:
@@ -344,6 +355,7 @@ class _Masker:
         # Set after a code macro pylatexenc parsed without arguments (one
         # the preamble defined): its `{...}` follows as a sibling group.
         self.skip_group = False
+        self.atoms: list[tuple[int, int]] = []
 
     def run(self) -> LatexMask:
         from pylatexenc import latexwalker as lw
@@ -372,7 +384,8 @@ class _Masker:
             h.end = min(h.end, self.n) if h.end is not None else None
         self.structure.sort(key=lambda s: s.start)
         return LatexMask("".join(self.out[:self.n]), self.headings,
-                         self.structure)
+                         self.structure, [],
+                         [(a, min(b, self.n)) for a, b in self.atoms if a < self.n])
 
     # -- primitives ---------------------------------------------------------
 
@@ -410,6 +423,8 @@ class _Masker:
             if self.skip_group:
                 if isinstance(n, lw.LatexGroupNode):
                     self.skip_group = False
+                    if prose:
+                        self.atoms.append((n.pos, n.pos + n.len))
                     continue                     # the code's argument
                 if not (isinstance(n, lw.LatexCharsNode)
                         and not n.chars.strip()):
@@ -425,6 +440,8 @@ class _Masker:
             elif isinstance(n, lw.LatexGroupNode):
                 self.walk(n.nodelist, prose, sink)
             elif isinstance(n, lw.LatexMathNode):
+                if prose:
+                    self.atoms.append((n.pos, n.pos + n.len))
                 if n.displaytype == "display":
                     self.structure.append(StructureItem(
                         "equation", n.pos, n.pos + n.len,
@@ -459,6 +476,7 @@ class _Masker:
             return
         if name in CITE_MACROS:
             if prose:
+                self.atoms.append((n.pos, end))
                 key = self.raw_arg(args[-1]) if args else ""
                 self.structure.append(
                     StructureItem("citation", n.pos, end, key or None))
@@ -468,8 +486,12 @@ class _Masker:
                 self.walk([args[1]], prose, sink)
             return
         if name in MASK_WHOLE:
+            if prose and name in ATOM_MACROS:
+                self.atoms.append((n.pos, end))
             return
         if name in self.code_macros:
+            if prose and args:
+                self.atoms.append((n.pos, end))
             self.skip_group = not args
             return
         if name in ESCAPED_CHARS:

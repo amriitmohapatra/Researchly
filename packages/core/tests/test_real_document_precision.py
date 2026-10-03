@@ -159,3 +159,41 @@ def test_a_lost_hyphen_with_a_tripled_letter_is_still_flagged():
     # "crosssectional" is not.
     assert ("S001", "crosssectional") in flags(
         "Results\n\nA crosssectional survey was run.", kind="plain", rule="S001")
+
+
+# --- formatting is not inline material (bench finding 6, P29) ---------------
+# The P28 guard first counted every masked character, so "\emph{" and "**"
+# silenced real errors next to them. Only atoms (maths, citations, code,
+# references, Word equations) count now.
+
+def test_formatting_macros_are_not_atoms():
+    d = Document.from_text(tex("We observed an \\emph{large} increase."), "latex")
+    an = d.original.index("an ")
+    assert not d.touches_masked(an, an + 2)
+
+
+@lt
+@pytest.mark.parametrize("text,kind", [
+    (tex("We observed an \\emph{large} increase in cases."), "latex"),
+    (tex("We observed an \\textbf{large} increase in cases."), "latex"),
+    ("Results\n\nWe observed an **large** increase in cases.", "markdown"),
+])
+def test_grammar_next_to_formatting_is_still_flagged(text, kind):
+    assert flags(text, kind=kind, rule="LT001"), "an + large must still be flagged"
+
+
+def test_doubled_word_across_bold_is_still_flagged():
+    t = tex("\\textbf{The} the outbreak spread.")
+    assert [r for r, _ in flags(t, rule="W207")] == ["W207"]
+
+
+def test_markdown_inline_code_and_maths_are_atoms():
+    d = Document.from_text("Results\n\nWe set `x` and $y$ and then fit.", "markdown")
+    assert len(d.atoms) == 2
+
+
+def test_word_equations_are_atoms():
+    from ingest_fixtures import docx_bytes, equation, para
+    from researchly.ingest import load_bytes
+    d = load_bytes("c.docx", docx_bytes(para("We set ", equation("x+1"), " and then fit.")))
+    assert len(d.atoms) == 1

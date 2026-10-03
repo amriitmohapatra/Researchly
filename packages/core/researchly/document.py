@@ -94,6 +94,10 @@ class Document:
     segments: list[Segment] = field(default_factory=list)
     structure: list[StructureItem] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    # Masked spans that stood for a word in the sentence: maths, citations,
+    # cross-references, code, URLs, Word equations. Formatting (\emph{,
+    # **, a heading) is masked too but stands for nothing, so it is not here.
+    atoms: list[tuple[int, int]] = field(default_factory=list)
     _line_starts: list[int] = field(default_factory=list, repr=False)
 
     # -- construction -------------------------------------------------------
@@ -139,6 +143,8 @@ class Document:
             structure, warnings = res.structure, res.warnings
         else:
             masked, headings = text, _detect_plain_headings(text)
+        atoms = (res.atoms if kind == "latex"
+                 else inline_atoms(text, kind) if kind == "markdown" else [])
         # Mask heading TEXT as well (after recording it): headings are not
         # sentences, and without terminal punctuation the parser merges them
         # into the following paragraph's first sentence, corrupting
@@ -150,7 +156,7 @@ class Document:
             _mask_spans(chars, [(h.start, end)])
         masked = "".join(chars)
         doc = cls(original=text, masked=masked, kind=kind, headings=headings,
-                  structure=structure, warnings=warnings)
+                  structure=structure, warnings=warnings, atoms=atoms)
         doc._line_starts = [0] + [m.end() for m in re.finditer(r"\n", text)]
         return doc
 
@@ -232,23 +238,11 @@ class Document:
         return line_idx + 1, offset - self._line_starts[line_idx] + 1
 
     def masked_content(self, start: int, end: int) -> bool:
-        """True if [start, end) covers masked material inside the running
-        text: something that was in the source (maths, a citation, code) and
-        is now blanked. Headings are masked too, but they are not part of a
-        sentence, so they never count."""
-        o, m = self.original, self.masked
-        for i in range(max(0, start), min(end, len(m))):
-            if m[i] == " " and not o[i].isspace() and not self._in_heading(i):
-                return True
-        return False
-
-    def _in_heading(self, i: int) -> bool:
-        for h in self.headings:
-            if h.start <= i:
-                end = h.end if h.end is not None else self.original.find("\n", h.start)
-                if end == -1 or i < end:
-                    return True
-        return False
+        """True if [start, end) overlaps an atom: masked material that stood
+        for a word in the sentence (maths, a citation, code). Masked
+        formatting such as `\\emph{` or `**` does not count: "an
+        \\emph{large} rise" is still "an large rise" to the reader."""
+        return any(a < end and start < b for a, b in self.atoms)
 
     def touches_masked(self, start: int, end: int) -> bool:
         """True if masked material lies inside [start, end) or in the spaces
@@ -374,6 +368,26 @@ _TEX_MASK_WHOLE = (
     "includegraphics", "input", "include", "bibliography", "bibliographystyle",
     "usepackage", "documentclass", "footnote", "footnotemark", "href",
 )
+
+
+# Inline material per markup: what stands for a word in the sentence.
+_ATOM_PATTERNS = {
+    "markdown": (r"`[^`\n]+`", r"\$\$.*?\$\$", r"(?<![\\$])\$[^$\n]+\$",
+                 r"\[[^\]\n]*@[^\]\n]*\]", r"(?<![\w.])@[\w:.\-]+",
+                 r"!\[[^\]]*\]\([^)]*\)"),
+    "latex": (r"\$\$.*?\$\$", r"(?<!\\)\$[^$]+\$", r"\\\[.*?\\\]",
+              r"\\\(.*?\\\)",
+              r"\\(?:[a-zA-Z]*cite[a-zA-Z]*|ref|eqref|autoref|[cC]ref|url|"
+              r"texttt|verb)\*?(?:\[[^\]]*\])*(?:\{[^{}]*\})+"),
+}
+
+
+def inline_atoms(text: str, kind: str) -> list[tuple[int, int]]:
+    """Atoms (see Document.atoms) found by pattern, for the regex maskers."""
+    spans: list[tuple[int, int]] = []
+    for pat in _ATOM_PATTERNS.get(kind, ()):
+        spans += _find_all(pat, text, re.DOTALL)
+    return sorted(spans)
 
 
 def _mask_latex(text: str) -> tuple[str, list[Heading]]:
