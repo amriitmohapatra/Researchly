@@ -80,7 +80,10 @@ python desktop-mac/researchly_app.py     # macOS app (macOS only)
 - Convention-type rules that can fire often should set `aggregate=True`.
 - Every bug fix ships with a regression test; run the full suite before
   handing anything back. Precision changes also get a corpus run:
-  `python3.10 dogfood/run_dogfood.py` — baseline 10.4/1000w ex-S001.
+  `python3.10 dogfood/run_dogfood.py` — baselines: **10.4/1000w** with
+  `RESEARCHLY_DISABLE=S001,LT001`, **12.5** with `S001` only disabled and the
+  grammar tier live (P18). Point `RESEARCHLY_CORPUS_OUT` at a scratch dir
+  unless you mean to update the tracked `dogfood/results/`.
 - Append a dated entry to `docs/PROJECT_LOG.md` after substantive work
   (standing user requirement).
 

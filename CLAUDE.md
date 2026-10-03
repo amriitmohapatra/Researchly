@@ -93,8 +93,9 @@ Researchly/
 ## How to work here
 
 - **Run tests**: `cd prototype && python3.10 -m pytest tests/ -q` (the
-  user's interpreter is `python3.10`; bare `python3` is a 3.14 with no
-  deps). All green before delivering. Every bug fix gets a regression test.
+  user's interpreter is `python3.10`; on their Mac bare `python3` is a 3.14
+  with no deps). All green before delivering — currently **260 passed,
+  1 skipped** off macOS (P21). Every bug fix gets a regression test.
 - **Never assemble your own pipeline in a surface.** Call
   `api.analyze(...)`. It resolves config, parses **once**, and returns
   suggestions (already carrying `why`/`source`/`tier`/`fix_safety`), counts,
@@ -121,7 +122,12 @@ Researchly/
   `api.analyze()`. UI changes are per-surface.
 - **User's environment**: macOS (Apple Silicon), Homebrew Python 3.10 —
   so no 3.11+ syntax (no tomllib without fallback; no multiline f-string
-  expressions; no backslashes inside f-string braces).
+  expressions; no backslashes inside f-string braces). Pin dependencies to
+  versions that still ship 3.10 wheels, including the version any model
+  artifact is pickled with (P21: a scikit-learn 1.8 pickle cannot load on
+  3.10). Some sessions run on a cloud Ubuntu VM instead: `python3.10` and a
+  real JDK exist there, `desktop-mac/` and pyobjc cannot be exercised, and
+  the macOS java-stub test skips by design.
 - **pyobjc rules** (learned the hard way): every non-selector method on an
   NSObject subclass needs `@objc.python_method`; ObjC-visible method names
   need one trailing underscore per argument.
@@ -138,27 +144,53 @@ Researchly/
 
 ## Current state & near-term backlog (details in PROJECT_LOG.md)
 
+The repo holds **one mainline tree** at the root (consolidated in P21) plus
+the `Experiment_Researchly/` fork (P21-EXP drafting guide — not merged; its
+move classifier cannot load on Python 3.10 until retrained, see P21).
+
 Working and user-verified: CLI, Word add-in (incl. Apply fix, Add to
-dictionary), macOS app + .dmg, spelling tier. Untested by user: LSP/VS
-Code extension, D2 live watching.
+dictionary), macOS app + .dmg, spelling tier, and the grammar tier on the
+user's Mac (P17). Built but not yet user-tested: LSP/VS Code extension, D2
+live watching, the P19 Word Settings/Review/Health tabs, the macOS panel
+action buttons and Settings window, both P20 standalone installers, and
+everything in `desktop-win/` (follow `docs/windows-smoke-checklist.md`).
 
-**v0.8 is in progress against a five-workstream plan** (W0 shared layer ✅ ·
-W1 reliability · W2 parity + settings · W3 grammar depth · W4 document
-intelligence · W5 knowledge re-mine). Read the PROJECT_LOG P15 entry first.
+**v0.8 is in progress against a five-workstream plan.** Status from the log:
+W0 shared layer ✅ (P15) · W1 reliability ✅ (P16) · W2 parity + settings
+— shipped in P19, awaiting on-device testing · W3 grammar depth — started:
+LanguageTool live and tuned (P17–P18), learned-GEC scaffold present but
+abstaining (P19) · W4 document intelligence — only the P19 ArgumentObject so
+far · W5 knowledge re-mine — no entry yet. Read PROJECT_LOG P15 (the plan)
+and P21 (the latest state) first.
 
-Two things a future agent will otherwise get wrong:
+Things a future agent will otherwise get wrong:
 
-- **The grammar tier has never run on this machine.** Not a code bug — there
-  is no JRE, only the macOS `java` stub. `researchly check` now says so.
-- **The spelling tier has never been dogfooded** (S001 shipped after the last
-  corpus run). It adds 2.4 flags/1000w on *accepted* theses; most are PDF
-  artifacts, but `estimand(s)`, `urbanicity`, `prespecified`, `lockdowns`,
-  `serotypic`, `tradeoff` are real gaps in `data/scientific_terms.txt`.
+- **The grammar tier runs.** Homebrew's openjdk is keg-only, so the JDK is
+  invisible to `which java`; `health.find_java()` searches for it and puts
+  it on PATH for the process (P17), and the P20 installers bundle a JRE. Do
+  not "fix" this with a `sudo` symlink, and do not reintroduce a presence
+  check — macOS's `/usr/bin/java` stub passes `shutil.which`.
+- **Spelling lexicon gaps are still open.** S001 adds 2.4 flags/1000w on
+  *accepted* theses (P15); most are PDF artifacts, but `estimand(s)`,
+  `urbanicity`, `prespecified`, `lockdowns`, `serotypic`, `tradeoff` are
+  real gaps in `data/scientific_terms.txt`.
+- **The recall bar is 15.3%** AESW edit-site recall with every tier live
+  (P18). A learned GEC model has to beat it to justify itself.
 
-The noise-floor guard is runnable again:
-`python3.10 dogfood/extract_clean.py && python3.10 dogfood/run_dogfood.py`
-(`RESEARCHLY_DISABLE=S001` isolates a tier). Baseline **10.4/1000w** ex-S001;
-past ~11 means re-tune, not ship.
+The noise-floor guard: `python3.10 dogfood/run_dogfood.py` from
+`prototype/` (re-extract first with `dogfood/extract_clean.py` only if the
+PDFs change). Set `RESEARCHLY_CORPUS_OUT` to a scratch directory unless you
+mean to update the tracked `dogfood/results/`. Compare like with like:
+
+| Run | Baseline (flags/1000w) |
+|---|---|
+| `RESEARCHLY_DISABLE=S001,LT001` (craft layers only) | **10.4** — past ~11 means re-tune, not ship |
+| `RESEARCHLY_DISABLE=S001` with grammar live | **12.5** (P18, after tuning LT001) |
+| all tiers | 14.9 |
+
+All three were reproduced exactly in P21. Grammar-live numbers are only
+valid where a JDK is found; a machine without one silently gives the
+craft-only figure, so check `researchly check`'s tier banner first.
 
 ## Before this repository is ever made public (user reminder, 2026-10-03)
 

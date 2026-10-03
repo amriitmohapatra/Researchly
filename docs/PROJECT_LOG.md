@@ -765,6 +765,17 @@ locally, `HOME` isolated per run so nothing touched a real `~/.researchly`.
   no longer matches the root tree; `word-addin/ship_zip.sh` regenerates it.
 - `_to_delete/` (98 tracked files, including tarballs of both old trees) is
   still in the repo.
-- `CLAUDE.md` statements that predate P17 and are now stale ("the grammar
-  tier has never run on this machine", the 10.4 baseline stated without the
-  12.5 grammar-live figure) were not rewritten without the user's say.
+
+### Follow-up (same day, user-approved): stale guidance corrected
+
+`CLAUDE.md` still carried statements that predate P17. Rewritten:
+"the grammar tier has never run on this machine" (false since P17 — now
+explains `find_java()` and warns against the `sudo` symlink); "the spelling
+tier has never been dogfooded" (it was, in P15 — the lexicon gaps it found
+are still open, so that point stays); the noise-floor baseline, which now
+gives all three like-for-like figures (10.4 craft-only, 12.5 ex-S001 with
+grammar live, 14.9 all tiers) instead of one "ex-S001" number that an agent
+with a working JDK would misread as a regression; the user-tested list
+(P19/P20 work added as untested); the W0–W5 status; and a note that some
+sessions run on a cloud Ubuntu VM. `AGENTS.md`'s baseline line updated to
+match.
