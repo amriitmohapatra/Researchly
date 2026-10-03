@@ -3,6 +3,7 @@
 import { memo, type MouseEvent } from "react";
 import type { Suggestion } from "@researchly/contract";
 import { categoryMeta, sectionLabel, tierLabel } from "@/lib/categories";
+import { dictionaryCandidate, isRuleId } from "@/lib/settings";
 import { CategoryBadge } from "./CategoryIcon";
 
 interface Props {
@@ -11,6 +12,18 @@ interface Props {
   /** False when the span could not be placed in the text (out of range). */
   placeable: boolean;
   onShowInText: (id: string) => void;
+  /** For a multi-file upload: the file and line the suggestion is in. */
+  location?: string | null;
+  /** Signed in only: account actions. Absent signed out, so the card is exactly as in S1. */
+  actions?: CardActions | null;
+}
+
+export interface CardActions {
+  onMute: (s: Suggestion) => void;
+  /** Only offered for spelling suggestions whose flagged text is one dictionary word. */
+  onAddWord: (s: Suggestion, word: string) => void;
+  /** An account action is in flight: buttons are announced as unavailable. */
+  busy: boolean;
 }
 
 const MAX_QUOTE = 160;
@@ -20,10 +33,21 @@ function quote(text: string): string {
   return t.length > MAX_QUOTE ? `${t.slice(0, MAX_QUOTE - 1)}…` : t;
 }
 
-export const SuggestionCard = memo(function SuggestionCard({ suggestion: s, active, placeable, onShowInText }: Props) {
+export const SuggestionCard = memo(function SuggestionCard({
+  suggestion: s,
+  active,
+  placeable,
+  onShowInText,
+  location,
+  actions,
+}: Props) {
   const meta = categoryMeta(s.category);
   const section = sectionLabel(s.section);
   const msgId = `msg-${s.id}`;
+  const word = actions && s.tier === "spelling" ? dictionaryCandidate(s.text) : null;
+  // Only ids the settings table accepts can be muted (e.g. "G101").
+  const mutable = isRuleId(s.rule_id);
+  const hasActions = Boolean(actions && (mutable || word));
 
   // Mouse convenience: clicking the card's body jumps to the text. Keyboard
   // users have the explicit "Show in text" button.
@@ -57,6 +81,12 @@ export const SuggestionCard = memo(function SuggestionCard({ suggestion: s, acti
           </button>
         ) : null}
       </div>
+      {location ? (
+        <p className="card-location" data-testid="card-location">
+          <span className="sr-only">In file: </span>
+          {location}
+        </p>
+      ) : null}
       <p className="card-msg" id={msgId}>
         {s.message}
       </p>
@@ -75,7 +105,7 @@ export const SuggestionCard = memo(function SuggestionCard({ suggestion: s, acti
       <p className="card-source">
         <span className="card-source-label">Source</span> <cite>{s.source}</cite>
       </p>
-      <div className="card-foot">
+      <div className={`card-foot${hasActions ? " card-foot-actions" : ""}`}>
         <details className="why">
           <summary>Why?</summary>
           <div className="why-body">
@@ -94,6 +124,40 @@ export const SuggestionCard = memo(function SuggestionCard({ suggestion: s, acti
             </dl>
           </div>
         </details>
+        {actions && hasActions ? (
+          <div className="card-actions">
+            {mutable ? (
+              <button
+                type="button"
+                className="btn-link btn-link-quiet"
+                aria-describedby={msgId}
+                aria-disabled={actions.busy || undefined}
+                onClick={() => {
+                  if (!actions.busy) actions.onMute(s);
+                }}
+                data-testid="mute-rule"
+              >
+                Mute this rule
+              </button>
+            ) : null}
+            {word ? (
+              <button
+                type="button"
+                className="btn-link btn-link-quiet"
+                aria-disabled={actions.busy || undefined}
+                onClick={() => {
+                  if (!actions.busy) actions.onAddWord(s, word);
+                }}
+                data-testid="add-word"
+              >
+                {/* One text run: a flex button would drop the spaces between separate nodes. */}
+                <span>
+                  Add <q translate="no">{word}</q> to dictionary
+                </span>
+              </button>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </article>
   );

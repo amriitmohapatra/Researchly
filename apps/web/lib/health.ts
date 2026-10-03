@@ -8,8 +8,12 @@
 import type { TierHealth } from "@researchly/contract";
 
 const FAULT_STATES = new Set(["error", "unstarted"]);
-/** Tiers whose absence silently removes whole classes of suggestions. */
-const CORE_TIERS = new Set(["grammar", "spelling", "parser"]);
+/**
+ * Tiers whose absence silently removes whole classes of suggestions, or (the
+ * `files` tier, reported only when degraded) changes how LaTeX and .docx are
+ * read.
+ */
+const CORE_TIERS = new Set(["grammar", "spelling", "parser", "files"]);
 
 export function shouldBanner(t: TierHealth): boolean {
   if (t.ok) return false;
@@ -32,7 +36,9 @@ export function healthBanners(health: readonly TierHealth[] | undefined): Banner
     const title =
       t.state === "unstarted"
         ? `${label} checks are still starting`
-        : `${label} checks unavailable`;
+        : t.tier === "files"
+          ? `${label} is limited on this engine`
+          : `${label} checks unavailable`;
     return { tier: t.tier, title, detail: t.detail, remedy: t.remedy };
   });
 }

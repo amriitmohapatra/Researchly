@@ -6,6 +6,7 @@
  * to the engine (ADR-02). scripts/check-boundary.mjs enforces both.
  */
 import { NextResponse, type NextRequest } from "next/server";
+import { supabaseConfig } from "./lib/config";
 import { cspHeader, makeNonce } from "./lib/security";
 
 export function proxy(request: NextRequest) {
@@ -13,6 +14,11 @@ export function proxy(request: NextRequest) {
   const csp = cspHeader({
     nonce,
     engineUrl: process.env.NEXT_PUBLIC_ENGINE_URL,
+    // Only a complete, valid accounts config adds Supabase to connect-src.
+    supabaseUrl: supabaseConfig(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    )?.url,
     dev: process.env.NODE_ENV === "development",
   });
   const requestHeaders = new Headers(request.headers);
