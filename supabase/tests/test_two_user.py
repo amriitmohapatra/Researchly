@@ -253,16 +253,20 @@ def test_each_user_sees_only_their_own_rows(pg):
     with as_user(pg, USER_A) as cur:
         cur.execute("select user_id, disabled_rules from public.user_settings")
         assert cur.fetchall() == [(USER_A, ["S001", "LT001"])]
-        cur.execute("select user_id, word from public.dictionary_words order by word")
-        assert cur.fetchall() == [(USER_A, "Stan"), (USER_A, "brms")]
+        # Compared as sets: `order by word` follows the server's collation
+        # (CI's en_US puts "brms" first, a C-locale server puts "Stan" first).
+        cur.execute("select user_id, word from public.dictionary_words")
+        assert set(cur.fetchall()) == {(USER_A, "Stan"), (USER_A, "brms")}
         # Asking for B's rows by id returns nothing, not an error.
         cur.execute("select count(*) from public.user_settings where user_id = %s", (USER_B,))
         assert cur.fetchone()[0] == 0
         cur.execute("select count(*) from public.dictionary_words where user_id = %s", (USER_B,))
         assert cur.fetchone()[0] == 0
-        assert my_config(cur) == {
+        config = my_config(cur)
+        assert sorted(config.pop("dictionary")) == ["Stan", "brms"]
+        assert config == {
             "disabled_rules": ["S001", "LT001"], "show_preferences": True,
-            "locale": "en-GB", "dictionary": ["Stan", "brms"]}
+            "locale": "en-GB"}
 
     with as_user(pg, USER_B) as cur:
         cur.execute("select user_id from public.user_settings")
