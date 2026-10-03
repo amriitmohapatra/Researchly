@@ -163,3 +163,34 @@ def test_request_ids_are_unique(client):
 def test_client_supplied_request_id_is_not_trusted(client):
     r = client.get("/v1/rules", headers={"x-request-id": "evil\nlog-line"})
     assert r.headers["x-request-id"] != "evil\nlog-line"
+
+
+def test_body_cap_admits_any_valid_document():
+    """Every document the contract accepts must fit under the body cap, or a
+    valid 1M-character text in a 4-byte script is refused with 413 before the
+    content check can explain the real limit (S1 review finding)."""
+    from researchly_service.schemas import MAX_CONTENT_CHARS
+    from researchly_service.settings import Settings, load
+    worst_case = MAX_CONTENT_CHARS * 4 + 64 * 1024   # 4-byte chars + envelope
+    assert Settings().max_body_bytes >= worst_case
+    assert load().max_body_bytes >= worst_case
+
+
+def test_documented_error_codes_match_what_the_service_emits():
+    """The contract lists the error codes; a new one must be documented."""
+    import re
+    from pathlib import Path
+    from researchly_service.schemas import ErrorBody
+    documented = set(re.findall(r"[a-z_]{4,}", ErrorBody.model_fields["code"].description))
+    src = Path(__file__).resolve().parents[1] / "researchly_service"
+    emitted = set()
+    for name in ("errors.py", "middleware.py"):
+        text = (src / name).read_text()
+        # every way a code is written: a status table (`413: "x"`), a
+        # helper call (`_respond(request, 413, "x"`, `reply_error(413, "x"`)
+        # and the fallback (`STATUS_CODES.get(status, "x")`).
+        emitted |= set(re.findall(r'\b\d{3}\s*[:,]\s*"([a-z_]+)"', text))
+        emitted |= set(re.findall(r'\.get\(\s*status\s*,\s*"([a-z_]+)"', text))
+    assert {"payload_too_large", "malformed_json", "internal"} <= emitted, \
+        "the patterns no longer find the codes; update this test"
+    assert emitted <= documented, sorted(emitted - documented)

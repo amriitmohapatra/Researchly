@@ -163,7 +163,7 @@
         "description": "Every non-2xx response. `code` is stable and machine-readable;\n`message` is for people and never contains document text.",
         "properties": {
           "code": {
-            "description": "e.g. payload_too_large, invalid_request, rate_limited, not_found, internal",
+            "description": "One of: invalid_request, malformed_json, malformed_request, payload_too_large, unsupported_media_type, rate_limited, not_found, method_not_allowed, internal, or http_error for any other HTTP status",
             "title": "Code",
             "type": "string"
           },
@@ -286,6 +286,7 @@
             "additionalProperties": {
               "type": "number"
             },
+            "description": "Share of clauses in the passive voice per section, as a fraction 0-1.",
             "title": "Passive Share By Section",
             "type": "object"
           },
@@ -417,7 +418,7 @@
             "type": "integer"
           },
           "end": {
-            "description": "Character offset into `content` (exclusive).",
+            "description": "Offset into `content` in Unicode code points, exclusive.",
             "minimum": 0.0,
             "title": "End",
             "type": "integer"
@@ -429,7 +430,7 @@
             "type": "integer"
           },
           "start": {
-            "description": "Character offset into `content` (inclusive).",
+            "description": "Offset into `content` in Unicode code points (Python str indices, NOT UTF-16 units), inclusive.",
             "minimum": 0.0,
             "title": "Start",
             "type": "integer"

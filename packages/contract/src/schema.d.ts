@@ -151,7 +151,7 @@ export interface components {
         ErrorBody: {
             /**
              * Code
-             * @description e.g. payload_too_large, invalid_request, rate_limited, not_found, internal
+             * @description One of: invalid_request, malformed_json, malformed_request, payload_too_large, unsupported_media_type, rate_limited, not_found, method_not_allowed, internal, or http_error for any other HTTP status
              */
             code: string;
             /** Message */
@@ -207,7 +207,10 @@ export interface components {
             mean_sentence_len: number;
             /** Nominalizations Per 100W */
             nominalizations_per_100w: number;
-            /** Passive Share By Section */
+            /**
+             * Passive Share By Section
+             * @description Share of clauses in the passive voice per section, as a fraction 0-1.
+             */
             passive_share_by_section?: {
                 [key: string]: number;
             };
@@ -253,7 +256,7 @@ export interface components {
             col: number;
             /**
              * End
-             * @description Character offset into `content` (exclusive).
+             * @description Offset into `content` in Unicode code points, exclusive.
              */
             end: number;
             /**
@@ -263,7 +266,7 @@ export interface components {
             line: number;
             /**
              * Start
-             * @description Character offset into `content` (inclusive).
+             * @description Offset into `content` in Unicode code points (Python str indices, NOT UTF-16 units), inclusive.
              */
             start: number;
         };

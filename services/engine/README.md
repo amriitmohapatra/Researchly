@@ -82,7 +82,7 @@ python bench.py --url http://localhost:8080      # or --in-process
 | `RESEARCHLY_ALLOWED_ORIGINS` | none (prod) | comma-separated CORS origins; `*` is refused |
 | `RESEARCHLY_LT_URL` | unset | LanguageTool server, e.g. `http://localhost:8010`; unset = local JVM |
 | `RESEARCHLY_GRAMMAR` | `on` | `off` = this deployment runs no grammar (health says `disabled`, not degraded) |
-| `RESEARCHLY_MAX_BODY_BYTES` | `4194304` | request body cap (4 MiB) |
+| `RESEARCHLY_MAX_BODY_BYTES` | `8388608` | request body cap (8 MiB; must admit 1M four-byte characters) |
 | `RESEARCHLY_RATE_LIMIT_PER_MIN` | `30` | per client IP, per instance; `0` disables |
 | `RESEARCHLY_TRUSTED_PROXY_HOPS` | `0` | X-Forwarded-For entries added by trusted proxies (Cloud Run: `1`) |
 | `RESEARCHLY_WARMUP` | `on` | warm spaCy, rules and LanguageTool before opening the port |

@@ -73,8 +73,9 @@ class AnalyzeRequest(_Strict):
 # --- response --------------------------------------------------------------
 
 class Span(_Strict):
-    start: int = Field(..., ge=0, description="Character offset into `content` (inclusive).")
-    end: int = Field(..., ge=0, description="Character offset into `content` (exclusive).")
+    start: int = Field(..., ge=0, description="Offset into `content` in Unicode code points "
+                                              "(Python str indices, NOT UTF-16 units), inclusive.")
+    end: int = Field(..., ge=0, description="Offset into `content` in Unicode code points, exclusive.")
     line: int = Field(..., ge=0, description="1-based line of `start`; 0 if unknown.")
     col: int = Field(..., ge=0, description="1-based column of `start`; 0 if unknown.")
 
@@ -112,7 +113,9 @@ class Metrics(_Strict):
     boosters_per_100w: float
     self_mention_per_100w: float
     hedge_booster_balance: Optional[str] = None
-    passive_share_by_section: Dict[str, float] = Field(default_factory=dict)
+    passive_share_by_section: Dict[str, float] = Field(
+        default_factory=dict,
+        description="Share of clauses in the passive voice per section, as a fraction 0-1.")
 
 
 class TierHealth(_Strict):
@@ -171,8 +174,12 @@ class RulesResponse(_Strict):
 class ErrorBody(_Strict):
     """Every non-2xx response. `code` is stable and machine-readable;
     `message` is for people and never contains document text."""
-    code: str = Field(..., description="e.g. payload_too_large, invalid_request, "
-                                       "rate_limited, not_found, internal")
+    code: str = Field(..., description="One of: invalid_request, malformed_json, "
+                                       "malformed_request, payload_too_large, "
+                                       "unsupported_media_type, "
+                                       "rate_limited, not_found, "
+                                       "method_not_allowed, internal, or "
+                                       "http_error for any other HTTP status")
     message: str
     request_id: str = Field(..., description="Quote this when reporting a problem.")
 
