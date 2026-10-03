@@ -1149,3 +1149,12 @@ Every branch was reviewed, re-tested and merged by the lead.
 
 **Waiting on the owner:** `docs/deploy.md` step 8 (Supabase project,
 migration, URL settings, two variables), then the S2 exit check.
+
+**Addendum (P26, merge):** amriitmohapatra/Researchly#2 merged on
+2026-10-03 with all 11 checks green. The first CI run caught one real test
+bug: `test_each_user_sees_only_their_own_rows` expected dictionary words in
+byte order ("Stan" before "brms"), which the local C-collation cluster used
+and CI's en_US Postgres does not. Isolation itself passed. Reproduced
+locally with an ICU en-US database, fixed to compare as sets (c975bec).
+Lesson: a test that sorts text inherits the server's collation; compare
+sets unless order is the point.
