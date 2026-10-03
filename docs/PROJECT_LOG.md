@@ -948,3 +948,81 @@ lesson: an origin story ("built from a professor's notes") is not a moat,
 because anyone can paste a style guide into a chatbot. The moat is the set
 of promises a generative tool cannot keep. New slice S2b covers the
 consistency and structure checks.
+
+## 2026-10-03 — P24: S1 Engine online (code complete; deploy waits on the owner)
+
+**What.** The hosted engine and the web page that calls it, built as a small
+team:
+- I wrote the contract first.
+- A backend agent and a frontend agent built in parallel against it.
+- A designer agent did a second pass using the owner's UI/UX skills.
+- I integrated, reviewed, tested end to end and wrote the deployment.
+
+**Shipped (PR amriitmohapatra/Researchly#1):**
+- **Contract v1.**
+  - Pydantic models are exported to OpenAPI, and the TypeScript types are
+    generated from that.
+  - CI fails on drift. The check caught a real drift before regeneration.
+  - Units are documented: offsets are Unicode code points; the passive
+    share is 0–1. Every error code is documented, with a test that parses
+    the code.
+- **Engine service** (`services/engine`).
+  - Stateless FastAPI. Each request builds its own in-memory config and
+    never reads `~/.researchly`.
+  - One engine lock, matched by Cloud Run concurrency 1.
+  - Rate limit, body cap (8 MiB, so a valid 1M-character document in
+    four-byte characters fits), allow-listed CORS, JSON logs that never
+    contain text.
+  - LanguageTool runs as a sidecar.
+  - No-Java image, non-root, built from an allow-list `.dockerignore`.
+- **Q6 canary test** (release-blocking). It found a real leak: a failed log
+  write printed a traceback containing the document. Fixed, with a
+  regression test.
+- **Web page** (`apps/web`, Next.js 16).
+  - Highlights, cards, why and source.
+  - Per-request nonce CSP.
+  - A lint-time boundary check that no server code ever receives text.
+  - Code-point to UTF-16 offset conversion, tested with emoji.
+  - Redesigned with the owner's design skills; passed the anti-ui-slop
+    finish gate.
+- **Deployment.**
+  - `bootstrap-gcp.sh`: Workload Identity Federation, so no keys.
+  - A manual `deploy-engine.yml`: deploy by digest, smoke test.
+  - `docs/deploy.md` for the steps only the owner can do.
+- **CI** now also runs the service tests, the contract, the web suite
+  (lint, typecheck, unit, e2e) and an engine-image privacy-and-boot check.
+
+**Found by doing it for real:**
+- **Mocked tests can't find content bugs.** The first run of the web page
+  against the real engine and LanguageTool showed two:
+  - sources rendered as bare "§4";
+  - "the the" flagged twice (LanguageTool plus W207).
+
+  Both are fixed in the engine. `sources.py` expands codes into full
+  citations and fails at import on an unknown code. LanguageTool rules that
+  W207 already covers are skipped. The noise floor went from 14.84 to 14.75.
+- **Briefs must name the owner's skills.** The first web page was built
+  without the installed design skills because the brief didn't name them.
+  ARCHITECTURE.md §14 now lists the skills per role.
+- **A copy-detection scan must ignore numbers.** Page numbers in a thesis
+  matched version lists in `package-lock.json`. Shingles now need at least
+  5 words with letters, and the scan covers only files git tracks or would
+  track.
+- **The security review** (security-review skill) found no vulnerabilities
+  at its bar. It flagged one logic bug: the public health endpoint probed
+  LanguageTool on every hit. Fixed.
+
+**Measured, locally (not Cloud Run):**
+
+| Request | p95 | Target |
+|---|---|---|
+| 311-word paragraph | 309 ms | 800 ms |
+| 10k-word chapter | 4.68 s | 6 s |
+
+The chapter time is about half spaCy and half LanguageTool, run one after
+the other; running them in parallel is in the Inbox. A 1M-character request
+takes 74 s and 2.8 GiB.
+
+**Waiting on the owner:** `docs/deploy.md` steps 1–6 (GCP project, bootstrap,
+repository variables, Vercel, first deploy). After that, the latency
+measurements on the real deployment and the S1 exit check.

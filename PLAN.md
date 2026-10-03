@@ -17,7 +17,7 @@ done and what's next*. Both the owner and Claude edit it.
   slice until the previous slice's exit check is ticked.
 - Substantive work still gets a dated entry in `docs/PROJECT_LOG.md`.
 
-**Current slice: S0 — Foundation** (started 2026-10-03, in PR amriitmohapatra/Researchly#1).
+**Current slice: S1 — Engine online** (S0 done pending merge of amriitmohapatra/Researchly#1; S1 code complete, waiting on owner deploy steps in docs/deploy.md).
 
 ---
 
@@ -71,15 +71,21 @@ done and what's next*. Both the owner and Claude edit it.
 
 ## S1 — Engine online (paste text at a private URL → suggestions)
 
-- [ ] FastAPI `services/engine` wrapping `api.analyze()`; `/v1/analyze`, `/v1/health`, `/v1/rules`
-- [ ] OpenAPI → `packages/contract` generated TS types; drift check in CI
-- [ ] Dockerfile (engine) + LanguageTool sidecar; image excludes thesis/course data (CI grep for canaries)
-- [ ] Cloud Run staging deploy in region D3 **(Amriit: create GCP project + billing)**
-- [ ] Minimal Next.js page on Vercel: paste → highlights + suggestion list **(Amriit: Vercel account/team)**
-- [ ] Logging config: request bodies never logged; Sentry payload scrubbing
-- [ ] Q6 canary test: no document text in logs/DB/errors after an analysis
-- [ ] Measure Q1/Q2 latency on staging; record numbers here
-- [ ] **Exit check:** owner pastes a real chapter on staging and gets the same suggestions as the CLI
+- [x] API contract v1 first (Pydantic → OpenAPI → generated TS types), drift check in CI — 2026-10-03, 53862dd / 0f711e1; the check caught a real drift before regeneration
+- [x] FastAPI `services/engine`: `/v1/analyze`, `/v1/health`, `/v1/rules`; per-request in-memory config (never reads ~/.researchly); one engine lock + Cloud Run concurrency 1 — aef87e6; 74 service tests
+- [x] Q6 canary test (release-blocking): canary absent from all logs, stdout/stderr, error bodies, headers and /v1/health across success, every error path and forced crashes — aef87e6. **It found and fixed a real leak** (failed log write dumped a traceback with the document)
+- [x] Logging: one JSON line per request, never text; exceptions as class + frames only — aef87e6 (Sentry not wired yet → S6)
+- [x] Remote LanguageTool sidecar support (`RESEARCHLY_LT_URL`), probed by real check, backs off and recovers; failure detail is exception type only — aef87e6; probe cached for public /v1/health — 32a5135
+- [x] Dockerfile (no Java, non-root, allow-list `.dockerignore`) + docker-compose + Cloud Run spec with sidecar, max 2 instances — aef87e6
+- [x] Web page (Next.js 16): paste → highlights + cards + why + source; health banner; read-outs not a score; per-request nonce CSP; privacy boundary enforced in lint — 27ed1c2; redesigned with the owner's UI/UX skills, anti-ui-slop gate passed — d5448c9
+- [x] Security review (security-review skill) of the engine service — no vulnerabilities at the reporting bar; one logic bug (uncached probe) fixed — 32a5135
+- [x] Real end-to-end run (web → engine container → LanguageTool container, no mocks): section-awareness and emoji offsets correct, no CSP/console errors — 2026-10-03. It exposed two defects, both fixed in cb7375b: bare "§4" sources (now full citations via `sources.py`) and a duplicate "the the" flag (LanguageTool rule covered by W207 skipped; noise floor 14.84 → 14.75)
+- [~] CI jobs for engine-service, contract, web (lint/typecheck/unit/e2e) and engine-image (privacy path check + boot) — b989081; *done when* green on PR #1
+- [x] Manual deploy workflow (WIF, deploy by digest, smoke test) + owner guide `docs/deploy.md` — 73a5755
+- [ ] Cloud Run deploy in Singapore **(Amriit: docs/deploy.md steps 1–3, 5)**
+- [ ] Vercel project for `apps/web` **(Amriit: docs/deploy.md steps 4, 6)**
+- [ ] Measure Q1/Q2 latency on the real deployment. Local container numbers (not Cloud Run): paragraph p95 309 ms (target 800 ms); 10k-word chapter p95 4.68 s (target 6 s)
+- [ ] **Exit check:** owner pastes a real chapter on the deployed site and gets the same suggestions as the CLI
 
 ## S2 — Accounts, files, settings sync
 
@@ -173,7 +179,9 @@ patterns of good research writing across disciplines, not just epidemiology.
 - [ ] Harper (WASM grammar) as an alternative to LanguageTool for the private mode
 - [ ] W5 knowledge re-mine of `Notes_On_Writing/` → authored questions, rules, Learn cards (paraphrased + cited, never reproduced) — now the primary knowledge source (D7); schedule alongside S4
 - [ ] Wire `document_type` / `aggressiveness` config into behaviour (stored but unused today)
-- [ ] Reach Q3: bring the noise floor from 14.84 to ≤ 11/1000w (top contributors: G101 779, S001 676, G106 648, LT001 592 flags)
+- [ ] Run spaCy parsing and LanguageTool in parallel inside `api.analyze()` — chapter latency ~4.3 s → ~2.1 s (backend measurement, S1)
+- [ ] Lower or split very large documents server-side: a 1M-character request takes ~74 s and 2.8 GiB (backend measurement, S1)
+- [ ] Reach Q3: bring the noise floor from 14.75 to ≤ 11/1000w (top contributors: G101 779, S001 676, G106 648, LT001 566 flags)
 - [ ] Clean the 20 cosmetic ruff findings (17 unused imports, 3 placeholder-less f-strings) in a dedicated change, then widen `ruff.toml`
 - [ ] `language_tool_python` client is GPL-3.0-only: fine server-side; check before bundling it into any distributed desktop installer
 - [ ] Correct `docs/eval-corpora.md`: JFLEG and CWEB *do* declare CC BY-NC-SA 4.0 (registry audit, 2026-10-03)
