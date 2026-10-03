@@ -231,6 +231,54 @@ class Document:
         line_idx = bisect_right(self._line_starts, offset) - 1
         return line_idx + 1, offset - self._line_starts[line_idx] + 1
 
+    def masked_content(self, start: int, end: int) -> bool:
+        """True if [start, end) covers masked material inside the running
+        text: something that was in the source (maths, a citation, code) and
+        is now blanked. Headings are masked too, but they are not part of a
+        sentence, so they never count."""
+        o, m = self.original, self.masked
+        for i in range(max(0, start), min(end, len(m))):
+            if m[i] == " " and not o[i].isspace() and not self._in_heading(i):
+                return True
+        return False
+
+    def _in_heading(self, i: int) -> bool:
+        for h in self.headings:
+            if h.start <= i:
+                end = h.end if h.end is not None else self.original.find("\n", h.start)
+                if end == -1 or i < end:
+                    return True
+        return False
+
+    def touches_masked(self, start: int, end: int) -> bool:
+        """True if masked material lies inside [start, end) or in the spaces
+        either side of it (across a wrapped line, not a paragraph break).
+
+        Masking blanks inline maths, citations and code to spaces, so the
+        words around them look adjacent: "and $C(0)$ and" reads as a doubled
+        "and and", "An $\\exp(1)$ prior" as "An prior". A finding whose
+        evidence crosses a blank is about the masking, not the writing.
+        """
+        m = self.masked
+        a = self._blank_run(start, -1)
+        b = self._blank_run(end, +1)
+        return self.masked_content(a, b)
+
+    def _blank_run(self, i: int, step: int) -> int:
+        """Walk from i over blanks in the masked text, crossing at most one
+        line break (a sentence wrapped in the source) but never a blank line
+        (a paragraph break)."""
+        m, newlines = self.masked, 0
+        while True:
+            j = i if step > 0 else i - 1
+            if j < 0 or j >= len(m) or m[j] not in " \t\n":
+                return i
+            if m[j] == "\n":
+                newlines += 1
+                if newlines > 1:
+                    return i
+            i += step
+
     def section_at(self, offset: int) -> str:
         """IMRaD section governing this offset ('unknown' if no headings)."""
         if not self.headings:

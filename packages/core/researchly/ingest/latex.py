@@ -63,6 +63,28 @@ MASK_WHOLE = frozenset({
     # `\iffalse ... \fi` is how LaTeX authors comment out a block.
     "iffalse",
 })
+# Code, file names and table-of-contents plumbing: never prose. A preamble
+# `\newcommand{\code}[1]{\texttt{#1}}` adds `\code` to these per document
+# (_Masker.code_macros), which is how most authors spell inline code.
+CODE_MACROS = frozenset({"texttt", "code", "path", "file", "filename", "pkg",
+                         "cmd", "command", "nolinkurl", "addcontentsline"})
+_CODE_BODY = re.compile(r"\\(?:texttt|ttfamily|verb|lstinline|url|path|"
+                        r"nolinkurl|code)\b")
+_NEWCOMMAND = re.compile(
+    r"\\(?:re)?newcommand\*?\s*\{?\\([A-Za-z]+)\}?\s*(?:\[\d\])?"
+    r"\s*(?:\[[^\]]*\])?\s*\{")
+
+
+def code_macros_in(preamble: str) -> set[str]:
+    """Macros the preamble defines as wrappers around code formatting."""
+    found = set()
+    for m in _NEWCOMMAND.finditer(preamble):
+        body = preamble[m.end():m.end() + 200].split("\n", 1)[0]
+        if _CODE_BODY.search(body):
+            found.add(m.group(1))
+    return found
+
+
 # Macros whose text is their LAST argument only (`\textcolor{red}{text}`).
 LAST_ARG_ONLY = frozenset({"textcolor", "colorbox", "fcolorbox"})
 # Escaped characters stay as written ("50\%", "R\&D"), as the regex masker
@@ -268,10 +290,13 @@ def _context():
         ("affiliation", "[{"), ("affil", "[{"), ("address", "{"),
         ("email", "{"), ("institute", "{"), ("addtolength", "{{"),
         ("addtocounter", "{{"),
+        ("code", "{"), ("file", "{"), ("filename", "{"), ("pkg", "{"),
+        ("cmd", "{"), ("command", "{"), ("addcontentsline", "{{{"),
     )]
     macros += [MacroSpec(name, args_parser=RawArgs(raw, rest))
                for names, raw, rest in (
-                   (("url",), "{", ""), (("href",), "{", "{"),
+                   (("url", "path", "nolinkurl"), "{", ""),
+                   (("href",), "{", "{"),
                    (("verb", "lstinline"), "v", ""),
                    (("newcommand", "renewcommand", "providecommand"),
                     "*{[[{", ""),
@@ -315,6 +340,10 @@ class _Masker:
         # Each caption and the float or panel whose \label names it; the
         # label may come after the caption, so they are joined at the end.
         self.captions: list[tuple[StructureItem, StructureItem]] = []
+        self.code_macros = set(CODE_MACROS)
+        # Set after a code macro pylatexenc parsed without arguments (one
+        # the preamble defined): its `{...}` follows as a sibling group.
+        self.skip_group = False
 
     def run(self) -> LatexMask:
         from pylatexenc import latexwalker as lw
@@ -326,6 +355,8 @@ class _Masker:
         # pylatexenc need not understand), and nothing after \end{document}
         # is typeset.
         m = _BEGIN_DOCUMENT.search(self.text, 0, self.n)
+        if m:
+            self.code_macros |= code_macros_in(self.text[:m.start()])
         if m:
             node, _, _ = walker.get_latex_environment(m.start(1), "document")
             nodes = [node]
@@ -376,6 +407,13 @@ class _Masker:
         for n in nodes:
             if n is None:
                 continue
+            if self.skip_group:
+                if isinstance(n, lw.LatexGroupNode):
+                    self.skip_group = False
+                    continue                     # the code's argument
+                if not (isinstance(n, lw.LatexCharsNode)
+                        and not n.chars.strip()):
+                    self.skip_group = False
             if isinstance(n, lw.LatexCharsNode):
                 if prose:
                     self.keep(n.pos, n.pos + n.len)
@@ -430,6 +468,9 @@ class _Masker:
                 self.walk([args[1]], prose, sink)
             return
         if name in MASK_WHOLE:
+            return
+        if name in self.code_macros:
+            self.skip_group = not args
             return
         if name in ESCAPED_CHARS:
             if prose:

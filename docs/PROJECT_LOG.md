@@ -1194,3 +1194,45 @@ take about two minutes.
 
 **Lesson:** a timeout has two ends. When one side's limit is raised for a
 new workload (uploads), check the other side's.
+
+## 2026-10-03 (later) — P28: precision fixes from the owner's first real `.tex`
+
+**What:** the owner shared a real 167 KB `.tex` methods report (16,600
+prose words, 190 uses of a custom `\code` macro) to test uploads. It was
+checked in memory only and is not in the repository; tests use synthetic
+sentences. It parsed cleanly in 0.6 s and analysed in ~13 s locally. The
+flags exposed bugs no corpus could: the noise-floor corpus is plain text.
+
+**Found and fixed (172 → 117 flags; 9.9 → 6.6 per 1,000 prose words):**
+- **Masked maths made words adjacent.** "and $C(0)$ and" was a doubled
+  word (all 4 W207 flags); "An $\exp(1)$ prior", "a $90\%$ interval",
+  "Student-$t$ rather" drew a/an and spacing errors (about half of the
+  LanguageTool flags). `Document.touches_masked()` now tells LT001 and W207
+  when their evidence crosses blanked maths, citations or code, across a
+  wrapped line but not a paragraph break, and never counting headings.
+- **Code read as prose.** `\texttt`, `\path`, `\addcontentsline` and any
+  preamble macro defined as a wrapper around code formatting (`\newcommand
+  {\code}[1]{\texttt{#1}}`) are now masked.
+- **Hyphenated prefixes** ("mis-ordered" → "mis") and **prefixed real words**
+  ("unstratified", "uncited", "autoregression") are no longer spelling
+  errors; the stem must be a dictionary word as written. Two regressions the
+  suite and a corpus review caught on the way: "mispeled" ("mis" + "pele" +
+  "d") and "crosssectional" (tripled letter) — both flagged again.
+- **Lexicon gaps:** decadal, simplices, programmatically, macOS,
+  parameterise/-ize families, hospitalise/-ize, softmax, treedepth,
+  walltime, hardcoded, equidispersion and others.
+- **F601:** labels with a number attached (BA.1, XBB.1.5, AR(2)) are not
+  undefined acronyms.
+
+**Evidence:** 26 new tests (fire and don't-fire); all 17 don't-fire tests
+fail on the pre-fix code. Core 502 passed. Noise floor 14.75 → 14.51
+(S001 676 → 611), baseline updated with a note; every newly accepted corpus
+word was reviewed by hand.
+
+**Not fixed, tracked in PLAN:** section inheritance for nested headings,
+a document-type default for methods reports, and LanguageTool's own
+misreads on technical prose.
+
+**Lesson:** the corpus measures the plain-text path only. One real LaTeX
+document found more LaTeX bugs in ten minutes than the suite had; every
+format needs a real-document check, not just synthetic fixtures.

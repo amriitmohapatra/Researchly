@@ -18,6 +18,8 @@ fatigue that kills checkers. Layers of defence:
 
 from __future__ import annotations
 
+import re
+
 import threading
 from pathlib import Path
 
@@ -125,10 +127,34 @@ def _variants(word: str) -> list[str]:
     return out
 
 
+# Prefixes that make a real word from a real word: "unstratified",
+# "uncited", "autoregression", "nonzero". A typo in the stem still fails,
+# because the stem itself must be known.
+DERIVATIONAL_PREFIXES = ("non", "un", "mis", "re", "pre", "post", "over",
+                         "under", "sub", "co", "multi", "inter", "intra",
+                         "semi", "pseudo", "quasi", "auto", "hyper", "hypo",
+                         "anti", "counter", "cross", "self")
+
+
+def _known_stem(word: str) -> bool:
+    """A stem behind a prefix must be a dictionary word as written (or its
+    UK/US twin). No suffix-stripping here: "mis" + "peled" would pass as
+    "pele" + "d", and "mispeled" is the classic typo this tier exists for."""
+    return is_known(word) or any(is_known(v) for v in _variants(word))
+
+
 def known_with_fallbacks(word: str) -> bool:
-    """Known directly, morphologically, or as a UK/US variant."""
+    """Known directly, morphologically, as a UK/US variant, or as a known
+    word behind a common prefix."""
     if is_known(word):
         return True
+    # "crosssectional": a tripled letter is a lost hyphen or a slip, not a
+    # prefixed word, however real the stem.
+    tripled = re.search(r"(.)\1\1", word) is not None
+    for p in () if tripled else DERIVATIONAL_PREFIXES:
+        if word.startswith(p) and len(word) - len(p) >= 4 \
+                and _known_stem(word[len(p):]):
+            return True
     for suf in SUFFIXES:
         if word.endswith(suf) and len(word) - len(suf) >= 3:
             base = word[: -len(suf)]

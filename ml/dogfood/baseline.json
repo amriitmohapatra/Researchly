@@ -1,14 +1,14 @@
 {
   "documents": 8,
   "words": 284537,
-  "suggestions": 4196,
-  "per_1000_words": 14.75,
+  "suggestions": 4130,
+  "per_1000_words": 14.51,
   "by_rule": {
     "G101": 779,
-    "S001": 676,
     "G106": 648,
+    "S001": 611,
     "LT001": 566,
-    "F601": 244,
+    "F601": 243,
     "G103": 182,
     "W202": 152,
     "C303": 138,
@@ -40,5 +40,5 @@
     "E705": 1,
     "W208": 1
   },
-  "note": "S1: LanguageTool ENGLISH_WORD_REPEAT_RULE skipped (duplicated W207); -26 LT001 flags"
+  "note": "P28 (2026-10-03): fixes from the owner's first real .tex upload. S001 676->611: prefixed real words (un-/non-/sub-/multi-...) and a small lexicon addition; F601 244->243: lineage/model-order labels (BA.1, AR(2)). LaTeX-only fixes (maths adjacency, code macros) do not touch this plain-text corpus."
 }
