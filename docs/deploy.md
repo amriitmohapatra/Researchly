@@ -80,11 +80,27 @@ is merged, `main` still has the old prototype layout: no `apps/web`, no
 2. Click **Add New… → Project**, then import `amriitmohapatra/Researchly`.
    Grant Vercel access to that repository only.
 3. Before deploying, set:
-   - **Root Directory:** `apps/web`. Leave "Include files outside the Root
-     Directory" **on**, because the web app reads the API contract from
-     `packages/contract`.
+   - **Root Directory:** `apps/web`. The picker is a folder tree: click the
+     arrow next to `apps` (not its radio button) and select `web`. Leave
+     "Include files outside the Root Directory" **on**, because the web app
+     reads the API contract from `packages/contract`.
    - **Environment variable:** `NEXT_PUBLIC_ENGINE_URL` =
-     `https://placeholder.invalid`. You'll replace it in step 6.
+     `https://placeholder.invalid`, with type **Config** (not Secret). You'll
+     replace the value in step 6.
+
+   > **Picker doesn't offer `apps/web`?** Leave Root Directory as `./` and
+   > deploy anyway. That first build fails, which is expected. Then go to
+   > **Settings → Build and Deployment** (or **General**), type `apps/web` into
+   > **Root Directory**, keep "Include files outside the root directory" on,
+   > click **Save**, and **Redeploy**. (Worked for the owner, 2026-10-03.)
+
+   > **Why Config, not Secret?** A `NEXT_PUBLIC_` value is built into the page
+   > the browser downloads, so it can't be secret, and Vercel warns if you
+   > try. The engine address isn't a secret anyway: the browser has to know
+   > it to send text there. Vercel can't convert a Secret into a Config. If
+   > you saved it as Secret, **delete it and add it again** as Config. If
+   > Config is greyed out, turn off **Team Settings → Security & Privacy →
+   > "Enforce Sensitive Environment Variables"** first.
 4. Click **Deploy**. When it finishes, note the production address, for
    example `https://researchly-xyz.vercel.app`.
 5. **Settings → Deployment Protection:** keep **Vercel Authentication** on
@@ -107,7 +123,10 @@ is merged, `main` still has the old prototype layout: no `apps/web`, no
 ## 6. Connect the two (about 3 minutes)
 
 1. In Vercel, go to **Settings → Environment Variables** and set
-   `NEXT_PUBLIC_ENGINE_URL` to the engine URL from step 5.5.
+   `NEXT_PUBLIC_ENGINE_URL` to the engine URL from step 5.5, with type
+   **Config**, for Production and Preview, and no trailing slash. If the old
+   placeholder was saved as Secret, delete it and add it again (see the note
+   in step 4.3).
 2. Go to **Deployments**, open the latest one, choose **⋯ → Redeploy**. The
    engine address is built into the page and its security policy, so a
    redeploy is needed.
