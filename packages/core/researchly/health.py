@@ -359,7 +359,11 @@ def _remote_grammar_status(cfg: Optional[Config], url: str,
         if state == "error":
             return TierStatus("grammar", "Grammar", False, "error",
                               detail or "LanguageTool server failed", remedy)
-    ok, why = probe_remote(url, use_cache=not probe)
+    # `probe` means "ask the server rather than trust module state", not
+    # "bypass the cache": /v1/health is public and polled, and an uncached
+    # probe cost the sidecar a real check per hit. PROBE_TTL_S bounds how
+    # stale the answer can be.
+    ok, why = probe_remote(url)
     if ok:
         return TierStatus("grammar", "Grammar", True, "ready", ready_detail)
     return TierStatus("grammar", "Grammar", False, "error", why, remedy)

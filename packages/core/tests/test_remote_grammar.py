@@ -62,6 +62,7 @@ class _FakeLT(BaseHTTPRequestHandler):
     """Just enough of LanguageTool's v2 HTTP API."""
     mode = "ok"                 # ok | broken_check | garbage
     checks = 0
+    probes = 0
 
     def log_message(self, *a):  # keep test output quiet
         pass
@@ -93,7 +94,9 @@ class _FakeLT(BaseHTTPRequestHandler):
             return self._send(200, "<html>not languagetool</html>",
                               "text/html")
         is_probe = text == health.PROBE_TEXT
-        if not is_probe:
+        if is_probe:
+            type(self).probes += 1
+        else:
             type(self).checks += 1
         if type(self).mode == "broken_check" and not is_probe:
             # A server error that echoes the submitted text back — the worst
@@ -120,7 +123,7 @@ class _FakeLT(BaseHTTPRequestHandler):
 
 @pytest.fixture
 def fake_lt(monkeypatch):
-    _FakeLT.mode, _FakeLT.checks = "ok", 0
+    _FakeLT.mode, _FakeLT.checks, _FakeLT.probes = "ok", 0, 0
     server = HTTPServer(("127.0.0.1", 0), _FakeLT)
     t = threading.Thread(target=server.serve_forever, daemon=True)
     t.start()
@@ -174,6 +177,19 @@ def test_health_probes_remote_with_a_real_check(fake_lt):
     assert st.ok and st.state == "ready"
     assert fake_lt in st.detail                 # desktop: says where text goes
     assert "nothing leaves this machine" not in st.detail
+
+
+def test_repeated_health_checks_reuse_the_cached_probe(fake_lt):
+    """/v1/health is public and polled; each call must not cost the sidecar
+    a fresh check. The security review (S1) found probe=True bypassed the
+    TTL cache, so every health hit made a new 3-second-timeout request."""
+    for _ in range(5):
+        st = _grammar(health.engine_status(Config(), probe=True))
+        assert st.ok
+    assert _FakeLT.probes == 1
+    health.reset_probe_cache()                   # TTL over -> probed again
+    _grammar(health.engine_status(Config(), probe=True))
+    assert _FakeLT.probes == 2
 
 
 def test_probe_rejects_a_server_that_is_not_languagetool(fake_lt):
