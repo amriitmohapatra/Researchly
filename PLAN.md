@@ -80,7 +80,7 @@ done and what's next*. Both the owner and Claude edit it.
 - [x] Web page (Next.js 16): paste → highlights + cards + why + source; health banner; read-outs not a score; per-request nonce CSP; privacy boundary enforced in lint — 27ed1c2; redesigned with the owner's UI/UX skills, anti-ui-slop gate passed — d5448c9
 - [x] Security review (security-review skill) of the engine service — no vulnerabilities at the reporting bar; one logic bug (uncached probe) fixed — 32a5135
 - [x] Real end-to-end run (web → engine container → LanguageTool container, no mocks): section-awareness and emoji offsets correct, no CSP/console errors — 2026-10-03. It exposed two defects, both fixed in cb7375b: bare "§4" sources (now full citations via `sources.py`) and a duplicate "the the" flag (LanguageTool rule covered by W207 skipped; noise floor 14.84 → 14.75)
-- [~] CI jobs for engine-service, contract, web (lint/typecheck/unit/e2e) and engine-image (privacy path check + boot) — b989081; *done when* green on PR #1
+- [x] CI jobs for engine-service, contract, web (lint/typecheck/unit/e2e) and engine-image (privacy path check + boot) — b989081; all 9 checks green on PR #1 at b5c49c7 (web: 28 Playwright e2e passed on a production build, 0 retries)
 - [x] Manual deploy workflow (WIF, deploy by digest, smoke test) + owner guide `docs/deploy.md` — 73a5755
 - [ ] Cloud Run deploy in Singapore **(Amriit: docs/deploy.md steps 1–3, 5)**
 - [ ] Vercel project for `apps/web` **(Amriit: docs/deploy.md steps 4, 6)**
