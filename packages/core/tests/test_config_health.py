@@ -135,6 +135,21 @@ def test_engine_status_reports_every_tier():
             assert s.detail, f"{s.tier} is down without saying why"
 
 
+def test_file_readers_reported_only_when_missing(monkeypatch):
+    """A missing pylatexenc silently degrades LaTeX masking on every
+    surface; it must show up with a remedy. Installed, it adds no line."""
+    statuses = health_mod.engine_status(config_mod.Config())
+    assert "files" not in {s.tier for s in statuses}
+    real = health_mod._installed
+    monkeypatch.setattr(health_mod, "_installed",
+                        lambda m: m != "pylatexenc" and real(m))
+    files = [s for s in health_mod.engine_status(config_mod.Config())
+             if s.tier == "files"]
+    assert len(files) == 1 and not files[0].ok
+    assert files[0].remedy == "pip install pylatexenc"
+    assert "File reading off" in health_mod.summary_line(files)
+
+
 def test_grammar_tier_reports_disabled_distinctly():
     """'You turned it off' must not look like 'it is broken'."""
     cfg = config_mod.Config(grammar_tier=False)

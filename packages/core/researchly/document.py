@@ -51,6 +51,10 @@ class Heading:
     start: int
     text: str
     section: str
+    # Where the heading's own text ends. None means "end of its line", which
+    # is right for Markdown and Word; a LaTeX `\paragraph{Title.} Text...`
+    # shares its line with prose that must not be masked with it.
+    end: int | None = None
 
 
 @dataclass
@@ -97,8 +101,15 @@ class Document:
     @classmethod
     def from_path(cls, path: str | Path) -> "Document":
         path = Path(path)
-        text = path.read_text(encoding="utf-8")
         suffix = path.suffix.lower()
+        if suffix in {".docx", ".zip"}:
+            # Binary containers go through the file adapters, so the CLI
+            # reads them exactly as the hosted engine does.
+            from .ingest import load_bytes
+            doc = load_bytes(path.name, path.read_bytes())
+            doc.path = str(path)
+            return doc
+        text = path.read_text(encoding="utf-8")
         if suffix in {".md", ".qmd", ".rmd", ".markdown"}:
             kind = "markdown"
         elif suffix in {".tex", ".ltx"}:
@@ -110,11 +121,22 @@ class Document:
         return doc
 
     @classmethod
-    def from_text(cls, text: str, kind: str = "plain") -> "Document":
+    def from_text(cls, text: str, kind: str = "plain", *,
+                  locate=None) -> "Document":
+        """`locate(offset) -> str` words a position in a warning; the
+        Overleaf adapter passes one that names the source file."""
+        structure: list[StructureItem] = []
+        warnings: list[str] = []
         if kind == "markdown":
             masked, headings = _mask_markdown(text)
         elif kind == "latex":
-            masked, headings = _mask_latex(text)
+            # Parsed with pylatexenc; falls back to `_mask_latex` (with a
+            # warning) when the source cannot be parsed. Imported here
+            # because the ingest package imports this module.
+            from .ingest.latex import mask_latex
+            res = mask_latex(text, locate)
+            masked, headings = res.masked, res.headings
+            structure, warnings = res.structure, res.warnings
         else:
             masked, headings = text, _detect_plain_headings(text)
         # Mask heading TEXT as well (after recording it): headings are not
@@ -123,11 +145,12 @@ class Document:
         # subject/verb analysis ("Results Selected variables are shown...").
         chars = list(masked)
         for h in headings:
-            end = masked.find("\n", h.start)
+            end = h.end if h.end is not None else masked.find("\n", h.start)
             end = end if end != -1 else len(masked)
             _mask_spans(chars, [(h.start, end)])
         masked = "".join(chars)
-        doc = cls(original=text, masked=masked, kind=kind, headings=headings)
+        doc = cls(original=text, masked=masked, kind=kind, headings=headings,
+                  structure=structure, warnings=warnings)
         doc._line_starts = [0] + [m.end() for m in re.finditer(r"\n", text)]
         return doc
 
