@@ -54,6 +54,25 @@ class Heading:
 
 
 @dataclass
+class Segment:
+    """`Document.original[start:end]` came from `path` at `source_start`
+    (docs/s2-design.md §4). A single-file document has one segment."""
+    path: str
+    start: int
+    end: int
+    source_start: int = 0
+
+
+@dataclass
+class StructureItem:
+    """A figure, table, equation, caption or citation (kept for S2b)."""
+    kind: str            # figure | table | equation | caption | citation
+    start: int
+    end: int
+    label: str | None = None
+
+
+@dataclass
 class Document:
     original: str
     masked: str
@@ -67,6 +86,10 @@ class Document:
     # (start, end) spans that are table cells, not prose. Metrics exclude
     # them: a table of parameter values is not a set of long sentences.
     table_spans: list[tuple[int, int]] = field(default_factory=list)
+    # Set by the file adapters (researchly.ingest); empty for pasted text.
+    segments: list[Segment] = field(default_factory=list)
+    structure: list[StructureItem] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
     _line_starts: list[int] = field(default_factory=list, repr=False)
 
     # -- construction -------------------------------------------------------

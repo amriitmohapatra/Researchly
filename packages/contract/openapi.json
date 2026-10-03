@@ -5,7 +5,7 @@
         "additionalProperties": false,
         "properties": {
           "disabled_rules": {
-            "description": "Rule ids to mute for this request, e.g. [\"G101\"]. Per-user settings replace this in S2.",
+            "description": "Rule ids to mute for this request, e.g. [\"G101\"]. For a signed-in caller these are added to the rules muted in their account settings.",
             "items": {
               "type": "string"
             },
@@ -103,6 +103,12 @@
             "title": "Sections Detected",
             "type": "array"
           },
+          "signed_in": {
+            "default": false,
+            "description": "True when a valid account token came with the request and its settings were looked up.",
+            "title": "Signed In",
+            "type": "boolean"
+          },
           "suggestions": {
             "items": {
               "$ref": "#/components/schemas/Suggestion"
@@ -163,7 +169,7 @@
         "description": "Every non-2xx response. `code` is stable and machine-readable;\n`message` is for people and never contains document text.",
         "properties": {
           "code": {
-            "description": "One of: invalid_request, malformed_json, malformed_request, payload_too_large, unsupported_media_type, rate_limited, not_found, method_not_allowed, internal, or http_error for any other HTTP status",
+            "description": "One of: invalid_request, malformed_json, malformed_request, payload_too_large, unsupported_media_type, unsupported_file, unreadable_file, unauthorized, sign_in_required, auth_unavailable, rate_limited, not_found, method_not_allowed, internal, or http_error for any other HTTP status",
             "title": "Code",
             "type": "string"
           },
@@ -207,7 +213,7 @@
         "type": "string"
       },
       "Format": {
-        "description": "Input formats accepted in S1. `docx` and Overleaf `.zip` arrive in S2\nas multipart uploads; `word_paragraphs` arrives with the hosted add-in (S3).",
+        "description": "Formats of pasted `content`. Files (.docx, .tex, Overleaf .zip, …) go\nto /v1/analyze-file instead; `word_paragraphs` arrives with the hosted\nadd-in (S3).",
         "enum": [
           "plain",
           "markdown",
@@ -577,7 +583,7 @@
             "type": "string"
           },
           "tier": {
-            "description": "parser | spelling | grammar | gec",
+            "description": "parser | spelling | grammar | gec | account (account: whether a signed-in caller's settings could be loaded)",
             "title": "Tier",
             "type": "string"
           }

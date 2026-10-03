@@ -72,7 +72,7 @@ export interface components {
         AnalyzeOptions: {
             /**
              * Disabled Rules
-             * @description Rule ids to mute for this request, e.g. ["G101"]. Per-user settings replace this in S2.
+             * @description Rule ids to mute for this request, e.g. ["G101"]. For a signed-in caller these are added to the rules muted in their account settings.
              */
             disabled_rules?: string[];
             /**
@@ -124,6 +124,12 @@ export interface components {
             schema_version: "1";
             /** Sections Detected */
             sections_detected: string[];
+            /**
+             * Signed In
+             * @description True when a valid account token came with the request and its settings were looked up.
+             * @default false
+             */
+            signed_in: boolean;
             /** Suggestions */
             suggestions: components["schemas"]["Suggestion"][];
         };
@@ -151,7 +157,7 @@ export interface components {
         ErrorBody: {
             /**
              * Code
-             * @description One of: invalid_request, malformed_json, malformed_request, payload_too_large, unsupported_media_type, rate_limited, not_found, method_not_allowed, internal, or http_error for any other HTTP status
+             * @description One of: invalid_request, malformed_json, malformed_request, payload_too_large, unsupported_media_type, unsupported_file, unreadable_file, unauthorized, sign_in_required, auth_unavailable, rate_limited, not_found, method_not_allowed, internal, or http_error for any other HTTP status
              */
             code: string;
             /** Message */
@@ -173,8 +179,9 @@ export interface components {
         FixSafety: "safe" | "review";
         /**
          * Format
-         * @description Input formats accepted in S1. `docx` and Overleaf `.zip` arrive in S2
-         *     as multipart uploads; `word_paragraphs` arrives with the hosted add-in (S3).
+         * @description Formats of pasted `content`. Files (.docx, .tex, Overleaf .zip, …) go
+         *     to /v1/analyze-file instead; `word_paragraphs` arrives with the hosted
+         *     add-in (S3).
          * @enum {string}
          */
         Format: "plain" | "markdown" | "latex";
@@ -353,7 +360,7 @@ export interface components {
             state: string;
             /**
              * Tier
-             * @description parser | spelling | grammar | gec
+             * @description parser | spelling | grammar | gec | account (account: whether a signed-in caller's settings could be loaded)
              */
             tier: string;
         };

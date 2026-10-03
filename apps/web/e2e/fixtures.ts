@@ -52,6 +52,7 @@ const prefsOnly = SAMPLE_SUGGESTIONS.filter((s) => s.category === "preference");
 /** show_preferences: false — the engine withholds preferences and reports how many. */
 export const happyResponse = {
   schema_version: "1",
+  signed_in: false,
   suggestions: withoutPrefs,
   counts: countsOf(withoutPrefs),
   hidden_preferences: prefsOnly.length,

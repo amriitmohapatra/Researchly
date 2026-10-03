@@ -26,8 +26,9 @@ MAX_CONTENT_CHARS = 1_000_000
 
 
 class Format(str, Enum):
-    """Input formats accepted in S1. `docx` and Overleaf `.zip` arrive in S2
-    as multipart uploads; `word_paragraphs` arrives with the hosted add-in (S3)."""
+    """Formats of pasted `content`. Files (.docx, .tex, Overleaf .zip, …) go
+    to /v1/analyze-file instead; `word_paragraphs` arrives with the hosted
+    add-in (S3)."""
     plain = "plain"
     markdown = "markdown"
     latex = "latex"
@@ -59,7 +60,8 @@ class AnalyzeOptions(_Strict):
     disabled_rules: List[str] = Field(
         default_factory=list, max_length=200,
         description="Rule ids to mute for this request, e.g. [\"G101\"]. "
-                    "Per-user settings replace this in S2.")
+                    "For a signed-in caller these are added to the rules "
+                    "muted in their account settings.")
 
 
 class AnalyzeRequest(_Strict):
@@ -119,7 +121,9 @@ class Metrics(_Strict):
 
 
 class TierHealth(_Strict):
-    tier: str = Field(..., description="parser | spelling | grammar | gec")
+    tier: str = Field(..., description="parser | spelling | grammar | gec | account "
+                                       "(account: whether a signed-in caller's "
+                                       "settings could be loaded)")
     label: str
     ok: bool = Field(..., description="Is this tier contributing suggestions right now?")
     state: str = Field(..., description="ready | missing | disabled | error | unstarted")
@@ -135,6 +139,8 @@ class EngineInfo(_Strict):
 
 class AnalyzeResponse(_Strict):
     schema_version: Literal["1"] = SCHEMA_VERSION
+    signed_in: bool = Field(False, description="True when a valid account token "
+                            "came with the request and its settings were looked up.")
     suggestions: List[Suggestion]
     counts: Dict[str, int] = Field(..., description="Shown suggestions per category.")
     hidden_preferences: int = Field(..., ge=0)
@@ -144,6 +150,50 @@ class AnalyzeResponse(_Strict):
                                      "degraded tier (CLAUDE.md: no silent tiers).")
     engine: EngineInfo
     elapsed_ms: int = Field(..., ge=0)
+
+
+class SourceFormat(str, Enum):
+    """How an uploaded file was read."""
+    latex = "latex"
+    docx = "docx"
+    markdown = "markdown"
+    plain = "plain"
+
+
+class Segment(_Strict):
+    """A stretch of `document.text` that came from one source file.
+    `text[start:end]` equals that file's `[source_start : source_start + (end - start)]`."""
+    path: str = Field(..., description="Path inside the upload, e.g. sections/methods.tex.")
+    start: int = Field(..., ge=0)
+    end: int = Field(..., ge=0)
+    source_start: int = Field(..., ge=0, description="Offset in the source file, in code points.")
+
+
+class StructureItem(_Strict):
+    """A figure, table, equation, caption or citation found in the source.
+    Kept as structure for the consistency and cross-reference checks (S2b)."""
+    kind: Literal["figure", "table", "equation", "caption", "citation"]
+    start: int = Field(..., ge=0)
+    end: int = Field(..., ge=0)
+    label: Optional[str] = Field(None, description="\\label key or Word bookmark, if any.")
+
+
+class SourceInfo(_Strict):
+    filename: str = Field(..., description="Echoed back to the caller; never logged.")
+    format: SourceFormat
+    text: str = Field(..., description="The text suggestions' spans index into: the "
+                                       "source itself for .tex/.md/.txt, the "
+                                       "expanded project for a .zip, the "
+                                       "extracted paragraphs for .docx.")
+    segments: List[Segment]
+    structure: List[StructureItem] = Field(default_factory=list)
+    warnings: List[str] = Field(default_factory=list,
+                                description="Things skipped or approximated while "
+                                            "reading the file; never document text.")
+
+
+class AnalyzeFileResponse(AnalyzeResponse):
+    document: SourceInfo
 
 
 class HealthResponse(_Strict):
@@ -177,6 +227,9 @@ class ErrorBody(_Strict):
     code: str = Field(..., description="One of: invalid_request, malformed_json, "
                                        "malformed_request, payload_too_large, "
                                        "unsupported_media_type, "
+                                       "unsupported_file, unreadable_file, "
+                                       "unauthorized, sign_in_required, "
+                                       "auth_unavailable, "
                                        "rate_limited, not_found, "
                                        "method_not_allowed, internal, or "
                                        "http_error for any other HTTP status")

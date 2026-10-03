@@ -6,6 +6,7 @@ import { sugg } from "./helpers";
 function response(suggestions: Suggestion[], hidden_preferences = 0): AnalyzeResponse {
   return {
     schema_version: "1",
+    signed_in: false,
     suggestions,
     counts: {},
     hidden_preferences,
