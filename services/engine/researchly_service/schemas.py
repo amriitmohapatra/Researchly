@@ -121,9 +121,10 @@ class Metrics(_Strict):
 
 
 class TierHealth(_Strict):
-    tier: str = Field(..., description="parser | spelling | grammar | gec | account "
-                                       "(account: whether a signed-in caller's "
-                                       "settings could be loaded)")
+    tier: str = Field(..., description="parser | spelling | grammar | gec | files | account "
+                                       "(files: the LaTeX/.docx readers, shown only "
+                                       "when one is missing; account: whether a "
+                                       "signed-in caller's settings could be loaded)")
     label: str
     ok: bool = Field(..., description="Is this tier contributing suggestions right now?")
     state: str = Field(..., description="ready | missing | disabled | error | unstarted")
@@ -150,6 +151,12 @@ class AnalyzeResponse(_Strict):
                                      "degraded tier (CLAUDE.md: no silent tiers).")
     engine: EngineInfo
     elapsed_ms: int = Field(..., ge=0)
+    warnings: List[str] = Field(
+        default_factory=list,
+        description="What was skipped or approximated while reading the text, "
+                    "e.g. LaTeX that could not be parsed and was read with a "
+                    "simpler method. May quote the caller's own text; never "
+                    "logged.")
 
 
 class SourceFormat(str, Enum):

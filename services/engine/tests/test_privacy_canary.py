@@ -380,3 +380,20 @@ def test_token_and_user_id_never_logged(make_client, capture):
         assert secret not in capture.json_lines()
         assert secret not in capture.fds()
         assert secret not in r2.text
+
+
+def test_upload_warnings_never_logged(client, capture):
+    """Adapter warnings can quote document text (an \\input target's name):
+    returned to the caller, never logged."""
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.insert(0, str(_Path(__file__).resolve().parents[3] / "packages/core/tests"))
+    from ingest_fixtures import zip_bytes
+    main = ("\\documentclass{article}\n\\begin{document}\n"
+            f"Text.\n\\input{{{CANARY}}}\n\\end{{document}}\n")
+    r = client.post("/v1/analyze-file", content=zip_bytes({"main.tex": main}),
+                    headers={"content-type": "application/octet-stream",
+                             "x-researchly-filename": "p.zip"})
+    assert r.status_code == 200, r.text
+    assert any(CANARY in w for w in r.json()["document"]["warnings"])
+    assert_no_canary_anywhere(capture)

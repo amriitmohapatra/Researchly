@@ -175,6 +175,7 @@ def run_analysis(source: Union[str, Document], fmt: str,
         health=health,
         engine=engine_info(),
         elapsed_ms=0,
+        warnings=list(a.document.warnings) if a.document is not None else [],
         **extra,
     )
     out.elapsed_ms = int(round((time.perf_counter() - t0) * 1000))

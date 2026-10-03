@@ -7,6 +7,7 @@ function response(suggestions: Suggestion[], hidden_preferences = 0): AnalyzeRes
   return {
     schema_version: "1",
     signed_in: false,
+    warnings: [],
     suggestions,
     counts: {},
     hidden_preferences,

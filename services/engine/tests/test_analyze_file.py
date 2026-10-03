@@ -130,3 +130,68 @@ def test_docx_and_zip_are_routed_to_their_adapters(client):
         r = upload(client, b"PK\x03\x04 not really a zip", name=name)
         assert r.status_code in (415, 422), (name, r.text)
         assert r.json()["error"]["code"] in ("unsupported_file", "unreadable_file")
+
+
+# --- real .docx and Overleaf .zip, end to end (S2 adapters) -----------------
+# The fixture builders live with the adapter tests in packages/core/tests.
+
+import sys as _sys  # noqa: E402
+from pathlib import Path as _Path  # noqa: E402
+
+_sys.path.insert(0, str(_Path(__file__).resolve().parents[3] / "packages/core/tests"))
+from ingest_fixtures import docx_bytes, para, run, zip_bytes  # noqa: E402
+
+PASSIVE = "The model was calibrated by the authors using weekly data."
+
+
+def test_docx_upload_end_to_end(client):
+    body = (para(run("Methods"), style="Heading1") + para(run(PASSIVE))
+            + para(run("Discussion"), style="Heading1")
+            + para(run("The effect was very large in every district.")))
+    r = upload(client, docx_bytes(body), name="chapter.docx",
+               options={"show_preferences": True})
+    assert r.status_code == 200, r.text
+    b = r.json()
+    doc = b["document"]
+    assert doc["format"] == "docx"
+    assert "Methods" in doc["text"] and PASSIVE in doc["text"]
+    assert {"methods", "discussion"} <= set(b["sections_detected"])
+    for s in b["suggestions"]:
+        assert doc["text"][s["span"]["start"]:s["span"]["end"]] == s["text"]
+    assert "W204" in {s["rule_id"] for s in b["suggestions"]}
+
+
+def test_overleaf_zip_end_to_end(client):
+    main = ("\\documentclass{article}\n\\begin{document}\n"
+            "\\section{Methods}\n\\input{sections/results}\n\\end{document}\n")
+    child = "\\section{Results}\nThe effect was very large in every district.\n"
+    r = upload(client, zip_bytes({"main.tex": main, "sections/results.tex": child}),
+               name="project.zip", options={"show_preferences": True})
+    assert r.status_code == 200, r.text
+    doc = r.json()["document"]
+    assert doc["format"] == "latex"
+    paths = [g["path"] for g in doc["segments"]]
+    assert "main.tex" in paths and "sections/results.tex" in paths
+    (w204,) = [s for s in r.json()["suggestions"] if s["rule_id"] == "W204"]
+    seg = next(g for g in doc["segments"]
+               if g["start"] <= w204["span"]["start"] < g["end"])
+    assert seg["path"] == "sections/results.tex"
+    off = seg["source_start"] + w204["span"]["start"] - seg["start"]
+    assert child[off:off + 4] == "very"
+
+
+def test_zip_warning_is_returned(client):
+    main = ("\\documentclass{article}\n\\begin{document}\n"
+            "Text.\n\\input{appendix}\n\\end{document}\n")
+    r = upload(client, zip_bytes({"main.tex": main}), name="p.zip")
+    assert r.status_code == 200
+    assert any("appendix" in w for w in r.json()["document"]["warnings"])
+
+
+def test_pasted_latex_fallback_is_visible(client):
+    # Unbalanced braces send the parser to the regex fallback: say so.
+    r = client.post("/v1/analyze", json={
+        "format": "latex",
+        "content": "\\section{Results}\nThe effect {was large in every district.\n"})
+    assert r.status_code == 200
+    assert r.json()["warnings"], "a parse fallback must not be silent"
