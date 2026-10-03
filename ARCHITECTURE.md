@@ -713,14 +713,17 @@ The lead engineer (Claude) owns this document, slicing, integration and the fina
 
 That is the brief format in ch. 27.8.
 
-| Role | Owns | Typical briefs |
-|---|---|---|
-| Engine engineer | `packages/core`, `services/engine` | adapters, tiers, API, performance |
-| Frontend engineer | `apps/web`, `apps/word-addin` | editor, highlights, narrative map, accessibility |
-| Platform engineer | CI, Vercel, Cloud Run, Supabase, secrets | deploys, environments, monitoring |
-| ML engineer | `ml/`, `critics/` | datasets registry, bake-offs, ONNX, model cards |
-| Writing-science lead | `knowledge/`, `docs/knowledge-base.md`, Learn cards | authored questions, sources, lessons, W5 re-mine of `Notes_On_Writing/` |
-| QA and security reviewer | tests, two-user tests, noise floor, security review | adversarial review of every diff before it reaches the owner |
+| Role | Owns | Typical briefs | Skills the brief must name |
+|---|---|---|---|
+| Engine engineer | `packages/core`, `services/engine` | adapters, tiers, API, performance | `code-review`, `security-review` |
+| Frontend engineer / product designer | `apps/web`, `apps/word-addin` | editor, highlights, narrative map, accessibility | `anthropic-skills:ui-ux-pro-max`, `anthropic-skills:frontend-design`, `anthropic-skills:design-taste-frontend`, `anthropic-skills:web-design-guidelines`, `anthropic-skills:anti-ui-slop` (finish gate), `dataviz` for any chart |
+| Platform engineer | CI, Vercel, Cloud Run, Supabase, secrets | deploys, environments, monitoring | `security-review` |
+| ML engineer | `ml/`, `critics/` | datasets registry, bake-offs, ONNX, model cards | `anthropic-skills:statistical-analysis`, `anthropic-skills:exploratory-data-analysis`, `anthropic-skills:scientific-visualization` / `research-figures` for evaluation plots |
+| Writing-science lead | `knowledge/`, `docs/knowledge-base.md`, Learn cards | authored questions, sources, lessons, W5 re-mine of `Notes_On_Writing/` | `anthropic-skills:paper-access`, `anthropic-skills:citation-provenance`, `anthropic-skills:literature-review`, `anthropic-skills:epi-critical-appraisal` (for the epidemiology pack) |
+| Corpus builder (S5a) | `ml/` corpus manifests | open-access harvesting with licence checks | `anthropic-skills:research-lookup`, `anthropic-skills:paper-access`; PubMed, bioRxiv, Scholar Gateway and Consensus connectors |
+| QA and security reviewer | tests, two-user tests, noise floor, security review | adversarial review of every diff before it reaches the owner | `code-review`, `security-review` |
+
+**Briefs name their skills explicitly.** The owner has installed these skills for a reason, and an agent won't load a skill it isn't told about. This lesson came from S1: the first web page was built without the design skills, so a design-review pass was needed afterwards.
 
 **Rule for every role:** a change is reported in terms of the behaviour it changes and the evidence for it: what changed, why it was needed, how it was checked, and what remains uncertain. A list of edited files is not a report.
 
