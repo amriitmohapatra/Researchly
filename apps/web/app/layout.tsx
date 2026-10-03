@@ -3,7 +3,7 @@ import { connection } from "next/server";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Researchly — a writing coach for research",
+  title: "Researchly: a writing coach for research",
   description:
     "Explainable, section-aware feedback on research writing. It advises; it never drafts. Your text is analysed in memory and never stored.",
   referrer: "no-referrer",
@@ -15,7 +15,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   colorScheme: "light dark",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f7f6f2" },
+    { media: "(prefers-color-scheme: light)", color: "#f4f5f3" },
     { media: "(prefers-color-scheme: dark)", color: "#14161a" },
   ],
 };

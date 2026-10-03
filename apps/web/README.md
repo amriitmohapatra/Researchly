@@ -101,11 +101,17 @@ outside the root directory" enabled (the contract lives in
 `packages/contract`), and set `NEXT_PUBLIC_ENGINE_URL` to the engine's
 HTTPS URL for each environment.
 
+## Design
+
+`DESIGN.md` is the design contract (hierarchy, type roles, colour, shape,
+required states, what to reject). Check UI changes against it.
+
 ## Layout
 
 ```
 app/            layout (dynamic, for CSP nonces), page (static chrome), globals.css
-components/     Checker (form + state), Results, DocumentView, SuggestionCard,
+components/     Checker (form + state), ReadingKey (idle "how to read the
+                feedback" key), Results, DocumentView, SuggestionCard,
                 HealthBanner, MetricsPanel, CategoryIcon
 lib/            engine (fetch), segments (offsets + highlight segmentation),
                 categories, health, errors, validate, view, prefs, config, security

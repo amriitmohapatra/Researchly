@@ -1,7 +1,8 @@
 /*
- * Researchly web — one stylesheet, no framework.
- * Tone: calm, academic, trustworthy. Paper-white, ink, a serif for the
- * writer's own words, a system sans for the interface.
+ * Researchly web: one stylesheet, no framework. Contract: DESIGN.md.
+ * Tone: calm, academic, trustworthy. Neutral paper, ink, one navy accent.
+ * Type says who is speaking: serif for writing (the draft, quoted words,
+ * revisions, cited sources), system sans for the coach and the controls.
  *
  * Category palette: derived from Okabe & Ito (2008), the colour-universal
  * palette that stays distinct under protanopia, deuteranopia and tritanopia.
@@ -12,17 +13,18 @@
 :root {
   color-scheme: light dark;
 
-  --bg: #f7f6f2;
+  --bg: #f4f5f3;
   --surface: #ffffff;
-  --surface-2: #f0eee8;
-  --ink: #1c2027;
-  --ink-2: #4b515d;
-  --line: #d9d5cb;
-  --line-strong: #8b8f99;
+  --surface-2: #eceeeb;
+  --ink: #1b1f24;
+  --ink-2: #4a515b;
+  --line: #d5d9d4;
+  --line-strong: #858b93;
   --accent: #26344d;
   --accent-ink: #ffffff;
   --accent-hover: #1a2539;
   --focus: #1f5fbf;
+  --link: #1d4f9c;
   --info-bg: #edf1f7;
   --info-line: #b9c6db;
   --error-bg: #fbf0ea;
@@ -51,8 +53,10 @@
     sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 
-  --radius: 10px;
-  --shadow: 0 1px 2px rgb(20 24 31 / 0.05), 0 2px 8px rgb(20 24 31 / 0.04);
+  /* One radius for every box; pills only for chips, badges and the switch. */
+  --radius: 8px;
+  --shadow: 0 1px 2px rgb(27 31 36 / 0.05);
+  --measure: 62ch;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -68,6 +72,7 @@
     --accent-ink: #10141c;
     --accent-hover: #d0dcf0;
     --focus: #8ab4ff;
+    --link: #8ab4ff;
     --info-bg: #1d2533;
     --info-line: #3a4a66;
     --error-bg: #2c1f1a;
@@ -116,10 +121,11 @@ body {
 h1,
 h2,
 h3 {
-  font-family: var(--serif);
-  font-weight: 600;
+  font-family: var(--sans);
+  font-weight: 650;
   line-height: 1.25;
   margin: 0;
+  text-wrap: balance;
 }
 
 p {
@@ -134,21 +140,33 @@ textarea {
   color: inherit;
 }
 
+a,
+button,
+summary,
+label,
+select,
+input,
+textarea {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgb(38 52 77 / 0.12);
+}
+
 :focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
 
+/* Inline padding only: a shorthand here would silently zero main's and the header's vertical padding. */
 .wrap {
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 16px;
+  padding-inline: 16px;
 }
 
 @media (min-width: 720px) {
   .wrap {
-    padding: 0 24px;
+    padding-inline: 24px;
   }
 }
 
@@ -172,7 +190,7 @@ textarea {
   background: var(--accent);
   color: var(--accent-ink);
   padding: 8px 14px;
-  border-radius: 6px;
+  border-radius: var(--radius);
   text-decoration: none;
 }
 .skip-link:focus {
@@ -208,7 +226,7 @@ kbd {
 .header-inner {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 4px 16px;
   padding-top: 14px;
@@ -219,10 +237,10 @@ kbd {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-family: var(--serif);
-  font-size: 1.3rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  font-family: var(--sans);
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.005em;
   color: var(--accent);
 }
 @media (prefers-color-scheme: dark) {
@@ -240,8 +258,13 @@ kbd {
 }
 
 main {
-  padding-top: 28px;
+  padding-top: 32px;
   padding-bottom: 48px;
+}
+@media (min-width: 720px) {
+  main {
+    padding-top: 40px;
+  }
 }
 main:focus {
   outline: none;
@@ -252,12 +275,15 @@ main:focus {
   margin-bottom: 20px;
 }
 .intro h1 {
-  font-size: clamp(1.6rem, 1.3rem + 1.2vw, 2.1rem);
+  font-size: clamp(1.6rem, 1.35rem + 1vw, 2rem);
+  letter-spacing: -0.015em;
   margin-bottom: 8px;
 }
 .lede {
   color: var(--ink-2);
-  font-size: 1.02rem;
+  font-size: 1.0625rem;
+  max-width: var(--measure);
+  text-wrap: pretty;
 }
 
 .site-footer {
@@ -283,8 +309,77 @@ main:focus {
 }
 
 .panel-title {
-  font-size: 1.15rem;
+  font-size: 1.125rem;
   margin-bottom: 4px;
+}
+
+/* ---------- studio: composer beside the reading key ---------- */
+
+.studio {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+@media (min-width: 960px) {
+  .studio {
+    grid-template-columns: minmax(0, 1fr) 20rem;
+    gap: 24px;
+    align-items: start;
+  }
+}
+/* Phones and narrow windows: the key teaches before the first check, then gets out of the way. */
+@media (max-width: 959px) {
+  .key-has-results {
+    display: none;
+  }
+}
+
+.key {
+  padding: 4px 0 0;
+}
+.key-title {
+  font-size: 1rem;
+  margin-bottom: 12px;
+}
+.key-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+.key-row {
+  display: grid;
+  gap: 2px;
+}
+.key-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 650;
+  font-size: 0.9375rem;
+  color: var(--c-ink);
+}
+.key-specimen {
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  line-height: 1.7;
+}
+.key-note {
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+.key-foot {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+.key-example {
+  margin-top: 14px;
 }
 
 .field-label {
@@ -304,7 +399,7 @@ main:focus {
   resize: vertical;
   padding: 14px 16px;
   border: 1px solid var(--line-strong);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--bg);
   font-family: var(--serif);
   font-size: 1.0625rem;
@@ -366,16 +461,18 @@ main:focus {
   min-width: 10rem;
   padding: 8px 10px;
   border: 1px solid var(--line-strong);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--surface);
-  min-height: 42px;
+  color: var(--ink);
+  min-height: 44px;
 }
 
 .control-toggle {
   flex-direction: row;
   align-items: center;
   gap: 10px;
-  min-height: 42px;
+  min-height: 44px;
+  cursor: pointer;
 }
 
 .switch {
@@ -411,9 +508,6 @@ main:focus {
   transform: translateX(18px);
   background: var(--accent-ink);
 }
-.control-toggle label {
-  cursor: pointer;
-}
 
 .control-actions {
   flex-direction: row;
@@ -427,9 +521,9 @@ main:focus {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 42px;
+  min-height: 44px;
   padding: 8px 20px;
-  border-radius: 8px;
+  border-radius: var(--radius);
   border: 1px solid transparent;
   font-weight: 600;
   cursor: pointer;
@@ -461,19 +555,21 @@ main:focus {
 }
 
 .btn-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
   background: none;
   border: none;
-  padding: 2px 0;
-  color: var(--focus);
+  padding: 0 2px;
+  color: var(--link);
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
   cursor: pointer;
   font-weight: 600;
 }
-@media (prefers-color-scheme: light) {
-  .btn-link {
-    color: #1d4f9c;
-  }
+.btn-link:hover {
+  text-decoration-thickness: 2px;
 }
 
 .kbd-hint {
@@ -513,16 +609,14 @@ main:focus {
   color: var(--ink);
 }
 .local-note > summary {
-  color: var(--focus);
+  color: var(--link);
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: 3px;
   cursor: pointer;
   list-style: none;
 }
-@media (prefers-color-scheme: light) {
-  .local-note > summary {
-    color: #1d4f9c;
-  }
+.local-note > summary:hover {
+  text-decoration-thickness: 2px;
 }
 .local-note > summary::-webkit-details-marker {
   display: none;
@@ -637,20 +731,32 @@ main:focus {
   gap: 4px 16px;
 }
 .results-title {
-  font-size: 1.45rem;
+  font-size: 1.5rem;
+  letter-spacing: -0.01em;
 }
 .results-meta {
   font-size: 0.9rem;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+  margin-top: 16px;
 }
 
 .hidden-prefs {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 2px 6px;
   margin-top: 12px;
-  font-size: 0.925rem;
+  font-size: 0.9375rem;
   color: var(--ink-2);
+}
+.toolbar .hidden-prefs {
+  margin-top: 0;
 }
 .hidden-prefs .cat-icon {
   color: var(--preference-ink);
@@ -664,9 +770,8 @@ main:focus {
   background: var(--surface);
 }
 .empty-title {
-  font-family: var(--serif);
-  font-size: 1.15rem;
-  font-weight: 600;
+  font-size: 1.125rem;
+  font-weight: 650;
   margin-bottom: 4px;
 }
 
@@ -674,7 +779,6 @@ main:focus {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 16px;
 }
 
 .chip-btn {
@@ -698,6 +802,32 @@ main:focus {
 }
 .chip-btn:hover {
   border-color: var(--c-line);
+  background: var(--surface-2);
+}
+/* Each chip label carries its category's underline, tying the chip to the highlights. */
+.chip-btn .chip-label {
+  text-decoration-line: underline;
+  text-decoration-color: var(--c-line);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+  text-decoration-skip-ink: none;
+}
+.chip-all .chip-label {
+  text-decoration-line: none;
+}
+.chip-correction .chip-label {
+  text-decoration-style: solid;
+}
+.chip-improvement .chip-label {
+  text-decoration-style: double;
+  text-decoration-thickness: 3px;
+}
+.chip-convention .chip-label {
+  text-decoration-style: dotted;
+  text-decoration-thickness: 3px;
+}
+.chip-preference .chip-label {
+  text-decoration-style: dashed;
 }
 .chip-btn[aria-pressed="true"] {
   background: var(--c-tint);
@@ -722,8 +852,8 @@ main:focus {
 }
 
 .filter-blurb {
-  margin-top: 8px;
-  font-size: 0.875rem;
+  margin-top: 10px;
+  font-size: 0.9375rem;
 }
 
 .results-grid {
@@ -749,16 +879,16 @@ main:focus {
 }
 
 .col-title {
-  font-family: var(--sans);
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ink-2);
+  font-size: 1rem;
+  font-weight: 650;
+  color: var(--ink);
   margin-bottom: 4px;
 }
 .doc-col .help {
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+}
+.list-col .col-title {
+  margin-bottom: 10px;
 }
 
 /* ---------- category variables ---------- */
@@ -767,7 +897,9 @@ main:focus {
 .pt-correction,
 .badge-correction,
 .card-correction,
-.chip-correction {
+.chip-correction,
+.key-correction,
+.spec-correction {
   --c-ink: var(--correction-ink);
   --c-line: var(--correction-line);
   --c-tint: var(--correction-tint);
@@ -776,7 +908,9 @@ main:focus {
 .pt-improvement,
 .badge-improvement,
 .card-improvement,
-.chip-improvement {
+.chip-improvement,
+.key-improvement,
+.spec-improvement {
   --c-ink: var(--improvement-ink);
   --c-line: var(--improvement-line);
   --c-tint: var(--improvement-tint);
@@ -785,7 +919,9 @@ main:focus {
 .pt-convention,
 .badge-convention,
 .card-convention,
-.chip-convention {
+.chip-convention,
+.key-convention,
+.spec-convention {
   --c-ink: var(--convention-ink);
   --c-line: var(--convention-line);
   --c-tint: var(--convention-tint);
@@ -794,7 +930,9 @@ main:focus {
 .pt-preference,
 .badge-preference,
 .card-preference,
-.chip-preference {
+.chip-preference,
+.key-preference,
+.spec-preference {
   --c-ink: var(--preference-ink);
   --c-line: var(--preference-line);
   --c-tint: var(--preference-tint);
@@ -820,7 +958,8 @@ main:focus {
   }
 }
 
-.hl {
+.hl,
+.spec {
   color: inherit;
   background: var(--c-tint);
   border-radius: 2px;
@@ -831,20 +970,26 @@ main:focus {
   text-decoration-skip-ink: none;
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
+}
+.hl {
   cursor: pointer;
 }
-.hl-correction {
+.hl-correction,
+.spec-correction {
   text-decoration-style: solid;
 }
-.hl-improvement {
+.hl-improvement,
+.spec-improvement {
   text-decoration-style: double;
   text-decoration-thickness: 3px;
 }
-.hl-convention {
+.hl-convention,
+.spec-convention {
   text-decoration-style: dotted;
   text-decoration-thickness: 3px;
 }
-.hl-preference {
+.hl-preference,
+.spec-preference {
   text-decoration-style: dashed;
 }
 .hl-multi {
@@ -891,22 +1036,21 @@ main:focus {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .card {
   position: relative;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-left: 4px solid var(--c-line);
+  border-left: 3px solid var(--c-line);
   border-radius: var(--radius);
-  padding: 12px 14px 10px;
-  box-shadow: var(--shadow);
+  padding: 12px 16px 8px;
   scroll-margin: 24px;
 }
 .card.is-active {
   border-color: var(--c-line);
-  box-shadow: 0 0 0 2px var(--c-line), var(--shadow);
+  box-shadow: 0 0 0 2px var(--c-line);
 }
 .card:focus {
   outline: none;
@@ -920,7 +1064,7 @@ main:focus {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 8px;
+  gap: 2px 10px;
   margin-bottom: 6px;
 }
 
@@ -933,17 +1077,13 @@ main:focus {
   background: var(--c-tint);
   color: var(--c-ink);
   border: 1px solid color-mix(in srgb, var(--c-line) 55%, transparent);
-  font-size: 0.8rem;
+  font-size: 0.8125rem;
   font-weight: 700;
   letter-spacing: 0.01em;
 }
 
-.chip {
-  display: inline-block;
-  padding: 1px 8px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  font-size: 0.78rem;
+.card-section {
+  font-size: 0.875rem;
   color: var(--ink-2);
 }
 
@@ -953,13 +1093,15 @@ main:focus {
 }
 
 .card-msg {
-  font-weight: 600;
+  font-weight: 650;
   line-height: 1.45;
+  text-wrap: pretty;
 }
 
 .card-quote {
   margin-top: 6px;
   font-family: var(--serif);
+  font-size: 1.0625rem;
   color: var(--ink-2);
   overflow-wrap: anywhere;
 }
@@ -968,8 +1110,8 @@ main:focus {
 }
 
 .card-repl {
-  margin-top: 6px;
-  font-size: 0.925rem;
+  margin-top: 4px;
+  font-size: 0.9375rem;
   overflow-wrap: anywhere;
 }
 .card-repl-label {
@@ -977,23 +1119,47 @@ main:focus {
 }
 .card-repl q {
   font-family: var(--serif);
+  font-size: 1.0625rem;
   font-weight: 600;
   quotes: "\201C" "\201D";
 }
 
-.card-foot {
+/* The source is always visible: "it cites its sources" is the product's promise (CLAUDE.md #6). */
+.card-source {
   margin-top: 8px;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.card-source-label {
+  font-weight: 650;
+  margin-right: 4px;
+}
+.card-source cite {
+  font-family: var(--serif);
+  font-size: 0.9375rem;
+  font-style: italic;
+  color: var(--ink);
+}
+
+.card-foot {
+  margin-top: 2px;
 }
 .why > summary {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  min-height: 32px;
   cursor: pointer;
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--ink);
-  padding: 2px 0;
+  font-weight: 650;
+  font-size: 0.9375rem;
+  color: var(--link);
   list-style: none;
+}
+.why > summary:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .why > summary::-webkit-details-marker {
   display: none;
@@ -1010,19 +1176,25 @@ main:focus {
 .why[open] > summary::before {
   transform: rotate(90deg);
 }
+/* The explanation is the lesson: full-size text, a reading measure, set off like a margin note. */
 .why-body {
-  margin-top: 6px;
-  font-size: 0.925rem;
+  margin: 2px 0 8px;
+  padding-left: 12px;
+  border-left: 2px solid color-mix(in srgb, var(--c-line) 50%, transparent);
+  max-width: var(--measure);
   cursor: auto;
 }
 .why-body > p {
-  line-height: 1.55;
+  font-size: 1rem;
+  line-height: 1.6;
+  text-wrap: pretty;
 }
 .why-meta {
   margin: 8px 0 0;
   display: grid;
   gap: 2px;
-  font-size: 0.85rem;
+  font-size: 0.875rem;
+  color: var(--ink-2);
 }
 .why-meta > div {
   display: flex;
@@ -1030,8 +1202,7 @@ main:focus {
   gap: 0 6px;
 }
 .why-meta dt {
-  font-weight: 600;
-  color: var(--ink-2);
+  font-weight: 650;
 }
 .why-meta dt::after {
   content: ":";
@@ -1051,12 +1222,18 @@ main:focus {
 }
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 9.5rem), 1fr));
-  gap: 12px 20px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 8.5rem), 1fr));
+  gap: 14px 16px;
   margin: 14px 0 0;
 }
+@media (min-width: 720px) {
+  .metrics-grid {
+    grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr));
+    gap: 16px 24px;
+  }
+}
 .metric dt {
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   color: var(--ink-2);
 }
 .metric dd {
@@ -1067,7 +1244,7 @@ main:focus {
 .metric-note {
   display: block;
   font-weight: 400;
-  font-size: 0.8rem;
+  font-size: 0.8125rem;
   color: var(--ink-2);
 }
 .metric-wide {
@@ -1099,6 +1276,15 @@ main:focus {
 /* ---------- small screens ---------- */
 
 @media (max-width: 560px) {
+  .tagline {
+    display: none;
+  }
+  .card {
+    padding: 10px 12px 6px;
+  }
+  .card-head {
+    gap: 2px 8px;
+  }
   .controls {
     gap: 12px 16px;
   }

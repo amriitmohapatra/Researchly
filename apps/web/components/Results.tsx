@@ -23,6 +23,8 @@ interface Props {
 
 type FocusRequest = { id: string; target: "mark" | "card"; seq: number };
 
+const secondsFmt = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 1 });
+
 function prefersReducedMotion(): boolean {
   return typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 }
@@ -71,8 +73,22 @@ export function Results({ data, submittedText, showPreferences, stale, busy, onR
   }, []);
 
   const sections = data.sections_detected.map(sectionLabel).filter((s): s is string => s !== null);
-  const seconds = (data.elapsed_ms / 1000).toFixed(data.elapsed_ms < 10_000 ? 1 : 0);
+  const seconds = secondsFmt.format(data.elapsed_ms < 10_000 ? data.elapsed_ms / 1000 : Math.round(data.elapsed_ms / 1000));
   const chips: Filter[] = ["all", ...CATEGORY_ORDER.filter((c) => c !== "preference" || showPreferences)];
+
+  // When no suggestion is shown the note still has to be reachable, so it renders in either layout.
+  const hiddenNote =
+    hidden > 0 ? (
+      <p className="hidden-prefs" data-testid="hidden-prefs">
+        <CategoryIcon category="preference" />
+        <span>
+          {hidden} {hidden === 1 ? "preference" : "preferences"} hidden.
+        </span>{" "}
+        <button type="button" className="btn-link" onClick={onRevealPreferences} aria-label={`Show ${hidden} hidden preferences`}>
+          Show
+        </button>
+      </p>
+    ) : null;
 
   return (
     <section className="results" aria-labelledby="results-heading" aria-busy={busy} data-testid="results">
@@ -81,8 +97,8 @@ export function Results({ data, submittedText, showPreferences, stale, busy, onR
           {shown.length === 0 ? "No suggestions" : `${shown.length} ${shown.length === 1 ? "suggestion" : "suggestions"}`}
         </h2>
         <p className="muted results-meta">
-          {sections.length > 0 ? <>Sections detected: {sections.join(", ")} · </> : <>No section headings detected · </>}
-          checked in {seconds} s
+          {sections.length > 0 ? <>Sections detected: {sections.join(", ")}</> : <>No section headings detected</>}
+          {" · "}checked in {seconds}&nbsp;s
         </p>
       </div>
 
@@ -94,48 +110,42 @@ export function Results({ data, submittedText, showPreferences, stale, busy, onR
 
       <HealthBanner health={data.health} />
 
-      {hidden > 0 ? (
-        <p className="hidden-prefs" data-testid="hidden-prefs">
-          <CategoryIcon category="preference" />
-          <span>
-            {hidden} {hidden === 1 ? "preference" : "preferences"} hidden —{" "}
-          </span>
-          <button type="button" className="btn-link" onClick={onRevealPreferences} aria-label={`Show ${hidden} hidden preferences`}>
-            show
-          </button>
-        </p>
-      ) : null}
-
       {shown.length === 0 ? (
-        <div className="empty" data-testid="empty-state">
-          <p className="empty-title">No suggestions — that&rsquo;s not a score.</p>
-          <p className="muted">It means none of our checks fired on this text. Read-outs below still describe it.</p>
-        </div>
+        <>
+          {hiddenNote}
+          <div className="empty" data-testid="empty-state">
+            <p className="empty-title">No suggestions. That&rsquo;s not a score.</p>
+            <p className="muted">It means none of our checks fired on this text. The read-outs below still describe it.</p>
+          </div>
+        </>
       ) : (
         <>
-          <div className="filters" role="group" aria-label="Filter suggestions by category">
-            {chips.map((c) => {
-              const n = c === "all" ? shown.length : counts[c];
-              const label = c === "all" ? "All" : CATEGORIES[c].plural;
-              return (
-                <button
-                  key={c}
-                  type="button"
-                  className={`chip-btn chip-${c}`}
-                  aria-pressed={effectiveFilter === c}
-                  onClick={() => setFilter(c)}
-                  data-testid={`filter-${c}`}
-                >
-                  {c !== "all" ? <CategoryIcon category={c} /> : null}
-                  <span>{label}</span>
-                  <span className="chip-count">{n}</span>
-                </button>
-              );
-            })}
+          <div className="toolbar">
+            <div className="filters" role="group" aria-label="Filter suggestions by category">
+              {chips.map((c) => {
+                const n = c === "all" ? shown.length : counts[c];
+                const label = c === "all" ? "All" : CATEGORIES[c].plural;
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    className={`chip-btn chip-${c}`}
+                    aria-pressed={effectiveFilter === c}
+                    onClick={() => setFilter(c)}
+                    data-testid={`filter-${c}`}
+                  >
+                    {c !== "all" ? <CategoryIcon category={c} /> : null}
+                    <span className="chip-label">{label}</span>
+                    <span className="chip-count">{n}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {hiddenNote}
           </div>
           <p className="filter-blurb muted">
             {effectiveFilter === "all"
-              ? "Conventions are research-writing norms you may choose to follow — they are not errors."
+              ? "Conventions are research-writing norms you may choose to follow. They are not errors."
               : CATEGORIES[effectiveFilter].blurb}
           </p>
 
@@ -143,8 +153,8 @@ export function Results({ data, submittedText, showPreferences, stale, busy, onR
             <div className="doc-col" ref={docColRef}>
               <h3 className="col-title">Your text</h3>
               <p id="doc-help" className="help">
-                Click a highlight to see its suggestion. From the keyboard: focus the text, use the arrow keys, then
-                press Enter.
+                Select a highlight to open its suggestion. Keyboard: Tab into the text, move with the arrow keys, press
+                Enter.
               </p>
               <DocumentView segments={segments} activeId={activeId} onSelect={onSelectFromText} />
             </div>
@@ -174,8 +184,8 @@ export function Results({ data, submittedText, showPreferences, stale, busy, onR
       {data.metrics ? <MetricsPanel metrics={data.metrics} /> : null}
 
       <p className="engine-meta muted">
-        Engine {data.engine.service_version} (core {data.engine.core_version}) · {data.engine.rules_loaded} rules
-        loaded. Every suggestion names its source; open &ldquo;Why?&rdquo; to read it.
+        Checked by engine {data.engine.service_version} (core {data.engine.core_version}) with{" "}
+        {data.engine.rules_loaded} rules. Each suggestion names its source; open &ldquo;Why?&rdquo; for the reasoning.
       </p>
     </section>
   );

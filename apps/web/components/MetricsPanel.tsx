@@ -17,7 +17,7 @@ export function MetricsPanel({ metrics }: { metrics: Metrics }) {
     { term: "Boosters", value: `${n1.format(metrics.boosters_per_100w)} per 100 words`, note: "clearly, demonstrate, prove" },
   ];
   if (metrics.hedge_booster_balance) {
-    rows.push({ term: "Hedge–booster balance", value: metrics.hedge_booster_balance });
+    rows.push({ term: "Hedge to booster balance", value: metrics.hedge_booster_balance });
   }
   rows.push(
     { term: "Nominalisations", value: `${n1.format(metrics.nominalizations_per_100w)} per 100 words` },

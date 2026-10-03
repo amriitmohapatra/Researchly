@@ -62,7 +62,7 @@ test.describe("happy path", () => {
 
     // A replacement is labelled as a suggestion; there is no apply button.
     const wordy = page.locator(`#card-${byRule("C120").id}`);
-    await expect(wordy).toContainText("Suggestion — your call:");
+    await expect(wordy).toContainText("Suggested revision (your call):");
     await expect(page.getByRole("button", { name: /apply|accept|fix/i })).toHaveCount(0);
 
     // Card → highlight
@@ -175,6 +175,52 @@ test.describe("taxonomy", () => {
   });
 });
 
+test.describe("idle state", () => {
+  test("the key teaches all four types, with the same non-colour cues as the highlights", async ({ page }) => {
+    await page.goto("/");
+    const key = page.getByTestId("reading-key");
+    await expect(key.getByRole("heading", { name: "How to read the feedback" })).toBeVisible();
+    for (const label of ["Correction", "Improvement", "Convention", "Preference"]) await expect(key).toContainText(label);
+    const styles: Record<string, string> = { correction: "solid", improvement: "double", convention: "dotted", preference: "dashed" };
+    for (const [cat, style] of Object.entries(styles)) {
+      expect(await key.locator(`.spec-${cat}`).evaluate((el) => getComputedStyle(el).textDecorationStyle), cat).toBe(style);
+    }
+    // A convention is never presented as an error, here either.
+    await expect(key.locator(".key-convention")).toContainText("Never an error");
+    const conv = await key.locator(".spec-convention").evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return [cs.textDecorationColor, cs.backgroundColor, getComputedStyle(el.closest("li")!.querySelector(".key-label")!).color];
+    });
+    for (const c of conv) expect(isReddish(rgb(c)), c).toBe(false);
+    const axe = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
+    expect(axe.violations.filter((v) => v.impact === "serious" || v.impact === "critical")).toEqual([]);
+  });
+
+  test("the example fills only an empty editor and sends nothing until Check", async ({ page }) => {
+    const sent = await mockEngine(page);
+    await page.goto("/");
+    await page.getByTestId("insert-example").click();
+    await expect(page.getByLabel("Text to check")).toBeFocused();
+    await expect(page.getByLabel("Text to check")).toHaveValue(/Methods\n/);
+    // Offered only while the editor is empty, so it can never overwrite a draft.
+    await expect(page.getByTestId("insert-example")).toHaveCount(0);
+    expect(sent).toHaveLength(0);
+    await page.getByLabel("Text to check").fill("");
+    await expect(page.getByTestId("insert-example")).toBeVisible();
+  });
+
+  test("on a phone the key gives way to the results after a check", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await mockEngine(page);
+    await page.goto("/");
+    await expect(page.getByTestId("reading-key")).toBeVisible();
+    await paste(page, SAMPLE_TEXT);
+    await check(page);
+    await expect(page.getByTestId("suggestion-card").first()).toBeVisible();
+    await expect(page.getByTestId("reading-key")).toBeHidden();
+  });
+});
+
 test.describe("health", () => {
   test("a degraded grammar tier shows a calm banner with detail and remedy", async ({ page }) => {
     await mockEngine(page, (_req, route) => json(route, 200, degradedGrammarResponse));
@@ -241,7 +287,7 @@ test.describe("states and errors", () => {
     await page.goto("/");
     await paste(page, "A perfectly ordinary sentence.");
     await check(page);
-    await expect(page.getByTestId("empty-state")).toContainText("No suggestions — that’s not a score");
+    await expect(page.getByTestId("empty-state")).toContainText("No suggestions. That’s not a score");
     await expect(page.getByTestId("empty-state")).toContainText("none of our checks fired");
   });
 

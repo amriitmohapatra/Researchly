@@ -25,8 +25,7 @@ export function HealthBanner({ health }: { health: readonly TierHealth[] }) {
           </div>
         ))}
         <p className="notice-text notice-foot">
-          The other checks ran normally. Suggestions from the unavailable checks are simply missing; nothing below is
-          affected by this.
+          The other checks ran normally. Only suggestions from the unavailable checks are missing.
         </p>
       </div>
     </div>

@@ -45,7 +45,12 @@ export const SuggestionCard = memo(function SuggestionCard({ suggestion: s, acti
     >
       <div className="card-head">
         <CategoryBadge category={meta.id} />
-        {section ? <span className="chip">{section}</span> : null}
+        {section ? (
+          <span className="card-section">
+            <span className="sr-only">Section: </span>
+            {section}
+          </span>
+        ) : null}
         {placeable ? (
           <button type="button" className="btn-link card-jump" onClick={() => onShowInText(s.id)}>
             Show in text
@@ -63,10 +68,13 @@ export const SuggestionCard = memo(function SuggestionCard({ suggestion: s, acti
       ) : null}
       {s.replacement !== null && s.replacement !== undefined ? (
         <p className="card-repl">
-          <span className="card-repl-label">Suggestion — your call:</span>{" "}
+          <span className="card-repl-label">Suggested revision (your call):</span>{" "}
           {s.replacement === "" ? <em>remove this</em> : <q>{s.replacement}</q>}
         </p>
       ) : null}
+      <p className="card-source">
+        <span className="card-source-label">Source</span> <cite>{s.source}</cite>
+      </p>
       <div className="card-foot">
         <details className="why">
           <summary>Why?</summary>
@@ -74,13 +82,9 @@ export const SuggestionCard = memo(function SuggestionCard({ suggestion: s, acti
             <p>{s.why}</p>
             <dl className="why-meta">
               <div>
-                <dt>Source</dt>
-                <dd>{s.source}</dd>
-              </div>
-              <div>
                 <dt>Rule</dt>
                 <dd>
-                  {s.rule_id} · {s.rule_name}
+                  <span translate="no">{s.rule_id}</span> · {s.rule_name}
                 </dd>
               </div>
               <div>

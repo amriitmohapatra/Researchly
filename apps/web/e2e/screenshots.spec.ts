@@ -48,3 +48,9 @@ test("mobile 375 results", async ({ page }) => {
   await page.screenshot({ path: `${DIR}/mobile-375.png`, fullPage: true });
   await page.screenshot({ path: `${DIR}/mobile-375-viewport.png` });
 });
+
+test("mobile 375 idle", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/");
+  await page.screenshot({ path: `${DIR}/mobile-375-idle.png`, fullPage: true });
+});

@@ -17,6 +17,7 @@ import { loadFormat, saveFormat, subscribeFormat } from "@/lib/prefs";
 import { codePointLength } from "@/lib/segments";
 import { FORMATS, isFormat, validateContent, type InputProblem } from "@/lib/validate";
 import { revealNeedsRecheck, shownSuggestions, summarySentence } from "@/lib/view";
+import { ReadingKey } from "./ReadingKey";
 import { Results } from "./Results";
 
 type Phase = "idle" | "loading" | "done" | "error";
@@ -30,6 +31,10 @@ interface Checked {
 }
 
 const fmt = new Intl.NumberFormat("en-GB");
+
+/** Written for this page (no third-party text). Inserted only into an empty editor; nothing is sent until Check. */
+const EXAMPLE_DRAFT =
+  "Methods\nCase counts were analysed using a renewal model with a seven day generation interval. Data was collected from 2019 to 2023.\n\nDiscussion\nIn order to understand the the dynamics of transmission, further studies are needed. It is clearly proven that vector control works.\n";
 
 export function Checker() {
   const [text, setText] = useState("");
@@ -50,6 +55,21 @@ export function Checker() {
   const ids = { text: useId(), hint: useId(), problem: useId(), format: useId(), prefs: useId(), privacy: useId() };
 
   useEffect(() => () => abortRef.current?.abort(), []);
+
+  // Nothing is saved anywhere, so leaving the page loses the draft: ask first.
+  const hasText = text.trim().length > 0;
+  useEffect(() => {
+    if (!hasText) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [hasText]);
+
+  const onExample = () => {
+    setText(EXAMPLE_DRAFT);
+    setProblem(null);
+    textareaRef.current?.focus();
+  };
 
   const runCheck = useCallback(
     async (opts?: { showPreferences?: boolean }) => {
@@ -117,137 +137,142 @@ export function Checker() {
 
   return (
     <>
-      <form className="panel composer" onSubmit={onSubmit} onKeyDown={onKeyDown} aria-labelledby="composer-title" noValidate>
-        <h2 id="composer-title" className="sr-only">
-          Check your writing
-        </h2>
-        <div className="field">
-          <label htmlFor={ids.text} className="field-label">
-            Text to check
-          </label>
-          <p id={ids.hint} className="help">
-            Paste a section, a chapter or a whole draft. Headings such as &ldquo;Methods&rdquo; or
-            &ldquo;Discussion&rdquo; let the advice fit the section.
-          </p>
-          <textarea
-            id={ids.text}
-            ref={textareaRef}
-            className="editor"
-            value={text}
-            onChange={(e) => {
-              setText(e.target.value);
-              if (problem) setProblem(null);
-            }}
-            aria-describedby={describedBy}
-            aria-invalid={problem ? true : undefined}
-            spellCheck={false}
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="off"
-            rows={12}
-            placeholder="In order to estimate the effective reproduction number, a renewal model was fitted…"
-            data-testid="editor"
-          />
-          <div className="field-foot">
-            {problem ? (
-              <p id={ids.problem} className="field-problem" role="alert" data-testid="input-problem">
-                {problem.message}
-              </p>
-            ) : (
-              <span />
-            )}
-            <p className={`counter${overLimit ? " counter-over" : ""}`} aria-live="off">
-              {fmt.format(chars)} / {fmt.format(MAX_CONTENT_CHARS)} characters
-            </p>
-          </div>
-        </div>
-
-        <div className="controls">
-          <div className="control">
-            <label htmlFor={ids.format} className="control-label">
-              Format
+      <div className="studio">
+        <form className="panel composer" onSubmit={onSubmit} onKeyDown={onKeyDown} aria-labelledby="composer-title" noValidate>
+          <h2 id="composer-title" className="sr-only">
+            Check your writing
+          </h2>
+          <div className="field">
+            <label htmlFor={ids.text} className="field-label">
+              Text to check
             </label>
-            <select
-              id={ids.format}
-              className="select"
-              value={format}
-              onChange={(e) => {
-                const v = e.target.value;
-                if (isFormat(v)) {
-                  setFormat(v);
-                  saveFormat(v);
-                }
-              }}
-              data-testid="format"
-            >
-              {FORMATS.map((f) => (
-                <option key={f.value} value={f.value}>
-                  {f.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="control control-toggle">
-            <input
-              id={ids.prefs}
-              type="checkbox"
-              role="switch"
-              className="switch"
-              checked={showPreferences}
-              onChange={(e) => setShowPreferences(e.target.checked)}
-              data-testid="show-preferences"
-            />
-            <label htmlFor={ids.prefs}>Show preferences</label>
-          </div>
-
-          <div className="control control-actions">
-            <button
-              type="submit"
-              className="btn btn-primary"
-              aria-disabled={loading || undefined}
-              aria-describedby={ids.privacy}
-              data-testid="check"
-            >
-              {loading ? (
-                <>
-                  <span className="spinner" aria-hidden="true" />
-                  Checking…
-                </>
-              ) : (
-                "Check"
-              )}
-            </button>
-            {loading ? (
-              <button type="button" className="btn btn-quiet" onClick={() => abortRef.current?.abort()}>
-                Cancel
-              </button>
-            ) : (
-              <span className="kbd-hint" aria-hidden="true">
-                <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd>
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="privacy">
-          <p id={ids.privacy} className="privacy-line">
-            <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-              <rect x="3" y="7" width="10" height="7" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.4" />
-              <path d="M5.5 7V5a2.5 2.5 0 015 0v2" fill="none" stroke="currentColor" strokeWidth="1.4" />
-            </svg>
-            Your text is analysed in memory and never stored.
-          </p>
-          <details className="local-note">
-            <summary>Prefer it never leaves your computer?</summary>
-            <p>
-              Local mode runs the same checks on your own machine — through the Researchly command-line tool or the
-              VS&nbsp;Code extension — so no text is sent over the network at all. This page never saves your text,
-              and it uses no cookies, analytics or third-party scripts.
+            <p id={ids.hint} className="help">
+              Paste a section, a chapter or a whole draft. Headings such as &ldquo;Methods&rdquo; or
+              &ldquo;Discussion&rdquo; let the advice fit the section.
             </p>
-          </details>
-        </div>
-      </form>
+            <textarea
+              id={ids.text}
+              ref={textareaRef}
+              className="editor"
+              name="content"
+              value={text}
+              onChange={(e) => {
+                setText(e.target.value);
+                if (problem) setProblem(null);
+              }}
+              aria-describedby={describedBy}
+              aria-invalid={problem ? true : undefined}
+              spellCheck={false}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              rows={12}
+              placeholder="In order to estimate the effective reproduction number, a renewal model was fitted…"
+              data-testid="editor"
+            />
+            <div className="field-foot">
+              {problem ? (
+                <p id={ids.problem} className="field-problem" role="alert" data-testid="input-problem">
+                  {problem.message}
+                </p>
+              ) : (
+                <span />
+              )}
+              <p className={`counter${overLimit ? " counter-over" : ""}`} aria-live="off">
+                {fmt.format(chars)} / {fmt.format(MAX_CONTENT_CHARS)} characters
+              </p>
+            </div>
+          </div>
+
+          <div className="controls">
+            <div className="control">
+              <label htmlFor={ids.format} className="control-label">
+                Format
+              </label>
+              <select
+                id={ids.format}
+                className="select"
+                value={format}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (isFormat(v)) {
+                    setFormat(v);
+                    saveFormat(v);
+                  }
+                }}
+                data-testid="format"
+              >
+                {FORMATS.map((f) => (
+                  <option key={f.value} value={f.value}>
+                    {f.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Label wraps the switch: one hit target, no dead zone between them. */}
+            <label className="control control-toggle" htmlFor={ids.prefs}>
+              <input
+                id={ids.prefs}
+                type="checkbox"
+                role="switch"
+                className="switch"
+                checked={showPreferences}
+                onChange={(e) => setShowPreferences(e.target.checked)}
+                data-testid="show-preferences"
+              />
+              <span>Show preferences</span>
+            </label>
+
+            <div className="control control-actions">
+              <button
+                type="submit"
+                className="btn btn-primary"
+                aria-disabled={loading || undefined}
+                aria-describedby={ids.privacy}
+                data-testid="check"
+              >
+                {loading ? (
+                  <>
+                    <span className="spinner" aria-hidden="true" />
+                    Checking…
+                  </>
+                ) : (
+                  "Check"
+                )}
+              </button>
+              {loading ? (
+                <button type="button" className="btn btn-quiet" onClick={() => abortRef.current?.abort()}>
+                  Cancel
+                </button>
+              ) : (
+                <span className="kbd-hint" aria-hidden="true">
+                  <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd>
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="privacy">
+            <p id={ids.privacy} className="privacy-line">
+              <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                <rect x="3" y="7" width="10" height="7" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.4" />
+                <path d="M5.5 7V5a2.5 2.5 0 015 0v2" fill="none" stroke="currentColor" strokeWidth="1.4" />
+              </svg>
+              Your text is analysed in memory and never stored.
+            </p>
+            <details className="local-note">
+              <summary>Prefer it never leaves your computer?</summary>
+              <p>
+                Local mode runs the same checks on your own machine, through the Researchly command-line tool or the
+                VS&nbsp;Code extension, so no text is sent over the network at all. This page never saves your text,
+                and it uses no cookies, analytics or third-party scripts.
+              </p>
+            </details>
+          </div>
+        </form>
+        <ReadingKey className={checked ? "key-has-results" : undefined} onExample={hasText ? undefined : onExample} />
+      </div>
 
       <div className="sr-only" role="status" aria-live="polite" aria-atomic="true" data-testid="announcer">
         {announcement}
