@@ -13,3 +13,6 @@ __pycache__/
 .pytest_cache/
 *.egg-info/
 .DS_Store
+
+# Isolated working copies used by Claude Code sub-agents.
+.claude/worktrees/
