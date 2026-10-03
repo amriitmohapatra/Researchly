@@ -1,0 +1,93 @@
+# Deploy the engine to Cloud Run (Singapore). Manual only: CI keeps every
+# commit releasable; promoting one to production is the owner's decision
+# (ARCHITECTURE.md ADR-08 — continuous delivery, not continuous deployment).
+#
+# One-time setup: services/engine/deploy/bootstrap-gcp.sh, then the three
+# repository variables it prints (docs/deploy.md walks through it).
+# No keys or secrets are stored anywhere: GitHub proves its identity to
+# Google with a short-lived OIDC token (Workload Identity Federation).
+name: Deploy engine
+
+on:
+  workflow_dispatch:
+    inputs:
+      allowed_origins:
+        description: "Browser origins allowed to call the engine, comma-separated (e.g. https://researchly.vercel.app)"
+        required: true
+
+permissions:
+  contents: read
+  id-token: write          # mint the OIDC token Google verifies
+
+concurrency:
+  group: deploy-engine
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    env:
+      REGION: asia-southeast1
+      SERVICE: researchly-engine
+      PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      # Passed through env, never interpolated into scripts (workflow input
+      # injection), and validated below before use.
+      ALLOWED_ORIGINS: ${{ inputs.allowed_origins }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check inputs and setup
+        run: |
+          if [ -z "$PROJECT_ID" ] || [ -z "${{ vars.GCP_WIF_PROVIDER }}" ] || [ -z "${{ vars.GCP_DEPLOY_SA }}" ]; then
+            echo "::error::Repository variables GCP_PROJECT_ID, GCP_WIF_PROVIDER and GCP_DEPLOY_SA are not set. See docs/deploy.md."
+            exit 1
+          fi
+          # https origins only, no paths, no wildcards.
+          if ! printf '%s' "$ALLOWED_ORIGINS" | grep -Eq '^https://[A-Za-z0-9.-]+(:[0-9]+)?(,https://[A-Za-z0-9.-]+(:[0-9]+)?)*$'; then
+            echo "::error::allowed_origins must be comma-separated https origins without paths, e.g. https://researchly.vercel.app"
+            exit 1
+          fi
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Build and push the image
+        run: |
+          gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/researchly/engine:${GITHUB_SHA}"
+          docker build -f services/engine/Dockerfile -t "$IMAGE" .
+          docker push "$IMAGE"
+          # Deploy by digest so the running image is exactly the one built here.
+          echo "ENGINE_IMAGE=$(docker inspect --format='{{index .RepoDigests 0}}' "$IMAGE")" >> "$GITHUB_ENV"
+
+      - name: Deploy the service (engine + LanguageTool sidecar)
+        run: |
+          export ENGINE_IMAGE ALLOWED_ORIGINS PROJECT_ID
+          python3 services/engine/deploy/render_service.py \
+            < services/engine/deploy/cloudrun.service.yaml > "$RUNNER_TEMP/service.yaml"
+          gcloud run services replace "$RUNNER_TEMP/service.yaml" --region "$REGION"
+          # The browser calls the engine directly, so it must be publicly
+          # invokable (no accounts until S2). Idempotent.
+          gcloud run services add-iam-policy-binding "$SERVICE" --region "$REGION" \
+            --member=allUsers --role=roles/run.invoker >/dev/null
+
+      - name: Smoke test
+        run: |
+          URL=$(gcloud run services describe "$SERVICE" --region "$REGION" --format='value(status.url)')
+          for i in $(seq 1 30); do
+            if curl -fsS "$URL/v1/health" -o health.json; then break; fi; sleep 5
+          done
+          python3 -c "import json;d=json.load(open('health.json'));print('status:',d['status']);[print(' ',t['tier'],t['state']) for t in d['tiers']];assert d['status']=='ok', 'engine is degraded'"
+          {
+            echo "### Engine deployed"
+            echo ""
+            echo "URL: $URL"
+            echo ""
+            echo "Set NEXT_PUBLIC_ENGINE_URL=$URL in the Vercel project (docs/deploy.md step 4)."
+          } >> "$GITHUB_STEP_SUMMARY"

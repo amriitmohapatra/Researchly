@@ -476,3 +476,553 @@ systematically overstates the grammar tier's noise.
 
 **15.3% is now the honest recall figure**, measured with every tier running.
 That is the bar a local GEC tagger has to clear to justify itself in W3.
+
+---
+
+## 2026-08-14 — P19: W2 sprint — actionable surfaces, GEC scaffold, ArgumentObject
+
+Executed in a cloud working copy delivered back as `Researchly_Updated_14082026/`
+(the user asked for a dedicated directory; the original tree is untouched).
+Ten sprint items from the user's Fable-5 execution brief, in order. One
+standing user decision recorded up front: **if a capability would ever need a
+cloud AI API and no local model can do it, drop the capability — the GEC tier
+stays an abstaining scaffold rather than ever calling out.**
+
+### 1–2 · Word add-in: settings truly shared, five-tab pane
+
+The taskpane still kept muted rules in browser localStorage — the /config
+backend existed since W0 but nothing called it. Now: mutes/unmutes go through
+`/config` (optimistic UI, confirmed by the response), a one-time
+`migrateLocalStorageMutes()` moves legacy mutes into the shared config then
+deletes the key, and `test_word_addin.py` pins `localStorage.setItem` out of
+the source forever. `/check` and `/polish` no longer send a `disabled`
+override — the server resolves the shared config, so parity is structural.
+The pane is reorganised into **Check | Review | Polish | Settings | Health**:
+Review renders the reviewer's brief from a new `/review` endpoint (built from
+the same Word paragraphs as /check, so style headings survive); Settings
+edits every shared field (document type, volume, locale, preferences,
+grammar/gec tiers, muted-rule chips); Health lists all tiers with reasons +
+remedies and keeps the probe button.
+
+### 3–4 · Windows: buttons that exist, and a bring-up protocol
+
+The old panel told users "use the buttons below" — buttons that are an
+AppKit view existing only in the macOS app. `panel_html.render_polish(...,
+actions=True)` now renders Replace/Copy in the HTML, wired through a new
+`rlAction()` bridge shim that routes to `window.pywebview.api.action(...)`
+(Windows) or `window.webkit.messageHandlers.researchly` (macOS) and no-ops
+without a bridge. `researchly_win.py` gained a full `JsApi.action()`
+dispatcher (copy fix / dismiss / mute / add-to-dictionary / settings /
+replace / copy), re-rendering state after each action, mutes via
+`config.mute_rule` (the shared store), hotkeys overridable in desktop.json.
+`docs/windows-smoke-checklist.md` is the ordered real-hardware protocol
+(env → engine sanity → non-admin launch → capture per target app → panel
+actions → settings → packaging), with the known follow-ups (UIA capture,
+installer) explicitly out of scope for the first smoke.
+
+### 5 · macOS: the check panel is actionable
+
+WKWebView now has a `researchly` script-message handler; check results
+render with per-suggestion **Copy fix / Dismiss / Mute rule / Add to
+dictionary** buttons (same HTML as Windows — one renderer, two bridges).
+Mute writes the shared config and clears every card of that rule. Added a
+**Settings…** menu item (renders `panel_html.render_settings` — same page as
+Windows), an **Open Accessibility settings** menu item (deep link to the
+Privacy pane), a numbered first-run Accessibility walkthrough, and
+configurable hotkeys (`desktop.json` `{"hotkeys": {"check": "r", "polish":
+"p"}}`, ⌘⇧ fixed). D2 watch snapshots stay display-only deliberately (no
+state to re-render behind the badge). pyobjc side is defensive throughout;
+needs an on-device session to verify, like every AX change.
+
+### 6 · Shared settings UI
+
+`panel_html.render_settings(cfg, health, note)` is THE settings page for
+both desktop apps; the Word Settings tab renders the same fields natively
+against the same `/config`. Every control writes through
+`config.with_overrides + save_user`. No surface keeps its own store;
+`test_desktop_panel.py` pins the page and `test_word_addin.py` pins the
+taskpane side.
+
+### 7–8 · GEC scaffold behind a disabled flag, golden tests
+
+`gec.py` (scaffold: `Edit`, `EditBackend`, `predict_edits`, confidence
+threshold 0.8, `MAX_EDIT_CHARS` 40 as an anti-generation gate, no ML deps,
+no downloads, never raises) + `rules_gec.py` (GEC001, tier="gec",
+fix_safety="review", **opt-in**: only `[tiers] gec = true` runs it — None
+means OFF for the learned tier, inverting the deterministic tiers' default
+on purpose). Masked-span policy: an edit is dropped if masked≠original over
+its span, and insertions at mask boundaries are dropped too. `health.py`
+now distinguishes scaffold-missing / present-but-opt-in / ready(+model
+version). 14 golden tests in `test_gec.py`: total abstention, opt-in
+gating, threshold, crash-abstention, mask straddling, insertion boundaries,
+oversized-edit refusal, model-version provenance in the message, GEC001
+excluded from POLISH_RULES, and overlap resolution preferring S001/LT001
+(explainable) over GEC — that ranking was observed live: LT001 caught the
+test's agreement error first and outranked the fake GEC backend, exactly
+as designed. **The bar a real model must clear remains 15.3% AESW edit-site
+recall (P18).**
+
+### 9–10 · ArgumentObject; review lens consumes it
+
+`argument.py`: sentence-level role labelling (claim, evidence, warrant,
+qualifier, limitation, rebuttal, background, method, result, contribution,
+implication) by signal lexicons over the MASKED text (offsets = source
+offsets; a citation key like `[@because2020]` can never be a warrant —
+pinned by test). Roles assemble per section into `ArgumentObject` (the
+Toulmin fields from the brief) with deterministic `missing_links`:
+claim_without_warrant, claim_without_grounds,
+evidence_without_interpretation, limitation_not_reflected_in_claim_strength,
+contribution_unclear. Methods/Results are exempt from argumentative
+demands (they narrate/report). **No rules registered, no analyze() output
+change** — pinned by test. First consumer: `build_review` embeds
+`summarize()` output and `render_review` prints an "argument structure"
+block listing missing links; the Word /review endpoint and `researchly
+review` both carry it. `label_sentence()` is the single swap point for a
+future learned classifier. Abstract-lens conversion deferred (gradual, per
+the sprint wording) — its move lexicons already overlap; unify when the
+argument layer gets its second consumer.
+
+### Fixed en route
+
+- `pygls` 2.x broke the LSP (`LanguageServer` moved); the requirements pin
+  `<2` was right and the env here had 2.x — reinstalling the pin fixed it.
+  No code change needed.
+- `test_jdk_found_with_a_finder_launch_environment` now skips off-macOS:
+  on Linux `/usr/bin/java` is a real JDK, not Apple's stub, so the assert
+  failed a healthy machine.
+- `test_engine_layer` correction-tier test now includes GEC001 as a
+  legitimate `tier="gec"` claimant.
+- Panel escape test re-aimed at suggestion-derived markup (the page now
+  legitimately carries the static bridge `<script>`).
+
+### Measured / verified
+
+- Suite **213 → 252 passed** (+39: 14 gec, 15 argument, 4 word, 6 panel),
+  1 skip (the macOS-only JDK test, on Linux).
+- Noise floor: unchanged by construction — GEC001 abstains and is opt-in;
+  no deterministic rule changed; `test_argument.py` pins analyze() output
+  unchanged. (Corpus re-run not repeated for this reason.)
+- Live smoke: server `/ping` → 38 rules; `/review` renders the brief with
+  the argument block; `/config` persisted mute + gec_tier to the TOML.
+- Audits: every surface calls `api.analyze` (grep-verified); no network
+  code anywhere in the engine beyond LanguageTool's own local-server
+  download; `gec.py`/`argument.py` import no ML and no network; whole tree
+  parses under Python 3.10 feature rules.
+
+### Remaining risk
+
+- macOS bridge (WKUserContentController handler) and menu additions are
+  untested on hardware — needs the usual on-device session; failures
+  degrade to display-only, not crashes.
+- Windows remains an unrun scaffold; the smoke checklist is the next step.
+- Word taskpane changes need the usual restart-server + Cmd-Q Word cycle
+  before judging anything.
+- The gec opt-in checkbox is visible in every settings surface while the
+  tier can only abstain; health explains this, but testers may still ask.
+
+---
+
+## 2026-08-14 (later) — P20: standalone installers (macOS + Windows)
+
+User request: both desktop apps must ship as standalone installers with
+EVERY dependency inside — no Python, no Java, no first-run downloads for
+the person installing.
+
+### Engine: vendored-runtime discovery
+
+`health.py` gains `vendor_dir()` / `bundled_java()` /
+`bundled_languagetool()`. A standalone build carries a `vendor/` folder
+(py2app: `Contents/Resources/vendor`, found via RESOURCEPATH; PyInstaller:
+next to the exe or under `_internal/`, found via sys.frozen/_MEIPASS;
+tests/overrides: env `RESEARCHLY_VENDOR`). `find_java()` now checks the
+bundled JRE FIRST — it is the one runtime the build verified — but a
+too-old bundled Java falls through to the system search rather than
+killing the tier. `rules_grammar._apply_bundled_lt()` sets
+`LTP_JAR_DIR_PATH` to the bundled LanguageTool before the wrapper starts
+(never overriding a user-set value), so the 259 MB download never happens
+on an installed build. Machines without a bundle behave exactly as before.
+8 tests in `test_bundled_runtime.py` (fake vendor tree; no Java, no
+network). Suite 252 → **260 passed**.
+
+### Proven end-to-end in the build sandbox
+
+Assembled a real vendor bundle (jlink JRE + cached LanguageTool-6.8),
+pointed `RESEARCHLY_VENDOR` at it with JAVA_HOME unset and a bare PATH:
+`find_java()` chose the bundled JRE, `LTP_JAR_DIR_PATH` landed on the
+bundled LT, and LT001 returned `has → have` with the health line
+"ready — local LanguageTool". **Found in the process: `jdk.httpserver` is
+NOT in `java.se`, and LanguageTool's server is built on
+`com.sun.net.httpserver` — a jlink image without that module dies at
+startup with NoClassDefFoundError.** Both build scripts pin
+`--add-modules java.se,jdk.httpserver,jdk.unsupported`.
+
+### macOS — `desktop-mac/build_installer.sh`
+
+vendor prep (reuse the build Mac's LT cache or download once via the
+wrapper's own SHA256-verified path; jlink from the JDK `health.find_java()`
+locates) → py2app → inject `vendor/` into Resources → **ad-hoc re-sign**
+(modifying the bundle invalidates the signature; Apple Silicon refuses
+unsigned code) → verify the artifact (files present, bundled java runs,
+and the engine's own `vendor_dir()`/`find_java()` resolve the bundle under
+a simulated RESOURCEPATH — the P18 "test the artifact" lesson) → build
+BOTH `Researchly-0.8.dmg` (drag-install) and `Researchly-0.8.pkg`
+(double-click installer, pkgbuild, /Applications). Flags: `--skip-jre`,
+`--skip-lt`, `--dmg-only`, `--pkg-only`. Must be RUN ON THE MAC (py2app);
+`build_app.sh` remains the small dev build.
+
+### Windows — `desktop-win/build_installer.bat` + `installer.iss`
+
+Same vendor prep (jlink; LT reused from cache or downloaded once) →
+PyInstaller onedir with `--add-data vendor;vendor` plus
+`--collect-all language_tool_python certifi` → artifact verification →
+Inno Setup → `Output/Researchly-Setup-0.8.exe`. Installer decisions:
+**per-user install** (`{localappdata}\Programs`, PrivilegesRequired=lowest
+— no admin prompt, sidestepping the `keyboard`-library admin question for
+install at least), optional start-at-login task, uninstall keeps
+`~/.researchly` (shared with the other surfaces on purpose). Still
+UNTESTED on real Windows like everything in desktop-win;
+`windows-smoke-checklist.md` §6 now tests the Setup.exe FIRST, on a
+machine with no Python and no Java, watching the network monitor to
+confirm nothing downloads.
+
+### Caveats recorded
+
+- Neither installer can be built in this sandbox (py2app needs macOS,
+  PyInstaller/Inno need Windows); what was proven here is the engine-side
+  discovery end-to-end plus artifact-verification steps baked into the
+  scripts.
+- Artifacts are ad-hoc/unsigned: right-click-Open on macOS, SmartScreen
+  "Run anyway" on Windows — same personal-sharing stance as P14; wider
+  distribution needs Developer ID notarization / Authenticode.
+- Bundle sizes: LT ~400 MB unpacked + JRE ~90 MB + spaCy stack — expect a
+  ~350-450 MB compressed installer. `--skip-lt`/`--skip-jre` trade size
+  for the no-download guarantee.
+
+---
+
+## 2026-08-14 (later) — P21-EXP: the drafting guide (EXPERIMENT FORK)
+
+**This tree is `Experiment_Researchly/` — a fork of the stable
+`Researchly_Updated_14082026/` made at the user's request so the new
+ideas cannot destabilise the shipped work.** Scope: Word add-in only.
+The two ideas from the "how should a guidance layer work" discussion:
+(1) a learned rhetorical-move classifier (encoder-style, non-generative),
+(2) exemplar retrieval over accepted manuscripts. No generation anywhere;
+the user does the writing.
+
+### Idea 1 — move classifier (`researchly/moves.py`)
+
+v0 = TF-IDF (word 1–2 grams, digits masked) + multinomial logistic
+regression, trained by `experiments/train_moves.py` on **PubMed 20k RCT**
+(Dernoncourt & Lee 2017; 180k labelled sentences; public benchmark).
+Labels map onto the Belcher schema abstract_lens already uses
+(BACKGROUND→background, OBJECTIVE→aim, METHODS→methods, RESULTS→findings,
+CONCLUSIONS→significance). Artifact: **3.5 MB**, ships in
+`researchly/data/models/` with meta.json provenance + metrics.md.
+
+Measured (held-out, 30,135 sentences): **82.6% accuracy**; abstention
+curve pinned in the artifact — CONFIDENCE_THRESHOLD 0.6 chosen from it
+(84.5% coverage @ 88.3% accuracy). Known weakness, designed around:
+OBJECTIVE recall is 0.55 (classic BACKGROUND/OBJECTIVE confusion), and
+**"gap" has no labelled corpus at all** → the HYBRID labeller
+(`guide.label_hybrid`) gives gap/aim/limitation to high-precision
+lexicons and everything else to the model. `MoveClassifier` is the swap
+point for a future SciBERT-class encoder; consumers never change.
+
+### Idea 2 — exemplar retrieval (`researchly/exemplars.py`)
+
+"Show me how accepted papers did it": JSONL index of real sentences,
+each labelled with its move and citing its source document; queries rank
+by TF-IDF cosine similarity to the user's draft section, with a
+**max-2-per-source cap per query** (the user's explicit style-bias
+concern: no single author's voice should dominate).
+
+Corpus (user-directed, built this session): the 8 accepted theses
+already in the repo **plus 12 published papers** — 9 fetched as PMC
+open-access full text via PubMed (Prem 2017 contact matrices; Prem 2020
+Wuhan; Endo 2020 overdispersion; Mishra 2021 Delta; Levin 2020 IFR;
+Hozé 2021; Lefrancq 2021; two Alex Cook papers incl. a Bayesian VAR
+dengue study) and 3 from user-provided PDFs (Dehning 2020 Science —
+needed OCR, its embedded fonts had no Unicode maps; Monod 2021 Science;
+Bouman 2024 PLOS Comp Biol Bayesian workflow). Flaxman 2020 Nature and
+Davies 2020 Nat Med are NOT in PMC-OA and were skipped, not scraped.
+Raw texts live in `experiments/corpus/` for rebuilds.
+
+`experiments/build_exemplars.py` → **2,189 exemplars from 20 documents**
+(all seven moves covered; model-labelled sentences admitted only at
+p ≥ 0.75, stricter than the guide's own threshold). Index is plain
+inspectable JSONL at `researchly/data/exemplars/exemplars.jsonl`.
+
+### The guide (`researchly/guide.py` + Word surface)
+
+`build_guide(document)`: per detected section, the hybrid move profile
+vs `SECTION_EXPECTED` (intro: background+gap+aim; discussion:
+significance+limitation; abstract: all six; etc.). Each missing move →
+Pallas/Belcher fill-in frame + up to 3 cited exemplars ranked against
+the section's own text. Word add-in gains a **Guide tab** (sixth) and
+`/guide` endpoint. Payload carries model version/accuracy and corpus
+stats so the UI can always say who spoke.
+
+Verified live: intro with background+aim but no gap → guide reports
+exactly that, with a topical dengue gap exemplar cited to a thesis.
+Suite: 260 → **275 passed** (15 new in test_guide_experiment.py,
+including: abstention on missing artifact, lexicon-over-model blind-spot
+routing, retrieval-not-generation (every exemplar is a verbatim corpus
+row), per-source cap, and api.analyze() output pinned unchanged by the
+whole layer).
+
+### Honest limitations (for the next session)
+
+- Move labels come from RCT *abstracts*; full-text prose is out-of-domain
+  — abstention absorbs some of this, but a proper eval on annotated
+  full-text sections is the gate before merging into the stable tree.
+- Exemplar labelling inherits classifier noise (e.g. a "we quantified…"
+  sentence can read as aim); the corpus is inspectable JSONL precisely so
+  bad exemplars can be audited and pruned.
+- New runtime deps (scikit-learn, joblib) are in requirements.txt —
+  installer/py2app implications NOT yet handled (this fork ships no
+  installers; Word add-in runs from source, where pip deps are fine).
+- Desktop surfaces deliberately untouched.
+
+> *Merged into the root log on 2026-10-03 (S0). P19–P20 were written in
+> `Researchly_Updated_14082026/` (now `legacy/updated-p20/`), P21-EXP in
+> `Experiment_Researchly/` (now `legacy/experiment-p21/`). Paths inside these
+> entries refer to those trees as they were at the time.*
+
+## 2026-10-03 — P22: production architecture (prototype → hosted product)
+
+**What.** The user decided to take Researchly from prototype to a hosted,
+production app (Vercel), run "like a one-person company" with sub-agents as
+specialist staff. Produced `ARCHITECTURE.md` (draft v1) and `PLAN.md` (the
+shared checklist the user asked for, to be ticked as work lands).
+
+**How.** Method taken from the user's *The Art of Building Software* (ch. 20–27):
+purpose → measurable requirements → architecture proportional to the promise →
+trace one action → claim-to-evidence table → thin slices. Three sub-agents
+reported first: a codebase audit, a Laya identification, and hosting research.
+
+**Findings worth keeping.**
+- **Three diverging code trees.** The "canonical" `prototype/` is the oldest
+  (P18). `Researchly_Updated_14082026/` (P20, 260 tests) is the proposed
+  baseline. `Experiment_Researchly/` (P21-EXP, 275 tests) holds the only
+  trained model. This root log was missing P19–P21.
+- **The "local neural network" is partly a scaffold.** The GEC tagger has no
+  model. The only trained model is a TF-IDF + logistic-regression move
+  classifier: 82.6% on PubMed-RCT abstracts, never measured on thesis prose,
+  and stored as a pickle.
+- **Third-party exemplars ship today.** 70% of `exemplars.jsonl` (1,539 of
+  2,189 sentences) comes from the 8 sample theses. That must not ship in a
+  hosted product without the authors' permission.
+- **Laya.** Most likely Convai Innovations' Laya: Apache-2.0, a
+  ModernBERT-large decision model, the open alternative to TypeSafe's hosted
+  Jev. It is non-generative, gives calibrated answers, can abstain, and can
+  be fine-tuned on a Mac or Kaggle. But it is near chance zero-shot,
+  ≈2 weeks old, has one maintainer, and does not do grammar. Decision: adopt
+  only through a bake-off against a plain ModernBERT classifier (ADR-06, S5).
+- **Vercel cannot run Java (LanguageTool)** and caps request bodies at
+  4.5 MB. The engine therefore runs on Cloud Run with LanguageTool as a
+  sidecar; Vercel hosts the web app and the Word taskpane (ADR-03).
+
+**Decisions pending from the user.** D1–D8 in `PLAN.md`. The main one is D1,
+the replacement wording for non-negotiable #2 ("Confidential by design").
+CLAUDE.md now marks #2 as under revision.
+
+**Files.** `ARCHITECTURE.md` (new), `PLAN.md` (new), `CLAUDE.md` (pointer +
+#2 revision note), this entry.
+
+**Addendum (same day): decisions recorded.** The user answered D1–D8:
+- **D1:** "Confidential by design" approved as drafted; non-negotiable #2 in
+  CLAUDE.md is amended.
+- **D2:** free and non-commercial *for now*.
+- **D3:** Singapore.
+- **D4:** the `Researchly_Updated_14082026` tree is the baseline.
+- **D5:** the desktop apps go to maintenance-only.
+- **D6:** the theses are for private evaluation only.
+- **D7:** `Notes_On_Writing/` is the knowledge source; papers and theses
+  come later, through the dataset registry.
+- **D8:** Laya is adopted only via the bake-off.
+
+ARCHITECTURE.md is now v1.2. Slice S0 is unblocked.
+
+## 2026-10-03 — P23: S0 Foundation (one repo, CI, licences, clean engine)
+
+**What.** The first build slice of the production plan (PLAN.md S0). It
+delivers no user-visible change: one repository, automated checks, and an
+engine with no third-party text in it.
+
+**Shipped:**
+- **Monorepo (ADR-01, D4).** `Researchly_Updated_14082026` became the
+  baseline:
+  - engine → `packages/core/`;
+  - Word add-in, VS Code extension and desktop apps → `apps/`;
+  - `eval/` and `dogfood/` → `ml/`;
+  - the other two trees → `legacy/`.
+
+  All moves used `git mv`, so history follows. Test, server, build-script
+  and VS Code paths were repointed. Result: 260 passed, 1 skipped, identical
+  to before the move.
+- **Spelling gaps.** Seven words from the first S001 corpus run were added,
+  with a test that fails without them. While writing it I found that
+  capitalised words are skipped as possible proper nouns. A test that puts
+  the word at the start of a sentence would therefore pass for the wrong
+  reason.
+- **`ml/datasets.yaml`.** 41 sources, each with a licence, whether that
+  licence was seen first-hand, and its permitted use under D2, D6 and D7.
+- **`ml/tools/check_third_party.py`.** An 8-word shingle scan of
+  `packages/`, `apps/` and `services/` against the theses, the paper corpus
+  and Notes_On_Writing. It found **19 hits inside the engine**:
+  - Pallas's exemplar abstract and frames;
+  - Endo lecture quotes in why-texts;
+  - thesis sentences used as test fixtures.
+
+  All were replaced with paraphrases (attribution kept) or synthetic
+  fixtures, and the scan now reports 0 hits. Rule logic was proven unchanged
+  by comparing each module's syntax tree with strings blanked.
+- **CI** (`.github/workflows/`). Four jobs on every PR:
+  - ruff (bug-class rules only);
+  - engine tests on Python 3.10 with Java 21;
+  - the third-party scan;
+  - gitleaks (clean over the full history).
+
+  A separate, path-filtered noise-floor workflow runs on engine changes.
+
+**Measured: the real noise floor.**
+
+| Tiers on | flags/1000 words |
+|---|---|
+| All | **14.84** |
+| All except S001 (spelling) | 12.5 |
+| All except LT001 (grammar) | 12.8 |
+
+The "12.5" quoted in P18 excluded S001, so the all-tier figure had never
+been written down. The target (Q3) is ≤ 11.
+
+`noise_gate.py` fails on a rise of more than 0.3, and also when a rule that
+fired at least 20 times drops to zero. A quieter run is how a dead tier
+looks. I found this by testing the gate against a run without LanguageTool:
+the first version passed it.
+
+**Lessons:**
+- Licence audits find things code review doesn't. Course and book wording
+  had crept into rule explanations and test fixtures one quote at a time.
+- Some old fixtures passed for the wrong reason:
+  - C301's hedges were outside the window, so the clause-boundary guard was
+    never reached.
+  - E703's fixture followed a short sentence, so the noun check never ran.
+
+  Swapping in synthetic fixtures exposed both. Both tests are now stricter.
+
+**Open (PLAN.md Inbox):**
+- reach Q3;
+- 20 cosmetic lint findings;
+- the GPL-3.0 LanguageTool client before any desktop bundle;
+- `docs/eval-corpora.md` licence corrections;
+- PubMed-RCT's undeclared licence;
+- the Pallas year (2022 vs 2023);
+- two scanned PDFs the scan can't read;
+- `_to_delete/` (owner).
+
+**Addendum (same day): product direction.** The owner answered P1–P5.
+
+| # | Decision |
+|---|---|
+| P1 | Coach alongside existing tools: a web revision studio plus add-ins, with a Draft / Revise mode |
+| P2 | Consistency checks and reporting checklists ship in v1 |
+| P3 | Epidemiology is the first discipline pack |
+| P4 | Structural checks only for figures, tables and equations |
+| P5 | Responsive web plus add-ins; no native apps |
+
+The owner also raised the defining question: "why use Researchly when one
+already has LLMs or Grammarly?" ARCHITECTURE.md §1.3 now answers it as
+claims an LLM or Grammarly structurally can't make:
+- allowed (it never writes);
+- confidential;
+- sourced;
+- consistent;
+- section- and discipline-aware;
+- teaches;
+- whole-document.
+
+Each claim has an evidence row, including an S6 comparison study. The
+lesson: an origin story ("built from a professor's notes") is not a moat,
+because anyone can paste a style guide into a chatbot. The moat is the set
+of promises a generative tool cannot keep. New slice S2b covers the
+consistency and structure checks.
+
+## 2026-10-03 — P24: S1 Engine online (code complete; deploy waits on the owner)
+
+**What.** The hosted engine and the web page that calls it, built as a small
+team:
+- I wrote the contract first.
+- A backend agent and a frontend agent built in parallel against it.
+- A designer agent did a second pass using the owner's UI/UX skills.
+- I integrated, reviewed, tested end to end and wrote the deployment.
+
+**Shipped (PR amriitmohapatra/Researchly#1):**
+- **Contract v1.**
+  - Pydantic models are exported to OpenAPI, and the TypeScript types are
+    generated from that.
+  - CI fails on drift. The check caught a real drift before regeneration.
+  - Units are documented: offsets are Unicode code points; the passive
+    share is 0–1. Every error code is documented, with a test that parses
+    the code.
+- **Engine service** (`services/engine`).
+  - Stateless FastAPI. Each request builds its own in-memory config and
+    never reads `~/.researchly`.
+  - One engine lock, matched by Cloud Run concurrency 1.
+  - Rate limit, body cap (8 MiB, so a valid 1M-character document in
+    four-byte characters fits), allow-listed CORS, JSON logs that never
+    contain text.
+  - LanguageTool runs as a sidecar.
+  - No-Java image, non-root, built from an allow-list `.dockerignore`.
+- **Q6 canary test** (release-blocking). It found a real leak: a failed log
+  write printed a traceback containing the document. Fixed, with a
+  regression test.
+- **Web page** (`apps/web`, Next.js 16).
+  - Highlights, cards, why and source.
+  - Per-request nonce CSP.
+  - A lint-time boundary check that no server code ever receives text.
+  - Code-point to UTF-16 offset conversion, tested with emoji.
+  - Redesigned with the owner's design skills; passed the anti-ui-slop
+    finish gate.
+- **Deployment.**
+  - `bootstrap-gcp.sh`: Workload Identity Federation, so no keys.
+  - A manual `deploy-engine.yml`: deploy by digest, smoke test.
+  - `docs/deploy.md` for the steps only the owner can do.
+- **CI** now also runs the service tests, the contract, the web suite
+  (lint, typecheck, unit, e2e) and an engine-image privacy-and-boot check.
+
+**Found by doing it for real:**
+- **Mocked tests can't find content bugs.** The first run of the web page
+  against the real engine and LanguageTool showed two:
+  - sources rendered as bare "§4";
+  - "the the" flagged twice (LanguageTool plus W207).
+
+  Both are fixed in the engine. `sources.py` expands codes into full
+  citations and fails at import on an unknown code. LanguageTool rules that
+  W207 already covers are skipped. The noise floor went from 14.84 to 14.75.
+- **Briefs must name the owner's skills.** The first web page was built
+  without the installed design skills because the brief didn't name them.
+  ARCHITECTURE.md §14 now lists the skills per role.
+- **A copy-detection scan must ignore numbers.** Page numbers in a thesis
+  matched version lists in `package-lock.json`. Shingles now need at least
+  5 words with letters, and the scan covers only files git tracks or would
+  track.
+- **The security review** (security-review skill) found no vulnerabilities
+  at its bar. It flagged one logic bug: the public health endpoint probed
+  LanguageTool on every hit. Fixed.
+
+**Measured, locally (not Cloud Run):**
+
+| Request | p95 | Target |
+|---|---|---|
+| 311-word paragraph | 309 ms | 800 ms |
+| 10k-word chapter | 4.68 s | 6 s |
+
+The chapter time is about half spaCy and half LanguageTool, run one after
+the other; running them in parallel is in the Inbox. A 1M-character request
+takes 74 s and 2.8 GiB.
+
+**Waiting on the owner:** `docs/deploy.md` steps 1–6 (GCP project, bootstrap,
+repository variables, Vercel, first deploy). After that, the latency
+measurements on the real deployment and the S1 exit check.

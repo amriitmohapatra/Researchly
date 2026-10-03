@@ -1,0 +1,57 @@
+# Noise-floor gate (CLAUDE.md #5, ARCHITECTURE.md Q3): fails if a change
+# raises flags per 1000 words on the accepted-thesis corpus, or if a busy
+# rule goes silent (a tier that failed to load). Only runs when engine or
+# corpus code changes, since a full run takes ~5 minutes.
+#
+# The corpus is third-party text in this private repo. Results stay on the
+# runner: never upload them as artifacts or print samples.
+name: Noise floor
+
+on:
+  pull_request:
+    paths:
+      - "packages/core/researchly/**"
+      - "packages/core/requirements.txt"
+      - "ml/dogfood/**"
+      - ".github/workflows/noise-floor.yml"
+  push:
+    branches: [main]
+    paths:
+      - "packages/core/researchly/**"
+      - "ml/dogfood/**"
+
+permissions:
+  contents: read
+
+jobs:
+  noise-floor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+          cache-dependency-path: packages/core/requirements.txt
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Cache LanguageTool download
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/language_tool_python
+          key: languagetool-${{ hashFiles('packages/core/requirements.txt') }}
+      - name: Install engine dependencies
+        run: |
+          python -m pip install -r packages/core/requirements.txt
+          python -m spacy download en_core_web_sm
+      - name: Run the corpus
+        working-directory: ml/dogfood
+        env:
+          RESEARCHLY_CORPUS_OUT: ${{ runner.temp }}/noise
+        run: python run_dogfood.py | grep -E "^TOTAL|^  [A-Z]+[0-9]+:"
+      - name: Compare with baseline
+        working-directory: ml/dogfood
+        run: python noise_gate.py "${{ runner.temp }}/noise/corpus_stats.json"

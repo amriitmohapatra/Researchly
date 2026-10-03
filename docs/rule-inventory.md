@@ -161,6 +161,7 @@ signal classes (contrastives; limited/few/little; none-of/not-been/no-study).
 |---|---|---|---|---|
 | S001 | Spelling (unknown words, top-3 suggestions) | Correction | symspellpy (MIT), always on | MVP |
 | LT001 | Grammar: agreement, verb forms, a/an, confusions | Correction | LanguageTool via language_tool_python (local server, Java), optional | MVP |
+| GEC001 | Learned corrections: minimal token-level edits (GECToR-style), opt-in `[tiers] gec = true`, abstains without a local model | Correction | local edit tagger scaffold (`gec.py` + `rules_gec.py`), tier="gec", never auto-applied, confidence-gated, masked-span-safe (test_gec.py) | 2026-08-14 scaffold |
 
 Phase-1 deliberately deferred this tier ("integrate, don't rebuild");
 added after desktop dogfooding exposed the gap. S001 precision guards:

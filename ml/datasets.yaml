@@ -1,0 +1,1000 @@
+# ml/datasets.yaml — Researchly dataset / corpus / model registry
+#
+# The single record of every body of text, word list, model or knowledge
+# source the project uses or plans to use. ARCHITECTURE.md §5.7 and the
+# ADR-06 promotion gate require an entry here before any model trained on a
+# source can reach production. PLAN.md S0 owns this file.
+#
+# THE RULE: nothing is used for a shipped artefact (engine package, app,
+# container image, model weights, Learn card, exemplar index) unless that
+# source's permitted_use includes ship_model or ship_text.
+#
+# Fields
+#   id               short kebab-case key; never reuse a retired id
+#   name             human name
+#   kind             corpus | lexicon | model | knowledge_source | eval_set
+#   source           URL, or "owner-provided", or "third-party PDF (private)"
+#   location         repo path if present locally, else null
+#   in_git           true if the files are tracked in this (private) repo
+#   licence          SPDX id or the exact licence wording; "unknown — verify"
+#   licence_verified true ONLY if the licence text/page was seen first-hand
+#                    by whoever last edited the entry; licence_evidence then
+#                    names the URL or file it was seen in. A licence copied
+#                    from an older doc without re-checking stays false.
+#   licence_evidence URL / file path / tool result where the licence was seen
+#   commercial_ok    true | false | unknown — could a paid Researchly use a
+#                    model or text derived from it? (D2: free *for now*)
+#   permitted_use    subset of:
+#                      private_eval         owner's machine only, never committed output
+#                      ci_eval              may run in CI (data fetched at run time or
+#                                           already in this private repo; never published)
+#                      knowledge_derivation authored rules/questions/Learn cards that
+#                                           paraphrase and cite (D7); no passages
+#                      train_experimental   train models that are NOT shipped
+#                      ship_model           weights trained on it may ship
+#                      ship_text            its text may appear in a shipped artefact
+#   current_use      what it is used for today, or "planned"
+#   shipped_today    true if verbatim text, or a data derivative (word list,
+#                    exemplar rows, model weights), from this source is inside
+#                    packages/ or apps/ right now. Authored rules that merely
+#                    cite a source do not count.
+#   sha256           for a local single file (sha256sum)
+#   manifest         for a local directory: file count, total bytes, and
+#                    per-file sha256 where the set is small
+#   items            optional per-member breakdown when members of one corpus
+#                    carry different licences (e.g. per-article)
+#   notes            caveats
+#
+# Owner decisions applied (ARCHITECTURE.md §13, 2026-10-03):
+#   D2  free / non-commercial *for now* → NC-licensed data: private_eval and
+#       ci_eval only, never ship_model (shipped models stay licence-clean)
+#   D6  the 8 sample theses → private_eval and ci_eval (noise floor) only;
+#       thesis-derived exemplars removed from shipped data
+#   D7  Notes_On_Writing/ → knowledge_derivation only (paraphrase + cite;
+#       never ship_text)
+#   D8  Laya only via the S5 bake-off, never zero-shot
+# Conservative default: licence unknown → permitted_use [private_eval] only,
+# licence_verified false.
+#
+# Last full audit: 2026-10-03 (S0). Network note for that audit: huggingface.co,
+# arxiv.org, aclanthology.org, ncbi.nlm.nih.gov, europepmc, cl.cam.ac.uk,
+# textmining.lt and data.mendeley.com were blocked by the sandbox proxy, so
+# every licence that lives only on those sites is recorded as unverified.
+# github.com / raw.githubusercontent.com and the PubMed connector worked.
+
+schema_version: 1
+updated: "2026-10-03"
+
+datasets:
+
+  # ───────────────────────── Owner-provided / project-authored ─────────────────────────
+
+  - id: craft-guide
+    name: "The Craft of Scientific Writing (founding writing guide)"
+    kind: knowledge_source
+    source: "owner-provided"
+    location: "The-Craft-of-Scientific-Writing.md"
+    in_git: true
+    licence: "unknown — verify (owner-provided; authorship not recorded)"
+    licence_verified: false
+    licence_evidence: null
+    commercial_ok: unknown
+    permitted_use: [private_eval, knowledge_derivation]
+    current_use: "Founding guide; P2 mined 60+ rules from it (Gopen & Swan, Schimel OCAR, Swales CARS, Toulmin). Rule why-texts cite it by § number."
+    shipped_today: true
+    sha256: f7993401b200e58da05fa2349cc0ec5ed48cbed5ff03e92c1d9bf7eb034ddb83
+    notes: >-
+      knowledge_derivation is granted beyond the unknown-licence default
+      because CLAUDE.md names this file as the owner's founding guide for rule
+      derivation. Verbatim spans from it ship today in rule why-texts
+      (packages/core/researchly/rules_lexical.py ~148 words in 12 spans of 6+ words,
+      rules_syntax.py ~105 words in 12 spans). Owner to confirm authorship
+      (own writing or AI-assisted for the owner) before adding ship_text.
+      The guide itself quotes published books (Pinker, Gopen & Swan, Schimel).
+
+  - id: scientific-terms-lexicon
+    name: "Researchly scientific lexicon (S001 spelling allow-list)"
+    kind: lexicon
+    source: "project-authored"
+    location: "packages/core/researchly/data/scientific_terms.txt"
+    in_git: true
+    licence: "MIT (project LICENSE)"
+    licence_verified: true
+    licence_evidence: "LICENSE (repo root): MIT License, Copyright (c) 2026 amriitmohapatra"
+    commercial_ok: true
+    permitted_use: [private_eval, ci_eval, knowledge_derivation, train_experimental, ship_model, ship_text]
+    current_use: "Shipped allow-list for the S001 spelling tier (260 terms, one per line)."
+    shipped_today: true
+    sha256: c4b8a1e4e27ffee5267c20e65cbfb309c4e81a449942d0153e546d87f990bdbf
+    notes: >-
+      Single words of ordinary domain vocabulary, project-authored. Known gaps
+      (PLAN.md S0): estimand(s), urbanicity, prespecified, lockdowns,
+      serotypic, tradeoff, exergy. Older copy in legacy/prototype-v0.8 and
+      legacy/experiment-p21 (sha256 fcf7089a…) differs from the current file.
+
+  - id: owner-annotations
+    name: "Owner-provided training data (own drafts, supervisor comments, labelled paragraphs, accept/dismiss logs)"
+    kind: corpus
+    source: "owner-provided"
+    location: null
+    in_git: false
+    licence: "owner's own work — consent to be recorded per item"
+    licence_verified: false
+    licence_evidence: null
+    commercial_ok: unknown
+    permitted_use: [private_eval, ci_eval, train_experimental, ship_model]
+    current_use: "planned (ADR-06 training-data strategy; S4 labelling guide, S5 bake-off tasks A and B)"
+    shipped_today: false
+    sha256: null
+    notes: >-
+      ADR-06 rates this the highest-value source. ship_model applies ONLY to
+      text the owner wrote, or to other people's text with their written
+      consent recorded in this entry (supervisor comments and co-author text
+      are other people's). Accept/dismiss logs: the owner's own logs only;
+      other users' feedback_events are out of scope until a consent/ToS basis
+      exists, and must never contain document text (ADR-02). Planned first
+      deliverable: 300–500 paragraphs labelled e.g. "states its point first?".
+      Never ship_text: no owner draft text is to appear in a shipped artefact.
+
+  - id: owner-added-papers-theses
+    name: "Papers and theses the owner adds later (D7 intake)"
+    kind: corpus
+    source: "owner-provided"
+    location: null
+    in_git: false
+    licence: "unknown — verify (per item)"
+    licence_verified: false
+    licence_evidence: null
+    commercial_ok: unknown
+    permitted_use: [private_eval]
+    current_use: "planned (D7: research papers and theses the owner adds go through this registry with licences)"
+    shipped_today: false
+    sha256: null
+    notes: >-
+      Intake placeholder. Each new item gets its own entry (or an items: row)
+      with its own licence before any wider use. Open-access CC BY / CC0
+      papers may then gain ship_text (exemplars, with attribution) and
+      ship_model; theses need their authors' written permission before
+      anything trained on them ships (ADR-06).
+
+  # ───────────────────────── The 8 accepted theses (D6) ─────────────────────────
+
+  - id: sample-theses-pdf
+    name: "Eight accepted PhD theses (dogfooding corpus, PDFs)"
+    kind: corpus
+    source: "third-party PDF (private)"
+    location: "Sample_thesis_drafts/"
+    in_git: true
+    licence: "unknown — verify (all rights reserved by each author unless stated; no permission on record)"
+    licence_verified: false
+    licence_evidence: null
+    commercial_ok: false
+    permitted_use: [private_eval, ci_eval]
+    current_use: "Source of the noise-floor corpus (ml/dogfood); precision tuning since P4."
+    shipped_today: false
+    manifest:
+      files: 8
+      bytes: 152904823
+      per_file_sha256:
+        "ChenY.pdf": c5e593814ea2649c8ca5bbe3c992160ea8d15dd61c8981286fb406b463f3225c
+        "Koh_Wee_Ming.pdf": c0b81b0f78f99b5efa4082425b43cca5b973e28b372c33b2f96486d83ed12010
+        "LimJT.pdf": de52a31ca851f092502419b1060c3e5c50d98c9ac92bc63bb449229b24204ee6
+        "MODELLING OF THE COVID-19 PANDEMIC_Updated (clean).pdf": 252b09b80ef2602b392e1f25bed98bcf6b495111f87550d28c3d0f0288fbeb16
+        "PremK.pdf": de270aaa5b68abb4a87d55e4c47068877e16758ac16618782b562dc5ce14fd0d
+        "Sun Haoyang_Thesis.pdf": 5511462295d0ea4175a16526455aae5633d71d1bfc4e2e0b16e4be61e82e1206
+        "ZHAOZX.pdf": 7be97ef5425c0f9dd2d690552cd540f8af43c71fb27abb72e5401084fa3e7798
+        "thesis_CHAO FENGQING_A0047193A.pdf": 31a69f4b30da534fc7137c582337250062d6de0fc5185b8ee5c727b1be39686c
+    notes: >-
+      D6: private evaluation and noise floor only. The repo must stay private
+      while this is in git history (CLAUDE.md); deleting it in a new commit is
+      not enough. Never train a shipped model on it, never ship its text.
+
+  - id: dogfood-thesis-text
+    name: "Noise-floor corpus: text extracted from the 8 theses"
+    kind: eval_set
+    source: "derived from sample-theses-pdf by ml/dogfood/extract_clean.py"
+    location: "ml/dogfood/text/"
+    in_git: true
+    licence: "unknown — verify (inherits sample-theses-pdf)"
+    licence_verified: false
+    licence_evidence: null
+    commercial_ok: false
+    permitted_use: [private_eval, ci_eval]
+    current_use: "Noise-floor gate (baseline 10.4/1000w ex-S001; ~12.5 with grammar live; >11 means re-tune). PLAN.md S0 CI gate."
+    shipped_today: true
+    manifest:
+      files: 8
+      bytes: 1866223
+      per_file_sha256:
+        "ChenY.txt": d5cf480c9255fa6a43e0a0270a11fab0631de78ee99e0da427f89d64c3477961
+        "Koh_Wee_Ming.txt": 39b1754b9b4abb00e6cdc7f30d15b4d6ac760700a792efde5df07b137f869420
+        "LimJT.txt": 5082df2afdb533ef2c2a5b2a3b52e73b2473910328025e0eb7db00b07aad96dc
+        "MODELLING_OF_THE_COVID_19_PANDEMIC_Updat.txt": ec3b175e4302a01a40a349ed881ccfc424566b46f01686e2db6065d228798c18
+        "PremK.txt": 4a5bca16fcb1301d3086e9dfa1c3fd8ef8c8eb556fdeb96853dc15f485939d24
+        "Sun_Haoyang_Thesis.txt": 98efc9502187b789cd7e35d97066d787debb0d2693b59c5c49dc6f54f6dbb138
+        "ZHAOZX.txt": e54e5b524f9ec29b2a7bc775b7bf7853e277c8680c73bb678824b15998fd68f7
+        "thesis_CHAO_FENGQING_A0047193A.txt": a6e137258e51d08f1438c624072ee0991b7e6c7e230f1c9b1a7eaf9fddf599d8
+    notes: >-
+      shipped_today is true because of small fragments, not the corpus: ChenY
+      fragments sit in packages/core/researchly/rules_syntax.py (a comment
+      quoting "The coefficient for a classification of the upper risk decile")
+      and packages/core/tests/test_rules.py (that sentence, "The power
+      spectrum values are categorised by decile", and ChenY's thesis title
+      as a front-matter fixture). Paraphrase these fixtures to clear the S0
+      exit check. CI use must keep the text inside the private repo; never
+      print whole sentences into public CI logs or artefacts.
+
+  - id: dogfood-results
+    name: "Noise-floor run outputs (per-thesis stats + flagged-context samples)"
+    kind: eval_set
+    source: "output of ml/dogfood/run_dogfood.py over dogfood-thesis-text"
+    location: "ml/dogfood/results/"
+    in_git: true
+    licence: "unknown — verify (inherits sample-theses-pdf)"
+    licence_verified: false
+    licence_evidence: null
+    commercial_ok: false
+    permitted_use: [private_eval, ci_eval]
+    current_use: "Inspection of flags per rule; corpus_stats.json feeds dogfooding-report.md numbers."
+    shipped_today: false
+    manifest:
+      files: 2
+      bytes: 424572
+      per_file_sha256:
+        "corpus_stats.json": 6be201cb1a8aabeafeb25074d5b4a7d79f215075dee417c6655f63d4431baf2d
+        "samples.json": caa137dc60d078842698a6a423d965f9b6aebe63a5375bfcb007b115e8624270
+    notes: >-
+      samples.json carries ~200-character context windows of thesis text
+      around each flag, so it is third-party text, not just numbers.
+      corpus_stats.json is counts only.
+
+  # ───────────────────────── Notes_On_Writing/ (D7: knowledge only) ─────────────────────────
+
+  - id: nw-endo-lecture
+    name: "Endo A. — Scientific writing for infectious disease modelling (lecture slides, SSHSPH)"
+    kind: knowledge_source
+    source: "third-party PDF (private)"
+    location: "Notes_On_Writing/writing.pdf"
+    in_git: true
+    licence: "unknown — verify (lecture slides; no licence statement in the PDF)"
+    licence_verified: false
+    licence_evidence: null
+    commercial_ok: unknown
+    permitted_use: [knowledge_derivation]
+    current_use: "E701–E707, W201 extensions, W209/W210 corroboration (docs/knowledge-base.md §1)."
+    shipped_today: true
+    sha256: 6c32d229743f753942036346b6b8e2a753d113f10d71d08a5faf1d18fa7d43d8
+    notes: >-
+      Verbatim, attributed quotes ship in rule why-texts:
+      packages/core/researchly/rules_lexical.py (~84 words; longest span 24
+      words, "minimise empty sentences … holistic understanding of the complex
+      dynamics of dengue"), rules_syntax.py (~69 words; longest 27 words, the
+      "Fig 1 shows the estimated Rt values in city X" example), lexicons.py
+      (2 short quotes), plus test fixtures in tests/test_course_rules.py.
+      D7 says paraphrase and cite; these should be paraphrased in the W5
+      re-mine.
+
+  - id: nw-ng5001-unit1
+    name: "NG5001 Unit 1 — Reading Critically (NUS CELC course notes, 2025-26)"
+    kind: knowledge_source
+    source: "third-party PDF (private)"
+    location: "Notes_On_Writing/Unit 1 - 2510 .pdf"
+    in_git: true
+    licence: "unknown — verify (NUS course material; no licence statement found)"
+    licence_verified: false
+    licence_evidence: null
+    commercial_ok: unknown
+    permitted_use: [knowledge_derivation]
+    current_use: "L901 serial-summary-opener; Wallace & Wray warranting frame for the C-series (knowledge-base.md §2)."
+    shipped_today: true
+    sha256: c0268c97acefb26a82dcc383b798c32f4bae117a4d758a96e33797a83103071f
+    notes: >-
+      A 9-word fragment of the unit's "KM" example ("There are many studies
+      dealing with the effect of …") is a fixture in
+      packages/core/tests/test_course_rules.py. Contains third-party extracts
+      itself (Wallace & Wray, Swales); those are not licensed through NUS to us.
+
+  - id: nw-ng5001-unit2
+    name: "NG5001 Unit 2 — Writing Academically (NUS CELC course notes, 2025-26)"
+    kind: knowledge_source
+    source: "third-party PDF (private)"
+    location: "Notes_On_Writing/Unit 2 - 2510 .pdf"
+    in_git: true
+    licence: "unknown — verify (NUS course material; no licence statement found)"
+    licence_verified: false
+    licence_evidence: null
+    commercial_ok: unknown
+    permitted_use: [knowledge_derivation]
+    current_use: "Hyland metadiscourse, Thomas (2016) style checklist, Belcher abstract structure → AB801, abstract lens, metrics plans (knowledge-base.md §3)."
+    shipped_today: false
+    sha256: 64f5e93042f8ff7d67baaf36abc577dd74d687b3e7659be60b65a1327fa12260
+    notes: >-
+      Only two generic 6-word phrases overlap with packages/ (e.g. "vague
+      abstracts with little scientific substance"); treated as not shipped.
+
+  - id: nw-ng5001-unit2-2-task5
+    name: "NG5001 Unit 2.2 Task 5 (exercise sheet, Word)"
+    kind: knowledge_source
+    source: "third-party document (private)"
+    location: "Notes_On_Writing/Unit 2.2 Task 5.docx"
+    in_git: true
+    licence: "unknown — verify (NUS course material; docx creator: Yurni Said-Sirhan)"
+    licence_verified: false
+    licence_evidence: null
+    commercial_ok: unknown
+    permitted_use: [knowledge_derivation]
+    current_use: "Seed for a future audience/persona setting (knowledge-base.md §9)."
+    shipped_today: false
+    sha256: 38f209161d9defb0a89528421b0ce2faf8112359e7999bfdd906dc9d7236ed06
+    notes: null
+
+  - id: nw-ng5001-week2-key-points
+    name: "NG5001 Week 2 tutorial key points (Yurni Said-Sirhan, CELC)"
+    kind: knowledge_source
+    source: "third-party PDF (private)"
+    location: "Notes_On_Writing/Week 2 Key Points.pdf"
+    in_git: true
+    licence: "unknown — verify (NUS course material)"
+    licence_verified: false
+    licence_evidence: null
+    commercial_ok: unknown
+    permitted_use: [knowledge_derivation]
+    current_use: "Discipline-dependent warranting; boosters/hedges; gap statement (knowledge-base.md §7)."
+    shipped_today: false
+    sha256: dec8261f02c46f5fa3136c474d2f5d475254103bc460260b8ed9f3e0b93fd9a9
+    notes: null
+
+  - id: nw-ng5001-week4-key-points
+    name: "NG5001 Week 4 tutorial key points (Yurni Said-Sirhan, CELC)"
+    kind: knowledge_source
+    source: "third-party PDF (private)"
+    location: "Notes_On_Writing/Week 4 Key Points.pdf"
+    in_git: true
+    licence: "unknown — verify (NUS course material)"
+    licence_verified: false
+    licence_evidence: null
+    commercial_ok: unknown
+    permitted_use: [knowledge_derivation]
+    current_use: "Hyland interpersonal model framing (knowledge-base.md §7)."
+    shipped_today: false
+    sha256: fbb5930d738a00fa3df558e49480eef641697cbf519dface9d9048e2e1ed3e03
+    notes: null
+
+  - id: nw-wallace-wray-ch4
+    name: "Wallace & Wray — ch. 4 'Getting Started on Critical Reading' (NG5001 reading)"
+    kind: knowledge_source
+    source: "third-party PDF (private)"
+    location: "Notes_On_Writing/20250815T110556_ng5001_getting_started_on_critical_reading.pdf"
+    in_git: true
+    licence: "unknown — verify (book chapter, presumed publisher copyright)"
+    licence_verified: false
+    licence_evidence: null
+    commercial_ok: unknown
+    permitted_use: [knowledge_derivation]
+    current_use: "Critical Synopsis Questions + argument-flaw taxonomy → review lens, E704, C308–C310 (knowledge-base.md §4)."
+    shipped_today: false
+    sha256: 691addff300f651d7393bf264a942a0cf856d30dcc2587efaf7f9b515193bc2f
+    notes: "Scanned PDF with no text layer; the automated overlap check could not cover it."
+
+  - id: nw-shehzad-2008
+    name: "Shehzad W. (2008) Move two: establishing a niche. Ibérica 15"
+    kind: knowledge_source
+    source: "third-party PDF (private)"
+    location: "Notes_On_Writing/03_15_Shehzad (1).pdf"
+    in_git: true
+    licence: "unknown — verify (journal article, Ibérica)"
+    licence_verified: false
+    licence_evidence: null
+    commercial_ok: unknown
+    permitted_use: [knowledge_derivation]
+    current_use: "Gap-signal indicator words inside D902 missing-niche-signal; D902 why-text (knowledge-base.md §5)."
+    shipped_today: true
+    sha256: 7220745b19f3827664f79aab40ceb150acbe1b2e241cf439ee2949d3d2625873
+    notes: >-
+      Also present as "Notes_On_Writing/Week 2 Reading.pdf" (different scan,
+      sha256 3d6833e28858a4459e40f748ebe6c2fd493415900a69a0cd320e0152da06657e,
+      no text layer). shipped_today is true only because a short list of
+      common gap-signal words (however, limited, few studies, not been …),
+      inline as regexes in D902 in packages/core/researchly/rules_lexical.py,
+      derives from it; no passages ship.
+
+  - id: nw-pallas-2023
+    name: "Pallas C.L. (2023) Doctoral Student Skills (Routledge), incl. ch. 7 'Writing conference abstracts'"
+    kind: knowledge_source
+    source: "third-party PDF (private)"
+    location: "Notes_On_Writing/Doctoral Student Skills_25_09_04_10_38_31.pdf"
+    in_git: true
+    licence: "All rights reserved (© 2023 Christopher L. Pallas)"
+    licence_verified: true
+    licence_evidence: "Notes_On_Writing/Doctoral Student Skills_25_09_04_10_38_31.pdf, copyright page: '© 2023 Christopher L. Pallas … All rights reserved. No part of this book may be reprinted or reproduced …'"
+    commercial_ok: false
+    permitted_use: [knowledge_derivation]
+    current_use: "Six-part abstract structure + fill-in frames → AB801, abstract_lens (AB802) (knowledge-base.md §6)."
+    shipped_today: true
+    sha256: 43ee48df108aba55b0f46a9deb74dcf1b264714ef1f41b5634f0c6d5a774fe76
+    notes: >-
+      Chapter 7 is duplicated as "Writing conference abstract.pdf"
+      (sha256 ad50b8b34e337eb23bdead07433a22c7d4d6fa09bf25a9c090965fae7494123c)
+      and "Writing conference abstract_compressed.pdf"
+      (sha256 3b79b797007e2fdea05d358e3148c7c2f4d7621ef013cdb9b68fceaa4f086e1e),
+      both image-only scans. Shipped today: Pallas's own ~130-word exemplar
+      abstract verbatim in packages/core/tests/test_abstract_lens.py (the
+      largest third-party passage in packages/), and short sentence-frame
+      fragments (~31 words across 5 frames) in
+      packages/core/researchly/abstract_lens.py. Both should be replaced:
+      the fixture with an authored abstract, the frames with paraphrased,
+      cited frames.
+
+  - id: nw-omodan-2025
+    name: "Omodan B.I. (2025) Understanding Research Paradigm, ch. 1 (Routledge)"
+    kind: knowledge_source
+    source: "third-party PDF (private)"
+    location: "Notes_On_Writing/Understanding Research Paradigm_Omodan (2025).pdf"
+    in_git: true
+    licence: "unknown — verify (book chapter; presumed publisher copyright)"
+    licence_verified: false
+    licence_evidence: null
+    commercial_ok: unknown
+    permitted_use: [knowledge_derivation]
+    current_use: "Context only: paradigms shape warranting; informs discipline-conditioned packs (knowledge-base.md §8)."
+    shipped_today: false
+    sha256: 37e6e3a01b8c967485b298d629be0bcfa079b268adf3d2b52020e8310a7b7f46
+    notes: null
+
+  # ───────────────────────── Legacy experiment (P21-EXP) data ─────────────────────────
+
+  - id: p21-paper-corpus
+    name: "Published-paper corpus for exemplar retrieval (12 infectious-disease modelling papers)"
+    kind: corpus
+    source: "PMC open-access full text (9) + user-provided PDFs (3)"
+    location: "legacy/experiment-p21/prototype/experiments/corpus/"
+    in_git: true
+    licence: "mixed — per article, see items"
+    licence_verified: false
+    licence_evidence: "per item"
+    commercial_ok: unknown
+    permitted_use: [private_eval]
+    current_use: "Built 30% (650/2,189) of the legacy exemplar index (p21-exemplars). Not used by packages/ today."
+    shipped_today: false
+    manifest:
+      files: 12
+      bytes: 375478
+    items:
+      - file: bouman2024_ploscompbiol.txt
+        ref: "Bouman et al. 2024, PLOS Comput Biol (user-provided PDF)"
+        sha256: 8b8d1236565500049953c48d27f3810daaf7cbed2cc753e7fa6d82556df48ae7
+        licence: "CC BY (Creative Commons Attribution License; version not stated in the text, PLOS uses 4.0)"
+        licence_verified: true
+        licence_evidence: "the file itself, lines 21-22: '© 2024 Bouman et al. This is an open access article distributed under the terms of the Creative Commons Attribution License …'"
+      - file: dehning2020_science.txt
+        ref: "Dehning et al. 2020, Science; PMID 32414780; doi:10.1126/science.abb9789 (user-provided PDF, OCR)"
+        sha256: b3785110e897fd3fd5cba1b9a920e4b514fa185d2a27b5e682cde7634c49357d
+        licence: "unknown — verify (PubMed: '© 2020 The Authors, some rights reserved; exclusive licensee AAAS'; no CC licence seen)"
+        licence_verified: false
+        licence_evidence: "PubMed connector get_copyright_status(32414780), 2026-10-03"
+      - file: dickens2020_lancetwesternpacific.txt
+        ref: "Dickens et al. 2020, Lancet Reg Health West Pac; PMC7395828; PMID 34173590"
+        sha256: 92426d84064d1671b45517c2862e1fe5da8c69846ef8ca7b34262bc973d1f100
+        licence: "unknown — verify (PubMed: '© 2020 The Author(s). Published by Elsevier Ltd.'; licence type not returned)"
+        licence_verified: false
+        licence_evidence: "PubMed connector get_copyright_status(34173590), 2026-10-03"
+      - file: endo2020_wellcomeopenres.txt
+        ref: "Endo et al. 2020, Wellcome Open Res; PMC7338915; PMID 32685698"
+        sha256: 83d5a34ee32ce6c8c14755fb7b9fcc63a955b63efcfab284665f49ac40a9b4a6
+        licence: "unknown — verify (PubMed: '© 2020 Endo A et al.'; licence type not returned)"
+        licence_verified: false
+        licence_evidence: "PubMed connector get_copyright_status(32685698), 2026-10-03"
+      - file: hoze2021_lancetpublichealth.txt
+        ref: "Hozé et al. 2021, Lancet Public Health; PMC8032222; PMID 33838700"
+        sha256: 94decec17ea8381dca3a5f9e67407cdd70da99b5fb3c040b7bc964a2d4259d98
+        licence: "CC-BY-NC-ND-4.0"
+        licence_verified: true
+        licence_evidence: "PubMed connector get_copyright_status(33838700): 'This is an Open Access article under the CC BY-NC-ND 4.0 license.'"
+        note: "NC + ND: never ship_text or ship_model; evaluation only even after re-sourcing."
+      - file: lefrancq2021_lancetregionalhealtheurope.txt
+        ref: "Lefrancq et al. 2021, Lancet Reg Health Eur; PMC7981225; PMID 34104903"
+        sha256: f2d5bb1160fc6737f4ce7995a154f6f32f6f4578fe60fa781dce7c23eac5f52b
+        licence: "unknown — verify (PubMed: '© 2021 The Authors.'; licence type not returned)"
+        licence_verified: false
+        licence_evidence: "PubMed connector get_copyright_status(34104903), 2026-10-03"
+      - file: levin2020_ejepidemiology.txt
+        ref: "Levin et al. 2020, Eur J Epidemiol; PMC7721859; PMID 33289900"
+        sha256: 02b02134f877f1274ad5676b4514ee9705b6c9ee4d14da7868c821a3aa828fc4
+        licence: "CC-BY-4.0"
+        licence_verified: true
+        licence_evidence: "PubMed connector get_copyright_status(33289900): PMC licence CC BY 4.0"
+      - file: lim2021_jrsocinterface.txt
+        ref: "Lim et al. 2021, J R Soc Interface; PMC8440027; PMID 34520691"
+        sha256: 7f3a71e0236874fba74b9ee532cf9a3aa75f5cf057743717167343cbf4284894
+        licence: "CC-BY-4.0"
+        licence_verified: true
+        licence_evidence: "PubMed connector get_copyright_status(34520691): PMC licence CC BY 4.0"
+      - file: mishra2021_eclinicalmedicine.txt
+        ref: "Mishra et al. 2021, EClinicalMedicine; PMC8349999; PMID 34401689"
+        sha256: d232b55728d33e5a28824eefeb0a1feee6c20a8b6a39cc2d075072a725694bb2
+        licence: "unknown — verify (PubMed: '© 2021 The Authors.'; licence type not returned)"
+        licence_verified: false
+        licence_evidence: "PubMed connector get_copyright_status(34401689), 2026-10-03"
+      - file: monod2021_science.txt
+        ref: "Monod et al. 2021, Science (user-provided PDF)"
+        sha256: b7aaf02c6baab0a95f1f64389fa923979a34df9e0d12ae8425a9c0e8968133e9
+        licence: "CC-BY-4.0"
+        licence_verified: true
+        licence_evidence: "the file itself, lines 54 and 392-393: 'This work is licensed under a Creative Commons Attribution 4.0 International (CC BY 4.0) license'"
+      - file: prem2017_ploscompbiol.txt
+        ref: "Prem et al. 2017, PLOS Comput Biol; PMC5609774; PMID 28898249"
+        sha256: dc30a524e7cfb37459234619aec6f997918a248c50179bae3807224d84c49ccc
+        licence: "CC-BY-4.0"
+        licence_verified: true
+        licence_evidence: "PubMed connector get_copyright_status(28898249): PMC licence CC BY 4.0"
+      - file: prem2020_lancetpublichealth.txt
+        ref: "Prem et al. 2020, Lancet Public Health; PMC7158905; PMID 32220655"
+        sha256: 9946055a5979377c1716338e7164b291fcb3125d37b986a354efd28d1e4848d8
+        licence: "CC-BY-4.0"
+        licence_verified: true
+        licence_evidence: "PubMed connector get_copyright_status(32220655): 'This is an Open Access article under the CC BY 4.0 license.'"
+    notes: >-
+      Corpus-level permitted_use is the most restrictive member's default
+      until the corpus is split. The 6 verified CC BY items (Bouman, Levin,
+      Lim, Monod, Prem 2017, Prem 2020) could move to pmc-oa-commercial-subset
+      with ship_text (attributed) + ship_model; Hozé is NC-ND; the other 5
+      need their licences checked. Flaxman 2020 and Davies 2020 were
+      skipped (not in PMC-OA), per PROJECT_LOG P21.
+
+  - id: p21-exemplars
+    name: "Legacy exemplar index (exemplars.jsonl, 2,189 move-labelled sentences)"
+    kind: corpus
+    source: "derived: experiments/build_exemplars.py over dogfood-thesis-text + p21-paper-corpus"
+    location: "legacy/experiment-p21/prototype/researchly/data/exemplars/exemplars.jsonl"
+    in_git: true
+    licence: "unknown — verify (inherits: 70% thesis text, 30% mixed-licence papers)"
+    licence_verified: false
+    licence_evidence: null
+    commercial_ok: false
+    permitted_use: [private_eval]
+    current_use: "Legacy only: fed the P21 Word add-in Guide tab. Not in packages/ or apps/ today."
+    shipped_today: false
+    sha256: 3c2e066d892d3b31ce985f7d963e2d0c2199006d6987421550508300af032e43
+    notes: >-
+      70.3% of rows (1,539 of 2,189) came from the 8 theses (D6: must not
+      ship); they include acknowledgements and declarations ("I am extremely
+      grateful …"). The remaining 650 rows come from 12 papers, one of them
+      CC BY-NC-ND (Hozé, 41 rows) and five with unverified licences. PLAN.md
+      S0: re-source from CC BY PMC-OA with per-sentence licence before any
+      exemplar feature is ported.
+
+  - id: move-clf-v0
+    name: "Rhetorical-move classifier v0 (TF-IDF + logistic regression, sklearn pickle)"
+    kind: model
+    source: "trained by legacy/experiment-p21/prototype/experiments/train_moves.py on pubmed-rct (20k split)"
+    location: "legacy/experiment-p21/prototype/researchly/data/models/move_clf.joblib"
+    in_git: true
+    licence: "unknown — verify (inherits pubmed-rct: no licence declared)"
+    licence_verified: false
+    licence_evidence: null
+    commercial_ok: unknown
+    permitted_use: [private_eval]
+    current_use: "Legacy only (P21 guide). Baseline to beat in S5 Task B: 82.55% test accuracy on PubMed 20k RCT (30,135 sentences)."
+    shipped_today: false
+    sha256: da21e5916c1de09fb2af50a2a72e9cd53b2d08bf2164ceb2f8da33d1a3044de9
+    notes: >-
+      Version moves-v0-tfidf-logreg-20260814, seed 20260814, sklearn 1.8.0,
+      n_train 180,040. Companion files: move_clf.meta.json (sha256
+      fb7b54ab88f4b97870854beab4029c0ae72d075a4178cfb4f924c2b0f36e4a33),
+      move_clf.metrics.md (sha256
+      8dce8689c23aac63dc3dc0b1753b4b0fa928d3a859b3d9464557970e7a390848).
+      A TF-IDF vocabulary (75k features) is a data derivative of PubMed
+      abstracts. joblib pickles are never loaded in production (ADR-06).
+      Never measured on thesis prose.
+
+  # ───────────────────────── Runtime third-party data (dependencies) ─────────────────────────
+
+  - id: symspell-frequency-dictionary
+    name: "SymSpell English frequency dictionary (frequency_dictionary_en_82_765.txt)"
+    kind: lexicon
+    source: "https://github.com/mammothb/symspellpy (bundled in the symspellpy wheel)"
+    location: null
+    in_git: false
+    licence: "MIT (symspellpy / SymSpell); underlying data = Google Books Ngram (CC-BY-3.0) ∩ SCOWL"
+    licence_verified: true
+    licence_evidence: "symspellpy 6.10.0 wheel METADATA 'License: MIT License' + https://raw.githubusercontent.com/mammothb/symspellpy/master/LICENSE; dictionary provenance from https://raw.githubusercontent.com/wolfgarbe/SymSpell/master/README.md (lines 269-273)"
+    commercial_ok: true
+    permitted_use: [private_eval, ci_eval, train_experimental, ship_model, ship_text]
+    current_use: "Base dictionary for the S001 spelling tier (loaded by packages/core/researchly/spelling.py via importlib.resources)."
+    shipped_today: false
+    sha256: 68e9dc81c7e73bd7310b57e516ecaea0d8b6387ff71344a57c04174650a407a7
+    notes: >-
+      Hash is of the copy in symspellpy 6.10.0 (82,833 lines). Not vendored in
+      the repo; it ships inside every install as a pip dependency (and inside
+      the py2app .dmg). Google Books Ngram CC BY 3.0 asks for attribution;
+      the SCOWL README licence was not opened in this audit.
+
+  - id: spacy-en-core-web-sm
+    name: "spaCy en_core_web_sm pipeline"
+    kind: model
+    source: "https://github.com/explosion/spacy-models"
+    location: null
+    in_git: false
+    licence: "MIT"
+    licence_verified: true
+    licence_evidence: "en_core_web_sm 3.8.0 meta.json (installed wheel): license 'MIT'; sources OntoNotes 5 ('commercial (licensed by Explosion)'), ClearNLP conversion, WordNet 3.0"
+    commercial_ok: true
+    permitted_use: [private_eval, ci_eval, train_experimental, ship_model]
+    current_use: "Tokenisation, POS and dependency parse for every syntax rule; loaded at runtime (python -m spacy download en_core_web_sm)."
+    shipped_today: false
+    sha256: null
+    notes: >-
+      Not vendored; downloaded at install time and will be baked into the
+      engine container (S1). Training data (OntoNotes 5, LDC) is licensed to
+      Explosion, not to us; we may ship the model under MIT but must not
+      claim any right to OntoNotes text. Pin the version (3.8.0 checked) in
+      the container build.
+
+  - id: languagetool
+    name: "LanguageTool (local server) + language_tool_python client"
+    kind: model
+    source: "https://github.com/languagetool-org/languagetool"
+    location: null
+    in_git: false
+    licence: "LGPL-2.1-or-later (LanguageTool core); client language_tool_python is GPL-3.0-only"
+    licence_verified: true
+    licence_evidence: "https://raw.githubusercontent.com/languagetool-org/languagetool/master/README.md ('### License … distributed under the LGPL'); language_tool_python 3.4.0 wheel METADATA 'License-Expression: GPL-3.0-only'"
+    commercial_ok: true
+    permitted_use: [private_eval, ci_eval]
+    current_use: "Grammar tier LT001 (rule engine + rule data, not ML); sidecar container planned for S1."
+    shipped_today: false
+    sha256: null
+    notes: >-
+      Rule engine and rule data rather than a learned model; registered
+      because its rule data decides LT001 suggestions. LT itself is fine to
+      run as a separate process. Not a data concern but flagged for the lead:
+      the Python client is GPL-3.0-only, which matters if it is bundled into
+      a distributed binary (the py2app .dmg / Windows installer) alongside
+      MIT code; running it inside a hosted service does not distribute it.
+      ship_model / ship_text deliberately not granted: nothing here is
+      training data.
+
+  # ───────────────────────── Planned training sets — sentence roles / moves ─────────────────────────
+
+  - id: pubmed-rct
+    name: "PubMed 200k RCT and PubMed 20k RCT (Dernoncourt & Lee 2017)"
+    kind: corpus
+    source: "https://github.com/Franck-Dernoncourt/pubmed-rct"
+    location: null
+    in_git: false
+    licence: "none declared — README: 'NLM freely provides PubMed data. Please note some abstracts may be protected by copyright.'"
+    licence_verified: true
+    licence_evidence: "https://raw.githubusercontent.com/Franck-Dernoncourt/pubmed-rct/master/README.md ('## License' section; no LICENSE file)"
+    commercial_ok: unknown
+    permitted_use: [private_eval]
+    current_use: "20k split trained move-clf-v0 (legacy). Planned: S5 Task B (sentence rhetorical role) training + eval."
+    shipped_today: false
+    sha256: null
+    notes: >-
+      licence_verified is true in the sense that the absence of a licence was
+      seen first-hand; the effective licence is unknown, so the default
+      applies. The repo authors themselves say they found no licence and
+      leave copyright to the user (abstracts belong to publishers/authors).
+      PLAN.md S5 requires this to be resolved before training anything
+      shippable. Options: owner accepts the risk for ship_model only (weights,
+      no text), or train on PMC-OA CC BY abstracts instead.
+
+  - id: csabstruct
+    name: "CSAbstruct (Cohan et al. 2019) — CS abstracts with sentence roles"
+    kind: corpus
+    source: "https://github.com/allenai/sequential_sentence_classification (data/CSAbstruct); mirror https://huggingface.co/datasets/allenai/csabstruct"
+    location: null
+    in_git: false
+    licence: "Apache-2.0 (repository LICENSE, which contains the data directory)"
+    licence_verified: true
+    licence_evidence: "https://raw.githubusercontent.com/allenai/sequential_sentence_classification/master/LICENSE (Apache License 2.0); data present at data/CSAbstruct in the same repo"
+    commercial_ok: unknown
+    permitted_use: [private_eval, ci_eval, train_experimental]
+    current_use: "planned (S5 Task B, sentence rhetorical role)"
+    shipped_today: false
+    sha256: null
+    notes: >-
+      The repo licence is Apache-2.0, but the abstract sentences themselves
+      are third-party (paper authors/publishers); the repo does not claim to
+      relicense them. ship_model held back until the owner accepts that
+      reading (PLAN.md S5: verify before training anything shippable).
+      The HF dataset card licence (reported as apache-2.0 by search) was not
+      opened — huggingface.co blocked.
+
+  - id: cars-50
+    name: "CaRS-50 — rhetorical moves and steps in 50 bioRxiv article introductions"
+    kind: corpus
+    source: "https://data.mendeley.com/datasets/kwr9s5c4nk/1"
+    location: null
+    in_git: false
+    licence: "unknown — verify"
+    licence_verified: false
+    licence_evidence: null
+    commercial_ok: unknown
+    permitted_use: [private_eval]
+    current_use: "planned (rhetorical-move detection; ADR-06 'verify licences')"
+    shipped_today: false
+    sha256: null
+    notes: >-
+      Mendeley Data page (published 2025-07-07; 50 bioRxiv introductions
+      across 5 categories; Move 1–3 / Step a–d per sentence, XML) was blocked
+      by the proxy. Mendeley datasets are usually CC BY 4.0 — but that was
+      not seen. bioRxiv article text carries each preprint's own licence.
+
+  - id: raamove
+    name: "RAAMove — moves in research-article abstracts (LREC-COLING 2024)"
+    kind: corpus
+    source: "https://arxiv.org/abs/2403.15872"
+    location: null
+    in_git: false
+    licence: "unknown — verify"
+    licence_verified: false
+    licence_evidence: null
+    commercial_ok: unknown
+    permitted_use: [private_eval]
+    current_use: "planned (rhetorical-move detection; ADR-06 'verify licences')"
+    shipped_today: false
+    sha256: null
+    notes: >-
+      33,988 annotated instances, multi-domain. A search summary claims
+      "CC BY-NC 4.0" and "available for academic research purposes"; that
+      may be the paper's licence rather than the data's, and arxiv.org /
+      aclanthology.org were blocked. If the data is NC, D2 limits it to
+      private_eval / ci_eval.
+
+  # ───────────────────────── Planned evaluation sets — grammar ─────────────────────────
+
+  - id: aesw-2016
+    name: "AESW 2016 — Automated Evaluation of Scientific Writing (VTeX, v1.2)"
+    kind: eval_set
+    source: "http://textmining.lt/aesw/aesw2016down.html"
+    location: "ml/eval/data/"
+    in_git: false
+    licence: "CC-BY-NC-SA-4.0 plus no-re-identification clauses (as recorded in docs/eval-corpora.md)"
+    licence_verified: false
+    licence_evidence: "docs/eval-corpora.md and ml/eval/data/.gitignore (secondary); textmining.lt blocked during this audit"
+    commercial_ok: false
+    permitted_use: [private_eval, ci_eval]
+    current_use: "Precision on editor-approved prose and edit-site recall (ml/eval/aesw.py, stress_test.py); recall baseline 15.3% the GEC tier must beat."
+    shipped_today: false
+    sha256: null
+    notes: >-
+      Not present in this checkout (ml/eval/data/ holds only .gitignore,
+      which ignores everything else). ~1.2M sentences from 9,919 articles.
+      NC + SA + no-re-identification: never commit the corpus or derived
+      sentences, never train a shipped model (ADR-06 "not by default").
+      ci_eval only if CI downloads it into an ephemeral runner and prints
+      no sentences. Site TLS cert expired; plain HTTP works (curl -k).
+      Cite Daudaravicius (2016).
+
+  - id: wi-locness
+    name: "Write & Improve + LOCNESS v2.1 (BEA-2019)"
+    kind: eval_set
+    source: "https://www.cl.cam.ac.uk/research/nl/bea2019st/"
+    location: null
+    in_git: false
+    licence: "non-commercial use only (per docs/eval-corpora.md quoting the BEA-2019 site); exact licence text not re-seen"
+    licence_verified: false
+    licence_evidence: "docs/eval-corpora.md (secondary); cl.cam.ac.uk blocked during this audit"
+    commercial_ok: false
+    permitted_use: [private_eval, ci_eval]
+    current_use: "planned (W3 academic-ESL regression set; ERRANT F0.5)"
+    shipped_today: false
+    sha256: null
+    notes: "3,600 W&I submissions (CEFR A/B/C) + 100 native LOCNESS essays; ~45k sentences. Grammar evaluation only (ADR-06)."
+
+  - id: nucle
+    name: "NUCLE — NUS Corpus of Learner English"
+    kind: eval_set
+    source: "https://www.cl.cam.ac.uk/research/nl/bea2019st/ (licence agreement via Google Form)"
+    location: null
+    in_git: false
+    licence: "non-commercial licence agreement (per docs/eval-corpora.md); not re-seen"
+    licence_verified: false
+    licence_evidence: "docs/eval-corpora.md (secondary)"
+    commercial_ok: false
+    permitted_use: [private_eval, ci_eval]
+    current_use: "planned (grammar evaluation only, ADR-06)"
+    shipped_today: false
+    sha256: null
+    notes: "1,400 NUS student essays. A signed licence form likely restricts redistribution; keep the signed copy's terms in this entry once obtained."
+
+  - id: fce
+    name: "FCE v2.1 — Cambridge Learner Corpus First Certificate exam scripts"
+    kind: eval_set
+    source: "https://www.cl.cam.ac.uk/research/nl/bea2019st/"
+    location: null
+    in_git: false
+    licence: "non-commercial use only (per docs/eval-corpora.md); not re-seen"
+    licence_verified: false
+    licence_evidence: "docs/eval-corpora.md (secondary)"
+    commercial_ok: false
+    permitted_use: [private_eval, ci_eval]
+    current_use: "planned (grammar evaluation only, ADR-06)"
+    shipped_today: false
+    sha256: null
+    notes: "1,244 exam scripts."
+
+  - id: jfleg
+    name: "JFLEG — fluency-oriented GEC test set (Napoles et al. 2017)"
+    kind: eval_set
+    source: "https://github.com/keisks/jfleg (also jhu-clsp/jfleg on Hugging Face)"
+    location: null
+    in_git: false
+    licence: "CC-BY-NC-SA-4.0"
+    licence_verified: true
+    licence_evidence: "https://raw.githubusercontent.com/keisks/jfleg/master/README.md, '## License': 'This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.'"
+    commercial_ok: false
+    permitted_use: [private_eval, ci_eval]
+    current_use: "planned (tests whether Researchly over-edits; grammar evaluation only)"
+    shipped_today: false
+    sha256: null
+    notes: "Corrects docs/eval-corpora.md, which says the GitHub repo declares no licence: its README declares CC BY-NC-SA 4.0. 1,511 sentences × 4 rewrites."
+
+  - id: lang-8
+    name: "NAIST Lang-8 Learner Corpora (BEA-2019 release)"
+    kind: corpus
+    source: "https://www.cl.cam.ac.uk/research/nl/bea2019st/ (request form)"
+    location: null
+    in_git: false
+    licence: "non-commercial / research use (per docs/eval-corpora.md); not re-seen"
+    licence_verified: false
+    licence_evidence: "docs/eval-corpora.md (secondary)"
+    commercial_ok: false
+    permitted_use: [private_eval, ci_eval]
+    current_use: "planned (listed in ADR-06 brief; large, noisy learner corrections)"
+    shipped_today: false
+    sha256: null
+    notes: "Web-scraped user text; NC. Useful for experiments only; train_experimental not granted until the form's terms are read."
+
+  - id: bea-2019-test
+    name: "BEA-2019 shared-task benchmark (W&I+LOCNESS test, hidden references, CodaLab scoring)"
+    kind: eval_set
+    source: "https://www.cl.cam.ac.uk/research/nl/bea2019st/"
+    location: null
+    in_git: false
+    licence: "non-commercial use only (per docs/eval-corpora.md); not re-seen"
+    licence_verified: false
+    licence_evidence: "docs/eval-corpora.md (secondary)"
+    commercial_ok: false
+    permitted_use: [private_eval, ci_eval]
+    current_use: "planned (standard GEC comparability; ERRANT F0.5)"
+    shipped_today: false
+    sha256: null
+    notes: "Umbrella entry for the shared-task benchmark; the underlying corpora have their own entries (wi-locness, fce, nucle, lang-8)."
+
+  - id: conll-2014-test
+    name: "CoNLL-2014 shared task test set (1,312 sentences, M2)"
+    kind: eval_set
+    source: "https://www.comp.nus.edu.sg/~nlp/conll14st.html"
+    location: null
+    in_git: false
+    licence: "unknown — verify (described as 'research use' in docs/eval-corpora.md)"
+    licence_verified: false
+    licence_evidence: null
+    commercial_ok: unknown
+    permitted_use: [private_eval]
+    current_use: "planned (comparability with published GEC numbers)"
+    shipped_today: false
+    sha256: null
+    notes: "Avoid bundling the GPL-2.0 M2 scorer; use ERRANT (MIT)."
+
+  - id: gmeg
+    name: "GMEG — Grammarly multi-domain GEC benchmark"
+    kind: eval_set
+    source: "https://github.com/grammarly/GMEG"
+    location: null
+    in_git: false
+    licence: "none declared"
+    licence_verified: true
+    licence_evidence: "https://raw.githubusercontent.com/grammarly/GMEG/master/README.md has no licence section; LICENSE returns 404 (checked 2026-10-03)"
+    commercial_ok: unknown
+    permitted_use: [private_eval]
+    current_use: "planned (Tier-2 breadth: formal/informal native + learner, 4 refs each)"
+    shipped_today: false
+    sha256: null
+    notes: "No licence = no granted rights. Local reading/evaluation only; do not vendor or train."
+
+  - id: cweb
+    name: "CWEB — GEC on web text (low error density; FP test)"
+    kind: eval_set
+    source: "https://github.com/SimonHFL/CWEB"
+    location: null
+    in_git: false
+    licence: "CC-BY-NC-SA-4.0"
+    licence_verified: true
+    licence_evidence: "https://raw.githubusercontent.com/SimonHFL/CWEB/master/README.md, '# License': 'Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.'"
+    commercial_ok: false
+    permitted_use: [private_eval, ci_eval]
+    current_use: "planned (Tier-2 false-positive test)"
+    shipped_today: false
+    sha256: null
+    notes: "Corrects docs/eval-corpora.md, which says no licence is declared."
+
+  # ───────────────────────── Planned clean-licence sources ─────────────────────────
+
+  - id: pmc-oa-commercial-subset
+    name: "PMC Open Access subset — commercial-use group (CC0 / CC BY / CC BY-SA / CC BY-ND)"
+    kind: corpus
+    source: "https://www.ncbi.nlm.nih.gov/pmc/tools/openftlist/"
+    location: null
+    in_git: false
+    licence: "per article (machine-readable in PMC OA metadata); this entry admits only CC0-1.0 and CC-BY-4.0 / CC-BY-3.0 articles"
+    licence_verified: false
+    licence_evidence: "ncbi.nlm.nih.gov blocked during this audit; per-article licences can be read via the PubMed connector (as done for p21-paper-corpus)"
+    commercial_ok: true
+    permitted_use: [private_eval, ci_eval, knowledge_derivation, train_experimental, ship_model, ship_text]
+    current_use: "planned (PLAN.md S0: re-source exemplars with per-sentence licence; domain false-positive oracle; training sentences)"
+    shipped_today: false
+    sha256: null
+    notes: >-
+      Permissions are conditional, per article: ship_text only for CC0 /
+      CC BY items, with attribution carried on every shipped sentence
+      (author, journal, year, licence, PMCID). Exclude CC BY-SA from
+      ship_text (share-alike would bind the exemplar file) and CC BY-ND
+      (no derivatives). Exclude the PMC "non-commercial" group entirely.
+      Record each fetched article as an items: row with its licence string
+      before use.
+
+  - id: arxiv-fulltext
+    name: "arXiv full text"
+    kind: corpus
+    source: "https://arxiv.org"
+    location: null
+    in_git: false
+    licence: "mixed per paper; most use arXiv's non-exclusive distribution licence (no reuse rights); metadata CC0"
+    licence_verified: false
+    licence_evidence: "docs/eval-corpora.md (secondary); arxiv.org blocked during this audit"
+    commercial_ok: unknown
+    permitted_use: [private_eval]
+    current_use: "planned (Tier-2; only the CC BY / CC0 papers would be usable beyond evaluation)"
+    shipped_today: false
+    sha256: null
+    notes: "Treat like PMC-OA: per-paper licence rows; only CC BY / CC0 papers may gain ship_* uses."
+
+  # ───────────────────────── Base models for the S5 bake-off ─────────────────────────
+
+  - id: laya
+    name: "Laya — Convai Innovations decision model (convaiinnovations/laya, laya-typed-decisions, laya-multilingual)"
+    kind: model
+    source: "https://huggingface.co/convaiinnovations/laya (code: https://github.com/NandhaKishorM/laya)"
+    location: null
+    in_git: false
+    licence: "Apache-2.0"
+    licence_verified: true
+    licence_evidence: "https://raw.githubusercontent.com/NandhaKishorM/laya/main/LICENSE (Apache License 2.0); README '## License — Apache 2.0. Developed by Convai Innovations.' The Hugging Face model-card licence field was NOT checked (huggingface.co blocked)."
+    commercial_ok: true
+    permitted_use: [private_eval, ci_eval, train_experimental]
+    current_use: "planned (D8: S5 bake-off only — Task A flag re-ranker, Task B sentence role; never zero-shot)"
+    shipped_today: false
+    sha256: null
+    notes: >-
+      English checkpoint = ModernBERT-large (~421M) + decision head, 512
+      tokens; typed-decisions variant 1024 tokens; multilingual = mmBERT-base.
+      Non-generative, abstains. ship_model withheld until (a) it wins the S5
+      bake-off and passes the ADR-06 promotion gate, and (b) its training mix
+      is checked: the README lists AG News and BoolQ as "in training mix" and
+      does not document the full data provenance (AG's corpus is commonly
+      distributed for non-commercial research — verify). Pin the exact
+      revision and ONNX SHA-256 here when downloaded. ~2 weeks old, one
+      maintainer (ADR-06).
+
+  - id: modernbert-large
+    name: "ModernBERT-large (Answer.AI / LightOn) — plain-classifier baseline"
+    kind: model
+    source: "https://huggingface.co/answerdotai/ModernBERT-large (code: https://github.com/AnswerDotAI/ModernBERT)"
+    location: null
+    in_git: false
+    licence: "Apache-2.0"
+    licence_verified: true
+    licence_evidence: "https://raw.githubusercontent.com/AnswerDotAI/ModernBERT/main/LICENSE (Apache License 2.0). The Hugging Face model-card licence field was NOT checked (huggingface.co blocked)."
+    commercial_ok: true
+    permitted_use: [private_eval, ci_eval, train_experimental, ship_model]
+    current_use: "planned (S5 bake-off baseline against Laya; ADR-06 decision 1 swap target)"
+    shipped_today: false
+    sha256: null
+    notes: >-
+      ship_model refers to the base weights' licence only. A fine-tune ships
+      only if every dataset it was fine-tuned on also has ship_model here,
+      and it passes the ADR-06 promotion gate (model card, held-out
+      precision, noise floor, ONNX SHA-256 pin, health.py entry).

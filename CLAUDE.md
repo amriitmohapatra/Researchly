@@ -13,6 +13,14 @@ Quarto/VS Code). One engine, five surfaces: CLI, MS Word add-in, LSP
 (VS Code/Positron), macOS menu-bar app (built to .dmg), Windows scaffold
 (untested).
 
+## Production build (from 2026-10-03)
+
+Researchly is moving from prototype to a hosted product. Read
+**`ARCHITECTURE.md`** (components, decisions, evidence) and **`PLAN.md`**
+(the shared checklist — tick a box only when its evidence exists) before
+starting any production work. Slice S0 (2026-10-03) consolidated the three
+prototype trees into the monorepo layout below.
+
 ## Non-negotiable decisions (user-made; do not revisit without asking)
 
 1. **No cloud LLMs, no generative drafting — local non-generative ML is
@@ -32,8 +40,17 @@ Quarto/VS Code). One engine, five surfaces: CLI, MS Word add-in, LSP
    - Rationale: Grammarly's pre-ChatGPT quality came from learned GEC, not
      regex. The compliance promise is *local-first*, which a bundled
      on-device tagger does not violate.
-2. **Local-first, always.** No document text ever leaves the machine.
-   This is a compliance matter (publisher AI policies), not a preference.
+2. **Confidential by design.** Document text is processed in memory in a
+   pinned region and is never stored, logged, shared, or used for training
+   unless the user explicitly opts in, per feature. No cloud LLM ever sees
+   it. A local mode that sends nothing anywhere remains available.
+   *(Amended 2026-10-03. The original rule read "Local-first, always. No
+   document text ever leaves the machine." The user lifted local-only so
+   Researchly can be hosted, and approved this wording — ADR-02 in
+   `ARCHITECTURE.md`.)* Still a compliance matter (publisher AI policies),
+   not a preference: anything that would persist, log or train on text needs
+   an explicit per-feature opt-in, and the canary test (ARCHITECTURE.md Q6)
+   must stay green.
 3. **The four-type suggestion taxonomy** — Correction / Improvement /
    Convention / Preference — is the product's core idea. Conventions are
    never presented as errors; Preferences are hidden by default.
@@ -51,45 +68,65 @@ Quarto/VS Code). One engine, five surfaces: CLI, MS Word add-in, LSP
 ```
 Researchly/
 ├── CLAUDE.md, AGENTS.md          ← you are here
-├── The-Craft-of-Scientific-Writing.md   ← the founding writing guide
-├── Notes_On_Writing/             ← course PDFs — BEING RE-MINED (W5, see below)
-├── Sample_thesis_drafts/         ← 8 accepted theses (dogfooding corpus)
+├── ARCHITECTURE.md, PLAN.md      ← production design + the shared checklist
+├── The-Craft-of-Scientific-Writing.md   ← the founding writing guide (owner's)
+├── Notes_On_Writing/             ← course PDFs: the knowledge source (D7) — third-party, private
+├── Sample_thesis_drafts/         ← 8 accepted theses (noise-floor corpus) — third-party, private
 ├── research/                     ← Phase-1 landscape research (00-synthesis.md first)
 ├── docs/
 │   ├── PROJECT_LOG.md            ← THE chronicle: read to understand everything
 │   ├── rule-inventory.md         ← all rules, all layers, sources, status
 │   ├── knowledge-base.md         ← source-document → rule provenance map
 │   ├── dogfooding-report.md      ← how precision tuning was done (methodology)
-│   └── roadmap-rewrite-and-desktop.md
-└── prototype/
-    ├── researchly/               ← THE ENGINE (one package, all surfaces use it)
-    │   ├── api.py                ← analyze(): THE entry point every surface calls
-    │   ├── config.py             ← layered settings, shared by every surface
-    │   ├── health.py             ← per-tier status; no tier may fail silently
-    │   ├── document.py           ← offset-preserving markup masking + IMRaD sections
-    │   ├── engine.py             ← Rule/Suggestion types, registry, check(), aggregation
-    │   ├── rules_*.py            ← rule modules (lexical, syntax, spelling, grammar)
-    │   ├── abstract_lens.py      ← Belcher six-part abstract check (AB802)
-    │   ├── review.py             ← Wallace & Wray critical-reader report
-    │   ├── transform.py          ← deterministic Polish rewriter
-    │   ├── spelling.py           ← SymSpell wrapper + guards + user dictionary
-    │   ├── lexicons.py           ← ALL word lists (auditable; extend here)
-    │   ├── metrics.py            ← read-outs incl. hedge/booster meter (never a score)
-    │   ├── telemetry.py          ← local usage log → `researchly stats`
-    │   ├── lsp.py                ← language server (pygls <2)
-    │   └── cli.py                ← check/polish/review/abstract/rules/explain/stats/dict
-    ├── word-addin/               ← Office JS taskpane + localhost:3517 server
-    ├── vscode-extension/         ← pre-bundled (esbuild); no npm needed on user's Mac
-    ├── desktop-mac/              ← pyobjc menu-bar app + py2app/.dmg build
-    ├── desktop-win/              ← UNTESTED scaffold
-    └── tests/                    ← ~130 tests; run before ANY delivery
+│   ├── adr/                      ← decision records (index; ADRs live in ARCHITECTURE.md §10)
+│   └── roadmap-rewrite-and-desktop.md   ← superseded by ARCHITECTURE.md
+├── packages/core/                ← THE ENGINE (`researchly` package; every surface uses it)
+│   ├── researchly/
+│   │   ├── api.py                ← analyze(): THE entry point every surface calls
+│   │   ├── config.py             ← layered settings, shared by every surface
+│   │   ├── health.py             ← per-tier status; no tier may fail silently
+│   │   ├── document.py           ← offset-preserving markup masking + IMRaD sections
+│   │   ├── engine.py             ← Rule/Suggestion types, registry, check(), aggregation
+│   │   ├── rules_*.py            ← rule modules (lexical, syntax, spelling, grammar, gec)
+│   │   ├── gec.py                ← learned-edit tier scaffold (no model yet; abstains)
+│   │   ├── argument.py           ← Toulmin ArgumentObject (feeds review.py)
+│   │   ├── abstract_lens.py      ← Belcher six-part abstract check (AB802)
+│   │   ├── review.py             ← Wallace & Wray critical-reader report
+│   │   ├── transform.py          ← deterministic Polish rewriter
+│   │   ├── spelling.py           ← SymSpell wrapper + guards + user dictionary
+│   │   ├── lexicons.py           ← ALL word lists (auditable; extend here)
+│   │   ├── metrics.py            ← read-outs incl. hedge/booster meter (never a score)
+│   │   ├── telemetry.py          ← local usage log → `researchly stats`
+│   │   ├── lsp.py                ← language server (pygls <2)
+│   │   └── cli.py                ← check/polish/review/abstract/rules/explain/stats/dict
+│   └── tests/                    ← ~260 tests; run before ANY delivery
+├── apps/
+│   ├── word-addin/               ← Office JS taskpane + localhost:3517 server
+│   ├── vscode-extension/         ← pre-bundled (esbuild); no npm needed on user's Mac
+│   ├── desktop-mac/              ← MAINTENANCE-ONLY (D5): pyobjc menu-bar app + .dmg build
+│   └── desktop-win/              ← MAINTENANCE-ONLY (D5): untested scaffold
+├── services/                     ← hosted engine service (arrives in S1)
+├── ml/
+│   ├── datasets.yaml             ← licence registry: nothing ships unless permitted here
+│   ├── dogfood/                  ← noise-floor corpus run + gate (baseline.json)
+│   ├── eval/                     ← AESW precision/recall harness
+│   └── tools/                    ← check_third_party.py (CI)
+└── legacy/                       ← read-only: prototype-v0.8, updated-p20, experiment-p21
 ```
 
 ## How to work here
 
-- **Run tests**: `cd prototype && python3.10 -m pytest tests/ -q` (the
+- **Run tests**: `cd packages/core && python3.10 -m pytest tests/ -q` (the
   user's interpreter is `python3.10`; bare `python3` is a 3.14 with no
   deps). All green before delivering. Every bug fix gets a regression test.
+  CI (`.github/workflows/`) runs the same suite on Python 3.10 with Java,
+  plus lint, the noise-floor gate, a third-party-text scan and a secret scan.
+- **Never put third-party text in `packages/`, `apps/` or `services/`** —
+  not thesis sentences, not course-PDF passages, not book exemplars, not
+  even as test fixtures. Paraphrase and cite (D7); write synthetic test
+  sentences. `ml/tools/check_third_party.py` enforces it in CI.
+- **Nothing trained or derived ships unless `ml/datasets.yaml` permits it**
+  (`ship_model` / `ship_text`). Add the registry entry before using a source.
 - **Never assemble your own pipeline in a surface.** Call
   `api.analyze(...)`. It resolves config, parses **once**, and returns
   suggestions (already carrying `why`/`source`/`tier`/`fix_safety`), counts,
@@ -107,7 +144,10 @@ Researchly/
   is how the grammar tier stayed dead for a whole release.
 - **Add a rule**: `@rule(...)` decorator in the right `rules_*.py`
   (word lists → `lexicons.py`), fire + don't-fire tests, entry in
-  `docs/rule-inventory.md` with its source. Declare `tier=` and
+  `docs/rule-inventory.md` with its source. The rule's `source=` is a short
+  code (`"§4"`, `"Endo"`) that `researchly/sources.py` expands into a full
+  citation at registration; an unknown code fails at import, so add the
+  citation there in the same change. Users never see a bare code. Declare `tier=` and
   `fix_safety=` — `fix_safety="safe"` means a bulk-apply button may touch it
   unread, and is pinned to `transform.POLISH_RULES` by a test. Registration
   happens via the imports in `engine.check()`; a new *module* must be added
@@ -131,35 +171,37 @@ Researchly/
   entry to `docs/PROJECT_LOG.md` (what/why/files/lessons). This is a
   standing user requirement.
 
-## Current state & near-term backlog (details in PROJECT_LOG.md)
+## Current state (details in PLAN.md and PROJECT_LOG.md)
 
-Working and user-verified: CLI, Word add-in (incl. Apply fix, Add to
-dictionary), macOS app + .dmg, spelling tier. Untested by user: LSP/VS
-Code extension, D2 live watching.
+Prototype surfaces working and user-verified: CLI, Word add-in (incl. Apply
+fix, Add to dictionary), macOS app + .dmg, spelling tier. Untested by user:
+LSP/VS Code extension, D2 live watching.
 
-**v0.8 is in progress against a five-workstream plan** (W0 shared layer ✅ ·
-W1 reliability · W2 parity + settings · W3 grammar depth · W4 document
-intelligence · W5 knowledge re-mine). Read the PROJECT_LOG P15 entry first.
+Production work follows `PLAN.md` slices S0–S6; the current slice is named
+at the top of that file.
 
-Two things a future agent will otherwise get wrong:
+Things a future agent will otherwise get wrong:
 
-- **The grammar tier has never run on this machine.** Not a code bug — there
-  is no JRE, only the macOS `java` stub. `researchly check` now says so.
-- **The spelling tier has never been dogfooded** (S001 shipped after the last
-  corpus run). It adds 2.4 flags/1000w on *accepted* theses; most are PDF
-  artifacts, but `estimand(s)`, `urbanicity`, `prespecified`, `lockdowns`,
-  `serotypic`, `tradeoff` are real gaps in `data/scientific_terms.txt`.
-
-The noise-floor guard is runnable again:
-`python3.10 dogfood/extract_clean.py && python3.10 dogfood/run_dogfood.py`
-(`RESEARCHLY_DISABLE=S001` isolates a tier). Baseline **10.4/1000w** ex-S001;
-past ~11 means re-tune, not ship.
+- **The noise floor is above target.** With every tier on, accepted theses
+  get **14.75 flags/1000w** (S1 baseline, LanguageTool 6.8): ex-S001 it is
+  12.5, ex-LT001 12.8. Q3's target is ≤ 11. The gate
+  (`ml/dogfood/noise_gate.py`) blocks regressions *and* a busy rule going
+  silent (a dead tier); it does not yet enforce the target.
+  Run: `cd ml/dogfood && RESEARCHLY_CORPUS_OUT=/tmp/nf python3.10 run_dogfood.py
+  && python3.10 noise_gate.py /tmp/nf/corpus_stats.json`. Never write run
+  output into `ml/dogfood/results/` casually — `samples.json` holds thesis
+  excerpts. `RESEARCHLY_DISABLE=S001` isolates a tier.
+- **The only trained model** (TF-IDF move classifier) lives in
+  `legacy/experiment-p21/` and is a pickle trained on PubMed-RCT, whose
+  licence is undeclared. It is not in the engine; it re-enters only via the
+  S5 bake-off and promotion gate (ADR-06).
 
 ## Before this repository is ever made public (user reminder, 2026-10-03)
 
 The GitHub repo is **private** and must stay private while it contains
 third-party material: `Sample_thesis_drafts/` (eight other people's theses),
-the text extracted from them in `*/prototype/dogfood/text/`, and the course
+the text extracted from them in `ml/dogfood/text/` (and older copies under
+`legacy/`), and the course
 PDFs in `Notes_On_Writing/`. The MIT `LICENSE` does not cover any of it.
 
 If the user says they want to make the repo public, remind them of this

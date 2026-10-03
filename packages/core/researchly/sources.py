@@ -1,0 +1,61 @@
+"""Short source codes -> full citations a student can look up (CLAUDE.md #6).
+
+Rules declare compact codes (`source="§4"`, `"Endo"`, `"§6+Endo"`) because
+they are easy to audit next to the rule. Users must never see the code
+alone: "§4" means nothing outside this repository. The rule registry expands
+every code through `cite()` at registration, so every surface (CLI, Word,
+LSP, web) shows the same full citation.
+
+An unknown code raises KeyError at import time: a rule with an unexplained
+source should fail loudly, not ship. Add the citation here, and its
+provenance entry in docs/knowledge-base.md, in the same change.
+
+Citations name works; they never quote them (PLAN.md S0: no third-party
+text in shippable code).
+"""
+
+from __future__ import annotations
+
+GUIDE = "The Craft of Scientific Writing (Researchly's founding guide)"
+
+# Section numbers and titles of the guide, as headed in
+# The-Craft-of-Scientific-Writing.md (the owner's own text).
+GUIDE_SECTIONS = {
+    "4": "Warranting your arguments",
+    "5.1": "The paragraph",
+    "5.2": "The sentence: Gopen & Swan's reader-expectation principles",
+    "5.2.1": "Keep subject and verb close together (after Gopen & Swan)",
+    "5.2.2": "Put the emphasis at the end, the stress position (after Gopen & Swan)",
+    "5.2.3": "Put whose story it is in the topic position (after Gopen & Swan)",
+    "5.2.4": "Put the action in the verb (after Gopen & Swan)",
+    "6": "Language and tone",
+    "8": "A practical workflow to beat the blank page",
+    "9.1": "Write for a reader who lacks one of your fields",
+    "9.3": "Uncertainty is not a caveat, it is the finding",
+    "9.4": "A model is an argument, not an oracle",
+}
+
+WORKS = {
+    "Endo": ('A. Endo, lecture "Scientific writing for infectious disease '
+             'modelling"'),
+    "NG5001-U1": 'NG5001 (NUS) Unit 1, "Reading Critically"',
+    "NG5001-U2": 'NG5001 (NUS) Unit 2, "Writing Academically"',
+    "Shehzad": 'W. Shehzad (2008), "Move two: establishing a niche"',
+    "LanguageTool": "LanguageTool, open-source grammar checker",
+    "symspellpy": ("SymSpell spelling engine with Researchly's scientific "
+                   "lexicon"),
+    "local GEC": "Researchly learned-correction tier (local model)",
+}
+
+
+def _one(code: str) -> str:
+    code = code.strip()
+    if code.startswith("§"):
+        number = code[1:]
+        return f"{GUIDE}, §{number} {GUIDE_SECTIONS[number]}"
+    return WORKS[code]
+
+
+def cite(code: str) -> str:
+    """Full citation for a rule's source code. Raises KeyError if unknown."""
+    return "; ".join(_one(part) for part in code.split("+"))
