@@ -13,6 +13,14 @@ Quarto/VS Code). One engine, five surfaces: CLI, MS Word add-in, LSP
 (VS Code/Positron), macOS menu-bar app (built to .dmg), Windows scaffold
 (untested).
 
+## Production build (from 2026-10-03)
+
+Researchly is moving from prototype to a hosted product. Read
+**`ARCHITECTURE.md`** (components, decisions, evidence) and **`PLAN.md`**
+(the shared checklist — tick a box only when its evidence exists) before
+starting any production work. The repository map below describes the
+prototype and will change in PLAN.md slice S0.
+
 ## Non-negotiable decisions (user-made; do not revisit without asking)
 
 1. **No cloud LLMs, no generative drafting — local non-generative ML is
@@ -34,6 +42,12 @@ Quarto/VS Code). One engine, five surfaces: CLI, MS Word add-in, LSP
      on-device tagger does not violate.
 2. **Local-first, always.** No document text ever leaves the machine.
    This is a compliance matter (publisher AI policies), not a preference.
+   *(Under revision 2026-10-03: the user is lifting local-only so Researchly
+   can be hosted. Proposed replacement — "Confidential by design": transient
+   in-memory processing, never stored/logged/trained on without opt-in, local
+   mode retained — is ADR-02 in `ARCHITECTURE.md`, awaiting the user's
+   wording sign-off (PLAN.md D1). Until signed off, do not build anything
+   that persists or logs document text.)*
 3. **The four-type suggestion taxonomy** — Correction / Improvement /
    Convention / Preference — is the product's core idea. Conventions are
    never presented as errors; Preferences are hidden by default.

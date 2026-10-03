@@ -476,3 +476,44 @@ systematically overstates the grammar tier's noise.
 
 **15.3% is now the honest recall figure**, measured with every tier running.
 That is the bar a local GEC tagger has to clear to justify itself in W3.
+
+## 2026-10-03 — P22: production architecture (prototype → hosted product)
+
+**What.** The user decided to take Researchly from prototype to a hosted,
+production app (Vercel), run "like a one-person company" with sub-agents as
+specialist staff. Produced `ARCHITECTURE.md` (draft v1) and `PLAN.md` (the
+shared checklist the user asked for, to be ticked as work lands).
+
+**How.** Method taken from the user's *The Art of Building Software* (ch. 20–27):
+purpose → measurable requirements → architecture proportional to the promise →
+trace one action → claim-to-evidence table → thin slices. Three sub-agents
+reported first: a codebase audit, a Laya identification, and hosting research.
+
+**Findings worth keeping.**
+- **Three diverging code trees.** The "canonical" `prototype/` is the oldest
+  (P18). `Researchly_Updated_14082026/` (P20, 260 tests) is the proposed
+  baseline. `Experiment_Researchly/` (P21-EXP, 275 tests) holds the only
+  trained model. This root log was missing P19–P21.
+- **The "local neural network" is partly a scaffold.** The GEC tagger has no
+  model. The only trained model is a TF-IDF + logistic-regression move
+  classifier: 82.6% on PubMed-RCT abstracts, never measured on thesis prose,
+  and stored as a pickle.
+- **Third-party exemplars ship today.** 70% of `exemplars.jsonl` (1,539 of
+  2,189 sentences) comes from the 8 sample theses. That must not ship in a
+  hosted product without the authors' permission.
+- **Laya.** Most likely Convai Innovations' Laya: Apache-2.0, a
+  ModernBERT-large decision model, the open alternative to TypeSafe's hosted
+  Jev. It is non-generative, gives calibrated answers, can abstain, and can
+  be fine-tuned on a Mac or Kaggle. But it is near chance zero-shot,
+  ≈2 weeks old, has one maintainer, and does not do grammar. Decision: adopt
+  only through a bake-off against a plain ModernBERT classifier (ADR-06, S5).
+- **Vercel cannot run Java (LanguageTool)** and caps request bodies at
+  4.5 MB. The engine therefore runs on Cloud Run with LanguageTool as a
+  sidecar; Vercel hosts the web app and the Word taskpane (ADR-03).
+
+**Decisions pending from the user.** D1–D8 in `PLAN.md`. The main one is D1,
+the replacement wording for non-negotiable #2 ("Confidential by design").
+CLAUDE.md now marks #2 as under revision.
+
+**Files.** `ARCHITECTURE.md` (new), `PLAN.md` (new), `CLAUDE.md` (pointer +
+#2 revision note), this entry.
