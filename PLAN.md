@@ -196,6 +196,8 @@ patterns of good research writing across disciplines, not just epidemiology.
   - [ ] Verify on the real Supabase project after step 8: run a quick two-user check through the REST API (the CI test uses a Postgres stand-in for Supabase's roles), and confirm `service_role` grants are as expected
   - [ ] Real users need a custom email sender (Supabase's built-in one only reaches the project team, ~2 emails/hour) — S6
   - [ ] Fold the S2 decisions from `docs/s2-design.md` into ARCHITECTURE.md when S2 closes
+- [ ] Verify the real Supabase project as an outsider (anonymous read/insert/delete/RPC refused, signing keys asymmetric): blocked in Claude's sandbox until `*.supabase.co` is allow-listed **(Amriit: environment network settings)**. The live engine side is verified (2026-10-03): anonymous upload and >1,500-word paste get `sign_in_required`, a forged token gets `unauthorized`, every tier healthy
+- [ ] Large `.tex` (measured locally, synthetic LaTeX, grammar on): 25k words 21 s / 0.6 GB; 65k words 44 s / 1.3 GB; 120k words 74 s / 2.1 GB (×~1.5 on Cloud Run). Fixed: the browser gave up at 120 s while the engine may run 300 s; now 290 s, pinned by a test. Still open: no progress beyond a spinner, and a whole thesis waits ~2 min
 - [ ] Muting a rule while viewing an uploaded file re-sends the whole file to re-check; filtering the shown results in the browser would be instant (web, S2 follow-up)
 - [ ] Upload is hidden when accounts are not configured, so local development without Supabase has no upload; consider a dev-only switch
 - [ ] Q2: run spaCy and LanguageTool in parallel inside `api.analyze()` (chapter 6.9 s engine time on Cloud Run vs 6 s target); deferred by the owner 2026-10-03

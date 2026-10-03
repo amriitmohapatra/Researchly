@@ -52,7 +52,9 @@ spec:
       # another instance (up to maxScale) or queues it itself.
       containerConcurrency: 1
       # A 1M-character document (the contract's cap) took 74 s end to end on
-      # a 4-core dev machine. 300 s leaves room for a slower vCPU.
+      # a 4-core dev machine. 300 s leaves room for a slower vCPU. The
+      # browser waits just under this (apps/web/lib/engine.ts
+      # ANALYZE_TIMEOUT_MS); a unit test there keeps the two in step.
       timeoutSeconds: 300
       serviceAccountName: researchly-engine@${PROJECT_ID}.iam.gserviceaccount.com
       containers:

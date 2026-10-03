@@ -1158,3 +1158,39 @@ and CI's en_US Postgres does not. Isolation itself passed. Reproduced
 locally with an ICU en-US database, fixed to compare as sets (c975bec).
 Lesson: a test that sorts text inherits the server's collation; compare
 sets unless order is the point.
+
+## 2026-10-03 (later) — P27: accounts live; large-file pre-flight
+
+**What:** the owner completed `docs/deploy.md` step 8 and confirmed sign-in
+and sign-out work. Testing sign-in repeatedly hit Supabase's built-in email
+limit (about 2 emails an hour for the whole project): expected, and the
+reason real users need a custom email sender (S6). Staying signed in avoids
+it, since the session refreshes without email.
+
+**Verified on the live engine:** an anonymous upload and a 1,600-word
+anonymous paste are refused with `sign_in_required`; a forged token gets
+`unauthorized`; a short anonymous paste still works; every tier is ready
+and the file readers are installed (no `files` tier). Probing the Supabase
+project itself from Claude's sandbox was blocked by the sandbox's network
+policy (`*.supabase.co` not allow-listed); tracked in PLAN.
+
+**Large `.tex` pre-flight** (synthetic LaTeX, grammar on, this machine):
+
+| Words | Time | Peak memory |
+|---|---|---|
+| 25k | 21 s | 0.6 GB |
+| 65k | 44 s | 1.3 GB |
+| 120k (whole thesis) | 74 s | 2.1 GB |
+
+Cloud Run ran ~1.5× slower than local in S1, so a whole thesis takes about
+110 s there. Memory is comfortable under 4 GB; the response is ~9 MB even
+for synthetic word salad (real prose flags far less).
+
+**Found and fixed:** the browser gave up after 120 s while the engine is
+allowed 300 s, so a whole thesis would have been abandoned just before it
+finished. The browser now waits 290 s; a unit test reads the Cloud Run
+spec and keeps the two in step. The file panel says a whole thesis can
+take about two minutes.
+
+**Lesson:** a timeout has two ends. When one side's limit is raised for a
+new workload (uploads), check the other side's.

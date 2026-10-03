@@ -27,7 +27,15 @@ import {
   type CheckError,
 } from "./errors";
 
-export const ANALYZE_TIMEOUT_MS = 120_000;
+/**
+ * How long the browser waits for one check. Just under the engine's own
+ * request timeout (services/engine/deploy/cloudrun.service.yaml,
+ * timeoutSeconds: 300), so the browser never gives up on a check the engine
+ * is still allowed to finish. A whole thesis (~120k words) takes about two
+ * minutes on Cloud Run; 120 s here abandoned it just before the end.
+ * Pinned by tests/unit/timeouts.test.ts.
+ */
+export const ANALYZE_TIMEOUT_MS = 290_000;
 
 export type CheckResult<T = AnalyzeResponse> = { ok: true; data: T } | { ok: false; error: CheckError };
 
