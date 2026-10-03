@@ -146,6 +146,16 @@ export async function mockSupabase(page: Page, init: Partial<SupabaseState> = {}
         return reply(route, 204);
       }
     }
+    if (p === "/rest/v1/rpc/mute_rule" || p === "/rest/v1/rpc/unmute_rule") {
+      // As the migration: one rule, changed in place, on the caller's own row.
+      const { rule_id } = JSON.parse(req.postData() || "{}") as { rule_id: string };
+      const base = state.settings ?? { disabled_rules: [], show_preferences: false, locale: "en-US" };
+      const rules = base.disabled_rules.filter((r) => r !== rule_id);
+      if (p.endsWith("/mute_rule")) rules.push(rule_id);
+      else if (!state.settings) return reply(route, 200, null);
+      state.settings = { ...base, disabled_rules: rules };
+      return reply(route, 200, rules);
+    }
     if (p === "/rest/v1/dictionary_words") {
       if (req.method() === "GET") return reply(route, 200, [...state.words].sort().map((word) => ({ word })));
       if (req.method() === "POST") {

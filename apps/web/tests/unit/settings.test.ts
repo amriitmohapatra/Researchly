@@ -6,8 +6,6 @@ import {
   MAX_DICTIONARY_WORDS,
   normaliseSettings,
   validateWord,
-  withoutRule,
-  withRule,
 } from "@/lib/settings";
 
 describe("dictionary limits (as the database enforces them)", () => {
@@ -56,11 +54,6 @@ describe("settings rows", () => {
     expect(isRuleId("LT001")).toBe(true);
     expect(isRuleId("g101")).toBe(false);
     expect(isRuleId("MORFOLOGIK_RULE_EN")).toBe(false);
-  });
-  it("muting is idempotent; unmuting removes only that rule", () => {
-    expect(withRule(["G101"], "G101")).toEqual(["G101"]);
-    expect(withRule(["G101"], "C120")).toEqual(["G101", "C120"]);
-    expect(withoutRule(["G101", "C120"], "G101")).toEqual(["C120"]);
   });
 });
 

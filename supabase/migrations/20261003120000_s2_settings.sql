@@ -241,6 +241,47 @@ as $$
 $$;
 
 -- ---------------------------------------------------------------------------
+-- mute_rule / unmute_rule: change ONE rule atomically.
+--
+-- Reading disabled_rules in the browser, editing it and writing the whole
+-- array back loses a change when two tabs or devices mute at the same time
+-- (the later write overwrites the earlier one). These do the change in one
+-- statement under the row lock instead. SECURITY INVOKER: RLS and the table
+-- CHECKs (rule-id format, at most 200) still apply, and the row is always
+-- the caller's own (auth.uid()), never one named by the client.
+-- Both return the caller's resulting list.
+-- ---------------------------------------------------------------------------
+create or replace function public.mute_rule(rule_id text)
+returns text[]
+language sql
+volatile
+security invoker
+set search_path = ''
+as $$
+  insert into public.user_settings as s (user_id, disabled_rules)
+  values ((select auth.uid()), array[rule_id])
+  on conflict (user_id) do update
+    set disabled_rules = case
+      when rule_id operator(pg_catalog.=) any (s.disabled_rules) then s.disabled_rules
+      else s.disabled_rules operator(pg_catalog.||) rule_id
+    end
+  returning s.disabled_rules
+$$;
+
+create or replace function public.unmute_rule(rule_id text)
+returns text[]
+language sql
+volatile
+security invoker
+set search_path = ''
+as $$
+  update public.user_settings as s
+     set disabled_rules = pg_catalog.array_remove(s.disabled_rules, rule_id)
+   where s.user_id = (select auth.uid())
+  returning s.disabled_rules
+$$;
+
+-- ---------------------------------------------------------------------------
 -- Privileges. Explicit, so this does not rely on Supabase's default
 -- privileges (which grant ALL, including TRUNCATE, to anon and authenticated
 -- on new public tables, and EXECUTE on new functions). TRUNCATE in particular
@@ -254,6 +295,10 @@ grant select, insert, update, delete
 
 revoke all on function public.my_config() from public, anon, authenticated;
 grant execute on function public.my_config() to authenticated;
+revoke all on function public.mute_rule(text), public.unmute_rule(text)
+  from public, anon, authenticated;
+grant execute on function public.mute_rule(text), public.unmute_rule(text)
+  to authenticated;
 
 -- Trigger functions are never called directly; triggers fire without an
 -- EXECUTE check on the inserting role.

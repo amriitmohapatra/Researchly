@@ -9,7 +9,7 @@
  */
 import "client-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { normaliseSettings, withRule, withoutRule, type UserSettings } from "./settings";
+import { isRuleId, normaliseSettings, type UserSettings } from "./settings";
 import { getSupabase } from "./supabase";
 
 export type AccountResult<T> = { ok: true; data: T } | { ok: false; message: string };
@@ -78,18 +78,27 @@ export function saveSettings(patch: Partial<UserSettings>): Promise<AccountResul
   });
 }
 
-async function updateRules(change: (rules: readonly string[]) => string[]): Promise<AccountResult<UserSettings>> {
-  const current = await loadSettings();
-  if (!current.ok) return current;
-  return saveSettings({ disabled_rules: change(current.data.disabled_rules) });
+/**
+ * Mute or unmute ONE rule with a database function that changes it under the
+ * row lock (supabase/migrations: mute_rule / unmute_rule). Reading the list,
+ * editing it here and writing it back would lose a change when two tabs or
+ * devices mute at the same time. Then reads the settings back for display.
+ */
+async function changeRule(fn: "mute_rule" | "unmute_rule", id: string): Promise<AccountResult<UserSettings>> {
+  if (!isRuleId(id)) return { ok: false, message: "That rule id is not valid; nothing was changed." };
+  const changed = await run<null>(async (sb) => {
+    const { error } = await sb.rpc(fn, { rule_id: id });
+    return error ? { ok: false, message: accountErrorMessage(error) } : { ok: true, data: null };
+  });
+  return changed.ok ? loadSettings() : changed;
 }
 
 export function muteRule(id: string) {
-  return updateRules((rules) => withRule(rules, id));
+  return changeRule("mute_rule", id);
 }
 
 export function unmuteRule(id: string) {
-  return updateRules((rules) => withoutRule(rules, id));
+  return changeRule("unmute_rule", id);
 }
 
 export function listWords(): Promise<AccountResult<string[]>> {

@@ -244,9 +244,11 @@ test.describe("signed in", () => {
     await expect(page.getByRole("heading", { name: "1 suggestion" })).toBeVisible();
     expect(calls).toHaveLength(2);
     expect(sb.settings?.disabled_rules).toEqual(["C120"]);
-    const upsert = sb.sent.find((r) => r.method === "POST" && r.path === "/rest/v1/user_settings")!;
-    expect(new URLSearchParams(upsert.search).get("on_conflict")).toBe("user_id");
-    expect(JSON.parse(upsert.body)).not.toHaveProperty("user_id");
+    // One atomic call, never read-modify-write of the whole list (a second tab
+    // muting at the same moment would otherwise be lost).
+    const mute = sb.sent.find((r) => r.method === "POST" && r.path === "/rest/v1/rpc/mute_rule")!;
+    expect(JSON.parse(mute.body)).toEqual({ rule_id: "C120" });
+    expect(sb.sent.some((r) => r.method === "POST" && r.path === "/rest/v1/user_settings")).toBe(false);
     for (const r of sb.sent) expect(r.body + r.search).not.toContain(OTHER_USER_ID);
     expect(await axeSerious(page)).toEqual([]);
   });

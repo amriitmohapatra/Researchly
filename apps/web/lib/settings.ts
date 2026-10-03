@@ -49,14 +49,6 @@ export function normaliseSettings(row: unknown): UserSettings {
   };
 }
 
-export function withRule(rules: readonly string[], id: string): string[] {
-  return rules.includes(id) ? [...rules] : [...rules, id];
-}
-
-export function withoutRule(rules: readonly string[], id: string): string[] {
-  return rules.filter((r) => r !== id);
-}
-
 export type WordProblem = { kind: "empty" | "too_long" | "spaces" | "full" | "duplicate"; message: string };
 
 const nf = new Intl.NumberFormat("en-GB");

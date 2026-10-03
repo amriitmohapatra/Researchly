@@ -223,13 +223,14 @@ def test_function_privileges_and_hardening(pg):
         " where n.nspname = 'public' order by p.proname").fetchall()
     by_name = {r[0]: r[1:] for r in rows}
     assert set(by_name) == {
-        "my_config", "researchly_dictionary_cap",
+        "my_config", "mute_rule", "unmute_rule", "researchly_dictionary_cap",
         "researchly_rule_ids_valid", "researchly_set_updated_at"}
     for name, (secdef, config, anon_x, auth_x, public_x) in by_name.items():
         assert secdef is False, name + " must be SECURITY INVOKER"
         assert config == ['search_path=""'], (name, config)
         assert anon_x is False and public_x is False, name
-        assert auth_x is (name in ("my_config", "researchly_rule_ids_valid")), name
+        assert auth_x is (name in ("my_config", "mute_rule", "unmute_rule",
+                                   "researchly_rule_ids_valid")), name
 
 
 def test_no_trigger_on_auth_users_and_no_extra_tables(pg):
@@ -697,3 +698,86 @@ def test_rerunning_migration_keeps_data_and_policies(pg):
     with as_user(pg, USER_A) as cur:
         cur.execute("select count(*) from public.dictionary_words")
         assert cur.fetchone()[0] == 1
+
+
+
+# ---------------------------------------------------------------------------
+# mute_rule / unmute_rule: one rule at a time, atomically, own row only
+# ---------------------------------------------------------------------------
+
+def _mute(pg, user, rule):
+    with as_user(pg, user) as cur:
+        cur.execute("select public.mute_rule(%s)", (rule,))
+        return cur.fetchone()[0]
+
+
+def _unmute(pg, user, rule):
+    with as_user(pg, user) as cur:
+        cur.execute("select public.unmute_rule(%s)", (rule,))
+        return cur.fetchone()[0]
+
+
+def test_mute_creates_the_row_and_is_idempotent(pg):
+    assert _mute(pg, USER_A, "W204") == ["W204"]
+    assert _mute(pg, USER_A, "W204") == ["W204"]
+    assert _mute(pg, USER_A, "G101") == ["W204", "G101"]
+    assert _unmute(pg, USER_A, "W204") == ["G101"]
+    assert _unmute(pg, USER_A, "W204") == ["G101"]
+    # No settings row: unmute changes nothing and creates nothing.
+    assert _unmute(pg, USER_B, "W204") is None
+    assert pg.execute("select count(*) from public.user_settings where user_id = %s",
+                      (USER_B,)).fetchone()[0] == 0
+
+
+def test_mute_and_unmute_touch_only_the_callers_row(pg):
+    seed(pg, USER_B, rules=("S001",))
+    before = snapshot(pg, USER_B)
+    _mute(pg, USER_A, "G101")
+    _unmute(pg, USER_A, "S001")
+    assert snapshot(pg, USER_B) == before
+
+
+def test_mute_keeps_the_table_checks(pg):
+    for bad in ("w204", "W204; drop", "", None):
+        with pytest.raises(psycopg.Error):
+            _mute(pg, USER_A, bad)
+    _set_rules(pg, [f"R{i}" for i in range(200)])
+    with pytest.raises(psycopg.errors.CheckViolation):
+        _mute(pg, USER_A, "Z1")
+
+
+def test_anon_cannot_mute(pg):
+    for fn in ("mute_rule", "unmute_rule"):
+        with pytest.raises(psycopg.errors.InsufficientPrivilege):
+            with as_anon(pg) as cur:
+                cur.execute(sql.SQL("select public.{}('W204')").format(sql.Identifier(fn)))
+
+
+def test_concurrent_mutes_are_both_kept(db_dsn, pg):
+    """The bug this replaces: two tabs muting at once lost one of the mutes."""
+    import threading
+    seed(pg, USER_A, rules=(), words=())
+    barrier = threading.Barrier(2)
+    errors = []
+
+    def worker(rule):
+        try:
+            with psycopg.connect(db_dsn) as conn:
+                with as_user(conn, USER_A) as cur:
+                    barrier.wait(timeout=10)
+                    cur.execute("select public.mute_rule(%s)", (rule,))
+        except Exception as e:  # pragma: no cover - reported below
+            errors.append(e)
+
+    for _ in range(10):
+        pg.execute("update public.user_settings set disabled_rules = '{}' where user_id = %s",
+                   (USER_A,))
+        threads = [threading.Thread(target=worker, args=(r,)) for r in ("W204", "G101")]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        assert not errors, errors
+        rules = pg.execute("select disabled_rules from public.user_settings where user_id = %s",
+                           (USER_A,)).fetchone()[0]
+        assert sorted(rules) == ["G101", "W204"]
