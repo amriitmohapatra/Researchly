@@ -2,6 +2,7 @@
 
 Usage:
   python -m researchly check FILE [FILE...] [options]
+      (.tex .md .qmd .Rmd .txt, Word .docx, Overleaf project .zip)
   python -m researchly rules
   python -m researchly explain RULE_ID
 
@@ -32,6 +33,7 @@ from . import api
 from . import config as config_mod
 from . import metrics as metrics_mod
 from .health import summary_line
+from .ingest import IngestError, source_position
 
 # --- ANSI ----------------------------------------------------------------
 
@@ -109,14 +111,31 @@ def cmd_check(args) -> int:
         if args.all:
             cfg.show_preferences = True
 
-        a = api.analyze(path, nlp=nlp, cfg=cfg,
-                        with_metrics=not args.no_metrics)
+        try:
+            # .docx and Overleaf .zip are read by researchly.ingest, the
+            # same adapters the hosted engine uses.
+            a = api.analyze(path, nlp=nlp, cfg=cfg,
+                            with_metrics=not args.no_metrics)
+        except IngestError as e:
+            # One unreadable file must not discard the others' results.
+            print(f"researchly: {fname}: {e.message}", file=sys.stderr)
+            exit_code = 2
+            continue
         suggestions, document = a.suggestions, a.document
 
         if args.json:
+            items = [s.to_dict() for s in suggestions]
+            if len(document.segments) > 1:
+                # line/col index the combined project text; say where each
+                # suggestion is in the file that holds it.
+                for d, s in zip(items, suggestions):
+                    src, line, col = source_position(
+                        document.segments, document.original, s.start)
+                    d["source"] = {"path": src, "line": line, "col": col}
             payload.append({
                 "file": str(path),
-                "suggestions": [s.to_dict() for s in suggestions],
+                "warnings": list(document.warnings),
+                "suggestions": items,
                 "hidden_preferences": a.hidden_preferences,
                 "metrics": a.metrics.to_dict() if a.metrics else None,
                 "health": [t.to_dict() for t in a.health],
@@ -126,7 +145,7 @@ def cmd_check(args) -> int:
                     hidden_prefs=a.hidden_preferences,
                     metrics=a.metrics, explain=args.explain, health=a.health)
         if suggestions:
-            exit_code = 1
+            exit_code = max(exit_code, 1)
 
     if args.json:
         print(json.dumps(payload, indent=2))
@@ -158,10 +177,17 @@ def _render(path, document, suggestions, *, hidden_prefs, metrics, explain,
             if tier.remedy:
                 note += f"\n    fix: {tier.remedy}"
             print(_c(COLORS[Category.CONVENTION], note))
+    for w in document.warnings:
+        print(_c(COLORS[Category.CONVENTION], f"  ! {w}"))
 
     for s in suggestions:
         tag = _c(COLORS[s.category], f"[{s.category.value}]")
         loc = f"L{s.line}:{s.col}"
+        if len(document.segments) > 1:
+            # An Overleaf project: point into the file the text came from.
+            src, line, col = source_position(document.segments,
+                                             document.original, s.start)
+            loc = f"{src}:{line}:{col}"
         sec = f" §{s.section}" if s.section not in ("unknown",) else ""
         print(f"\n  {loc} {tag} {s.rule_id} {s.rule_name}{_c(DIM, sec)}")
         snippet = " ".join(s.text.split())
