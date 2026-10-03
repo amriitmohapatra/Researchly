@@ -17,14 +17,14 @@ done and what's next*. Both the owner and Claude edit it.
   slice until the previous slice's exit check is ticked.
 - Substantive work still gets a dated entry in `docs/PROJECT_LOG.md`.
 
-**Current slice: S0 — Foundation.** D2–D8 are decided. D1 only blocks work that would send text to a server (S1 onward), so S0 can start.
+**Current slice: S0 — Foundation.** All owner decisions are made; S0 is ready to start.
 
 ---
 
 ## Owner decisions — see ARCHITECTURE.md §13
 
-- [ ] **D1** Approve/edit the new non-negotiable #2 wording ("Confidential by design", ADR-02) **(Amriit)** — clarification sent 2026-10-03
-- [x] **D2** Free — 2026-10-03. Vercel Hobby OK; shipped models stay licence-clean
+- [x] **D1** "Confidential by design" approved as drafted — 2026-10-03
+- [x] **D2** Free / non-commercial for now — 2026-10-03. Vercel Hobby OK; NC data for evaluation only; shipped models stay licence-clean
 - [x] **D3** Singapore — 2026-10-03
 - [x] **D4** `Researchly_Updated_14082026` is the baseline — 2026-10-03
 - [x] **D5** macOS app & Windows scaffold → maintenance-only — 2026-10-03
@@ -40,9 +40,9 @@ done and what's next*. Both the owner and Claude edit it.
 - [x] Codebase audit, Laya identification, hosting research (3 sub-agents) — 2026-10-03
 - [x] Write `ARCHITECTURE.md` draft v1 — 2026-10-03
 - [x] Create `PLAN.md` — 2026-10-03
-- [~] Owner reviews ARCHITECTURE.md and answers D1–D8 **(Amriit)** — D2–D8 answered 2026-10-03
+- [x] Owner reviews ARCHITECTURE.md and answers D1–D8 — 2026-10-03
 - [x] Revise ARCHITECTURE.md to v1.1 with D2–D8 — 2026-10-03
-- [ ] Amend CLAUDE.md non-negotiable #2 once D1 is signed off
+- [x] Amend CLAUDE.md non-negotiable #2 — 2026-10-03, ARCHITECTURE.md v1.2
 
 ## S0 — Foundation (one repo, green CI; no user-visible change)
 

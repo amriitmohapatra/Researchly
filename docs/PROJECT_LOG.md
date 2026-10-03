@@ -517,3 +517,17 @@ CLAUDE.md now marks #2 as under revision.
 
 **Files.** `ARCHITECTURE.md` (new), `PLAN.md` (new), `CLAUDE.md` (pointer +
 #2 revision note), this entry.
+
+**Addendum (same day): decisions recorded.** The user answered D1–D8:
+- **D1:** "Confidential by design" approved as drafted; non-negotiable #2 in
+  CLAUDE.md is amended.
+- **D2:** free and non-commercial *for now*.
+- **D3:** Singapore.
+- **D4:** the `Researchly_Updated_14082026` tree is the baseline.
+- **D5:** the desktop apps go to maintenance-only.
+- **D6:** the theses are for private evaluation only.
+- **D7:** `Notes_On_Writing/` is the knowledge source; papers and theses
+  come later, through the dataset registry.
+- **D8:** Laya is adopted only via the bake-off.
+
+ARCHITECTURE.md is now v1.2. Slice S0 is unblocked.

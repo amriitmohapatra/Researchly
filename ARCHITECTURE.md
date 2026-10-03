@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Draft v1.1 — owner decisions D2–D8 recorded 2026-10-03; D1 (privacy wording) pending. Nothing built yet |
+| **Status** | v1.2 — all owner decisions D1–D8 recorded 2026-10-03. Nothing built yet |
 | **Date** | 2026-10-03 |
 | **Owner** | Amriit (product owner, supervising) |
 | **Author** | Claude, acting as lead engineer, with staff-engineer, ML-research and platform sub-agent reports |
@@ -446,7 +446,7 @@ Each record follows the ch. 23.1 format: context, options, decision, and consequ
   - Option (c) would be ideal for privacy, but spaCy has no supported Pyodide build. LanguageTool can't run in a browser. The port is a large project with an uncertain outcome, so it doesn't belong in v1.
   - (d) ships now and keeps the strongest promise *available*. The CLI, LSP and Word add-in can all run against a local engine.
   - `packages/core` is kept **pure-Python where possible**, with spaCy behind an interface. That leaves room for a browser "Private mode" build later (Pyodide core plus an ONNX parser via onnxruntime-web).
-- **Proposed replacement for non-negotiable #2** ⟨OWNER — confirm wording⟩:
+- **Replacement for non-negotiable #2** (approved by the owner 2026-10-03; now in CLAUDE.md):
   > **Confidential by design.** Document text is processed in memory in a
   > pinned region and is never stored, logged, shared, or used for training
   > unless the user explicitly opts in, per feature. No cloud LLM ever sees
@@ -621,8 +621,8 @@ Each slice ends with something the owner can **use**, not just a component (ch. 
 
 | # | Question | Decision (2026-10-03) |
 |---|---|---|
-| D1 | Wording of the amended non-negotiable #2 (ADR-02) | **Pending.** The owner asked for clarification |
-| D2 | Free or paid? | **Free.** Vercel Hobby is allowed (no document text reaches Vercel). NC-licensed data stays out of shipped models so the decision can be revisited |
+| D1 | Wording of the amended non-negotiable #2 (ADR-02) | **Approved as drafted** ("Confidential by design"). CLAUDE.md amended |
+| D2 | Free or paid? | **Free and non-commercial *for now*.** Vercel Hobby is allowed (no document text reaches Vercel). Because "for now" leaves the door open, NC-licensed data is used for evaluation only, and shipped models stay licence-clean so going paid later needs no retraining |
 | D3 | Hosting region | **Singapore**: Vercel `sin1`, Cloud Run `asia-southeast1`, Supabase Singapore |
 | D4 | Baseline tree (ADR-01) | **`Researchly_Updated_14082026`**. Experiment features are ported behind flags |
 | D5 | macOS app and Windows scaffold | **Maintenance-only.** CLI and LSP remain as local mode |

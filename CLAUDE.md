@@ -40,14 +40,17 @@ prototype and will change in PLAN.md slice S0.
    - Rationale: Grammarly's pre-ChatGPT quality came from learned GEC, not
      regex. The compliance promise is *local-first*, which a bundled
      on-device tagger does not violate.
-2. **Local-first, always.** No document text ever leaves the machine.
-   This is a compliance matter (publisher AI policies), not a preference.
-   *(Under revision 2026-10-03: the user is lifting local-only so Researchly
-   can be hosted. Proposed replacement — "Confidential by design": transient
-   in-memory processing, never stored/logged/trained on without opt-in, local
-   mode retained — is ADR-02 in `ARCHITECTURE.md`, awaiting the user's
-   wording sign-off (PLAN.md D1). Until signed off, do not build anything
-   that persists or logs document text.)*
+2. **Confidential by design.** Document text is processed in memory in a
+   pinned region and is never stored, logged, shared, or used for training
+   unless the user explicitly opts in, per feature. No cloud LLM ever sees
+   it. A local mode that sends nothing anywhere remains available.
+   *(Amended 2026-10-03. The original rule read "Local-first, always. No
+   document text ever leaves the machine." The user lifted local-only so
+   Researchly can be hosted, and approved this wording — ADR-02 in
+   `ARCHITECTURE.md`.)* Still a compliance matter (publisher AI policies),
+   not a preference: anything that would persist, log or train on text needs
+   an explicit per-feature opt-in, and the canary test (ARCHITECTURE.md Q6)
+   must stay green.
 3. **The four-type suggestion taxonomy** — Correction / Improvement /
    Convention / Preference — is the product's core idea. Conventions are
    never presented as errors; Preferences are hidden by default.
