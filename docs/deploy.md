@@ -12,8 +12,21 @@ The steps produce:
 | Engine: analysis plus the LanguageTool sidecar | Google Cloud Run, Singapore | ~$0 (scales to zero, free tier); ~$10–15/month if kept warm in term time |
 | Website | Vercel Hobby, Singapore | $0. Allowed because Researchly is free and non-commercial (D2) |
 
-Before you start, **merge PR #1** so that `main` holds the S0 and S1 work.
-Vercel deploys production from `main`.
+## 0. Merge the pull request first (2 minutes)
+
+Vercel and the deploy workflow both read `main`, and until the pull request
+is merged, `main` still has the old prototype layout: no `apps/web`, no
+`services/engine`, no bootstrap script.
+
+1. Open the pull request (amriitmohapatra/Researchly#1) and check that every
+   CI check is green.
+2. Click **Merge pull request** and choose **Create a merge commit**, which
+   keeps each commit's evidence in history. Then **Confirm merge**.
+
+> **Don't see `apps/web` in Vercel's Root Directory picker?** The pull
+> request isn't merged yet: the picker lists folders on `main`. Merge it,
+> then cancel the import and start **Add New… → Project** again so Vercel
+> re-reads the repository.
 
 ---
 
