@@ -18,6 +18,7 @@ from enum import Enum
 from typing import Callable, Iterable, Optional
 
 from .document import Document
+from .sources import cite
 
 
 class Category(str, Enum):
@@ -132,7 +133,7 @@ def rule(id: str, name: str, category: Category, short: str, why: str,
             sections_only=frozenset(sections_only) if sections_only else None,
             sections_excluded=(frozenset(sections_excluded)
                                if sections_excluded else None),
-            source=source, aggregate=aggregate,
+            source=cite(source), aggregate=aggregate,
             tier=tier, fix_safety=fix_safety,
         )
         return func

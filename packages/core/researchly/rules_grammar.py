@@ -102,6 +102,12 @@ SKIP_TYPO_RULES = {
     "EN_UNPAIRED_BRACKETS", "DASH_RULE", "GERMAN_QUOTES",
 }
 
+# LanguageTool rules that duplicate one of Researchly's own rules on the same
+# span. The S1 end-to-end run showed two cards for one "the the". Researchly's
+# rule wins because it carries a named source and a bulk-safe fix.
+#   ENGLISH_WORD_REPEAT_RULE  ->  W207 doubled-word
+SKIP_COVERED_RULES = {"ENGLISH_WORD_REPEAT_RULE"}
+
 
 def get_tool(locale: str = "en-US"):
     """Lazy local LanguageTool; returns None if unavailable.
@@ -304,8 +310,9 @@ def lt001_grammar(doc, document: Document):
                    or getattr(m, "errorLength", 0) or 0)
         if issue not in KEEP_ISSUE_TYPES:
             continue
-        if rule_id.startswith(SKIP_RULE_PREFIXES) or rule_id in \
-                SKIP_TYPO_RULES:
+        if (rule_id.startswith(SKIP_RULE_PREFIXES)
+                or rule_id in SKIP_TYPO_RULES
+                or rule_id in SKIP_COVERED_RULES):
             continue
         start = m.offset
         end = m.offset + err_len

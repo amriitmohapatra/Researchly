@@ -89,7 +89,7 @@ python ../../apps/desktop-mac/researchly_app.py   # macOS app (maintenance-only)
 - Convention-type rules that can fire often should set `aggregate=True`.
 - Every bug fix ships with a regression test; run the full suite before
   handing anything back. Precision changes also get a corpus run:
-  `ml/dogfood/run_dogfood.py` then `noise_gate.py` — S0 baseline 14.84/1000w
+  `ml/dogfood/run_dogfood.py` then `noise_gate.py` — S1 baseline 14.75/1000w
   all tiers (target ≤ 11). CI blocks regressions and silent tiers.
 - Append a dated entry to `docs/PROJECT_LOG.md` after substantive work
   (standing user requirement).

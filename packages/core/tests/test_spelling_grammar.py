@@ -137,3 +137,15 @@ def test_lt_does_not_duplicate_spelling():
     # unknown-word spelling stays S001's job (MORFOLOGIK filtered out)
     hits = flags("The workk was hard.", rule="LT001", disabled=frozenset())
     assert all("workk" not in s.text for s in hits)
+
+
+@lt_available
+def test_doubled_word_is_flagged_once_not_twice():
+    """The S1 end-to-end run showed two cards for one "the the": LanguageTool's
+    ENGLISH_WORD_REPEAT_RULE and Researchly's own W207. Duplicate flags are the
+    noise CLAUDE.md #5 exists to prevent; W207 keeps it (it is sourced and its
+    fix is bulk-safe)."""
+    doc = Document.from_text("We studied the the dynamics of spread.", "plain")
+    hits = [s for s in check(doc, NLP, disabled=set(), show_preferences=False)
+            if "the the" in s.text]
+    assert [s.rule_id for s in hits] == ["W207"]

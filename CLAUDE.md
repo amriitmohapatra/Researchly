@@ -144,7 +144,10 @@ Researchly/
   is how the grammar tier stayed dead for a whole release.
 - **Add a rule**: `@rule(...)` decorator in the right `rules_*.py`
   (word lists → `lexicons.py`), fire + don't-fire tests, entry in
-  `docs/rule-inventory.md` with its source. Declare `tier=` and
+  `docs/rule-inventory.md` with its source. The rule's `source=` is a short
+  code (`"§4"`, `"Endo"`) that `researchly/sources.py` expands into a full
+  citation at registration; an unknown code fails at import, so add the
+  citation there in the same change. Users never see a bare code. Declare `tier=` and
   `fix_safety=` — `fix_safety="safe"` means a bulk-apply button may touch it
   unread, and is pinned to `transform.POLISH_RULES` by a test. Registration
   happens via the imports in `engine.check()`; a new *module* must be added
@@ -180,7 +183,7 @@ at the top of that file.
 Things a future agent will otherwise get wrong:
 
 - **The noise floor is above target.** With every tier on, accepted theses
-  get **14.84 flags/1000w** (S0 baseline, LanguageTool 6.8): ex-S001 it is
+  get **14.75 flags/1000w** (S1 baseline, LanguageTool 6.8): ex-S001 it is
   12.5, ex-LT001 12.8. Q3's target is ≤ 11. The gate
   (`ml/dogfood/noise_gate.py`) blocks regressions *and* a busy rule going
   silent (a dead tier); it does not yet enforce the target.
