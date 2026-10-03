@@ -349,6 +349,43 @@ test.describe("uploads", () => {
     expect(calls[0]!.path).toBe("/v1/analyze-file");
   });
 
+  test("Try again after a failed first file check re-sends the file, not the pasted text", async ({ page }) => {
+    // Regression: retry used to fall back to the editor's text when no file result existed yet.
+    await seedSession(page);
+    await mockSupabase(page);
+    const calls = await mockEngineAuth(page, (_c, route, n) => (n === 1 ? reply(route, 503, authUnavailable) : reply(route, 200, mdResponse)));
+    await page.goto("/");
+    await expect(page.getByTestId("account-button")).toBeVisible();
+    await page.getByLabel("Text to check").fill("Pasted draft.");
+    await page.getByTestId("file-input").setInputFiles({ name: "chapter-5.md", mimeType: "text/markdown", buffer: Buffer.from(MD_TEXT) });
+    await expect(page.getByTestId("check-error")).toHaveAttribute("data-kind", "auth_unavailable");
+    await page.getByTestId("retry").click();
+    await expect(page.getByRole("heading", { name: "1 suggestion" })).toBeVisible();
+    expect(calls.map((c) => c.path)).toEqual(["/v1/analyze-file", "/v1/analyze-file"]);
+  });
+
+  test("cancelling a new version returns to the editor instead of an empty file panel", async ({ page }) => {
+    // Regression: a stale earlier result made the cancel path keep the panel open with nothing in it.
+    await seedSession(page);
+    await mockSupabase(page);
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    await mockEngineAuth(page, async (_c, route, n) => {
+      if (n === 2) await gate;
+      await reply(route, 200, mdResponse);
+    });
+    await page.goto("/");
+    await expect(page.getByTestId("account-button")).toBeVisible();
+    await page.getByTestId("file-input").setInputFiles({ name: "chapter-5.md", mimeType: "text/markdown", buffer: Buffer.from(MD_TEXT) });
+    await expect(page.getByRole("heading", { name: "1 suggestion" })).toBeVisible();
+    await page.getByTestId("file-input").setInputFiles({ name: "chapter-6.md", mimeType: "text/markdown", buffer: Buffer.from(MD_TEXT) });
+    await expect(page.getByTestId("file-name")).toHaveText("chapter-6.md");
+    await page.getByRole("button", { name: "Cancel" }).click();
+    await expect(page.getByTestId("file-panel")).toHaveCount(0);
+    await expect(page.getByLabel("Text to check")).toBeVisible();
+    release();
+  });
+
   test("an unsupported type is refused in the browser, with no request", async ({ page }) => {
     await seedSession(page);
     await mockSupabase(page);

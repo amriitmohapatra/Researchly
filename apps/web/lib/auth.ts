@@ -159,8 +159,12 @@ export async function sendMagicLink(email: string): Promise<SignInResult> {
 export async function signOut(): Promise<void> {
   const pending = getSupabase();
   if (!pending) return;
-  const sb = await pending;
-  await sb.auth.signOut({ scope: "local" });
+  try {
+    const sb = await pending;
+    await sb.auth.signOut({ scope: "local" });
+  } catch {
+    // Offline: supabase-js has still forgotten the session in this browser.
+  }
   set({ auth: { status: "signed_out" } });
 }
 

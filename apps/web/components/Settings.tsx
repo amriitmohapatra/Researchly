@@ -510,7 +510,7 @@ function DeleteData({ busy, onDelete }: { busy: boolean; onDelete: () => Promise
         }}
         data-testid="delete-open"
       >
-        Delete my settings and dictionary…
+        Delete my data…
       </button>
       <dialog
         ref={ref}
@@ -551,7 +551,7 @@ function DeleteData({ busy, onDelete }: { busy: boolean; onDelete: () => Promise
                   Deleting…
                 </>
               ) : (
-                "Delete settings and dictionary"
+                "Delete them"
               )}
             </button>
           </div>

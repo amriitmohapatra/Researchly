@@ -51,10 +51,16 @@ export function Results({ data, submittedText, showPreferences, stale, busy, onR
   const placeable = useMemo(() => new Set(resolved.map((r) => r.id)), [resolved]);
   const hidden = hiddenPreferenceCount(data, showPreferences);
   // A multi-file upload (an Overleaf project): each card says which file and line it is in.
-  const locate = useMemo(
-    () => (source && isMultiFile(source.segments) ? buildLocator(source.text, source.segments) : null),
-    [source],
-  );
+  const locations = useMemo(() => {
+    if (!source || !isMultiFile(source.segments)) return null;
+    const locate = buildLocator(source.text, source.segments);
+    const out = new Map<string, string>();
+    for (const s of data.suggestions) {
+      const at = locate(s.span.start);
+      if (at) out.set(s.id, `${at.path}, line ${lineFmt.format(at.line)}`);
+    }
+    return out;
+  }, [source, data.suggestions]);
 
   useEffect(() => {
     if (!focusReq) return;
@@ -192,21 +198,18 @@ export function Results({ data, submittedText, showPreferences, stale, busy, onR
                 <p className="muted">No {CATEGORIES[effectiveFilter as keyof typeof CATEGORIES]?.plural.toLowerCase()} in this check.</p>
               ) : (
                 <ol className="cards" aria-label="Suggestions, in document order">
-                  {visible.map((s) => {
-                    const at = locate?.(s.span.start);
-                    return (
-                      <li key={s.id}>
-                        <SuggestionCard
-                          suggestion={s}
-                          active={s.id === activeId}
-                          placeable={placeable.has(s.id)}
-                          onShowInText={onShowInText}
-                          location={at ? `${at.path}, line ${lineFmt.format(at.line)}` : null}
-                          actions={actions}
-                        />
-                      </li>
-                    );
-                  })}
+                  {visible.map((s) => (
+                    <li key={s.id}>
+                      <SuggestionCard
+                        suggestion={s}
+                        active={s.id === activeId}
+                        placeable={placeable.has(s.id)}
+                        onShowInText={onShowInText}
+                        location={locations?.get(s.id) ?? null}
+                        actions={actions}
+                      />
+                    </li>
+                  ))}
                 </ol>
               )}
             </div>

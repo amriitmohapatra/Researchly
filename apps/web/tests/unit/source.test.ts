@@ -31,6 +31,23 @@ describe("segment → file lookup", () => {
     expect(locate(text.indexOf("\\end{document}"))).toEqual({ path: "main.tex", line: 6 });
   });
 
+  it("a file included twice is counted from line 1 each time", () => {
+    const ABBR = "\\newcommand{\\Rt}{R_t}\nSecond line.\n";
+    const A = "Chapter one.\n";
+    const B = "Chapter two.\n";
+    const t = A + ABBR + B + ABBR;
+    const segs = [
+      seg("main.tex", 0, A.length, 0),
+      seg("abbrev.tex", A.length, A.length + ABBR.length, 0),
+      seg("main.tex", A.length + ABBR.length, A.length + ABBR.length + B.length, A.length + 14),
+      seg("abbrev.tex", A.length + ABBR.length + B.length, t.length, 0),
+    ];
+    const loc = buildLocator(t, segs);
+    expect(loc(t.indexOf("Second line."))).toEqual({ path: "abbrev.tex", line: 2 });
+    expect(loc(t.lastIndexOf("Second line."))).toEqual({ path: "abbrev.tex", line: 2 });
+    expect(loc(t.indexOf("Chapter two."))).toEqual({ path: "main.tex", line: 2 });
+  });
+
   it("uses code points, like the engine (emoji and 𝑅 before the span)", () => {
     const a = "Alpha 🦟 line\nsecond 𝑅ₜ line\n";
     const b = "Beta file\nhere is 𝑅 the target\n";

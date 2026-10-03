@@ -43,10 +43,11 @@ async function client(): Promise<SupabaseClient | null> {
   return pending ? pending : null;
 }
 
+/** Never rejects: a failed load of supabase-js or a thrown fetch becomes a message. */
 async function run<T>(fn: (sb: SupabaseClient) => Promise<AccountResult<T>>): Promise<AccountResult<T>> {
-  const sb = await client();
-  if (!sb) return { ok: false, message: "Accounts are not available on this site." };
   try {
+    const sb = await client();
+    if (!sb) return { ok: false, message: "Accounts are not available on this site." };
     return await fn(sb);
   } catch {
     return { ok: false, message: OFFLINE };

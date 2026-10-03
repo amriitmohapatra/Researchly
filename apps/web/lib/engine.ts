@@ -139,7 +139,7 @@ async function call<T>(
   init: RequestInit,
   signal: AbortSignal | undefined,
   validate: (body: unknown) => body is T,
-  context: { upload?: boolean; engineUrl: string },
+  context: { upload?: boolean; engineUrl: string; versioned?: boolean },
 ): Promise<CheckResult<T>> {
   const timeout = new AbortController();
   const timer = setTimeout(() => timeout.abort(), ANALYZE_TIMEOUT_MS);
@@ -173,7 +173,8 @@ async function call<T>(
     return { ok: false, error: badPayloadError("The engine's answer was not in the expected shape.") };
   }
   const version = (body as { schema_version?: unknown }).schema_version;
-  if (version !== undefined && version !== "1") {
+  // Analysis responses must say which contract they speak; /v1/rules has no version field.
+  if (context.versioned !== false && version !== "1") {
     return {
       ok: false,
       error: badPayloadError(`The engine speaks API version ${String(version)}; this page expects version 1.`),
@@ -276,6 +277,7 @@ function looksLikeRules(body: unknown): body is { rules: RuleInfo[] } {
 export async function listRules(engineUrl: string = ENGINE_URL, signal?: AbortSignal): Promise<CheckResult<RuleInfo[]>> {
   const r = await call(`${engineUrl}/v1/rules`, { method: "GET", headers: { accept: "application/json" } }, signal, looksLikeRules, {
     engineUrl,
+    versioned: false,
   });
   return r.ok ? { ok: true, data: r.data.rules } : r;
 }

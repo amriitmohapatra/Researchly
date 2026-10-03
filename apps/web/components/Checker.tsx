@@ -24,7 +24,7 @@ import {
 import { addWord, loadSettings, muteRule } from "@/lib/account";
 import { getEngineAuth, openSignIn, useAuth } from "@/lib/auth";
 import { analyze, analyzeFile } from "@/lib/engine";
-import { UPLOAD_TYPES_SENTENCE, type CheckError } from "@/lib/errors";
+import { clientError, UPLOAD_TYPES_SENTENCE, type CheckError } from "@/lib/errors";
 import { loadFormat, saveFormat, subscribeFormat } from "@/lib/prefs";
 import { codePointLength } from "@/lib/segments";
 import { ACCEPT_ATTR, checkFile } from "@/lib/source";
@@ -96,6 +96,8 @@ export function Checker() {
   const abortRef = useRef<AbortController | null>(null);
   const loadingRef = useRef(false);
   const prefsTouched = useRef(false);
+  /** The file whose results are on screen, read synchronously (state may lag inside a running check). */
+  const shownFileRef = useRef<File | null>(null);
   const dragDepth = useRef(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -182,19 +184,26 @@ export function Checker() {
         } else {
           const r = await analyzeFile({ file: target.file, showPreferences: prefs, signal: ctrl.signal }, undefined, auth);
           if (r.ok) {
+            shownFileRef.current = target.file;
             setFileChecked((prev) => ({ seq: (prev?.seq ?? 0) + 1, data: r.data, file: target.file }));
             setPhase("done");
             setAnnouncement(summarySentence(shownSuggestions(r.data, prefs)));
           } else fail(r.error);
         }
       } catch {
+        if (!ctrl.signal.aborted) {
+          // Not a cancel: something failed before the request went out.
+          fail(clientError());
+          return;
+        }
         // Cancelled by the user. Nothing to report beyond that.
-        if (target.kind === "file" && !fileChecked) {
+        if (target.kind === "file" && shownFileRef.current !== target.file) {
+          // A new file was cancelled before any result: back to the editor.
           setMode("paste");
           setPendingFile(null);
           setPhase(checked ? "done" : "idle");
         } else {
-          setPhase((target.kind === "file" ? fileChecked : checked) ? "done" : "idle");
+          setPhase((target.kind === "file" ? shownFileRef.current : checked) ? "done" : "idle");
         }
         setAnnouncement(target.kind === "file" ? "Check cancelled." : "Check cancelled. Your text is unchanged.");
       } finally {
@@ -202,16 +211,18 @@ export function Checker() {
         abortRef.current = null;
       }
     },
-    [text, format, showPreferences, checked, fileChecked],
+    [text, format, showPreferences, checked],
   );
 
   /** Check again whatever is on screen: the file, or the editor's text. */
   const recheck = useCallback(
     (opts?: { showPreferences?: boolean }) => {
-      if (mode === "file" && fileChecked) return runCheck({ kind: "file", file: fileChecked.file }, opts);
+      // In file mode, the file on screen, or the one whose first check failed.
+      const file = fileChecked?.file ?? pendingFile;
+      if (mode === "file") return file ? runCheck({ kind: "file", file }, opts) : undefined;
       return runCheck({ kind: "paste" }, opts);
     },
-    [mode, fileChecked, runCheck],
+    [mode, fileChecked, pendingFile, runCheck],
   );
 
   const onSubmit = (e: FormEvent) => {
@@ -254,6 +265,7 @@ export function Checker() {
     }
     setMode("file");
     setFileChecked(null);
+    shownFileRef.current = null;
     setPendingFile(file);
     setAccountNote(null);
     void runCheck({ kind: "file", file });
@@ -277,6 +289,7 @@ export function Checker() {
     abortRef.current?.abort();
     setMode("paste");
     setFileChecked(null);
+    shownFileRef.current = null;
     setPendingFile(null);
     setFileProblem(null);
     setError(null);

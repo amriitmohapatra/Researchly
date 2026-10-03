@@ -246,6 +246,16 @@ export function networkError(timedOut: boolean, engineUrl = ""): CheckError {
       };
 }
 
+/** Something in the page failed before the request was sent (e.g. the sign-in library would not load). */
+export function clientError(): CheckError {
+  return {
+    kind: "unreachable",
+    title: "The check could not be sent",
+    message: "Something in this page failed before anything was sent; nothing was stored. Reload the page and try again. Your text is still here.",
+    retryable: true,
+  };
+}
+
 export function badPayloadError(detail: string): CheckError {
   return {
     kind: "bad_response",
