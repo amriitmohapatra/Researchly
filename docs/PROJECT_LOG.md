@@ -1026,3 +1026,126 @@ takes 74 s and 2.8 GiB.
 **Waiting on the owner:** `docs/deploy.md` steps 1–6 (GCP project, bootstrap,
 repository variables, Vercel, first deploy). After that, the latency
 measurements on the real deployment and the S1 exit check.
+
+## 2026-10-03 (later) — P25: S1 live — deployed, measured, and what the live check found
+
+**What:** the owner deployed the engine (Cloud Run, Singapore, with the
+LanguageTool sidecar) and the web app (Vercel, `researchly-chi.vercel.app`)
+by following `docs/deploy.md`. Claude then checked the live site end to end
+and measured it.
+
+**Evidence:**
+- Live headless-Chromium run against the production alias: HTTP 200,
+  suggestions rendered, no console or CSP errors. The owner confirmed it in
+  their own browser.
+- Parity: the live engine and the local engine returned the same 63
+  suggestions on a synthetic 10,316-word chapter.
+- Latency (`bench.py --url`, warm, measured from Claude's cloud sandbox):
+
+| Request | Engine time (p50) | Wall time from sandbox (p95) | Target |
+|---|---|---|---|
+| 311-word paragraph | 484 ms | 2.02 s | 800 ms |
+| 10,228-word chapter | 6.89 s | 9.35 s | 6 s |
+
+  The paragraph meets Q1 on engine time; wall time includes about 1.4 s of
+  network from the sandbox and needs re-measuring from Singapore. The
+  chapter misses Q2 even on engine time. The same chapter took 4.68 s in the
+  local container, so the Cloud Run instance is slower (probably CPU; not
+  yet profiled). Running spaCy and LanguageTool in
+  parallel is now an S1 task, not an Inbox idea.
+
+**Deployment snags the owner hit (now in `docs/deploy.md`):**
+- `apps/web` was missing from Vercel's Root Directory picker until the PR
+  was merged; setting it afterwards under Settings worked.
+- A `NEXT_PUBLIC_` variable saved as Secret can't be changed to Config;
+  delete and re-add it.
+- A **Preview** redeploy doesn't move the stable address, and its own
+  address is refused by the engine's origin allow-list. Redeploy (or
+  promote) to **Production**.
+- The first build used the Cloud Run console's older-style engine address;
+  the page couldn't reach the engine until it used the deploy Summary's URL.
+
+**Fixed from the live check (4187ded):**
+- **The reading key taught false categories.** It showed "seven day window"
+  as a Convention (no rule flags it) and "utilize" as a Preference (W201
+  calls it an Improvement). The specimens now live in
+  `packages/contract/reading-key.json`, exported to the web app as
+  `READING_KEY`, and `packages/core/tests/test_reading_key.py` runs each one
+  through `api.analyze` and checks the exact span gets the stated category.
+  New specimens: "proven" (C302) and "very" (W204). The test also caught
+  that "In order to fit the model" on its own reads as a heading and is
+  skipped, so the specimen became a full sentence.
+- The "Could not reach the checking engine" message now names the engine
+  host it tried, which would have diagnosed the stale-URL build at once.
+- `bench.py --n-chapter 0` crashed on NaN; a 0 count now skips that size.
+
+**Lessons:**
+- **Anything the UI teaches about the engine needs a test against the
+  engine.** The key's examples were written from memory of the rules, and
+  two of four were wrong. Shared data plus an engine-side test makes the
+  drift a red build.
+- **Error messages should carry the one fact that separates causes.** A
+  wrong build-time address and a dropped connection looked identical.
+
+**Open:** Q2 latency on Cloud Run; the owner's real-chapter exit check
+(paste a chapter on the live site, compare with the CLI).
+
+## 2026-10-03 (later) — P26: S2 accounts, files and settings sync (code complete; Supabase waits on the owner)
+
+**What:** the owner chose to defer the Q2 speed-up and start S2. The lead
+wrote `docs/s2-design.md`, fixed the API contract first, and ran three
+engineers in parallel in isolated worktrees (file adapters, database,
+web), building the engine's sign-in and upload route alongside them.
+Every branch was reviewed, re-tested and merged by the lead.
+
+**Decisions (s2-design.md):**
+- Two tables only (`user_settings`, `dictionary_words`). `profiles`,
+  usage and feedback tables wait for a feature that reads them.
+- The engine verifies Supabase tokens itself (JWKS; RS256/ES256 pinned to
+  the key) and reads settings through PostgREST **with the caller's own
+  token**. It holds no secret key, and refuses to start if given one.
+- Uploads are raw bytes on `/v1/analyze-file`: multipart would spool files
+  over 1 MB to disk. The filename travels in a header (URLs get logged) and
+  is never logged.
+- With no Supabase configured, engine and site behave exactly as in S1.
+
+**Evidence:**
+- Core 475 tests (adapters: LaTeX 106, zip 38, docx 37, with seeded random
+  offset round trips and hostile inputs: zip bombs, traversal, symlinks,
+  XXE, billion laughs).
+- Engine service 145 (tokens and settings 39, uploads 20, three new canary
+  scenarios: filename, uploaded text, adapter warnings, token and user id
+  never reach a log).
+- Database 90 on Postgres 16 with a Supabase shim; all 19 deliberate
+  weakenings of the migration caught (re-run by the lead), and a race test
+  that sees the lost-update bug it guards against.
+- Web 152 unit + 59 e2e in two builds (with and without accounts); axe
+  clean in light and dark; screenshots at 375 and 1280 px.
+- The web's per-file line numbers match the real `.zip` adapter on 12,910
+  offsets of 60 random projects.
+
+**Found and fixed during integration:**
+- A filename with an invalid `%`-escape crashed the upload route (500);
+  now a 422, with a test.
+- The deploy workflow first accepted legacy `eyJ…` keys, which would also
+  accept the service-role key (same shape) and bypass RLS. Now only
+  `sb_publishable_…` keys pass, in the workflow and in the engine.
+- Muting from two tabs at once lost a change (read-modify-write of the
+  whole list). `mute_rule` / `unmute_rule` change one rule under the row
+  lock.
+- LaTeX parse fallback on pasted text was silent; `warnings` is now in
+  every response.
+
+**Lessons:**
+- **Contract first made parallel work possible.** Three engineers built
+  against the same committed shapes; the only integration change was one
+  field added after the fact (`warnings`), announced to the web engineer
+  before it finished.
+- **Ask what a test can see.** The database suite was mutation-tested and
+  the race test was run against the old behaviour to prove it fails. A
+  green test that cannot fail is decoration.
+- **A key's shape is not its permission.** Validation by prefix
+  (`sb_publishable_`) is what keeps the RLS-bypassing key out.
+
+**Waiting on the owner:** `docs/deploy.md` step 8 (Supabase project,
+migration, URL settings, two variables), then the S2 exit check.

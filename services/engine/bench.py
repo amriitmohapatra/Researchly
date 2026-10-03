@@ -141,6 +141,8 @@ def inprocess_runner():
 
 
 def measure(run, text, n, warmup):
+    if n == 0:                       # --n-chapter 0: skip this size entirely
+        return {"n": 0}
     for _ in range(warmup):
         run(text)
     walls, servers, sugg, gram = [], [], 0, True
@@ -156,14 +158,23 @@ def measure(run, text, n, warmup):
             "suggestions": sugg, "grammar_ok": gram}
 
 
+def _count(value: str) -> int:
+    n = int(value)
+    if n < 0:
+        raise argparse.ArgumentTypeError("must be 0 or more")
+    return n
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--url")
     g.add_argument("--in-process", action="store_true")
-    ap.add_argument("--n-paragraph", type=int, default=40)
-    ap.add_argument("--n-chapter", type=int, default=10)
-    ap.add_argument("--warmup", type=int, default=3)
+    ap.add_argument("--n-paragraph", type=_count, default=40,
+                    help="timed paragraph runs; 0 skips the paragraph")
+    ap.add_argument("--n-chapter", type=_count, default=10,
+                    help="timed chapter runs; 0 skips the chapter")
+    ap.add_argument("--warmup", type=_count, default=3)
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args(argv)
 
@@ -184,14 +195,21 @@ def main(argv=None) -> int:
     print(f"target: {res['target']}  ({res['machine']})")
     for name, q, limit in (("paragraph", "Q1", 800), ("chapter", "Q2", 6000)):
         r = res[name]
+        if not r["n"]:
+            print(f"{q} {name:9s} skipped (n=0)")
+            continue
         verdict = "within" if r["p95_ms"] <= limit else "OVER"
         print(f"{q} {name:9s} {r['words']:>6} words  n={r['n']:<3} "
               f"p50 {r['p50_ms']:>6} ms  p95 {r['p95_ms']:>6} ms  "
               f"max {r['max_ms']:>6} ms  server p50 {r['server_p50_ms']} ms  "
               f"[{verdict} {limit} ms]  suggestions={r['suggestions']} "
               f"grammar_ok={r['grammar_ok']}")
-    print("caveat: measured on this machine, not on a Cloud Run instance; "
-          "staging numbers are the ones that tick Q1/Q2.")
+    if not a.url:
+        print("caveat: measured on this machine, not on a Cloud Run instance; "
+              "staging numbers are the ones that tick Q1/Q2.")
+    else:
+        print("note: p50/p95 include the network from here; server p50 is "
+              "the engine's own time.")
     return 0
 
 

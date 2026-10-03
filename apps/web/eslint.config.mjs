@@ -26,5 +26,5 @@ export default defineConfig([
       ],
     },
   },
-  globalIgnores([".next/**", "node_modules/**", "test-results/**", "playwright-report/**", "next-env.d.ts"]),
+  globalIgnores([".next/**", ".next-*/**", "node_modules/**", "test-results/**", "playwright-report/**", "next-env.d.ts"]),
 ]);

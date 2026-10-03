@@ -1,4 +1,4 @@
-import type { Category } from "@researchly/contract";
+import { READING_KEY as SPECIMENS } from "@researchly/contract";
 import { CATEGORIES, CATEGORY_ORDER } from "@/lib/categories";
 import { CategoryIcon } from "./CategoryIcon";
 
@@ -6,18 +6,11 @@ import { CategoryIcon } from "./CategoryIcon";
  * "How to read the feedback": the four-type taxonomy taught before the first
  * check, with live specimens of each underline style (CLAUDE.md #3).
  * Colour is never the only cue: each row has the label, icon and underline.
+ *
+ * The specimens come from packages/contract/reading-key.json, which the
+ * engine's tests run through api.analyze, so the key cannot teach a category
+ * the engine would not give.
  */
-const SPECIMENS: Record<Category, { before: string; flagged: string; after: string; note: string }> = {
-  correction: { before: "to understand ", flagged: "the the", after: " dynamics", note: "Likely an error. Worth fixing." },
-  improvement: { before: "", flagged: "In order to", after: " fit the model", note: "Correct, but clearer if revised." },
-  convention: {
-    before: "a ",
-    flagged: "seven day window",
-    after: "",
-    note: "A norm of research writing. Never an error; follow it if your journal does.",
-  },
-  preference: { before: "we ", flagged: "utilize", after: " daily counts", note: "A matter of taste. Hidden unless you switch it on." },
-};
 
 export function ReadingKey({ className, onExample }: { className?: string; onExample?: () => void }) {
   return (

@@ -24,6 +24,37 @@ export type HealthResponse = S["HealthResponse"];
 export type RuleInfo = S["RuleInfo"];
 export type RulesResponse = S["RulesResponse"];
 export type ErrorResponse = S["ErrorResponse"];
+export type AnalyzeFileResponse = S["AnalyzeFileResponse"];
+export type SourceInfo = S["SourceInfo"];
+export type SourceFormat = S["SourceFormat"];
+export type Segment = S["Segment"];
+export type StructureItem = S["StructureItem"];
 
 /** Mirrors schemas.MAX_CONTENT_CHARS; checked client-side for usability only. */
 export const MAX_CONTENT_CHARS = 1_000_000;
+
+/**
+ * The engine's default upload cap for /v1/analyze-file (RESEARCHLY_MAX_UPLOAD_BYTES,
+ * 25 MiB; docs/s2-design.md §4). Checked client-side for usability only.
+ */
+export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+
+/** File types /v1/analyze-file reads (docs/s2-design.md §4), lower-case. */
+export const UPLOAD_EXTENSIONS = [".docx", ".tex", ".zip", ".md", ".qmd", ".rmd", ".txt"] as const;
+
+import readingKey from "../reading-key.json";
+
+/** One reading-key specimen: before + flagged + after is a sentence the engine flags. */
+export type Specimen = { before: string; flagged: string; after: string; note: string };
+
+/**
+ * The reading key's specimens, one per category. Shared with the engine's test
+ * suite (packages/core/tests/test_reading_key.py), which runs each through
+ * api.analyze and checks the category, so the key cannot drift from the engine.
+ */
+export const READING_KEY: Record<Category, Specimen> = {
+  correction: readingKey.correction,
+  improvement: readingKey.improvement,
+  convention: readingKey.convention,
+  preference: readingKey.preference,
+};

@@ -23,3 +23,12 @@ symspellpy>=6.9,<7
 # GPL-3.0-only — fine server-side (PLAN.md Inbox note).
 language-tool-python>=3.0,<4
 tomli>=2.0; python_version < "3.11"
+
+# --- accounts (S2) ----------------------------------------------------------
+# Verifies Supabase access tokens against the project's public keys (JWKS).
+# [crypto] pulls in `cryptography` for RS256/ES256. MIT / Apache-2.0+BSD.
+PyJWT[crypto]>=2.10,<3
+
+# --- file adapters (S2, packages/core/researchly/ingest) --------------------
+pylatexenc>=2.10,<3        # LaTeX node walk, keeps positions. MIT.
+defusedxml>=0.7,<1         # .docx XML without XXE / entity bombs. PSF-2.0.

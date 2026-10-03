@@ -324,3 +324,76 @@ def test_broken_log_handler_never_dumps_text(client, capture, monkeypatch):
         root.removeHandler(broken)
     assert r.status_code == 500
     assert_no_canary_anywhere(capture, r)
+
+
+# --- S2: uploads and accounts -------------------------------------------------
+
+def test_upload_canary_in_content_filename_and_options(client, capture):
+    """A filename can be confidential ("trial_X_unblinded.docx"): it is
+    echoed to the caller but must never reach a log."""
+    import json as _json
+    import urllib.parse as _up
+    headers = {"content-type": "application/octet-stream",
+               "x-researchly-filename": _up.quote(f"{CANARY}_chapter.md"),
+               "x-researchly-options": _json.dumps({"show_preferences": True})}
+    r = client.post("/v1/analyze-file", content=DOC.encode(), headers=headers)
+    assert r.status_code == 200, r.text
+    assert r.json()["document"]["filename"] == f"{CANARY}_chapter.md"
+    rec = assert_logged_request(capture, 200)
+    assert rec.upload_bytes == len(DOC.encode()) and rec.format == "markdown"
+    # Error paths with the canary in the filename and the options.
+    bad = [dict(headers, **{"x-researchly-filename": _up.quote(f"{CANARY}.pdf")}),
+           dict(headers, **{"x-researchly-options": _json.dumps({CANARY: 1})}),
+           dict(headers, **{"x-researchly-options": "{" + CANARY})]
+    responses = [client.post("/v1/analyze-file", content=DOC.encode(), headers=h)
+                 for h in bad]
+    assert [x.status_code for x in responses] == [415, 422, 422]
+    # The success body legitimately echoes the filename and text back.
+    assert_no_canary_anywhere(capture, *responses)
+    for k, v in r.headers.items():
+        assert CANARY not in v
+
+
+def test_token_and_user_id_never_logged(make_client, capture):
+    """The bearer token and the user id are identifying: neither is logged,
+    on success or on refusal."""
+    import test_accounts as ta
+    c = make_client(supabase_url=ta.URL, supabase_publishable_key=ta.PUBLISHABLE)
+    fake = ta.FakeSupabase({"show_preferences": True})
+    c.app.state.accounts = ta.accounts.Accounts(
+        ta.URL, ta.PUBLISHABLE, jwks_client=ta.InMemoryJWKS(), fetch=fake)
+    good = ta.token(email=f"{CANARY}@example.org")
+    expired = ta.token(exp=1, iat=0)
+    r1 = c.post("/v1/analyze", json={"content": DOC},
+                headers={"authorization": f"Bearer {good}"})
+    r2 = c.post("/v1/analyze", json={"content": DOC},
+                headers={"authorization": f"Bearer {expired}"})
+    assert (r1.status_code, r2.status_code) == (200, 401)
+    rec = assert_logged_request(capture, 200)
+    assert rec.signed_in is True
+    for secret in (good, expired, ta.USER, CANARY):
+        for x in capture.records():
+            if x.name.split(".")[0] in CLIENT_SIDE:
+                continue
+            for s in _record_strings(x):
+                assert secret not in s, f"{secret[:12]}… in a log record"
+        assert secret not in capture.json_lines()
+        assert secret not in capture.fds()
+        assert secret not in r2.text
+
+
+def test_upload_warnings_never_logged(client, capture):
+    """Adapter warnings can quote document text (an \\input target's name):
+    returned to the caller, never logged."""
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.insert(0, str(_Path(__file__).resolve().parents[3] / "packages/core/tests"))
+    from ingest_fixtures import zip_bytes
+    main = ("\\documentclass{article}\n\\begin{document}\n"
+            f"Text.\n\\input{{{CANARY}}}\n\\end{{document}}\n")
+    r = client.post("/v1/analyze-file", content=zip_bytes({"main.tex": main}),
+                    headers={"content-type": "application/octet-stream",
+                             "x-researchly-filename": "p.zip"})
+    assert r.status_code == 200, r.text
+    assert any(CANARY in w for w in r.json()["document"]["warnings"])
+    assert_no_canary_anywhere(capture)

@@ -1,8 +1,10 @@
-# apps/web — Researchly web surface (PLAN.md S1)
+# apps/web — Researchly web surface (PLAN.md S1, S2)
 
 Paste text at a private URL and get explained, section-aware suggestions.
-Next.js (App Router, TypeScript strict), no UI kit, no analytics, no
-third-party scripts or fonts, no cookies.
+With accounts configured (S2), sign in by email link to check whole files
+(.docx, .tex, Overleaf .zip, .md/.qmd/.Rmd, .txt) and keep muted rules and a
+dictionary across devices. Next.js (App Router, TypeScript strict), no UI
+kit, no analytics, no third-party scripts or fonts, no cookies.
 
 ## Run locally
 
@@ -24,7 +26,7 @@ checking engine" state.
 | `npm run lint` | ESLint (Next + a11y rules, no-innerHTML) **and** `scripts/check-boundary.mjs` |
 | `npm run typecheck` | `tsc --noEmit` (strict, includes the contract package) |
 | `npm test` | Vitest unit tests (`tests/unit`) |
-| `npm run test:e2e` | Playwright against `next build && next start` on :3100, engine mocked |
+| `npm run test:e2e` | Playwright against two production builds, engine and Supabase mocked: project `chromium` (S1 build, no Supabase, :3100) and project `accounts` (with Supabase, :3101, `e2e/accounts*.spec.ts`) |
 | `npm run screenshots` | Design screenshots (`SHOTS_DIR=…` to choose where) |
 
 Playwright is pinned to 1.56.1 to match the pre-installed Chromium; set
@@ -34,7 +36,12 @@ Playwright is pinned to 1.56.1 to match the pre-installed Chromium; set
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `NEXT_PUBLIC_ENGINE_URL` | `http://localhost:8080` | Engine base URL. Inlined at **build** time; also the only non-self origin in the CSP `connect-src`. A malformed value fails the build. |
+| `NEXT_PUBLIC_ENGINE_URL` | `http://localhost:8080` | Engine base URL. Inlined at **build** time; also in the CSP `connect-src`. A malformed value fails the build. |
+| `NEXT_PUBLIC_SUPABASE_URL` | unset | S2 accounts. `https://<ref>.supabase.co` (or `http(s)://localhost:<port>` for a local Supabase). Added to `connect-src` only when both Supabase values are set. Anything else fails the build. |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | unset | `sb_publishable_…`. Public by design (RLS protects the data). A secret key (`sb_secret_…`) fails the build. |
+
+With either Supabase value unset the site is the S1 site: no sign-in UI, no
+upload, no `/settings` (404), and supabase-js is never loaded.
 
 Telemetry is disabled in the npm scripts (`NEXT_TELEMETRY_DISABLED=1`).
 
@@ -58,6 +65,31 @@ the contract compiles as first-party source.
   tier being absent is normal and not shown.
 - **CORS**: the engine must allow this site's origin, and should expose
   `Retry-After` and `X-Request-ID` (`Access-Control-Expose-Headers`).
+
+## Accounts (S2, docs/s2-design.md §5)
+
+- **Browser only.** supabase-js is loaded by `lib/supabase.ts` alone (a
+  dynamic import, `client-only`), with PKCE and `detectSessionInUrl`: the
+  email link's code is exchanged in the browser. No route handler, server
+  action or cookie is involved; `check-boundary.mjs` refuses supabase-js
+  anywhere else and `@supabase/ssr` everywhere.
+- **Engine calls** (`lib/engine.ts`) carry `Authorization: Bearer <access
+  token>` when signed in. On 401 `unauthorized` the session is refreshed once
+  and the call retried once; if it still fails the browser is signed out
+  locally and the page says so (never a silent anonymous retry). 401
+  `sign_in_required` shows a sign-in prompt in place of results; 503
+  `auth_unavailable` is a retryable error.
+- **Uploads** go to `POST {engine}/v1/analyze-file` as the raw file
+  (`application/octet-stream`), name in `X-Researchly-Filename`
+  (`encodeURIComponent`), options in `X-Researchly-Options`. Type and the
+  25 MB cap are checked first, for usability only.
+- **Settings** (`/settings`, `lib/account.ts`) read and write
+  `user_settings` and `dictionary_words` straight from the browser. Inserts
+  rely on the `user_id` default (`auth.uid()`); the only id the client ever
+  sends is its own, as a filter on "delete my settings and dictionary".
+- **Storage**: besides the format preference, the only stored item is
+  supabase-js's session (`sb-<ref>-auth-token`, plus its PKCE verifier while
+  a link is pending). Never document text.
 
 ## Privacy boundary (ADR-02, ARCHITECTURE.md §5.3)
 

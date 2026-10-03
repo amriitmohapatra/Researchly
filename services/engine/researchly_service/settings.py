@@ -14,6 +14,10 @@ read from a file.
 | RESEARCHLY_RATE_LIMIT_PER_MIN    | 30               | per client IP, per instance; 0 disables |
 | RESEARCHLY_TRUSTED_PROXY_HOPS    | 0                | X-Forwarded-For entries appended by trusted proxies (Cloud Run: 1) |
 | RESEARCHLY_WARMUP                | on               | warm spaCy/rules/LanguageTool before serving |
+| RESEARCHLY_SUPABASE_URL          | (unset)          | Supabase project URL; unset = no accounts (S1 behaviour) |
+| RESEARCHLY_SUPABASE_PUBLISHABLE_KEY | (unset)       | the project's publishable (anon) key — public by design |
+| RESEARCHLY_MAX_UPLOAD_BYTES      | 26214400 (25 MiB)| /v1/analyze-file bodies above this get 413 unread |
+| RESEARCHLY_ANON_MAX_WORDS        | 1500             | words an anonymous paste may have, when accounts are on; 0 = no cap |
 | PORT                             | 8080             | listen port (Cloud Run convention) |
 """
 
@@ -63,6 +67,25 @@ def _origins(env: str) -> List[str]:
 DEFAULT_MAX_BODY_BYTES = 8 * 1024 * 1024
 
 
+# ARCHITECTURE.md §6: a .docx with figures is often well over the 8 MiB JSON
+# cap; only its XML is read, and only in memory.
+DEFAULT_MAX_UPLOAD_BYTES = 25 * 1024 * 1024
+
+
+# `supabase start` serves on plain http on this machine only.
+LOCAL_HTTP = ("http://localhost:", "http://127.0.0.1:")
+
+
+def _supabase_url() -> str:
+    """https://<ref>.supabase.co, normalised. Anything that is not https is
+    refused (empty = accounts off), except a local `supabase start`: tokens
+    would otherwise be checked against keys fetched in the clear."""
+    raw = (os.environ.get("RESEARCHLY_SUPABASE_URL") or "").strip().rstrip("/")
+    if raw.startswith("https://") or raw.startswith(LOCAL_HTTP):
+        return raw
+    return ""
+
+
 @dataclass(frozen=True)
 class Settings:
     env: str = "production"
@@ -72,6 +95,28 @@ class Settings:
     rate_limit_per_min: int = 30
     trusted_proxy_hops: int = 0
     warmup: bool = True
+    supabase_url: str = ""
+    supabase_publishable_key: str = ""
+    max_upload_bytes: int = DEFAULT_MAX_UPLOAD_BYTES
+    anon_max_words: int = 1500
+
+    @property
+    def accounts_enabled(self) -> bool:
+        return bool(self.supabase_url and self.supabase_publishable_key)
+
+
+def _publishable_key() -> str:
+    """The Supabase publishable key, or "" when accounts are off.
+
+    Anything else is refused at startup, loudly: a secret or service_role key
+    in this slot would make every settings lookup bypass Row-Level Security.
+    """
+    key = (os.environ.get("RESEARCHLY_SUPABASE_PUBLISHABLE_KEY") or "").strip()
+    if key and not key.startswith("sb_publishable_"):
+        raise ValueError("RESEARCHLY_SUPABASE_PUBLISHABLE_KEY must be a "
+                         "publishable key (sb_publishable_...); refusing to "
+                         "start with any other kind of key.")
+    return key
 
 
 def load() -> Settings:
@@ -85,4 +130,9 @@ def load() -> Settings:
         rate_limit_per_min=max(0, _int("RESEARCHLY_RATE_LIMIT_PER_MIN", 30)),
         trusted_proxy_hops=max(0, _int("RESEARCHLY_TRUSTED_PROXY_HOPS", 0)),
         warmup=_flag("RESEARCHLY_WARMUP", True),
+        supabase_url=_supabase_url(),
+        supabase_publishable_key=_publishable_key(),
+        max_upload_bytes=max(1024, _int("RESEARCHLY_MAX_UPLOAD_BYTES",
+                                        DEFAULT_MAX_UPLOAD_BYTES)),
+        anon_max_words=max(0, _int("RESEARCHLY_ANON_MAX_WORDS", 1500)),
     )

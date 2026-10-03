@@ -97,7 +97,13 @@ def test_other_origins_methods_and_headers_refused(make_client):
         c, "https://evil.example").headers
     assert _preflight(c, APP_ORIGIN, method="PUT").status_code == 400
     assert _preflight(c, APP_ORIGIN,
-                      headers="authorization").status_code == 400
+                      headers="x-not-ours").status_code == 400
+    # S2: the bearer token and the upload headers are allowed (no cookies:
+    # credentials stay off).
+    ok = _preflight(c, APP_ORIGIN, headers="authorization,x-researchly-filename,"
+                                           "x-researchly-options")
+    assert ok.status_code == 200
+    assert "access-control-allow-credentials" not in ok.headers
     r = c.get("/v1/rules", headers={"origin": "https://evil.example"})
     assert "access-control-allow-origin" not in r.headers
 

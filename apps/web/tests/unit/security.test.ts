@@ -53,6 +53,31 @@ describe("Content-Security-Policy", () => {
   });
 });
 
+describe("Content-Security-Policy with accounts (S2)", () => {
+  it("adds exactly the Supabase origin to connect-src, and nothing else changes", () => {
+    const base = cspHeader({ nonce: "n", engineUrl: "https://engine.example.org", dev: false });
+    const csp = cspHeader({
+      nonce: "n",
+      engineUrl: "https://engine.example.org",
+      supabaseUrl: "https://abcdefghij.supabase.co",
+      dev: false,
+    });
+    expect(directive(csp, "connect-src")).toBe("connect-src 'self' https://engine.example.org https://abcdefghij.supabase.co");
+    const others = (s: string) => s.split(";").filter((d) => !d.trim().startsWith("connect-src")).join(";");
+    expect(others(csp)).toBe(others(base));
+  });
+  it("leaves connect-src as in S1 without accounts", () => {
+    for (const supabaseUrl of [undefined, null]) {
+      const csp = cspHeader({ nonce: "n", engineUrl: "https://engine.example.org", supabaseUrl, dev: false });
+      expect(directive(csp, "connect-src")).toBe("connect-src 'self' https://engine.example.org");
+    }
+  });
+  it("does not upgrade requests to a local http Supabase", () => {
+    const csp = cspHeader({ nonce: "n", engineUrl: "https://e.example.org", supabaseUrl: "http://localhost:54321", dev: false });
+    expect(csp).not.toContain("upgrade-insecure-requests");
+  });
+});
+
 describe("static headers and nonces", () => {
   it("sends no referrer and no sniffing", () => {
     const h = Object.fromEntries(STATIC_SECURITY_HEADERS.map((x) => [x.key, x.value]));

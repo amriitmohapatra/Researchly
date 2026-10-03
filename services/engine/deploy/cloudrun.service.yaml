@@ -4,6 +4,7 @@
 #   ${ENGINE_IMAGE}     asia-southeast1-docker.pkg.dev/${PROJECT_ID}/researchly/engine@sha256:...
 #   ${ALLOWED_ORIGINS}  comma-separated browser origins (the Vercel app)
 #   ${PROJECT_ID}       GCP project id
+#   ${SUPABASE_URL}, ${SUPABASE_PUBLISHABLE_KEY}   optional (S2 accounts)
 #
 #   python3 services/engine/deploy/render_service.py < cloudrun.service.yaml > /tmp/svc.yaml
 #   gcloud run services replace /tmp/svc.yaml --region asia-southeast1
@@ -75,6 +76,13 @@ spec:
               value: "1"
             - name: RESEARCHLY_RATE_LIMIT_PER_MIN
               value: "30"
+            # Accounts (S2). Both are public by design (the browser has
+            # them too); Row-Level Security protects the data. Empty = the
+            # engine runs without accounts.
+            - name: RESEARCHLY_SUPABASE_URL
+              value: "${SUPABASE_URL}"
+            - name: RESEARCHLY_SUPABASE_PUBLISHABLE_KEY
+              value: "${SUPABASE_PUBLISHABLE_KEY}"
           resources:
             limits:
               # spaCy parses on one core; the lock means one analysis at a

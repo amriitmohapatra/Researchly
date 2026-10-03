@@ -24,6 +24,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/analyze-file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Analyze File
+         * @description Check an uploaded file: .docx, .tex, an Overleaf .zip, .md/.qmd/.Rmd
+         *     or .txt. The body is the raw file; it is read in memory and discarded.
+         */
+        post: operations["analyzeFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/health": {
         parameters: {
             query?: never;
@@ -68,11 +89,54 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AnalyzeFileResponse */
+        AnalyzeFileResponse: {
+            /**
+             * Counts
+             * @description Shown suggestions per category.
+             */
+            counts: {
+                [key: string]: number;
+            };
+            document: components["schemas"]["SourceInfo"];
+            /** Elapsed Ms */
+            elapsed_ms: number;
+            engine: components["schemas"]["EngineInfo"];
+            /**
+             * Health
+             * @description Every surface must show a degraded tier (CLAUDE.md: no silent tiers).
+             */
+            health: components["schemas"]["TierHealth"][];
+            /** Hidden Preferences */
+            hidden_preferences: number;
+            metrics?: components["schemas"]["Metrics"] | null;
+            /**
+             * Schema Version
+             * @default 1
+             * @constant
+             */
+            schema_version: "1";
+            /** Sections Detected */
+            sections_detected: string[];
+            /**
+             * Signed In
+             * @description True when a valid account token came with the request and its settings were looked up.
+             * @default false
+             */
+            signed_in: boolean;
+            /** Suggestions */
+            suggestions: components["schemas"]["Suggestion"][];
+            /**
+             * Warnings
+             * @description What was skipped or approximated while reading the text, e.g. LaTeX that could not be parsed and was read with a simpler method. May quote the caller's own text; never logged.
+             */
+            warnings?: string[];
+        };
         /** AnalyzeOptions */
         AnalyzeOptions: {
             /**
              * Disabled Rules
-             * @description Rule ids to mute for this request, e.g. ["G101"]. Per-user settings replace this in S2.
+             * @description Rule ids to mute for this request, e.g. ["G101"]. For a signed-in caller these are added to the rules muted in their account settings.
              */
             disabled_rules?: string[];
             /**
@@ -124,8 +188,19 @@ export interface components {
             schema_version: "1";
             /** Sections Detected */
             sections_detected: string[];
+            /**
+             * Signed In
+             * @description True when a valid account token came with the request and its settings were looked up.
+             * @default false
+             */
+            signed_in: boolean;
             /** Suggestions */
             suggestions: components["schemas"]["Suggestion"][];
+            /**
+             * Warnings
+             * @description What was skipped or approximated while reading the text, e.g. LaTeX that could not be parsed and was read with a simpler method. May quote the caller's own text; never logged.
+             */
+            warnings?: string[];
         };
         /**
          * Category
@@ -151,7 +226,7 @@ export interface components {
         ErrorBody: {
             /**
              * Code
-             * @description One of: invalid_request, malformed_json, malformed_request, payload_too_large, unsupported_media_type, rate_limited, not_found, method_not_allowed, internal, or http_error for any other HTTP status
+             * @description One of: invalid_request, malformed_json, malformed_request, payload_too_large, unsupported_media_type, unsupported_file, unreadable_file, unauthorized, sign_in_required, auth_unavailable, rate_limited, not_found, method_not_allowed, internal, or http_error for any other HTTP status
              */
             code: string;
             /** Message */
@@ -173,8 +248,9 @@ export interface components {
         FixSafety: "safe" | "review";
         /**
          * Format
-         * @description Input formats accepted in S1. `docx` and Overleaf `.zip` arrive in S2
-         *     as multipart uploads; `word_paragraphs` arrives with the hosted add-in (S3).
+         * @description Formats of pasted `content`. Files (.docx, .tex, Overleaf .zip, …) go
+         *     to /v1/analyze-file instead; `word_paragraphs` arrives with the hosted
+         *     add-in (S3).
          * @enum {string}
          */
         Format: "plain" | "markdown" | "latex";
@@ -247,6 +323,56 @@ export interface components {
             /** Rules */
             rules: components["schemas"]["RuleInfo"][];
         };
+        /**
+         * Segment
+         * @description A stretch of `document.text` that came from one source file.
+         *     `text[start:end]` equals that file's `[source_start : source_start + (end - start)]`.
+         */
+        Segment: {
+            /** End */
+            end: number;
+            /**
+             * Path
+             * @description Path inside the upload, e.g. sections/methods.tex.
+             */
+            path: string;
+            /**
+             * Source Start
+             * @description Offset in the source file, in code points.
+             */
+            source_start: number;
+            /** Start */
+            start: number;
+        };
+        /**
+         * SourceFormat
+         * @description How an uploaded file was read.
+         * @enum {string}
+         */
+        SourceFormat: "latex" | "docx" | "markdown" | "plain";
+        /** SourceInfo */
+        SourceInfo: {
+            /**
+             * Filename
+             * @description Echoed back to the caller; never logged.
+             */
+            filename: string;
+            format: components["schemas"]["SourceFormat"];
+            /** Segments */
+            segments: components["schemas"]["Segment"][];
+            /** Structure */
+            structure?: components["schemas"]["StructureItem"][];
+            /**
+             * Text
+             * @description The text suggestions' spans index into: the source itself for .tex/.md/.txt, the expanded project for a .zip, the extracted paragraphs for .docx.
+             */
+            text: string;
+            /**
+             * Warnings
+             * @description Things skipped or approximated while reading the file; never document text.
+             */
+            warnings?: string[];
+        };
         /** Span */
         Span: {
             /**
@@ -268,6 +394,27 @@ export interface components {
              * Start
              * @description Offset into `content` in Unicode code points (Python str indices, NOT UTF-16 units), inclusive.
              */
+            start: number;
+        };
+        /**
+         * StructureItem
+         * @description A figure, table, equation, caption or citation found in the source.
+         *     Kept as structure for the consistency and cross-reference checks (S2b).
+         */
+        StructureItem: {
+            /** End */
+            end: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "figure" | "table" | "equation" | "caption" | "citation";
+            /**
+             * Label
+             * @description \label key or Word bookmark, if any.
+             */
+            label?: string | null;
+            /** Start */
             start: number;
         };
         /** Suggestion */
@@ -353,7 +500,7 @@ export interface components {
             state: string;
             /**
              * Tier
-             * @description parser | spelling | grammar | gec
+             * @description parser | spelling | grammar | gec | files | account (files: the LaTeX/.docx readers, shown only when one is missing; account: whether a signed-in caller's settings could be loaded)
              */
             tier: string;
         };
@@ -369,7 +516,10 @@ export interface operations {
     analyze: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description `Bearer <Supabase access token>` when signed in. Omit for anonymous use. */
+                authorization?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -390,6 +540,15 @@ export interface operations {
             };
             /** @description Malformed request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Sign-in invalid or expired (unauthorized), or this needs an account (sign_in_required) */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -426,6 +585,119 @@ export interface operations {
             };
             /** @description Engine error (no document text in the body) */
             500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Sign-in could not be checked (auth_unavailable) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    analyzeFile: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The file's name, percent-encoded (encodeURIComponent). Only its extension is used; it is never logged. */
+                "x-researchly-filename": string;
+                /** @description Optional JSON AnalyzeOptions. */
+                "x-researchly-options"?: string | null;
+                /** @description `Bearer <Supabase access token>` when signed in. Omit for anonymous use. */
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The file's bytes. */
+        requestBody: {
+            content: {
+                "application/octet-stream": string;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyzeFileResponse"];
+                };
+            };
+            /** @description Malformed request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Sign-in invalid or expired (unauthorized), or this needs an account (sign_in_required) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Document too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a supported file type (unsupported_file) */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Engine error (no document text in the body) */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Sign-in could not be checked (auth_unavailable) */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

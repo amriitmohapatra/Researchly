@@ -35,6 +35,10 @@ jobs:
       # Passed through env, never interpolated into scripts (workflow input
       # injection), and validated below before use.
       ALLOWED_ORIGINS: ${{ inputs.allowed_origins }}
+      # Accounts (S2): repository variables, not secrets — both are public
+      # by design. Unset = the engine runs without accounts.
+      SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
     steps:
       - uses: actions/checkout@v4
 
@@ -48,6 +52,16 @@ jobs:
           if ! printf '%s' "$ALLOWED_ORIGINS" | grep -Eq '^https://[A-Za-z0-9.-]+(:[0-9]+)?(,https://[A-Za-z0-9.-]+(:[0-9]+)?)*$'; then
             echo "::error::allowed_origins must be comma-separated https origins without paths, e.g. https://researchly.vercel.app"
             exit 1
+          fi
+          if [ -n "$SUPABASE_URL$SUPABASE_PUBLISHABLE_KEY" ]; then
+            if ! printf '%s' "$SUPABASE_URL" | grep -Eq '^https://[a-z0-9]+\.supabase\.co$'; then
+              echo "::error::Repository variable SUPABASE_URL must look like https://abcdefgh.supabase.co (no trailing slash)."
+              exit 1
+            fi
+            if ! printf '%s' "$SUPABASE_PUBLISHABLE_KEY" | grep -Eq '^sb_publishable_[A-Za-z0-9_-]+$'; then
+              echo "::error::SUPABASE_PUBLISHABLE_KEY must be the project's publishable key (sb_publishable_...). Never a secret or service_role key: those bypass Row-Level Security."
+              exit 1
+            fi
           fi
 
       - uses: google-github-actions/auth@v2
@@ -68,12 +82,12 @@ jobs:
 
       - name: Deploy the service (engine + LanguageTool sidecar)
         run: |
-          export ENGINE_IMAGE ALLOWED_ORIGINS PROJECT_ID
+          export ENGINE_IMAGE ALLOWED_ORIGINS PROJECT_ID SUPABASE_URL SUPABASE_PUBLISHABLE_KEY
           python3 services/engine/deploy/render_service.py \
             < services/engine/deploy/cloudrun.service.yaml > "$RUNNER_TEMP/service.yaml"
           gcloud run services replace "$RUNNER_TEMP/service.yaml" --region "$REGION"
           # The browser calls the engine directly, so it must be publicly
-          # invokable (no accounts until S2). Idempotent.
+          # invokable; the engine itself checks sign-in tokens. Idempotent.
           gcloud run services add-iam-policy-binding "$SERVICE" --region "$REGION" \
             --member=allUsers --role=roles/run.invoker >/dev/null
 

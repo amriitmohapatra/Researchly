@@ -68,6 +68,9 @@ OPTIONS = {
         "language_data", "symspellpy", "pydantic", "pydantic_core",
         "typing_extensions", "smart_open", "weasel", "confection",
         "language_tool_python",
+        # File readers (S2): LaTeX by parsing, .docx without XXE. Without
+        # them the app falls back to regex LaTeX masking and says so.
+        "pylatexenc", "defusedxml",
         # language_tool_python downloads LanguageTool over HTTPS with
         # requests on first use. py2app pulled requests in but not its
         # dependency chain, so the built app warned

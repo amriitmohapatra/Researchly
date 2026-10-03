@@ -30,7 +30,8 @@ from .schemas import ErrorBody, ErrorResponse
 
 # Field names of the request contract. Only these may be echoed in a message.
 KNOWN_FIELDS = {"body", "format", "content", "options", "show_preferences",
-                "disabled_rules", "query", "path", "header"}
+                "disabled_rules", "query", "path", "header",
+                "x-researchly-filename", "x-researchly-options"}
 
 _FRIENDLY = {
     "missing": "is required",
@@ -60,7 +61,8 @@ STATUS_MESSAGES = {
     400: "The request could not be read.",
     404: "No such endpoint.",
     405: "This endpoint does not accept that method.",
-    415: "Send the request body as application/json.",
+    415: "Send the request body as application/json (files: "
+         "application/octet-stream to /v1/analyze-file).",
 }
 
 INTERNAL_MESSAGE = ("The engine failed while checking this document. Nothing "
@@ -134,6 +136,24 @@ async def on_validation_error(request: Request,
                         "The request body is not valid JSON.")
     return _respond(request, 422, "invalid_request",
                     sanitized_validation_message(errors))
+
+
+class ApiError(Exception):
+    """Raised by a route to answer with an ErrorResponse. `message` must be
+    user-safe: fixed copy, never request content."""
+
+    def __init__(self, status: int, code: str, message: str):
+        super().__init__(message)
+        self.status = status
+        self.code = code
+        self.message = message
+
+
+async def on_api_error(request: Request, exc: ApiError) -> JSONResponse:
+    resp = _respond(request, exc.status, exc.code, exc.message)
+    if exc.status == 401:
+        resp.headers["WWW-Authenticate"] = 'Bearer realm="researchly"'
+    return resp
 
 
 async def on_http_error(request: Request,

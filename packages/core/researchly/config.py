@@ -19,6 +19,7 @@ read, so existing `.researchly.toml` files keep working.
 
 from __future__ import annotations
 
+import re
 import sys
 from dataclasses import dataclass, field, replace
 from pathlib import Path
@@ -156,6 +157,41 @@ def _apply(cfg: Config, data: dict) -> Config:
     if words:
         cfg.dictionary = list(cfg.dictionary) + [str(w) for w in words]
 
+    return cfg
+
+
+RULE_ID = re.compile(r"^[A-Z]{1,4}[0-9]{1,4}$")
+MAX_REMOTE_RULES = 200
+MAX_REMOTE_WORDS = 5000
+
+
+def apply_remote(cfg: Config, data: dict) -> Config:
+    """Fold the account layer (S2: settings stored with the user's account,
+    fetched by the hosted engine) into a Config.
+
+    `data` is the shape `my_config()` returns in Supabase:
+    {"disabled_rules": [...], "show_preferences": bool, "locale": str,
+     "dictionary": [...]}. It came over the network, so every value is
+    checked and anything malformed is dropped rather than trusted; the same
+    limits are enforced by the database, so dropping only bites on a bug.
+    """
+    if not isinstance(data, dict):
+        return cfg
+    rules = data.get("disabled_rules")
+    if isinstance(rules, list):
+        good = [r for r in rules[:MAX_REMOTE_RULES]
+                if isinstance(r, str) and RULE_ID.match(r)]
+        cfg.disabled = set(cfg.disabled) | set(good)
+    if isinstance(data.get("show_preferences"), bool):
+        cfg.show_preferences = data["show_preferences"]
+    if data.get("locale") in LOCALES:
+        cfg.locale = data["locale"]
+    words = data.get("dictionary")
+    if isinstance(words, list):
+        good = [w for w in words[:MAX_REMOTE_WORDS]
+                if isinstance(w, str) and 0 < len(w) <= 64
+                and not any(c.isspace() for c in w)]
+        cfg.dictionary = list(cfg.dictionary) + good
     return cfg
 
 
