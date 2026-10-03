@@ -23,7 +23,7 @@ import json
 import os
 import threading
 import urllib.parse
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer as HTTPServer
 
 import pytest
 
@@ -60,9 +60,11 @@ def _isolated_grammar_state(monkeypatch):
 
 class _FakeLT(BaseHTTPRequestHandler):
     """Just enough of LanguageTool's v2 HTTP API."""
-    mode = "ok"                 # ok | broken_check | garbage
+    mode = "ok"                 # ok | broken_check | garbage | hang
     checks = 0
     probes = 0
+    prefix = ""                 # serve under a path, e.g. "/lt"
+    hang_s = 0.0
 
     def log_message(self, *a):  # keep test output quiet
         pass
@@ -76,7 +78,7 @@ class _FakeLT(BaseHTTPRequestHandler):
         self.wfile.write(raw)
 
     def do_GET(self):
-        if self.path.startswith("/v2/languages"):
+        if self.path.startswith(type(self).prefix + "/v2/languages"):
             self._send(200, json.dumps([
                 {"name": "English (US)", "code": "en", "longCode": "en-US"},
                 {"name": "English (GB)", "code": "en", "longCode": "en-GB"}]))
@@ -88,12 +90,16 @@ class _FakeLT(BaseHTTPRequestHandler):
         form = urllib.parse.parse_qs(
             self.rfile.read(n).decode())
         text = (form.get("text") or [""])[0]
-        if not self.path.startswith("/v2/check"):
+        if not self.path.startswith(type(self).prefix + "/v2/check"):
             return self._send(404, "{}")
         if type(self).mode == "garbage":
             return self._send(200, "<html>not languagetool</html>",
                               "text/html")
         is_probe = text == health.PROBE_TEXT
+        if type(self).mode == "hang" and not is_probe:
+            import time
+            time.sleep(type(self).hang_s)
+            return self._send(200, json.dumps({"matches": []}))
         if is_probe:
             type(self).probes += 1
         else:
@@ -124,6 +130,7 @@ class _FakeLT(BaseHTTPRequestHandler):
 @pytest.fixture
 def fake_lt(monkeypatch):
     _FakeLT.mode, _FakeLT.checks, _FakeLT.probes = "ok", 0, 0
+    _FakeLT.prefix, _FakeLT.hang_s = "", 0.0
     server = HTTPServer(("127.0.0.1", 0), _FakeLT)
     t = threading.Thread(target=server.serve_forever, daemon=True)
     t.start()
@@ -160,7 +167,8 @@ def test_remote_server_is_used_and_java_is_never_started(fake_lt,
     assert tool is not None
     assert rules_grammar.state() == ("ready", "")
     assert tool._url.startswith(fake_lt)
-    assert tool._TIMEOUT == rules_grammar.REMOTE_TIMEOUT_S
+    # per-try timeout x the client's tries == the total budget
+    assert tool._TIMEOUT * rules_grammar.REMOTE_CLIENT_TRIES == rules_grammar.REMOTE_TIMEOUT_S
 
 
 def test_remote_lt001_fires_through_the_engine(fake_lt, monkeypatch):
@@ -347,3 +355,56 @@ def test_real_languagetool_server(monkeypatch):
     a = analyze("We used a infectious disease model.", cfg=Config())
     assert _grammar(a.health).ok, _grammar(a.health)
     assert any(s.rule_id == "LT001" for s in a.suggestions)
+
+
+# --- the remote path's two S1 code-review findings ------------------------
+
+def test_hung_server_costs_one_timeout_budget_not_two(fake_lt, monkeypatch):
+    """language_tool_python retries a timed-out check once, so a per-try
+    timeout of REMOTE_TIMEOUT_S really cost twice that while the engine lock
+    was held. REMOTE_TIMEOUT_S is now the total budget across both tries."""
+    import time
+    _no_java(monkeypatch)
+    monkeypatch.setattr(rules_grammar, "REMOTE_TIMEOUT_S", 1.0)
+    _FakeLT.mode, _FakeLT.hang_s = "hang", 5.0
+    from researchly.api import analyze
+    t0 = time.monotonic()
+    a = analyze("These results are robust.", cfg=Config())
+    elapsed = time.monotonic() - t0
+    assert not [s for s in a.suggestions if s.rule_id == "LT001"]
+    assert elapsed < 1.6, f"grammar held the request for {elapsed:.1f}s"
+
+
+def test_server_under_a_path_is_used_by_probe_and_client_alike(monkeypatch):
+    """RESEARCHLY_LT_URL=http://host/lt: the probe checked /lt/v2/check while
+    the client called /v2/check, so health said ready and every check failed."""
+    _FakeLT.mode, _FakeLT.checks, _FakeLT.probes = "ok", 0, 0
+    _FakeLT.prefix, _FakeLT.hang_s = "/lt", 0.0
+    server = HTTPServer(("127.0.0.1", 0), _FakeLT)
+    t = threading.Thread(target=server.serve_forever, daemon=True)
+    t.start()
+    try:
+        monkeypatch.setenv(rules_grammar.REMOTE_ENV,
+                           f"http://127.0.0.1:{server.server_address[1]}/lt")
+        _no_java(monkeypatch)
+        from researchly.api import analyze
+        a = analyze("These results are robust.", cfg=Config())
+        assert _grammar(a.health).ok
+        assert [s for s in a.suggestions if s.rule_id == "LT001"]
+        assert _FakeLT.checks == 1
+    finally:
+        server.shutdown()
+        server.server_close()
+        _FakeLT.prefix = ""
+
+
+def test_url_without_scheme_is_accepted_consistently(fake_lt, monkeypatch):
+    """`localhost:8010` was accepted by the client but always failed the
+    probe, so grammar never started. Both now see the same normalised URL."""
+    _no_java(monkeypatch)
+    monkeypatch.setenv(rules_grammar.REMOTE_ENV, fake_lt.replace("http://", ""))
+    assert rules_grammar.remote_url() == fake_lt
+    from researchly.api import analyze
+    a = analyze("These results are robust.", cfg=Config())
+    assert _grammar(a.health).ok
+    assert [s for s in a.suggestions if s.rule_id == "LT001"]

@@ -63,19 +63,34 @@ _FAILED_AT = 0.0            # monotonic time of the last failed start
 # being sticky for the life of the process.
 REMOTE_ENV = "RESEARCHLY_LT_URL"
 REMOTE_RETRY_S = 15.0
-# Per-request timeout for the remote server. language_tool_python's default
-# is 300 s, which would hold a hosted request hostage to a hung sidecar.
-# A 1M-character document (the contract's cap) took ~27 s of LanguageTool
-# time on a 4-core dev machine; 120 s leaves room for a slower vCPU. After
-# one failure the client is dropped and re-probed (3 s), so a dead sidecar
-# costs one slow request, not every request.
+# Total time one grammar check may take against the remote server.
+# language_tool_python's default is 300 s per try, which would hold a hosted
+# request hostage to a hung sidecar. A 1M-character document (the contract's
+# cap) took ~27 s of LanguageTool time on a 4-core dev machine; 120 s leaves
+# room for a slower vCPU. After one failure the client is dropped and
+# re-probed (3 s), so a dead sidecar costs one slow request, not every one.
 REMOTE_TIMEOUT_S = 120
+# check() goes through the client's _query_server, which tries twice on an
+# I/O error, each try with the full per-try timeout. The S1 code review found
+# the real worst case was therefore 2 x REMOTE_TIMEOUT_S under the engine
+# lock, past Cloud Run's 300 s request limit on a large document. The budget
+# above is split across the tries instead.
+REMOTE_CLIENT_TRIES = 2
 
 
 def remote_url():
-    """The LanguageTool server to use instead of a local JVM, or None."""
-    url = (os.environ.get(REMOTE_ENV) or "").strip()
-    return url.rstrip("/") or None
+    """The LanguageTool server to use instead of a local JVM, or None.
+
+    Normalised once, here, so the health probe and the client agree on the
+    address: a scheme is added when missing (`localhost:8010`), and the base
+    keeps any path (`http://host/lt`). Both then append `/v2/...` to it.
+    """
+    url = (os.environ.get(REMOTE_ENV) or "").strip().rstrip("/")
+    if not url:
+        return None
+    if "://" not in url:
+        url = "http://" + url
+    return url
 
 # 'misspelling' is included because LanguageTool files rule-based word
 # confusions (a/an, their/there) under it — dictionary spelling is still
@@ -204,10 +219,13 @@ def _get_remote_tool(locale: str, url: str):
                 except Exception:
                     pass
                 _TOOL = None
+            # The trailing slash keeps a path in the base: the client
+            # urljoins "v2/" onto it, which would otherwise replace the last
+            # path segment (http://host/lt -> http://host/v2/).
             tool = language_tool_python.LanguageTool(locale,
-                                                     remote_server=url)
-            # Instance attribute shadows the class's 300 s default.
-            tool._TIMEOUT = REMOTE_TIMEOUT_S
+                                                     remote_server=url + "/")
+            # Instance attribute shadows the class's 300 s default; per try.
+            tool._TIMEOUT = REMOTE_TIMEOUT_S / REMOTE_CLIENT_TRIES
             _TOOL, _LOCALE, _URL = tool, locale, url
             _FAILED, _STATE, _DETAIL = False, "ready", ""
         except Exception as e:
