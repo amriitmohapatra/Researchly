@@ -57,7 +57,9 @@ def test_render_check_escapes_html():
         "why": "x & y",
     }]
     html = panel_html.render_check(fake)
-    assert "<script>" not in html
+    # the page carries its own (static) bridge <script>; what must never
+    # appear unescaped is SUGGESTION-derived markup
+    assert "<script>alert(1)</script>" not in html
     assert "&lt;script&gt;" in html
     assert "&lt;b&gt;utilize&lt;/b&gt;" in html
 
@@ -82,3 +84,74 @@ def test_render_polish_unchanged_state():
 def test_render_message():
     html = panel_html.render_message("No selection", "Select some text.")
     assert "No selection" in html and "Select some text." in html
+
+
+# --- W2 sprint (2026-08-14): actionable panels + shared settings page ------
+
+def test_actionable_check_cards_carry_bridge_buttons():
+    suggestions, mets = _checked(
+        "We utilize household data. This proves that stratification "
+        "matters for policy.")
+    html = panel_html.render_check(suggestions, mets, actions=True)
+    assert "rlAction" in html
+    assert "Dismiss" in html and "Mute rule" in html
+    assert "&quot;action&quot;: &quot;mute&quot;" in html \
+        or "&quot;action&quot;:&quot;mute&quot;" in html \
+        or "mute" in html          # exact JSON spacing is an impl detail
+    # the shim itself ships with the page and degrades to a no-op
+    assert "window.webkit" in html and "window.pywebview" in html
+
+
+def test_display_only_render_stays_display_only():
+    """actions defaults to False — the D2 watch snapshot and any old
+    callers keep the previous behaviour."""
+    suggestions, mets = _checked("We utilize household data.")
+    html = panel_html.render_check(suggestions, mets)
+    assert "Dismiss" not in html and "Mute rule" not in html
+
+
+def test_add_to_dictionary_only_on_spelling_cards():
+    fake = [{"rule_id": "S001", "rule_name": "spelling",
+             "category": "correction", "message": "Unknown word",
+             "text": "urbanicity", "section": "unknown",
+             "replacement": "urbanity", "why": "w"},
+            {"rule_id": "W201", "rule_name": "grand-word",
+             "category": "improvement", "message": "m",
+             "text": "utilize", "section": "unknown",
+             "replacement": "use", "why": "w"}]
+    html = panel_html.render_check(fake, actions=True)
+    assert html.count("Add to dictionary") == 1
+
+
+def test_polish_actions_render_html_buttons_for_windows():
+    r = polish("We utilize data in order to make an assessment of risk.",
+               NLP)
+    html = panel_html.render_polish(r, actions=True)
+    assert "Replace selection" in html and "Copy rewrite" in html
+    assert "rlAction" in html
+    # and the native-bar note is gone when the buttons are in the HTML
+    assert "buttons below" not in html
+
+
+def test_settings_page_renders_every_shared_setting():
+    from researchly.config import Config
+    cfg = Config(disabled={"W201"}, show_preferences=True,
+                 document_type="manuscript", aggressiveness="thorough",
+                 locale="en-GB", gec_tier=True)
+    html = panel_html.render_settings(cfg)
+    for needle in ("Document type", "Suggestion volume", "English variant",
+                   "preference-type", "LanguageTool", "Learned-correction",
+                   "Muted rules", "W201", "unmute"):
+        assert needle in html, needle
+    # current values are selected
+    assert "value='manuscript' selected" in html.replace('"', "'")
+    assert "value='en-GB' selected" in html.replace('"', "'")
+    # every control writes through the shared-config bridge
+    assert html.count("rlAction") >= 7
+
+
+def test_settings_page_escapes_and_degrades_without_bridge():
+    from researchly.config import Config
+    html = panel_html.render_settings(Config())
+    assert "no bridge" in html      # shim comment: degrades to no-op
+    assert "none" in html           # empty muted list

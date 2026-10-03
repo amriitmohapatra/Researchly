@@ -139,9 +139,13 @@ def test_every_safe_rule_actually_offers_a_replacement():
 def test_correction_tiers_are_declared_on_the_commodity_rules():
     assert REGISTRY["S001"].tier == engine_mod.TIER_SPELLING
     assert REGISTRY["LT001"].tier == engine_mod.TIER_GRAMMAR
+    # GEC001 (2026-08-14): the learned tier's single entry point — an
+    # abstaining scaffold until a local model ships, but its tier claim is
+    # real (test_gec.py pins the abstention + offset-safety contract)
+    assert REGISTRY["GEC001"].tier == engine_mod.TIER_GEC
     # everything else is craft or lens, never a correction tier
     for rid, r in REGISTRY.items():
-        if rid not in ("S001", "LT001"):
+        if rid not in ("S001", "LT001", "GEC001"):
             assert r.tier not in engine_mod.CORRECTION_TIER_PRIORITY, \
                 f"{rid} claims a correction tier it does not implement"
 

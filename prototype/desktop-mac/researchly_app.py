@@ -51,7 +51,8 @@ try:
         NSViewWidthSizable, NSViewHeightSizable, NSViewMaxYMargin,
         NSTimer, NSControlStateValueOn, NSControlStateValueOff,
     )
-    from WebKit import WKWebView, WKWebViewConfiguration  # noqa: E402
+    from WebKit import (WKWebView, WKWebViewConfiguration,  # noqa: E402
+                        WKUserContentController)
     from Quartz import (  # noqa: E402
         CGEventCreateKeyboardEvent, CGEventPost, CGEventSetFlags,
         kCGHIDEventTap, kCGEventFlagMaskCommand,
@@ -80,6 +81,9 @@ WATCH_MAX_CHARS = 20_000                 # cap huge documents (check tail)
 BADGE_W, BADGE_H = 56, 24
 
 
+DEFAULT_HOTKEYS = {"check": "r", "polish": "p"}   # with ⌘⇧ held
+
+
 def load_prefs() -> dict:
     try:
         if PREFS_FILE.exists():
@@ -87,6 +91,21 @@ def load_prefs() -> dict:
     except Exception:
         pass
     return {"watch": False, "deny": []}
+
+
+def hotkeys_from(prefs: dict) -> dict:
+    """⌘⇧+<letter> bindings, overridable in desktop.json:
+    {"hotkeys": {"check": "r", "polish": "p"}}. Single letters only —
+    the modifier stays ⌘⇧ so bindings can't collide with plain typing."""
+    hk = dict(DEFAULT_HOTKEYS)
+    try:
+        for k, v in (prefs.get("hotkeys") or {}).items():
+            if k in hk and isinstance(v, str) and len(v) == 1 \
+                    and v.isalpha():
+                hk[k] = v.lower()
+    except Exception:
+        pass
+    return hk
 
 
 def save_prefs(prefs: dict):
@@ -273,6 +292,7 @@ class ResearchlyApp(NSObject):
     def applicationDidFinishLaunching_(self, _note):
         self.engine = Engine()
         self.pending_polish = None            # last PolishResult
+        self.last_check = None                # for dismiss/mute re-render
         self.busy = False
 
         # menu-bar item
@@ -296,16 +316,21 @@ class ResearchlyApp(NSObject):
         self.badge = None
         self.badge_button = None
 
+        self.hotkeys = hotkeys_from(self.prefs)
+        hk_c, hk_p = (self.hotkeys["check"].upper(),
+                      self.hotkeys["polish"].upper())
         menu = NSMenu.alloc().init()
         for title, action, key in (
-                ("Check selection (⌘⇧R)", "menuCheck:", ""),
-                ("Polish selection (⌘⇧P)", "menuPolish:", ""),
+                (f"Check selection (⌘⇧{hk_c})", "menuCheck:", ""),
+                (f"Polish selection (⌘⇧{hk_p})", "menuPolish:", ""),
                 (None, None, None),
                 ("Open panel", "menuOpenPanel:", ""),
+                ("Settings…", "menuSettings:", ""),
                 (None, None, None),
                 ("Live watching (beta)", "menuToggleWatch:", ""),
                 ("Pause watching in current app", "menuPauseApp:", ""),
                 (None, None, None),
+                ("Open Accessibility settings", "menuOpenAX:", ""),
                 ("Quit Researchly", "terminate:", "q")):
             if title is None:
                 menu.addItem_(NSMenuItem.separatorItem())
@@ -327,16 +352,24 @@ class ResearchlyApp(NSObject):
 
         self._build_panel()
 
-        # accessibility permission (prompts on first run)
+        # accessibility permission (prompts on first run). The onboarding
+        # panel names each step and offers the menu-bar shortcut straight
+        # to the right Settings pane ("Open Accessibility settings").
         trusted = AXIsProcessTrustedWithOptions(
             {kAXTrustedCheckOptionPrompt: True})
         if not trusted:
             self._show_html(panel_html.render_message(
-                "One-time setup",
-                "Grant Accessibility permission in System Settings → "
-                "Privacy & Security → Accessibility (to the Terminal if "
-                "running from a terminal; to Researchly if running the "
-                "app), then press the hotkey again."))
+                "One-time setup — Accessibility permission",
+                "Researchly reads your selection through macOS "
+                "Accessibility, entirely on this Mac. Steps: "
+                "1) open System Settings → Privacy & Security → "
+                "Accessibility (the R menu-bar icon has a shortcut: "
+                "'Open Accessibility settings'); "
+                "2) switch ON the Terminal if you ran this from a "
+                "terminal, or Researchly if you launched the app; "
+                "3) press the hotkey again. Until then the clipboard "
+                "fallback (⌘C simulation) is used, and your clipboard is "
+                "always restored."))
 
         # global + local hotkey monitors
         def handler(event):
@@ -365,9 +398,9 @@ class ResearchlyApp(NSObject):
             ch = (event.charactersIgnoringModifiers() or "").lower()
         except Exception:
             return
-        if ch == "r":
+        if ch == self.hotkeys["check"]:
             self._run("check")
-        elif ch == "p":
+        elif ch == self.hotkeys["polish"]:
             self._run("polish")
 
     def menuCheck_(self, _s):
@@ -420,10 +453,12 @@ class ResearchlyApp(NSObject):
                 for (rule, section), n in by.items():
                     telemetry.log_event("shown", rule, section=section,
                                         source="desktop", count=n)
-                html = panel_html.render_check(
-                    suggestions, mets, hidden, source_app=app_name,
-                    health=health)
-                AppHelper.callAfter(self._show_check, html)
+                self.last_check = {
+                    "suggestions": suggestions, "mets": mets,
+                    "hidden": hidden, "health": health,
+                    "app": app_name, "dismissed": set(),
+                }
+                AppHelper.callAfter(self._render_check_state)
             else:
                 result = self.engine.polish(text)
                 self.pending_polish = result
@@ -458,9 +493,19 @@ class ResearchlyApp(NSObject):
         content = self.panel.contentView()
         b = content.bounds()
 
+        # The rlAction bridge (W2): panel_html renders per-suggestion
+        # buttons whose rlAction() posts to this message handler — the fix
+        # for the check panel being display-only.
+        wk_config = WKWebViewConfiguration.alloc().init()
+        try:
+            controller = WKUserContentController.alloc().init()
+            controller.addScriptMessageHandler_name_(self, "researchly")
+            wk_config.setUserContentController_(controller)
+        except Exception:
+            pass                    # display-only fallback, never a crash
         self.webview = WKWebView.alloc().initWithFrame_configuration_(
             NSMakeRect(0, BAR_H, b.size.width, b.size.height - BAR_H),
-            WKWebViewConfiguration.alloc().init())
+            wk_config)
         self.webview.setAutoresizingMask_(
             NSViewWidthSizable | NSViewHeightSizable)
         content.addSubview_(self.webview)
@@ -500,6 +545,136 @@ class ResearchlyApp(NSObject):
     @objc.python_method
     def _show_check(self, html: str):
         self._show_html(html)
+
+    @objc.python_method
+    def _render_check_state(self):
+        """Render the last check minus dismissed cards, with actions."""
+        st = self.last_check
+        if not st:
+            return
+        visible = [s for i, s in enumerate(st["suggestions"])
+                   if i not in st["dismissed"]]
+        self._show_html(panel_html.render_check(
+            visible, st["mets"], st["hidden"], source_app=st["app"],
+            health=st["health"], actions=True))
+
+    # -- rlAction bridge (WKScriptMessageHandler) ---------------------------
+
+    def userContentController_didReceiveScriptMessage_(self, _ctrl, msg):
+        try:
+            p = dict(msg.body())
+        except Exception:
+            return
+        # AppKit thread: do the quick actions inline, re-render after.
+        try:
+            self._dispatch_action(p)
+        except Exception as e:
+            self._show_html(panel_html.render_message(
+                "Error", f"{type(e).__name__}: {e}"))
+
+    @objc.python_method
+    def _visible_index(self, idx):
+        st = self.last_check
+        if not st:
+            return None, None
+        visible = [i for i in range(len(st["suggestions"]))
+                   if i not in st["dismissed"]]
+        if 0 <= idx < len(visible):
+            return st, visible[idx]
+        return st, None
+
+    @objc.python_method
+    def _dispatch_action(self, p: dict):
+        from researchly import config as config_mod
+        from researchly import telemetry
+        act = str(p.get("action") or "")
+        if act == "copy_fix":
+            st, real = self._visible_index(int(p.get("idx", -1)))
+            if st is None or real is None:
+                return
+            s = st["suggestions"][real]
+            if s.get("replacement") is not None:
+                pb = NSPasteboard.generalPasteboard()
+                pb.clearContents()
+                pb.setString_forType_(s["replacement"],
+                                      NSPasteboardTypeString)
+            telemetry.log_event("applied", s.get("rule_id", ""),
+                                section=s.get("section", "unknown"),
+                                source="desktop")
+        elif act == "dismiss":
+            st, real = self._visible_index(int(p.get("idx", -1)))
+            if st is None or real is None:
+                return
+            st["dismissed"].add(real)
+            s = st["suggestions"][real]
+            telemetry.log_event("dismissed", s.get("rule_id", ""),
+                                section=s.get("section", "unknown"),
+                                source="desktop")
+            self._render_check_state()
+        elif act == "mute":
+            rule_id = str(p.get("rule_id") or "")
+            if not rule_id:
+                return
+            config_mod.mute_rule(rule_id)       # the SHARED config
+            telemetry.log_event("muted", rule_id, source="desktop")
+            st = self.last_check
+            if st:
+                for i, s in enumerate(st["suggestions"]):
+                    if s.get("rule_id") == rule_id:
+                        st["dismissed"].add(i)
+                self._render_check_state()
+        elif act == "unmute":
+            rule_id = str(p.get("rule_id") or "")
+            if rule_id:
+                config_mod.unmute_rule(rule_id)
+                self._show_settings(note=f"{rule_id} unmuted.")
+        elif act == "add_dict":
+            word = str(p.get("word") or "")
+            if not word:
+                return
+            from researchly import spelling
+            ok = spelling.add_to_user_dictionary(word)
+            st = self.last_check
+            if ok and st:
+                low = word.lower()
+                for i, s in enumerate(st["suggestions"]):
+                    if (s.get("rule_id") == "S001"
+                            and (s.get("text") or "").lower() == low):
+                        st["dismissed"].add(i)
+                self._render_check_state()
+        elif act == "set":
+            key = str(p.get("key") or "")
+            allowed = {"document_type", "aggressiveness", "locale",
+                       "show_preferences", "grammar_tier", "gec_tier"}
+            if key not in allowed:
+                return
+            cfg = config_mod.load().with_overrides(
+                **{key: p.get("value")})
+            ok = config_mod.save_user(cfg)
+            self._show_settings(
+                note="Saved — shared with every Researchly surface."
+                if ok else "Could not save settings.")
+
+    @objc.python_method
+    def _show_settings(self, note: str = ""):
+        from researchly import api
+        from researchly import config as config_mod
+        cfg = config_mod.load()
+        self._show_html(panel_html.render_settings(
+            cfg, health=api.status(cfg), note=note))
+
+    def menuSettings_(self, _s):
+        self._show_settings()
+
+    def menuOpenAX_(self, _s):
+        try:
+            from AppKit import NSWorkspace
+            from Foundation import NSURL
+            NSWorkspace.sharedWorkspace().openURL_(NSURL.URLWithString_(
+                "x-apple.systempreferences:com.apple.preference.security"
+                "?Privacy_Accessibility"))
+        except Exception:
+            pass
 
     @objc.python_method
     def _show_polish(self, html: str, changed: bool):

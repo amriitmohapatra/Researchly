@@ -333,6 +333,11 @@ def test_jdk_found_with_a_finder_launch_environment(monkeypatch):
     find_java() searches the filesystem for exactly this reason; this pins
     that it does not quietly regress into a PATH lookup.
     """
+    import sys as _sys
+    if _sys.platform != "darwin":
+        pytest.skip("the Apple java-stub scenario only exists on macOS — "
+                    "on Linux /usr/bin/java is a real JDK, so refusing it "
+                    "would fail a healthy machine")
     monkeypatch.setenv("PATH", "/usr/bin:/bin:/usr/sbin:/sbin")
     monkeypatch.delenv("JAVA_HOME", raising=False)
     health_mod.reset_java_cache()

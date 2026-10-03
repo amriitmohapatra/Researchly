@@ -95,3 +95,65 @@ def test_server_respects_disabled_and_occurrence():
     assert w201[0]["occurrence"] == 0 and w201[1]["occurrence"] == 1
     r2 = addin_server.run_check({"paragraphs": paras, "disabled": ["W201"]})
     assert not [s for s in r2["suggestions"] if s["rule_id"] == "W201"]
+
+
+# --- W2 (sprint items 1-2, 2026-08-14): shared config + review endpoint ----
+
+def test_taskpane_never_persists_mutes_in_localstorage():
+    """The W2 parity guarantee, pinned at the source level: the taskpane
+    may only *delete* the legacy localStorage key (migration), never write
+    it. A new localStorage settings store is exactly the regression the
+    shared config layer exists to prevent."""
+    js = (Path(__file__).resolve().parents[1] / "word-addin" / "web"
+          / "taskpane.js").read_text(encoding="utf-8")
+    assert "localStorage.setItem" not in js
+    assert "/config" in js                       # mutes go to the server
+    assert "migrateLocalStorageMutes" in js      # legacy mutes migrate
+
+
+def test_taskpane_has_the_five_tabs():
+    html = (Path(__file__).resolve().parents[1] / "word-addin" / "web"
+            / "taskpane.html").read_text(encoding="utf-8")
+    for tab in ("check", "review", "polish", "settings", "health"):
+        assert f'data-tab="{tab}"' in html, f"missing tab {tab}"
+
+
+def test_review_report_from_word_paragraphs():
+    """/review's core: build_review accepts the from_word Document so
+    style-based headings survive into the reviewer's brief."""
+    from researchly import review as review_mod
+    from researchly import api
+    paras = [
+        {"text": "Discussion", "style": "Heading1"},
+        {"text": "We argue that spatial heterogeneity drives outbreak "
+                 "size. Control must change now.", "style": "Normal"},
+    ]
+    doc = api.build_document(paras)
+    r = review_mod.build_review(doc, NLP)
+    assert "argument" in r
+    codes = {link["code"] for link in r["argument"]["missing_links"]}
+    assert "claim_without_warrant" in codes
+    report = review_mod.render_review(r)
+    assert "REVIEWER'S BRIEF" in report
+
+
+def test_polish_reads_muted_rules_from_shared_config(tmp_path, monkeypatch):
+    """The taskpane stopped sending `disabled`; the server must fall back
+    to the shared config, so a muted rule stays out of Polish too."""
+    from researchly import config as config_mod
+    user_dir = tmp_path / ".researchly"
+    user_dir.mkdir()
+    monkeypatch.setattr(config_mod, "USER_DIR", user_dir)
+    monkeypatch.setattr(config_mod, "USER_CONFIG_FILE",
+                        user_dir / "config.toml")
+    monkeypatch.chdir(tmp_path)
+
+    from researchly import transform
+    text = "We utilize a model in order to predict the outcome."
+
+    r1 = transform.polish(text, NLP, disabled=config_mod.load().disabled)
+    assert any(e["rule_id"] == "W201" for e in r1.to_dict()["edits"])
+
+    config_mod.mute_rule("W201")
+    r2 = transform.polish(text, NLP, disabled=config_mod.load().disabled)
+    assert not any(e["rule_id"] == "W201" for e in r2.to_dict()["edits"])

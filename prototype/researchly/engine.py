@@ -163,7 +163,7 @@ def check(document: Document, nlp, *,
     """
     # Import here so registration happens on first use, avoiding cycles.
     from . import (rules_lexical, rules_syntax,  # noqa: F401
-                   rules_spelling, rules_grammar)
+                   rules_spelling, rules_grammar, rules_gec)
 
     disabled = disabled or set()
     if spacy_doc is None:

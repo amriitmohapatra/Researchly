@@ -22,3 +22,14 @@ Setup on a Windows machine:
 Panel buttons (Replace selection / Copy rewrite) call back through
 pywebview's js_api — wire-up lives in `JsApi` and would be the first
 thing to verify.
+
+## Standalone installer (2026-08-14)
+
+`build_installer.bat` produces `Output/Researchly-Setup-0.8.exe` with
+EVERYTHING inside: Python runtime, engine, spaCy model, LanguageTool and
+a jlink-trimmed private JRE. End users install nothing else and nothing
+downloads at first run. Build-machine prereqs: the pip deps, a JDK 17+,
+and Inno Setup 6. `--skip-jre` / `--skip-lt` shrink the bundle at the
+cost of those runtime guarantees. `installer.iss` is the Inno script
+(per-user install, no admin, optional start-at-login task; uninstall
+keeps `~/.researchly` because it is shared with the other surfaces).

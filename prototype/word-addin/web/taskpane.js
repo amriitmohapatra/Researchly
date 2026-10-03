@@ -15,7 +15,12 @@ const state = {
   serverOk: false,
   checking: false,
   dismissed: new Set(),        // per-session: rule|para|start keys
-  muted: new Set(JSON.parse(localStorage.getItem("researchly.muted") || "[]")),
+  // Muted rules live in the SHARED config (~/.researchly/config.toml) via
+  // the server's /config endpoint — never in localStorage, where no other
+  // surface could see them (the W0/W2 parity guarantee).
+  muted: new Set(),
+  config: null,                // last resolved config from the server
+  health: null,                // last tier statuses from the server
   lastText: "",
   autoTimer: null,
   data: null,
@@ -33,14 +38,136 @@ Office.onReady(() => {
       $("trackChk").disabled = true;
     }
   } catch {}
+  initTabs();
   $("checkBtn").onclick = () => runCheck();
+  $("reviewBtn").onclick = () => runReview();
   $("polishBtn").onclick = () => runPolish();
   $("polishDiscard").onclick = () => $("polishPanel").classList.add("hidden");
   $("autoChk").onchange = toggleAuto;
-  $("prefChk").onchange = () => runCheck();
-  ping();
+  $("prefChk").onchange = () =>
+    saveSetting({ show_preferences: $("prefChk").checked }).then(runCheck);
+  $("probeBtn").onclick = () => probeGrammar();
+  initSettingsHandlers();
+  ping().then(() => { migrateLocalStorageMutes().then(loadConfig); });
   setInterval(ping, 15000);
 });
+
+/* ---------------- tabs ---------------- */
+
+function initTabs() {
+  document.querySelectorAll("#tabs .tab").forEach((btn) => {
+    btn.onclick = () => {
+      document.querySelectorAll("#tabs .tab").forEach((b) =>
+        b.classList.toggle("active", b === btn));
+      document.querySelectorAll(".tabpane").forEach((p) =>
+        p.classList.add("hidden"));
+      $(`pane-${btn.dataset.tab}`).classList.remove("hidden");
+      if (btn.dataset.tab === "settings" || btn.dataset.tab === "health") {
+        loadConfig();
+      }
+    };
+  });
+}
+
+/* ---------------- shared config (the ONLY settings store) --------------- */
+
+async function loadConfig() {
+  if (!state.serverOk) return;
+  try {
+    const r = await fetch("/status");
+    const j = await r.json();
+    applyConfig(j.config, j.health);
+  } catch {}
+}
+
+function applyConfig(config, health) {
+  if (!config) return;
+  state.config = config;
+  state.muted = new Set(config.disabled || []);
+  if (health) state.health = health;
+  // sync every control that mirrors a shared setting
+  $("prefChk").checked = !!config.show_preferences;
+  $("setPrefs").checked = !!config.show_preferences;
+  $("setDocType").value = config.document_type || "auto";
+  $("setAggr").value = config.aggressiveness || "standard";
+  $("setLocale").value = config.locale || "en-US";
+  $("setGrammar").checked = config.grammar_tier !== false;
+  $("setGec").checked = config.gec_tier === true;
+  renderMutedList();
+  if (state.health) renderHealthList(state.health);
+  if (state.data) render(state.data);
+}
+
+async function saveSetting(patch) {
+  try {
+    const r = await fetch("/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    const j = await r.json();
+    if (j.error) throw new Error(j.error);
+    applyConfig(j.config);
+    $("settingsMsg").textContent =
+      "Saved — shared with every Researchly surface.";
+    return j;
+  } catch (e) {
+    $("settingsMsg").textContent =
+      "Could not save: " + (e.message || e);
+    return null;
+  }
+}
+
+function initSettingsHandlers() {
+  $("setDocType").onchange = () =>
+    saveSetting({ document_type: $("setDocType").value });
+  $("setAggr").onchange = () =>
+    saveSetting({ aggressiveness: $("setAggr").value });
+  $("setLocale").onchange = () =>
+    saveSetting({ locale: $("setLocale").value });
+  $("setPrefs").onchange = () =>
+    saveSetting({ show_preferences: $("setPrefs").checked });
+  $("setGrammar").onchange = () =>
+    saveSetting({ grammar_tier: $("setGrammar").checked });
+  $("setGec").onchange = () =>
+    saveSetting({ gec_tier: $("setGec").checked });
+}
+
+async function muteRule(ruleId) {
+  const j = await saveSetting({ mute: ruleId });
+  if (j && state.data) render(state.data);
+}
+
+async function unmuteRule(ruleId) {
+  const j = await saveSetting({ unmute: ruleId });
+  if (j && state.data) render(state.data);
+}
+
+async function unmuteAll() {
+  // clear the disabled list in the shared config in one write
+  const j = await saveSetting({ disabled: [] });
+  if (j) runCheck();
+}
+
+/**
+ * One-time migration: earlier builds kept muted rules in this taskpane's
+ * localStorage, invisible to every other surface. Move them into the
+ * shared config, then delete the key so this never runs again.
+ */
+async function migrateLocalStorageMutes() {
+  let legacy = [];
+  try {
+    legacy = JSON.parse(localStorage.getItem("researchly.muted") || "[]");
+  } catch {}
+  if (!legacy.length) {
+    try { localStorage.removeItem("researchly.muted"); } catch {}
+    return;
+  }
+  for (const ruleId of legacy) {
+    try { await saveSetting({ mute: ruleId }); } catch {}
+  }
+  try { localStorage.removeItem("researchly.muted"); } catch {}
+}
 
 async function ping() {
   try {
@@ -57,6 +184,86 @@ async function ping() {
     $("checkBtn").disabled = true;
   }
   $("polishBtn").disabled = !state.serverOk;
+  $("reviewBtn").disabled = !state.serverOk;
+}
+
+/* ---------------- review (critical-reader report) ---------------- */
+
+async function runReview() {
+  if (!state.serverOk) return;
+  $("reviewBtn").textContent = "Reading…";
+  try {
+    const paragraphs = await getParagraphs();
+    const resp = await fetch("/review", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paragraphs }),
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    $("reviewOut").textContent = data.report;
+    $("reviewOut").classList.remove("hidden");
+  } catch (e) {
+    $("reviewOut").textContent = "Review failed: " + (e.message || e);
+    $("reviewOut").classList.remove("hidden");
+  } finally {
+    $("reviewBtn").textContent = "Run reviewer's brief";
+  }
+}
+
+/* ---------------- health tab ---------------- */
+
+function renderHealthList(health) {
+  const el = $("healthList");
+  if (!el) return;
+  el.innerHTML = (health || [])
+    .map((t) => {
+      const cls = t.ok ? "ok" : (t.state === "disabled" ? "off" : "down");
+      return `<div class="health-row ${cls}">
+        <b>${escapeHtml(t.label)}</b> — ${escapeHtml(t.state)}
+        <div class="dim">${escapeHtml(t.detail || "")}</div>
+        ${t.remedy ? `<code>${escapeHtml(t.remedy)}</code>` : ""}
+      </div>`;
+    })
+    .join("");
+}
+
+async function probeGrammar() {
+  $("healthMsg").textContent =
+    "Probing — the first run may download LanguageTool (~200 MB)…";
+  $("probeBtn").disabled = true;
+  try {
+    const r = await fetch("/status?probe=1");
+    const j = await r.json();
+    applyConfig(j.config, j.health);
+    $("healthMsg").textContent = j.summary || "done";
+  } catch (e) {
+    $("healthMsg").textContent = "Probe failed: " + (e.message || e);
+  } finally {
+    $("probeBtn").disabled = false;
+  }
+}
+
+/* ---------------- settings: muted-rules list ---------------- */
+
+function renderMutedList() {
+  const el = $("mutedList");
+  if (!el) return;
+  if (!state.muted.size) {
+    el.textContent = "none";
+    return;
+  }
+  el.innerHTML = [...state.muted]
+    .sort()
+    .map(
+      (id) =>
+        `<span class="muted-chip">${escapeHtml(id)} ` +
+        `<a data-rule="${escapeHtml(id)}" class="unmute-one">unmute</a></span>`
+    )
+    .join(" ");
+  el.querySelectorAll(".unmute-one").forEach((a) => {
+    a.onclick = () => unmuteRule(a.dataset.rule);
+  });
 }
 
 /* ---------------- polish (deterministic rewrite) ---------------- */
@@ -79,7 +286,7 @@ async function runPolish() {
     const resp = await fetch("/polish", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: selection, disabled: [...state.muted] }),
+      body: JSON.stringify({ text: selection }),
     });
     const data = await resp.json();
     if (data.error) throw new Error(data.error);
@@ -219,12 +426,13 @@ async function runCheck() {
   try {
     const paragraphs = await getParagraphs();
     state.lastText = normalizeBody(paragraphs.map((p) => p.text).join("\n"));
+    // No `disabled` override: the server resolves the shared config, so a
+    // rule muted here (or in any other surface) is muted for this check.
     const resp = await fetch("/check", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         paragraphs,
-        disabled: [...state.muted],
         show_preferences: $("prefChk").checked,
       }),
     });
@@ -333,9 +541,9 @@ function render(data) {
       };
       el.querySelector(".mute").onclick = () => {
         tele("muted", s);
-        state.muted.add(s.rule_id);
-        persistMuted();
+        state.muted.add(s.rule_id);   // optimistic; confirmed by /config
         render(state.data);
+        muteRule(s.rule_id);
       };
       el.querySelector(".whytoggle").onclick = () =>
         el.classList.toggle("open");
@@ -407,11 +615,7 @@ function renderMutedLine() {
   }
   $("muted").innerHTML = `muted rules: ${[...state.muted].join(", ")} — <a id="unmute">unmute all</a>`;
   $("muted").classList.remove("hidden");
-  $("unmute").onclick = () => {
-    state.muted.clear();
-    persistMuted();
-    runCheck();
-  };
+  $("unmute").onclick = () => unmuteAll();
 }
 
 /**
@@ -639,9 +843,6 @@ function addToDictionary(s, el) {
 
 function key(s) {
   return `${s.rule_id}|${s.para}|${s.start_in_para}`;
-}
-function persistMuted() {
-  localStorage.setItem("researchly.muted", JSON.stringify([...state.muted]));
 }
 function truncate(t, n) {
   t = (t || "").replace(/\s+/g, " ").trim();

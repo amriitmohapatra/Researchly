@@ -20,13 +20,17 @@ from __future__ import annotations
 from collections import Counter
 
 from . import abstract_lens
+from . import argument as argument_mod
 from . import metrics as metrics_mod
 from .document import Document
 from .engine import check
 
 
-def build_review(text: str, nlp, kind: str = "plain") -> dict:
-    doc = Document.from_text(text, kind)
+def build_review(text, nlp, kind: str = "plain") -> dict:
+    """`text` may be a str or an already-built Document (the Word server
+    passes a Document so style-based headings survive into the review)."""
+    doc = text if isinstance(text, Document) else Document.from_text(text,
+                                                                     kind)
     suggestions = check(doc, nlp, disabled={"LT001"},
                         show_preferences=True)
     by_rule = Counter(s.rule_id for s in suggestions)
@@ -35,11 +39,18 @@ def build_review(text: str, nlp, kind: str = "plain") -> dict:
     sections = sorted({h.section for h in doc.headings}) or ["(none)"]
     has_limitations = "limitations" in sections
 
+    # W4: the review lens now reads the document's argument structure from
+    # the shared argument objects rather than only rule hits — the first
+    # consumer of the ArgumentObject layer (sprint items 9–10).
+    arg_objects = argument_mod.build_argument(doc)
+    arg = argument_mod.summarize(arg_objects)
+
     def hits(rule_id):
         return [s for s in suggestions if s.rule_id == rule_id]
 
     causal = hits("C303")
     return {
+        "argument": arg,
         "sections": sections,
         "metrics": mets.to_dict(),
         "aim": moves["aim"],
@@ -108,6 +119,12 @@ def render_review(r: dict) -> str:
         + ("present — pre-empting the rebuttal (Toulmin)"
            if r["has_limitations"] else
            "NOT found — the rebuttal will come from the reviewer instead"))
+    links = (r.get("argument") or {}).get("missing_links") or []
+    if links:
+        add(f"   argument structure ({len(links)} missing link"
+            f"{'s' if len(links) != 1 else ''}, Toulmin scan):")
+        for link in links[:6]:
+            add(f"     - [{link['section']}] {link['message']}")
     if r["abstract_missing"]:
         add(f"   abstract: {r['abstract_missing'][0]}")
     add("")

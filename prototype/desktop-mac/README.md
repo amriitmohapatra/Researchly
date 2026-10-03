@@ -120,3 +120,15 @@ hides when there's nothing to flag.
 - Telemetry: the desktop app already logs shown/applied events (source
   `desktop`) into the same local file — `python -m researchly stats`
   covers all surfaces.
+
+## Standalone installer (2026-08-14)
+
+`bash build_installer.sh` produces `Researchly-0.8.dmg` AND
+`Researchly-0.8.pkg` with everything inside: the py2app bundle plus a
+pre-downloaded LanguageTool and a jlink-trimmed private JRE under
+`Contents/Resources/vendor/`. Installed apps need no Python, no Java and
+no first-run download — `health.find_java()` prefers the bundled JRE and
+`rules_grammar` points language_tool_python at the bundled LanguageTool
+(LTP_JAR_DIR_PATH). Build-machine prereqs: the pip deps + a JDK 17+
+(for jlink). `build_app.sh` remains the small/dev build that relies on
+system Java and first-run downloads.

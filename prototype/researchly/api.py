@@ -85,7 +85,7 @@ def ensure_rules_loaded() -> int:
     engine.
     """
     from . import (rules_lexical, rules_syntax,  # noqa: F401
-                   rules_spelling, rules_grammar)
+                   rules_spelling, rules_grammar, rules_gec)
     from .engine import REGISTRY
     return len(REGISTRY)
 

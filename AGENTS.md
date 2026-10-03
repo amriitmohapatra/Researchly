@@ -23,7 +23,7 @@ python -m spacy download en_core_web_sm
 ## Commands
 
 ```bash
-python3.10 -m pytest tests/ -q           # ~177 tests; must be green
+python3.10 -m pytest tests/ -q           # ~260 tests; must be green
 python3.10 -m researchly check FILE      # the checker
 python -m researchly polish "text"       # deterministic rewrite
 python -m researchly review --file F     # critical-reader report

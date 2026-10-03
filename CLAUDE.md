@@ -55,11 +55,14 @@ Researchly/
 ├── Notes_On_Writing/             ← course PDFs — BEING RE-MINED (W5, see below)
 ├── Sample_thesis_drafts/         ← 8 accepted theses (dogfooding corpus)
 ├── research/                     ← Phase-1 landscape research (00-synthesis.md first)
+├── Experiment_Researchly/        ← EXPERIMENT FORK (P21-EXP drafting guide); not the
+│                                    mainline — see PROJECT_LOG P21 before touching it
 ├── docs/
 │   ├── PROJECT_LOG.md            ← THE chronicle: read to understand everything
 │   ├── rule-inventory.md         ← all rules, all layers, sources, status
 │   ├── knowledge-base.md         ← source-document → rule provenance map
 │   ├── dogfooding-report.md      ← how precision tuning was done (methodology)
+│   ├── windows-smoke-checklist.md ← ordered real-hardware Windows bring-up protocol
 │   └── roadmap-rewrite-and-desktop.md
 └── prototype/
     ├── researchly/               ← THE ENGINE (one package, all surfaces use it)
@@ -71,6 +74,8 @@ Researchly/
     │   ├── rules_*.py            ← rule modules (lexical, syntax, spelling, grammar)
     │   ├── abstract_lens.py      ← Belcher six-part abstract check (AB802)
     │   ├── review.py             ← Wallace & Wray critical-reader report
+    │   ├── argument.py           ← ArgumentObject: Toulmin roles per section (feeds review)
+    │   ├── gec.py                ← learned-GEC scaffold (opt-in, abstains; tier="gec")
     │   ├── transform.py          ← deterministic Polish rewriter
     │   ├── spelling.py           ← SymSpell wrapper + guards + user dictionary
     │   ├── lexicons.py           ← ALL word lists (auditable; extend here)
@@ -82,7 +87,7 @@ Researchly/
     ├── vscode-extension/         ← pre-bundled (esbuild); no npm needed on user's Mac
     ├── desktop-mac/              ← pyobjc menu-bar app + py2app/.dmg build
     ├── desktop-win/              ← UNTESTED scaffold
-    └── tests/                    ← ~130 tests; run before ANY delivery
+    └── tests/                    ← ~260 tests; run before ANY delivery
 ```
 
 ## How to work here

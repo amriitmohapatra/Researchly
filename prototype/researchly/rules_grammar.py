@@ -12,10 +12,30 @@ word confusion) and drop LanguageTool's spelling (S001's job) and style
 
 from __future__ import annotations
 
+import os
 import threading
 
 from .document import Document
 from .engine import Category, Suggestion, rule
+
+
+def _apply_bundled_lt() -> bool:
+    """Point language_tool_python at a bundled LanguageTool, if shipped.
+
+    Standalone installers vendor LanguageTool-<version> inside the app so
+    the 259 MB first-run download never happens. language_tool_python
+    honours LTP_JAR_DIR_PATH; set it before the tool is constructed. An
+    explicit user-set value is never overridden. Returns True when a
+    bundled copy is in use.
+    """
+    if os.environ.get("LTP_JAR_DIR_PATH"):
+        return True                       # user/build already chose one
+    from .health import bundled_languagetool
+    lt_dir = bundled_languagetool()
+    if lt_dir is None:
+        return False
+    os.environ["LTP_JAR_DIR_PATH"] = str(lt_dir)
+    return True
 
 _LOCK = threading.Lock()
 _TOOL = None
@@ -73,6 +93,9 @@ def get_tool(locale: str = "en-US"):
             _DETAIL = str(e)
             _TOOL = None
             return None
+        # Standalone builds ship LanguageTool inside the app; point the
+        # wrapper at it BEFORE construction so nothing downloads.
+        _apply_bundled_lt()
         # language_tool_python finds the JVM with shutil.which("java"), so a
         # keg-only Homebrew JDK is invisible to it however correctly it was
         # installed. Put the real one on PATH first.

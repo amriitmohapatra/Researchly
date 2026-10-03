@@ -18,6 +18,7 @@ import importlib.util
 import os
 import re
 import shutil
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -78,6 +79,79 @@ MIN_JAVA = 17
 JAVA_EXE = "java.exe" if os.name == "nt" else "java"
 
 
+# --- bundled runtime discovery (P20: standalone installers) ----------------
+#
+# The standalone builds ship every dependency INSIDE the artifact: a
+# jlink-trimmed JRE at vendor/jre and a pre-downloaded LanguageTool at
+# vendor/LanguageTool-<version>. Nothing downloads at first run and no
+# system Java is required — but a machine WITHOUT the bundle behaves
+# exactly as before (these helpers just return None).
+
+VENDOR_ENV = "RESEARCHLY_VENDOR"      # explicit override; also used by tests
+
+
+def vendor_dir() -> Optional[Path]:
+    """The bundled-dependencies folder of a standalone build, if any.
+
+    Checked in order: the RESEARCHLY_VENDOR env override; the py2app
+    Resources directory (env RESOURCEPATH); PyInstaller's extraction dir
+    (sys._MEIPASS, onefile) and the executable's folder (onedir, where
+    modern PyInstaller puts support files under _internal/).
+    """
+    candidates: list[Path] = []
+    env = os.environ.get(VENDOR_ENV)
+    if env:
+        candidates.append(Path(env))
+    res = os.environ.get("RESOURCEPATH")               # py2app .app
+    if res:
+        candidates.append(Path(res) / "vendor")
+    meipass = getattr(sys, "_MEIPASS", None)           # PyInstaller onefile
+    if meipass:
+        candidates.append(Path(meipass) / "vendor")
+    if getattr(sys, "frozen", False):                  # PyInstaller onedir
+        exe_dir = Path(sys.executable).parent
+        candidates.append(exe_dir / "vendor")
+        candidates.append(exe_dir / "_internal" / "vendor")
+    for c in candidates:
+        try:
+            if c.is_dir():
+                return c
+        except Exception:
+            continue
+    return None
+
+
+def bundled_java() -> Optional[str]:
+    """Path to the bundle's own JRE executable, if this build ships one."""
+    v = vendor_dir()
+    if v is None:
+        return None
+    exe = v / "jre" / "bin" / JAVA_EXE
+    try:
+        return str(exe) if exe.exists() else None
+    except Exception:
+        return None
+
+
+def bundled_languagetool() -> Optional[Path]:
+    """The bundle's pre-downloaded LanguageTool-<version> folder, if any.
+
+    Points language_tool_python straight at the shipped jar directory (via
+    LTP_JAR_DIR_PATH, set in rules_grammar) so the 259 MB first-run
+    download never happens on an installed standalone build.
+    """
+    v = vendor_dir()
+    if v is None:
+        return None
+    try:
+        for cand in sorted(v.glob("LanguageTool*"), reverse=True):
+            if cand.is_dir():
+                return cand
+    except Exception:
+        pass
+    return None
+
+
 def _runs(exe: str) -> Optional[int]:
     """Major version if this java executable actually runs, else None.
 
@@ -112,6 +186,11 @@ def find_java() -> Optional[str]:
         return _JAVA_PATH
 
     candidates: list[str] = []
+    # A standalone build's own JRE wins over everything: it is the one
+    # runtime whose version and presence the build verified.
+    shipped = bundled_java()
+    if shipped:
+        candidates.append(shipped)
     env_home = os.environ.get("JAVA_HOME")
     if env_home:
         candidates.append(str(Path(env_home) / "bin" / JAVA_EXE))
@@ -268,13 +347,31 @@ def _grammar_status(cfg: Optional[Config], probe: bool) -> TierStatus:
 
 
 def _gec_status(cfg: Optional[Config]) -> TierStatus:
-    """Local non-generative edit tagger. Not built yet — W3 Tier B."""
+    """Local non-generative edit tagger — scaffold present, model absent.
+
+    Unlike the deterministic tiers, this one is OPT-IN: `gec = true` in
+    `[tiers]` is required even when a backend is live, because a learned
+    layer earns trust by being asked for (gec.py has the full contract).
+    """
+    from . import gec
+
     if cfg is not None and cfg.gec_tier is False:
         return TierStatus("gec", "Learned corrections", False, "disabled",
                           "turned off in settings",
                           "re-enable in settings")
-    return TierStatus("gec", "Learned corrections", False, "missing",
-                      "not installed in this build", "")
+    if not gec.available():
+        return TierStatus(
+            "gec", "Learned corrections", False, "missing",
+            "no local model in this build (the tier abstains entirely)", "")
+    if cfg is None or cfg.gec_tier is not True:
+        return TierStatus(
+            "gec", "Learned corrections", False, "disabled",
+            "a local model is present but the tier is opt-in",
+            "set  [tiers] gec = true  in settings to enable it")
+    return TierStatus(
+        "gec", "Learned corrections", True, "ready",
+        f"local edit tagger ({gec.get_backend().version}) — "
+        "nothing leaves this machine")
 
 
 def engine_status(cfg: Optional[Config] = None, nlp=None,

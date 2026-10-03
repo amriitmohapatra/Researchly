@@ -164,10 +164,30 @@ class Handler(SimpleHTTPRequestHandler):
                 text = payload.get("text") or ""
                 if not text.strip():
                     return self._json(400, {"error": "empty selection"})
-                result = transform.polish(
-                    text, get_nlp(),
-                    disabled=set(payload.get("disabled") or []))
+                # Muted rules come from the SHARED config; a payload
+                # override remains possible but the taskpane no longer
+                # sends one (parity with every other surface).
+                disabled = (set(payload["disabled"])
+                            if payload.get("disabled") is not None
+                            else config_mod.load().disabled)
+                result = transform.polish(text, get_nlp(),
+                                          disabled=disabled)
                 return self._json(200, result.to_dict())
+            except Exception as e:
+                return self._json(500, {"error": f"{type(e).__name__}: {e}"})
+        if self.path == "/review":
+            # The critical-reader report (Wallace & Wray + the Toulmin
+            # argument scan) over the whole document. Built from the same
+            # Word paragraphs as /check so style-based headings survive.
+            try:
+                paragraphs = payload.get("paragraphs") or []
+                if not paragraphs:
+                    return self._json(400, {"error": "empty document"})
+                from researchly import review as review_mod
+                doc = api.build_document(paragraphs)
+                r = review_mod.build_review(doc, get_nlp())
+                return self._json(200, {
+                    "report": review_mod.render_review(r), "data": r})
             except Exception as e:
                 return self._json(500, {"error": f"{type(e).__name__}: {e}"})
         if self.path == "/dictionary":
@@ -196,7 +216,8 @@ class Handler(SimpleHTTPRequestHandler):
                     cfg = cfg.with_overrides(**{
                         k: payload[k] for k in
                         ("show_preferences", "locale", "document_type",
-                         "aggressiveness", "grammar_tier", "disabled")
+                         "aggressiveness", "grammar_tier", "gec_tier",
+                         "disabled")
                         if k in payload})
                     if not config_mod.save_user(cfg):
                         return self._json(500, {"error": "could not save"})
