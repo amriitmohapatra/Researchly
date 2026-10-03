@@ -67,7 +67,7 @@ done and what's next*. Both the owner and Claude edit it.
 - [x] Add S001 lexicon gaps: `estimand(s)`, `urbanicity`, `prespecified`, `lockdown(s)`, `serotypic`, `tradeoff(s)`, `exergy` — 2026-10-03, ee0057d; regression test fails without, passes with
 - [x] Update CLAUDE.md / AGENTS.md / README repo map + commands to the new layout — 2026-10-03
 - [x] Noise-floor gate: `ml/dogfood/noise_gate.py` + `baseline.json` — measured **14.84/1000w** all tiers (12.5 ex-S001; 12.8 ex-LT001). Fails on a rise > 0.3 *or* a busy rule going silent (dead tier)
-- [~] **Exit check:** CI green on PR #1 ✅; `check_third_party.py` exits 0 ✅; owner merges PR #1 **(Amriit)**
+- [x] **Exit check:** CI green on PR #1 ✅; `check_third_party.py` exits 0 ✅; owner merges PR #1 **(Amriit)** ✅ (merged 2026-10-03)
 
 ## S1 — Engine online (paste text at a private URL → suggestions)
 
@@ -93,7 +93,7 @@ done and what's next*. Both the owner and Claude edit it.
 
 ## S2 — Accounts, files, settings sync
 
-- [ ] Supabase project (region D3) **(Amriit: create project; docs/deploy.md step 8)**
+- [x] Supabase project (region D3) **(Amriit: create project; docs/deploy.md step 8)** — 2026-10-03, owner signed in and out on the live site. Checked from outside: anonymous read/insert/update/delete and RPC calls refused (42501 permission denied), a forged unsigned token rejected (PGRST301), signing keys ES256
 - [x] Schema: `user_settings`, `dictionary_words`, RLS per command, `my_config()` (s2-design §2) — afc3041. `profiles`, `usage_events`, `feedback_events` are **not** created until a feature reads them (collect only what's needed)
 - [x] Engine verifies JWT; `user_id` from token only; remote config layer in `config.py` — 2026-10-03, 8e82b7a: JWKS verification with the algorithm pinned to the key, settings read via PostgREST with the caller's own token (no secret key in the engine; it refuses to start with one); 39 token/settings tests, 3 new canary scenarios
 - [x] `/v1/analyze-file` (raw bytes, filename never logged, 25 MiB cap, sign-in required when accounts are on) — 8e82b7a, 16 tests
@@ -196,7 +196,7 @@ patterns of good research writing across disciplines, not just epidemiology.
   - [ ] Verify on the real Supabase project after step 8: run a quick two-user check through the REST API (the CI test uses a Postgres stand-in for Supabase's roles), and confirm `service_role` grants are as expected
   - [ ] Real users need a custom email sender (Supabase's built-in one only reaches the project team, ~2 emails/hour) — S6
   - [ ] Fold the S2 decisions from `docs/s2-design.md` into ARCHITECTURE.md when S2 closes
-- [ ] Verify the real Supabase project as an outsider (anonymous read/insert/delete/RPC refused, signing keys asymmetric): blocked in Claude's sandbox until `*.supabase.co` is allow-listed **(Amriit: environment network settings)**. The live engine side is verified (2026-10-03): anonymous upload and >1,500-word paste get `sign_in_required`, a forged token gets `unauthorized`, every tier healthy
+- [x] Verify the real Supabase project as an outsider — done 2026-10-03 after the owner allow-listed the domain (see the S2 Supabase item). The live engine side is verified (2026-10-03): anonymous upload and >1,500-word paste get `sign_in_required`, a forged token gets `unauthorized`, every tier healthy
 - [ ] Large `.tex` (measured locally, synthetic LaTeX, grammar on): 25k words 21 s / 0.6 GB; 65k words 44 s / 1.3 GB; 120k words 74 s / 2.1 GB (×~1.5 on Cloud Run). Fixed: the browser gave up at 120 s while the engine may run 300 s; now 290 s, pinned by a test. Still open: no progress beyond a spinner, and a whole thesis waits ~2 min
 - [ ] **From the owner's first real `.tex` upload (P28, 2026-10-03), not yet fixed:**
   - [ ] Section inheritance: a subsection with no section keyword ("Priors", "Solver") resets the section to "other" instead of inheriting its parent's ("Methods"). Headings need a level (LaTeX/Markdown/Word all know it) and resolution should inherit; a keyword in a nested heading ("Model fit" under Results) must not override its parent
