@@ -53,6 +53,16 @@ SKIP_SUFFIXES = {".joblib", ".pkl", ".pickle", ".pyc", ".pyo", ".so",
 # The SymSpell frequency dictionary is a third-party *word list*, not prose;
 # it is licensed separately (ml/datasets.yaml) and would only add noise.
 SKIP_NAME_RX = re.compile(r"^frequency_(dictionary|bigramdictionary)", re.I)
+# Machine-generated files: dependency lockfiles and compiler/bundler state.
+# They hold version lists and number runs, never prose anyone wrote.
+SKIP_GENERATED_RX = re.compile(
+    r"(^package-lock\.json$|^pnpm-lock\.yaml$|^yarn\.lock$|\.tsbuildinfo$|\.map$)")
+
+# A shingle must carry prose to count as a match. Without this, runs of page
+# or line numbers ("6 7 8 9 10 11 12 13") in a thesis matched number lists in
+# package-lock.json and source maps — a false positive that failed CI.
+MIN_WORDS_WITH_LETTERS = 5
+_HAS_LETTER = re.compile(r"[a-z]")
 
 _LIGATURES = (("ffi", "f"), ("ffl", "f"), ("ff", "f"), ("fi", "f"),
               ("fl", "f"))
@@ -97,9 +107,15 @@ def tokens_with_lines(text: str) -> tuple[list[str], list[str], list[int]]:
     return folded, orig, lines
 
 
+def is_prose(window) -> bool:
+    return sum(1 for t in window if _HAS_LETTER.search(t)) >= MIN_WORDS_WITH_LETTERS
+
+
 def shingles(toks: list[str]):
     for i in range(len(toks) - N + 1):
-        yield " ".join(toks[i:i + N])
+        window = toks[i:i + N]
+        if is_prose(window):
+            yield " ".join(window)
 
 
 # ─────────────────────────────── sources ────────────────────────────────
@@ -201,26 +217,46 @@ def load_allowlist(path: Path, warn) -> set:
 
 # ─────────────────────────────── targets ────────────────────────────────
 
+def _candidate_files(root: Path):
+    """Files that are, or would be, in the repository under SCAN_ROOTS.
+
+    Shippable means "in git": build output (.next/, dist/) and anything
+    .gitignore excludes never reach a release, so scanning them only adds
+    noise. Falls back to walking the tree when git is unavailable.
+    """
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "-z", "--cached", "--others",
+             "--exclude-standard", "--", *SCAN_ROOTS],
+            capture_output=True, check=True, timeout=60).stdout
+        rels = [Path(r) for r in out.decode("utf-8", "replace").split("\0") if r]
+        return sorted(root / r for r in rels)
+    except (OSError, subprocess.SubprocessError):
+        files = []
+        for top in SCAN_ROOTS:
+            base = root / top
+            if base.is_dir():
+                files.extend(base.rglob("*"))
+        return sorted(files)
+
+
 def iter_targets(root: Path):
-    for top in SCAN_ROOTS:
-        base = root / top
-        if not base.is_dir():
+    for p in _candidate_files(root):
+        if not p.is_file():
             continue
-        for p in sorted(base.rglob("*")):
-            if not p.is_file():
-                continue
-            rel = p.relative_to(root)
-            if any(part in SKIP_DIRS for part in rel.parts[:-1]):
-                continue
-            if p.suffix.lower() in SKIP_SUFFIXES or SKIP_NAME_RX.match(p.name):
-                continue
-            try:
-                raw = p.read_bytes()
-            except OSError:
-                continue
-            if b"\x00" in raw[:8192]:
-                continue                                    # binary
-            yield rel, raw.decode("utf-8", "replace")
+        rel = p.relative_to(root)
+        if any(part in SKIP_DIRS for part in rel.parts[:-1]):
+            continue
+        if (p.suffix.lower() in SKIP_SUFFIXES or SKIP_NAME_RX.match(p.name)
+                or SKIP_GENERATED_RX.search(p.name)):
+            continue
+        try:
+            raw = p.read_bytes()
+        except OSError:
+            continue
+        if b"\x00" in raw[:8192]:
+            continue                                    # binary
+        yield rel, raw.decode("utf-8", "replace")
 
 
 def scan(root: Path, index: dict, allowed: set):
@@ -230,7 +266,10 @@ def scan(root: Path, index: dict, allowed: set):
         hit = [False] * len(folded)
         srcs: dict = {}
         for i in range(len(folded) - N + 1):
-            sh = " ".join(folded[i:i + N])
+            window = folded[i:i + N]
+            if not is_prose(window):
+                continue
+            sh = " ".join(window)
             label = index.get(sh)
             if label is None or sh in allowed:
                 continue
