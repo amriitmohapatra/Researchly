@@ -921,3 +921,30 @@ the first version passed it.
 - the Pallas year (2022 vs 2023);
 - two scanned PDFs the scan can't read;
 - `_to_delete/` (owner).
+
+**Addendum (same day): product direction.** The owner answered P1–P5.
+
+| # | Decision |
+|---|---|
+| P1 | Coach alongside existing tools: a web revision studio plus add-ins, with a Draft / Revise mode |
+| P2 | Consistency checks and reporting checklists ship in v1 |
+| P3 | Epidemiology is the first discipline pack |
+| P4 | Structural checks only for figures, tables and equations |
+| P5 | Responsive web plus add-ins; no native apps |
+
+The owner also raised the defining question: "why use Researchly when one
+already has LLMs or Grammarly?" ARCHITECTURE.md §1.3 now answers it as
+claims an LLM or Grammarly structurally can't make:
+- allowed (it never writes);
+- confidential;
+- sourced;
+- consistent;
+- section- and discipline-aware;
+- teaches;
+- whole-document.
+
+Each claim has an evidence row, including an S6 comparison study. The
+lesson: an origin story ("built from a professor's notes") is not a moat,
+because anyone can paste a style guide into a chatbot. The moat is the set
+of promises a generative tool cannot keep. New slice S2b covers the
+consistency and structure checks.
