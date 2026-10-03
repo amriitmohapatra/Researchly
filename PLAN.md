@@ -148,7 +148,9 @@ done and what's next*. Both the owner and Claude edit it.
 - [x] Manifest of 208 openly licensed documents, every licence verified per item — `ml/realdocs/manifest.yaml`, `SOURCES.md`, six `datasets.yaml` entries: 115 PMC OA articles (9 disciplines, 34 epidemiology), 20 PMC articles with native `.docx` supplements, 14 medRxiv/bioRxiv preprints, 18 LaTeX manuscripts on GitHub (CC BY/CC0), 41 Word robustness files
 - [x] Bench: fetch at run time (never committed), three renderings per JATS article (plain/docx/tex), invariants (lengths, segment round-trip, span bounds/text, spans never on masked markup, no I/O while reading, no crash/hang), format parity, report with no text — `ml/realdocs/`, `.github/workflows/realdocs.yml` (dispatch, weekly, engine changes); 26 tests in CI
 - [x] Local run on the 59 GitHub-hosted documents: **PASS** after the P29 fixes (was FAIL: 1 crash, 21 span violations, 2 projects refused); LaTeX 19.4 → 16.2 flags/1000w
-- [ ] First full run in GitHub Actions (the 115 PMC + 20 supplement + 14 preprint items cannot be fetched from Claude's sandbox) — after this branch merges
+- [x] First full run in GitHub Actions — 2026-10-03, run 37136223549 on 020bd32: **PASS** (1 h 47 min). All 115 PMC articles in three renderings (2.25M words), 74 native Word supplements from 20 articles, 17 LaTeX projects, 41 Word robustness files: no crash, every invariant held. Format parity: docx vs plain −0.44, tex vs plain −0.34 flags/1000w (mean of 118 articles). Published articles run at ~16 flags/1000w (PMC plain 16.46), like the theses (14.51)
+- [ ] Only 3 of 14 medRxiv/bioRxiv preprints were fetched (the servers refuse automated downloads); find a JATS mirror or drop them from the manifest
+- [ ] Add the published-article rate to the Q3 work: tune precision against PMC articles as well as the 8 theses (they are licence-clean, so examples can be inspected in the CI artifact)
 - [ ] Gate on flags/1000w per discipline once a baseline exists (reported, not gated, today)
 
 ### S5a — Open-access training corpus (owner request, 2026-10-03)

@@ -1310,3 +1310,12 @@ first run follows the merge.
 - **A bench must check itself.** The first local run of the bench caught
   my own regression in an unmerged PR; the invariants (no span on markup)
   are what made it visible, not the flag counts.
+
+**Addendum (P29, first full CI run):** run 37136223549 (1 h 47 min) passed
+on all 208 manifest items it could fetch: 115 PMC articles × 3 renderings
+(2.25M words), 74 Word supplements, 17 LaTeX projects, 41 robustness files;
+6 refusals all expected. Only 3 of 14 preprints were fetched (the preprint
+servers refuse automated downloads). Format parity holds on average
+(docx −0.44, tex −0.34 flags/1000w against plain). Published PLOS/eLife
+articles run at ~16 flags/1000w — no better than the theses — so Q3
+(≤ 11) must be tuned against published prose too, not only theses.
