@@ -1049,8 +1049,9 @@ and measured it.
 
   The paragraph meets Q1 on engine time; wall time includes about 1.4 s of
   network from the sandbox and needs re-measuring from Singapore. The
-  chapter misses Q2 even on engine time: Cloud Run's CPU is slower than the
-  local container (4.68 s there). Running spaCy and LanguageTool in
+  chapter misses Q2 even on engine time. The same chapter took 4.68 s in the
+  local container, so the Cloud Run instance is slower (probably CPU; not
+  yet profiled). Running spaCy and LanguageTool in
   parallel is now an S1 task, not an Inbox idea.
 
 **Deployment snags the owner hit (now in `docs/deploy.md`):**
