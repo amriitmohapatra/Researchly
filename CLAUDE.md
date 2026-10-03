@@ -154,3 +154,16 @@ The noise-floor guard is runnable again:
 `python3.10 dogfood/extract_clean.py && python3.10 dogfood/run_dogfood.py`
 (`RESEARCHLY_DISABLE=S001` isolates a tier). Baseline **10.4/1000w** ex-S001;
 past ~11 means re-tune, not ship.
+
+## Before this repository is ever made public (user reminder, 2026-10-03)
+
+The GitHub repo is **private** and must stay private while it contains
+third-party material: `Sample_thesis_drafts/` (eight other people's theses),
+the text extracted from them in `*/prototype/dogfood/text/`, and the course
+PDFs in `Notes_On_Writing/`. The MIT `LICENSE` does not cover any of it.
+
+If the user says they want to make the repo public, remind them of this
+first. Deleting the files in a new commit is **not enough** — they remain in
+git history. Either publish from a fresh repository that never contained
+them, or rewrite history (e.g. `git filter-repo`) and confirm with the user
+before doing so.
