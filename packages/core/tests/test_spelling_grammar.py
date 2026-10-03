@@ -43,6 +43,18 @@ def test_scientific_vocabulary_not_flagged():
     assert flags(t) == []
 
 
+def test_dogfood_vocabulary_gaps_not_flagged():
+    # The first S001 corpus run (CLAUDE.md, "never been dogfooded") found
+    # these real terms flagged on accepted theses. Each appears once here,
+    # so the repeated-term learning below cannot be what saves them.
+    # Mid-sentence and lowercase: capitalised words are skipped as possible
+    # proper nouns, which would make the test pass for the wrong reason.
+    t = ("The estimand was prespecified. Outcomes varied with urbanicity "
+         "after lockdowns. The serotypic shift reflects a tradeoff in "
+         "exergy, and several estimands were compared.")
+    assert flags(t) == []
+
+
 def test_uk_us_variants_not_flagged():
     t = ("We are modelling behaviour while analyzing and analysing "
          "hospitalisations and hospitalizations.")

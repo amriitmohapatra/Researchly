@@ -250,6 +250,17 @@ factsheet
 rainforest
 spatio
 serotyping
+# found by the first S001 corpus run (CLAUDE.md backlog; added 2026-10-03)
+estimand
+estimands
+prespecified
+urbanicity
+lockdown
+lockdowns
+serotypic
+tradeoff
+tradeoffs
+exergy
 # species epithets (lowercase by convention: Aedes aegypti)
 aegypti
 albopictus
