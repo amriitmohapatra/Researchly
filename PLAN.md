@@ -21,6 +21,14 @@ done and what's next*. Both the owner and Claude edit it.
 
 ---
 
+## Product direction questions (asked 2026-10-03) — awaiting answers
+
+- [ ] **P1** Researchly is a coach alongside existing tools (web "revision studio" + Word/Overleaf add-ins), not a place to write? **(Amriit)**
+- [ ] **P2** Add consistency checks (abbreviations, terminology, tense, numbers/units, figure/table citation) and reporting-guideline checklists (CONSORT/STROBE/PRISMA/EPIFORGE) to v1? **(Amriit)**
+- [ ] **P3** First discipline pack: epidemiology / infectious-disease modelling, then biomedical? **(Amriit)**
+- [ ] **P4** Figures/tables/equations: structural checks now (cross-refs, captions, symbol definitions, text↔table numbers); image understanding out of scope under rule #1? **(Amriit)**
+- [ ] **P5** Platforms: responsive web (installable PWA) + desktop add-ins; phones for reading reports; no native apps in v1? **(Amriit)**
+
 ## Owner decisions — see ARCHITECTURE.md §13
 
 - [x] **D1** "Confidential by design" approved as drafted — 2026-10-03
@@ -50,7 +58,7 @@ done and what's next*. Both the owner and Claude edit it.
 - [x] `git mv` baseline tree (D4) into `packages/core` + `apps/`; others into `legacy/` — 2026-10-03, d13255d; 260 passed / 1 skipped after the move (same as before)
 - [x] Merge P19–P21 entries into root `docs/PROJECT_LOG.md` — 2026-10-03, 83421b5
 - [x] Fix the Linux-only test failure (`test_jdk_found_with_a_finder_launch_environment`) — already fixed in the baseline tree (P19); passes on Linux
-- [~] GitHub Actions: ruff + pytest + noise-floor gate + third-party scan + secret scan — workflows written; gitleaks clean locally over full history. *Done when* green on PR #1
+- [x] GitHub Actions: ruff + pytest + noise-floor gate + third-party scan + secret scan — 2026-10-03, all 5 green on PR #1 at c041cdd: 261 passed / 1 skipped on Python 3.10 + Java 21; noise floor 14.84 reproduced exactly on CI (delta 0.0); scan 0 hits; gitleaks clean
 - [x] `ml/datasets.yaml` registry: 41 entries, licence + verified flag + permitted use + hash — 2026-10-03, 83421b5. Many licences unverifiable from the sandbox (proxy-blocked); marked unverified and narrowed
 - [x] Thesis-derived exemplars are not in shippable code — they stayed in `legacy/experiment-p21/` (verified by the registry audit)
 - [x] Remove third-party text found *inside* `packages/core` (Pallas exemplar abstract + frames, Endo lecture quotes in why-texts, ChenY thesis fragments, an NG5001 fixture) — 2026-10-03: paraphrased with attribution kept, original frames, synthetic fixtures. `check_third_party.py`: 19 hits → 0. Rule logic unchanged (string-blanked AST identical); tests 261 passed / 1 skipped. Several swapped fixtures now test their guard *more* strictly (C301, E703)
@@ -58,7 +66,7 @@ done and what's next*. Both the owner and Claude edit it.
 - [x] Add S001 lexicon gaps: `estimand(s)`, `urbanicity`, `prespecified`, `lockdown(s)`, `serotypic`, `tradeoff(s)`, `exergy` — 2026-10-03, ee0057d; regression test fails without, passes with
 - [x] Update CLAUDE.md / AGENTS.md / README repo map + commands to the new layout — 2026-10-03
 - [x] Noise-floor gate: `ml/dogfood/noise_gate.py` + `baseline.json` — measured **14.84/1000w** all tiers (12.5 ex-S001; 12.8 ex-LT001). Fails on a rise > 0.3 *or* a busy rule going silent (dead tier)
-- [ ] **Exit check:** CI green on PR #1; `check_third_party.py` exits 0; owner merges PR #1
+- [~] **Exit check:** CI green on PR #1 ✅; `check_third_party.py` exits 0 ✅; owner merges PR #1 **(Amriit)**
 
 ## S1 — Engine online (paste text at a private URL → suggestions)
 
