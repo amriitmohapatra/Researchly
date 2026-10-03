@@ -21,13 +21,14 @@ done and what's next*. Both the owner and Claude edit it.
 
 ---
 
-## Product direction questions (asked 2026-10-03) — awaiting answers
+## Product decisions — see ARCHITECTURE.md §1.3–1.4
 
-- [ ] **P1** Researchly is a coach alongside existing tools (web "revision studio" + Word/Overleaf add-ins), not a place to write? **(Amriit)**
-- [ ] **P2** Add consistency checks (abbreviations, terminology, tense, numbers/units, figure/table citation) and reporting-guideline checklists (CONSORT/STROBE/PRISMA/EPIFORGE) to v1? **(Amriit)**
-- [ ] **P3** First discipline pack: epidemiology / infectious-disease modelling, then biomedical? **(Amriit)**
-- [ ] **P4** Figures/tables/equations: structural checks now (cross-refs, captions, symbol definitions, text↔table numbers); image understanding out of scope under rule #1? **(Amriit)**
-- [ ] **P5** Platforms: responsive web (installable PWA) + desktop add-ins; phones for reading reports; no native apps in v1? **(Amriit)**
+- [x] **P1** Coach alongside existing tools: web revision studio + Word/Overleaf add-ins; Draft / Revise mode — 2026-10-03
+- [x] **P2** Consistency checks + reporting-guideline checklists in v1 — 2026-10-03
+- [x] **P3** First discipline pack: epidemiology / ID modelling; expand later — 2026-10-03
+- [x] **P4** Figures/tables/equations: structural checks; no image understanding — 2026-10-03
+- [x] **P5** Responsive web (PWA) + desktop add-ins; phones for reading; no native apps in v1 — 2026-10-03
+- [x] Positioning ("Why Researchly?") written down with its claims — ARCHITECTURE.md §1.3, 2026-10-03
 
 ## Owner decisions — see ARCHITECTURE.md §13
 
@@ -90,7 +91,22 @@ done and what's next*. Both the owner and Claude edit it.
 - [ ] Offset round-trip property test for every adapter
 - [ ] Cross-surface parity test (mute in one surface → muted everywhere)
 - [ ] Settings + dictionary UI in web app
+- [ ] Adapters keep figures, tables, equations and captions as *structure* (not just masked text) — needed by S2b
+- [ ] Web layout responsive from the start (P5): report and Learn views readable on a phone
 - [ ] **Exit check:** owner uploads a real `.tex` and `.docx` thesis chapter; offsets correct; settings sync across two browsers
+
+## S2b — Consistency & structure checks (P2, P4)
+
+- [ ] Abbreviations: defined at first use, defined once, used after definition
+- [ ] Terminology consistency (same concept → same term; e.g. "infection rate" vs "incidence" drift)
+- [ ] Tense consistency per section (Methods past, etc. — section-aware)
+- [ ] Numbers and units formatting consistency
+- [ ] Figures/tables: every one cited in text, cited in order, cited before it appears; labels exist
+- [ ] Caption quality: present, self-contained, defines abbreviations, states what/where/when/n
+- [ ] Equations: symbols defined near first use; numbered equations referenced
+- [ ] Text↔table numbers: a number quoted with "Table N" appears in Table N
+- [ ] Each check: authored question + named source, fire and don't-fire tests, rule-inventory row
+- [ ] **Exit check:** noise-floor gate holds; owner checks one real chapter and reports false flags
 
 ## S3 — Word add-in, hosted
 
@@ -98,6 +114,7 @@ done and what's next*. Both the owner and Claude edit it.
 - [ ] Sign-in via Office dialog + Supabase (Microsoft provider)
 - [ ] Unified JSON manifest (+ XML for Mac via `alternateIcons`)
 - [ ] Optional local-engine mode retained (localhost)
+- [ ] Draft / Revise mode (P1) in `config.py`, so it is shared by every surface; Draft shows sentence-level checks only
 - [ ] **Exit check:** owner uses it on Mac Word for a week; issues logged below
 
 ## S4 — Narrative map v1
@@ -107,6 +124,8 @@ done and what's next*. Both the owner and Claude edit it.
 - [ ] `/v1/narrative` endpoint; narrative map UI (moves present/missing/out of order)
 - [ ] Learn cards for every `learn_ref`
 - [ ] Hedging trajectory read-out (never a score)
+- [ ] Discipline-pack format + the epidemiology pack (P3): reporting checklists STROBE, CONSORT, PRISMA, EPIFORGE — checks *reporting*, never the science
+- [ ] Personal progress view: per-rule trends across a user's documents (from `usage_events` counts — no text)
 - [ ] Labelling guide + small annotation tool **(Claude)**; owner labels 50 paragraphs **(Amriit)**
 - [ ] **Exit check:** flag precision on the 50 labelled paragraphs reported here
 
@@ -139,6 +158,8 @@ patterns of good research writing across disciplines, not just epidemiology.
 ## S6 — Reach
 
 - [ ] Overleaf browser extension (CodeMirror 6)
+- [ ] Installable PWA (P5)
+- [ ] **Comparison study** (ARCHITECTURE §1.3): Researchly vs Grammarly vs a generic LLM prompt on the same public CC-BY chapters — false-flag rate, run-to-run consistency, sourced-feedback share; publish as measured. ⚠ Running Grammarly/an LLM on *public* text for evaluation is not product use, but confirm with owner before running **(Amriit)**
 - [ ] Privacy policy, sub-processor list, DPAs (Vercel Pro, Supabase, GCP) **(Amriit)**
 - [ ] AppSource submission (if D2 = paid/public)
 - [ ] Public beta cohort

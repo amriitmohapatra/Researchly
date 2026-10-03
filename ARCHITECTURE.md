@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | v1.2 — all owner decisions D1–D8 recorded 2026-10-03. Nothing built yet |
+| **Status** | v1.3 — owner decisions D1–D8 and product decisions P1–P5 recorded 2026-10-03; S0 built (PR #1) |
 | **Date** | 2026-10-03 |
 | **Owner** | Amriit (product owner, supervising) |
 | **Author** | Claude, acting as lead engineer, with staff-engineer, ML-research and platform sub-agent reports |
@@ -65,6 +65,61 @@ These are the product's identity, and they move into production unchanged:
 ### 1.2 What changes
 
 **Researchly becomes a hosted product (owner decision, 2026-10-03).** Until now, non-negotiable #2 read: "no document text ever leaves the machine". It is now **amended, not deleted**. ADR-02 sets out the replacement promise, which still has to satisfy publishers' confidentiality expectations.
+
+### 1.3 Why Researchly, when students already have LLMs and Grammarly?
+
+Every product decision has to keep this question answerable. The owner's framing (2026-10-03): Researchly is built for academic writing, from a professor's notes, communication courses and established best practice.
+
+That origin is necessary but not enough. Anyone can paste a style guide into a chatbot. The defensible answer is the combination below, which LLMs and Grammarly *structurally* cannot offer:
+
+| Researchly promise | Why an LLM can't make it | Why Grammarly doesn't |
+|---|---|---|
+| **Allowed to use.** It never writes or rewrites for you | Generating text is what it does. Many institutions restrict generative AI in theses and assessment | Its paid tiers include generative rewriting |
+| **Confidential.** No AI model sees the manuscript (ADR-02, ADR-07) | Your text goes to the model provider | Text is processed in the cloud by a generalist service |
+| **Sourced.** Every flag has a `why` and a named source (CLAUDE.md #6) | Feedback is plausible but unsourced, and sometimes invented | Explanations are generic |
+| **Consistent.** The same text always gets the same feedback | A second run gives a different critique | Mostly yes, for its rule-based layer |
+| **Section- and discipline-aware.** Passive voice is fine in Methods; reporting checklists apply | Only if prompted, and unreliably | Not section-aware |
+| **Teaches.** Learn cards, and personal patterns over time | No memory of your growth; it fixes text instead of teaching | Optimises the text, not the writer |
+| **Whole-document narrative.** Moves, argument chain and hedging across a 60k-word thesis | Context limits; it summarises rather than maps | Sentence-level only |
+
+**Where we deliberately lose:** fluent rephrasing. Researchly does not compete on it (ADR-07).
+
+**One-line positioning:** *the writing coach you're allowed to use — it cites its sources and makes you a better writer.*
+
+Each row above is a claim, so each needs evidence (§11). That includes a comparison study, PLAN.md S6, run only on public CC-BY text.
+
+### 1.4 How students use it (product decisions P1–P5, 2026-10-03)
+
+- **P1: a coach beside the student's tools, not a place to write.**
+  - The **web app is the revision studio**: whole-document review, the narrative map and the reviewer report. Small edits and a re-check are allowed, but it is not a word processor.
+  - **Add-ins** (Word, Overleaf, and VS Code via the LSP) bring live feedback to wherever the student already writes.
+  - A **Draft / Revise mode** switch sets how much appears at each stage:
+
+    | Stage | Mode | What the student sees |
+    |---|---|---|
+    | Planning | — | What should this section do? |
+    | Drafting | Draft | Sentence-level hints only |
+    | Revising | Revise | Full narrative and argument review |
+    | Pre-submission | Revise | Checklists |
+
+- **P2: v1 includes**
+  - **consistency checks**: abbreviations defined once, terminology, tense per section, numbers and units, figure and table citation;
+  - **reporting-guideline checklists**: CONSORT, STROBE, PRISMA, EPIFORGE.
+- **P3: discipline packs.**
+  - A **communication core** applies to every discipline.
+  - **Epidemiology / infectious-disease modelling** is the first pack; biomedical and others follow.
+  - Domain checks cover what was *reported* (for example, convergence diagnostics for a Bayesian fit), never whether the science is *right*.
+- **P4: figures, tables and equations get structural checks.**
+  - Cross-references exist, are in order and come before first use.
+  - Caption quality.
+  - Equation symbols are defined.
+  - Numbers in the text match the cited table.
+  - Image understanding is out of scope under rule #1.
+  - Input arrives as it is written: `.docx` with embedded figures and tables, or an Overleaf `.zip`. PDF is not a primary input.
+- **P5: platforms.**
+  - Responsive web, installable as a PWA, plus desktop add-ins.
+  - Phones and tablets are for *reading* reports and lessons.
+  - No native iOS or Android apps in v1.
 
 ---
 
@@ -600,6 +655,9 @@ This is the central methods record (ch. 27.5).
 | Every flag is explainable | Rule registry, `learn_ref` | Q10 contract test |
 | A degraded tier is visible | `health.py`, UI banner | Test that kills the LT sidecar, then a Playwright assertion on the banner |
 | Formats round-trip offsets | Ingest adapters | Property test: `source[start:end] == suggestion.text` for every adapter |
+| §1.3 "Consistent" | Deterministic rules; critics run at fixed weights with no sampling | Same input twice gives byte-identical suggestions (contract test) |
+| §1.3 "Sourced" | Rule registry and knowledge base | Q10 contract test, plus a `learn_ref` that resolves for every rule |
+| §1.3 "More precise for academic text than generic tools" | The whole engine | **Comparison study** (S6): Researchly vs Grammarly vs a generic LLM prompt on the same public CC-BY chapters. Measures: false-flag rate (owner-judged sample), run-to-run consistency, share of feedback with a source. Results are published as measured, including where we lose |
 
 ---
 
@@ -611,11 +669,12 @@ Each slice ends with something the owner can **use**, not just a component (ch. 
 |---|---|---|---|
 | **S0 Foundation** | Nothing new for users; one repo, green CI | ADR-01 consolidation; `legacy/`; CI; dataset registry; remove thesis exemplars from shippable data | All 275 tests green in the new layout; CI on every PR |
 | **S1 Engine online** | Paste text at a private URL and see suggestions | FastAPI service + LanguageTool sidecar on Cloud Run; minimal Next.js page; no accounts | Q1/Q2 measured on staging; Q6 canary test |
-| **S2 Accounts & files** | Sign in; upload `.tex` / `.docx` / `.md`; settings and dictionary sync | Supabase; pylatexenc and OOXML adapters; remote config layer | Two-user test; offset round-trip tests; parity test |
-| **S3 Word, hosted** | The Word add-in works with no local server | HTTPS taskpane on Vercel; SSO; unified manifest | Owner uses it on Mac Word for a week |
-| **S4 Narrative map v1** | Move map, missing links, hedging trajectory, Learn cards | Port `argument.py` / `guide.py` / `abstract_lens` into `discourse/`; `/v1/narrative`; licence-clean exemplars | Owner annotates 50 paragraphs; flag precision reported |
+| **S2 Accounts & files** | Sign in; upload `.tex` / `.docx` / `.md` (including Overleaf `.zip`); settings and dictionary sync; responsive layout | Supabase; pylatexenc and OOXML adapters (figures, tables, equations, captions kept as structure); remote config layer | Two-user test; offset round-trip tests; parity test |
+| **S2b Consistency & structure checks** | Abbreviation, terminology, tense, numbers/units checks; figure, table and equation cross-refs; caption quality; text↔table number match (P2, P4) | A new `tiers/structure/` over `SourceDocument.structure` | Fire and don't-fire tests per check; noise-floor gate holds |
+| **S3 Word, hosted** | The Word add-in works with no local server; Draft / Revise mode | HTTPS taskpane on Vercel; SSO; unified manifest; mode setting in `config.py` (shared by every surface) | Owner uses it on Mac Word for a week |
+| **S4 Narrative map v1** | Move map, missing links, hedging trajectory, Learn cards; epidemiology pack with reporting checklists (STROBE, CONSORT, PRISMA, EPIFORGE); personal progress view | Port `argument.py` / `guide.py` / `abstract_lens` into `discourse/`; `/v1/narrative`; discipline-pack format; licence-clean exemplars | Owner annotates 50 paragraphs; flag precision reported |
 | **S5 Critic bake-off** | Fewer, better flags in the narrative pass | Laya vs ModernBERT on re-ranker and sentence roles; ONNX; promotion gate | Model cards; Q3/Q4 met, or the slice ends with "not shipped, here's why" |
-| **S6 Reach** | Overleaf extension; public beta | CM6 extension; privacy policy; DPAs; AppSource submission ⟨if paid⟩ | Beta cohort feedback; legal checklist |
+| **S6 Reach** | Overleaf extension; installable PWA; public beta; comparison study | CM6 extension; privacy policy; DPAs; AppSource submission; §1.3 study | Beta cohort feedback; legal checklist; published comparison results |
 
 ---
 
@@ -631,6 +690,16 @@ Each slice ends with something the owner can **use**, not just a component (ch. 
 | D6 | The 8 sample theses | **Private evaluation only.** Thesis-derived exemplars are removed from shipped data |
 | D7 | Training data | **`Notes_On_Writing/`** is the knowledge source (rules, questions, Learn cards via the W5 re-mine). Research papers and theses the owner adds later go through the dataset registry with licences |
 | D8 | Laya | **Adopt only via the S5 bake-off**; never zero-shot |
+
+**Product decisions (2026-10-03; detail in §1.4)**
+
+| # | Question | Decision |
+|---|---|---|
+| P1 | A place to write, or a coach alongside existing tools? | **Coach**: web revision studio + add-ins; Draft / Revise mode |
+| P2 | Consistency checks and reporting checklists in v1? | **Yes** |
+| P3 | First discipline pack | **Epidemiology / infectious-disease modelling**; others later |
+| P4 | Figures, tables, equations | **Structural checks**; no image understanding under rule #1 |
+| P5 | Platforms | **Responsive web (PWA) + desktop add-ins**; phones for reading; no native apps in v1 |
 
 ## 14. How the work is organised (the "one-person company")
 
