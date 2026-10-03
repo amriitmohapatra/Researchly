@@ -167,6 +167,68 @@ is merged, `main` still has the old prototype layout: no `apps/web`, no
 
 ---
 
+## 8. Accounts: the Supabase project (about 20 minutes, S2)
+
+Accounts let you sign in, upload files, and keep muted rules and your
+dictionary across devices. Until these steps are done, the site keeps
+working as it does now, without sign-in. Steps 8.1–8.4 can be done any time;
+8.5 and 8.6 only after the S2 pull request is merged.
+
+1. **Create the project.** Go to <https://supabase.com/dashboard>, sign in
+   with GitHub, and click **New project**:
+   - Name: `researchly`. Plan: **Free**.
+   - Region: **Southeast Asia (Singapore)** (decision D3).
+   - Database password: let it generate one and save it in your password
+     manager. Nothing in Researchly needs it, and it never goes in chat or
+     the repository.
+2. **Create the tables.** On GitHub, open
+   `supabase/migrations/20261003120000_s2_settings.sql` on `main` and click
+   **Copy raw file**. In Supabase, open **SQL Editor → New query**, paste,
+   and click **Run**. You should see "Success. No rows returned". Running it
+   twice is harmless. It creates two tables (your settings and your
+   dictionary), each readable and writable only by its owner; CI proves
+   that on every change (the "two-user test").
+3. **Tell Supabase where the website is.** **Authentication → URL
+   Configuration**:
+   - **Site URL:** `https://researchly-chi.vercel.app`
+   - **Redirect URLs → Add URL:** the same address.
+
+   Email sign-in is on by default (**Authentication → Sign In / Providers →
+   Email**). Leave it on.
+4. **Find the two values Researchly needs.** Both are public by design: the
+   browser has them too, and the database's own rules protect the data.
+   - **Project URL**, like `https://abcdefghijklmnop.supabase.co` (on the
+     project's home page, or **Project Settings → Data API**).
+   - **Publishable key**, starting `sb_publishable_` (**Project Settings →
+     API Keys**).
+
+   > **Never copy the secret key** (`sb_secret_…`) or the legacy
+   > `service_role` key anywhere. They bypass the per-user protections.
+   > The deploy workflow and the engine both refuse anything that is not a
+   > publishable key.
+
+   Also check **Project Settings → JWT Keys**: the current key should be
+   asymmetric (ECC or RSA), the default for new projects. The engine does
+   not accept the legacy shared-secret (HS256) tokens.
+5. **Engine.** In GitHub, **Settings → Secrets and variables → Actions →
+   Variables**, add `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` (as
+   Variables, not Secrets). Then run **Deploy engine** again (step 5).
+6. **Website.** In Vercel, **Settings → Environment Variables**, add
+   `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
+   type **Config**, for Production and Preview. Then redeploy **to
+   Production** (step 6.2).
+7. **Check it.** On the stable address: sign in with your email, open the
+   link it sends, mute a rule from a suggestion card, and check again: the
+   rule stays muted. Then upload a `.docx` or `.tex` chapter.
+
+> **Sign-in emails during the private beta.** Supabase's built-in email
+> sender only delivers to members of your Supabase organisation, about two
+> emails an hour. That is enough for you to test. Before anyone else can
+> sign in, Researchly needs its own email sender (custom SMTP, planned for
+> S6).
+
+---
+
 ## Later deploys
 
 - **Website:** automatic. Every push to `main` deploys production, and every
@@ -184,4 +246,5 @@ is merged, `main` still has the old prototype layout: no `apps/web`, no
 |---|---|
 | Avoid cold starts in term time | In `services/engine/deploy/cloudrun.service.yaml` set `minScale: "1"`, then redeploy the engine (~$10–15/month) |
 | Stop everything | Cloud Run → `researchly-engine` → Delete; Vercel → Project → Settings → Delete |
-| Move to a custom domain | Add it in Vercel → Domains, then redeploy the engine with the new origin in `allowed_origins` |
+| Move to a custom domain | Add it in Vercel → Domains, then redeploy the engine with the new origin in `allowed_origins`, and update Supabase's Site URL and Redirect URLs (step 8.3) |
+| Turn accounts off | Delete the two Supabase variables in GitHub and Vercel, then redeploy both; the site returns to paste-only without sign-in |
