@@ -1248,3 +1248,65 @@ by each reader; the guard checks those. Five new tests fail on the first
 version and pass now; the owner's `.tex` result is unchanged (117 flags).
 Lesson: "masked" is not one thing. Formatting is masked because it is
 noise; maths is masked because it is content we cannot read.
+
+## 2026-10-03 (later) — P29: the real-document test bench
+
+**What:** the owner has no Word or LaTeX files to test with and asked for
+automated checking against real articles found with the PubMed and bioRxiv
+connectors, web search and GitHub. Two engineers worked in parallel: a
+corpus builder (manifest + licences) and a QA engineer (the bench).
+
+**Corpus (`ml/realdocs/manifest.yaml`, 208 documents, metadata only):**
+115 PMC Open Access articles in 9 disciplines (34 infectious-disease
+epidemiology), 20 PMC articles with native `.docx` supplements, 14
+medRxiv/bioRxiv preprints, 18 LaTeX manuscripts on GitHub, 41 Word
+robustness files (Apache POI, LibreOffice, python-docx, mammoth.js). Every
+licence was seen first-hand per item (PubMed copyright status, bioRxiv
+licence field, repository LICENSE at a pinned commit). arXiv was left out:
+its per-paper licences could not be verified from this sandbox. 27 hits
+showing only "© The Author(s)" were dropped.
+
+**Bench (`ml/realdocs/`, `.github/workflows/realdocs.yml`):** fetches at
+run time (never into the repo), renders each JATS article three ways
+(plain, a real .docx, a .tex) so format parity exposes reader bugs, and
+checks invariants on every document: masked length, segment round-trip,
+span bounds and text, no span on masked markup, no file/network/process
+access while reading (an audit hook; covers the XXE probe), no crash or
+hang. Reports carry no text; snippets go only to the CI artifact and only
+for openly licensed items.
+
+**What real documents found (all fixed, each with a regression test):**
+- **A regression in my own P28 fix**, before it merged: masked formatting
+  (`\emph{`, `**`) counted as material between words and silenced real
+  errors. Fixed in PR #3 with `Document.atoms` (b512393).
+- A 17 KB Word file with 400 nested tables crashed the reader
+  (RecursionError): depth cap + clean refusal.
+- Spans on markup: G106 started at `\documentclass`, G104 ended inside
+  `\cite{}` or was reversed, AB802 highlighted `\begin{a`. Rules fixed, and
+  `engine._trim_to_prose` now trims any span off masked blanks centrally
+  (headings exempt: D902 points at them on purpose).
+- `\vskip .5em`, `\kern 3pt`: brace-less dimensions read as prose.
+- Overleaf projects with a cover letter beside the manuscript were refused;
+  the adapter now chooses (side documents never win; most `\input`s, then
+  longest) and says which file it checked.
+- pandoc/knitr code blocks (`Shaded`/`Highlighting`) broke the parser for
+  whole R Markdown papers; glossary/theorem definitions and algorithmic
+  pseudo-code leaked as prose ("MTHM MTHM" as a doubled word).
+- On a parse failure the reader now tries pylatexenc's lenient mode and
+  keeps it only if it recovers ≥ 80% of the words (it kept 99% where it
+  worked and 19–57% where it swallowed text); otherwise the regex reader,
+  which now masks code too.
+
+**Evidence:** local bench on the 59 GitHub-hosted documents: FAIL (1
+crash, 21 span violations in 11 projects, 2 refusals) → **PASS**; LaTeX
+19.4 → 16.2 flags/1000w (engineering 38 → 18). Core 525 passed, service
+145, bench 26; noise floor unchanged at 14.51 (plain text is unaffected).
+The 149 PMC/preprint items can only be fetched in GitHub Actions: their
+first run follows the merge.
+
+**Lessons:**
+- **Real documents beat imagined ones.** One evening of 59 real files
+  found eleven reader bugs that 500 synthetic tests had not.
+- **A bench must check itself.** The first local run of the bench caught
+  my own regression in an unmerged PR; the invariants (no span on markup)
+  are what made it visible, not the flag counts.

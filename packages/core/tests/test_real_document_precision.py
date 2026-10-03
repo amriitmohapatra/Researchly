@@ -197,3 +197,103 @@ def test_word_equations_are_atoms():
     from researchly.ingest import load_bytes
     d = load_bytes("c.docx", docx_bytes(para("We set ", equation("x+1"), " and then fit.")))
     assert len(d.atoms) == 1
+
+
+# --- P29 bench: spans never start or end on masked markup ----------------------
+
+def _spans_on_prose(text, kind="latex"):
+    a = api.analyze(text, kind=kind, show_preferences=True, with_metrics=False)
+    d = a.document
+    for s in a.suggestions:
+        assert 0 <= s.start < s.end <= len(d.original), s.rule_id
+        assert not d.masked[s.start].isspace() and not d.masked[s.end - 1].isspace(), \
+            (s.rule_id, d.original[s.start:s.end][:40])
+    return a.suggestions
+
+
+def test_long_sentence_after_a_preamble_starts_on_its_first_word():
+    words = " ".join(["the weekly counts were compared across districts"] * 8)
+    t = PRE + "\\usepackage{amsmath}\n\\begin{document}\nResults show that " + words + ".\n\\end{document}\n"
+    g106 = [s for s in _spans_on_prose(t) if s.rule_id == "G106"]
+    assert g106 and g106[0].text.startswith("Results show")
+
+
+def test_passive_agent_span_stops_before_a_citation():
+    t = tex("\\section{Results}\nThe pattern was first described by Jones \\cite{ref1}. It holds.")
+    g104 = [s for s in _spans_on_prose(t) if s.rule_id == "G104"]
+    assert g104 and g104[0].text.endswith("Jones")
+
+
+def test_abstract_flag_points_at_prose_not_at_begin_abstract():
+    body = ("This study reports weekly counts from several districts and describes "
+            "them in plain terms without further comment. ") * 4
+    t = tex("\\begin{abstract}\n" + body + "\n\\end{abstract}\n\\section{Introduction}\nText.")
+    ab = [s for s in _spans_on_prose(t) if s.rule_id == "AB802"]
+    assert ab and ab[0].text.startswith("This study reports")
+
+
+def test_bare_tex_dimensions_are_not_prose():
+    t = tex("Edited by Smith \\vskip .5em Reviewed by Jones \\kern 3pt and \\penalty10000 more.")
+    masked = " ".join(Document.from_text(t, "latex").masked.split())
+    for junk in (".5em", "3pt", "10000"):
+        assert junk not in masked
+    assert "Reviewed by Jones" in masked and "more." in masked
+
+
+# --- P29 bench: constructs found in real LaTeX projects ------------------------
+
+def _prose(body, preamble=""):
+    d = Document.from_text(tex(body, preamble), "latex")
+    return " ".join(d.masked.split()), d.warnings
+
+
+def test_pandoc_code_blocks_are_code_and_do_not_break_the_parser():
+    prose, warnings = _prose(
+        "Before.\n\\begin{Shaded}\n\\begin{Highlighting}[]\n"
+        "\\NormalTok{res}\\OperatorTok{$}\\NormalTok{data}\n"
+        "\\CommentTok{#> NA NA NA}\n\\end{Highlighting}\n\\end{Shaded}\nAfter.")
+    assert prose == "Before. After." and warnings == []
+
+
+def test_glossary_and_theorem_definitions_are_not_prose():
+    prose, _ = _prose("\\newacronym{MTHM}{MTHM}{metric ton of heavy metal}\n"
+                      "\\theoremstyle{remark}\\newtheorem*{remark}{Remark}\nText stays.")
+    assert prose == "Text stays."
+
+
+def test_pseudo_code_is_not_prose():
+    prose, _ = _prose("Intro.\n\\begin{algorithmic}\\State $x \\gets 1$ "
+                      "\\If{done} \\State stop \\EndIf\\end{algorithmic}\nOutro.")
+    assert prose == "Intro. Outro."
+
+
+def test_unparseable_input_never_loses_prose_whichever_reader_wins():
+    # Here pylatexenc's lenient mode would keep 3 of 9 words, so the regex
+    # reader must be chosen; the policy keeps lenient only when it recovers
+    # at least LENIENT_MIN_SHARE of the words.
+    prose, warnings = _prose(
+        "First sentence here.\n\\begin{itemize}[nosep, before={\\begin{minipage}[t]{\\hsize}},"
+        " after={\\end{minipage}}]\n\\item An item.\n\\end{itemize}\nLast sentence here.")
+    for s in ("First sentence here.", "An item.", "Last sentence here."):
+        assert s in prose
+    assert warnings and "could not fully parse" in warnings[0]
+
+
+def test_lenient_parse_is_preferred_when_it_keeps_the_words(monkeypatch):
+    from researchly.ingest import latex as L
+
+    class Strict(L._Masker):
+        def __init__(self, text, tolerant=False):
+            super().__init__(text, tolerant)
+            if not tolerant:
+                raise ValueError("simulated strict-parse failure")
+    monkeypatch.setattr(L, "_Masker", Strict)
+    res = L.mask_latex(tex("A clean sentence.\\emph{Another} one here."))
+    assert "leniently" in res.warnings[0]
+    assert "Another" in res.masked
+
+
+def test_regex_fallback_masks_code_too():
+    from researchly.document import _mask_latex
+    masked, _ = _mask_latex("See \\texttt{parsenames()} and \\code{kwic()} here.")
+    assert "parsenames" not in masked and "kwic" not in masked and "here." in masked

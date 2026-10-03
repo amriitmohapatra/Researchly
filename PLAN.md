@@ -143,6 +143,14 @@ done and what's next*. Both the owner and Claude edit it.
 
 ## S5 — Critic bake-off (Laya vs ModernBERT)
 
+### Real-document test bench (P29, owner request 2026-10-03; seeds S5a)
+
+- [x] Manifest of 208 openly licensed documents, every licence verified per item — `ml/realdocs/manifest.yaml`, `SOURCES.md`, six `datasets.yaml` entries: 115 PMC OA articles (9 disciplines, 34 epidemiology), 20 PMC articles with native `.docx` supplements, 14 medRxiv/bioRxiv preprints, 18 LaTeX manuscripts on GitHub (CC BY/CC0), 41 Word robustness files
+- [x] Bench: fetch at run time (never committed), three renderings per JATS article (plain/docx/tex), invariants (lengths, segment round-trip, span bounds/text, spans never on masked markup, no I/O while reading, no crash/hang), format parity, report with no text — `ml/realdocs/`, `.github/workflows/realdocs.yml` (dispatch, weekly, engine changes); 26 tests in CI
+- [x] Local run on the 59 GitHub-hosted documents: **PASS** after the P29 fixes (was FAIL: 1 crash, 21 span violations, 2 projects refused); LaTeX 19.4 → 16.2 flags/1000w
+- [ ] First full run in GitHub Actions (the 115 PMC + 20 supplement + 14 preprint items cannot be fetched from Claude's sandbox) — after this branch merges
+- [ ] Gate on flags/1000w per discipline once a baseline exists (reported, not gated, today)
+
 ### S5a — Open-access training corpus (owner request, 2026-10-03)
 
 Build a broad, high-quality, **licence-clean** corpus so the critics learn
@@ -202,6 +210,12 @@ patterns of good research writing across disciplines, not just epidemiology.
   - [ ] Section inheritance: a subsection with no section keyword ("Priors", "Solver") resets the section to "other" instead of inheriting its parent's ("Methods"). Headings need a level (LaTeX/Markdown/Word all know it) and resolution should inherit; a keyword in a nested heading ("Model fit" under Results) must not override its parent
   - [ ] Topical top-level sections ("Experiment 1: the baseline SEIR") stay "other", so a methods report gets passive-voice flags meant for Discussion. Wire `document_type` (e.g. "methods report") into section defaults
   - [ ] LanguageTool's own misreads on technical prose ("who meets whom" → "meet", "No fit is…" → "now", "is well behaved" → hyphen): collect across uploads, then skip the rules that misfire repeatedly
+- [ ] **From the real-document bench (P29), not yet fixed:**
+  - [ ] No language detection: a Portuguese document gets hundreds of spelling flags. Detect the language and say "Researchly checks English" instead of checking
+  - [ ] A 1.8 MB LaTeX book chapter exceeds the 1M-character cap; consider per-chapter checking of large projects
+  - [ ] One project (custom `\Set` macro in maths) still needs the regex reader; the parser's `$` tracking is thrown off. Collect more cases before special-casing
+  - [ ] JATS format parity on 11 eLife articles: G104 fires ~2× more and C303 ~3.5× less in docx/tex than plain — the nested-heading section bug (tracked above); re-measure after it is fixed
+  - [ ] S001 counts Word table cells towards its "used 3+ times = vocabulary" exemption (benign; noted so it is not chased)
 - [ ] Muting a rule while viewing an uploaded file re-sends the whole file to re-check; filtering the shown results in the browser would be instant (web, S2 follow-up)
 - [ ] Upload is hidden when accounts are not configured, so local development without Supabase has no upload; consider a dev-only switch
 - [ ] Q2: run spaCy and LanguageTool in parallel inside `api.analyze()` (chapter 6.9 s engine time on Cloud Run vs 6 s target); deferred by the owner 2026-10-03

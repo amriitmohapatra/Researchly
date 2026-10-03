@@ -2142,8 +2142,8 @@ items:
     title: "apache/poi test file: deeply nested tables"
     year: null
     permitted_use: [ci_eval]
-    notes: "17198 bytes at pinned commit; expected: parse; repo licence only - test documents carry no per-file notice and some originate from bug reports, so CI evaluation only"
-    expect: parse            # parse | error | either (machine-readable form of notes)
+    notes: "17198 bytes at pinned commit; expected: graceful error (5,000 nested tables; refused by the reader's depth cap, P29); repo licence only - test documents carry no per-file notice and some originate from bug reports, so CI evaluation only"
+    expect: error            # parse | error | either (machine-readable form of notes)
   - id: docx-poi-fieldcodes
     kind: test-file
     source: github
@@ -2338,7 +2338,7 @@ items:
     year: null
     permitted_use: [ci_eval]
     notes: "12756 bytes at pinned commit; expected: must NOT resolve the entity; parse safely or reject; repo licence only - test documents carry no per-file notice and some originate from bug reports, so CI evaluation only"
-    expect: parse            # parse | error | either (machine-readable form of notes)
+    expect: either            # parse | error | either (machine-readable form of notes)
   - id: docx-poi-clusterfuzz-testcase-minimized-poixwpffuzzer-4791943399604224
     kind: test-file
     source: github

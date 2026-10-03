@@ -357,9 +357,12 @@ _TEX_MASK_ENVS = (
     "equation", "align", "alignat", "gather", "eqnarray", "multline",
     "displaymath", "math", "verbatim", "lstlisting", "minted", "tikzpicture",
     "tabular", "array",
+    # P29 real documents: pandoc/knitr code blocks, pseudo-code
+    "Shaded", "Highlighting", "Verbatim", "algorithmic", "algorithmicx",
+    "algorithm", "comment",
 )
 _TEX_KEEP_CONTENT = (
-    "emph", "textbf", "textit", "texttt", "textsc", "underline", "mbox",
+    "emph", "textbf", "textit", "textsc", "underline", "mbox",
     "caption", "title", "textnormal", "textrm",
 )
 _TEX_MASK_WHOLE = (
@@ -367,6 +370,12 @@ _TEX_MASK_WHOLE = (
     "ref", "eqref", "autoref", "cref", "Cref", "vref", "label", "url",
     "includegraphics", "input", "include", "bibliography", "bibliographystyle",
     "usepackage", "documentclass", "footnote", "footnotemark", "href",
+    # code is not prose (P28 for the parser; P29 for this fallback)
+    "texttt", "code", "path", "verb",
+    # definitions, not text (P29: "\\newacronym{MTHM}{MTHM}" read as a
+    # doubled word)
+    "newacronym", "newglossaryentry", "newtheorem", "theoremstyle",
+    "newcommand", "renewcommand", "providecommand", "DeclareMathOperator",
 )
 
 

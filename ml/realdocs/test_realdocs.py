@@ -284,16 +284,21 @@ def test_a_damaged_latex_zip_is_an_ordinary_refusal():
     assert rec["main_expected"] == "main.tex"
 
 
-def test_two_main_candidates_is_a_finding_not_a_failure():
+def test_two_main_candidates_are_resolved_and_compared_with_the_manifest():
+    # Since P29 the zip adapter chooses (a cover letter is never the main
+    # file) and tells the user; the bench checks the choice against `main:`.
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
-        zf.writestr("paper.tex", b"\\documentclass{article}\nA.")
-        zf.writestr("letter.tex", b"\\documentclass{letter}\nB.")
+        zf.writestr("paper.tex", b"\\documentclass{article}\n"
+                    b"\\begin{document}\nA short paper.\n\\end{document}\n")
+        zf.writestr("cover_letter.tex", b"\\documentclass{letter}\n"
+                    b"\\begin{document}\nDear editor.\n\\end{document}\n")
     r = convert.Rendering("native", "project.zip", buf.getvalue())
     item = dict(_item(None, fmt="latex"), kind="preprint",
                 notes="main: paper.tex")
     rec, _ = run.run_file(item, r, None, None)
-    assert rec["status"] == "main_undetermined"
+    assert rec["status"] == "ok"
+    assert rec["main_picked"] == "paper.tex" and rec["main_match"] is True
 
 
 def test_safe_name_keeps_the_extension():

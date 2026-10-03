@@ -144,7 +144,11 @@ def test_main_file_detection():
     doc = load({"Proj/main.tex": root.replace("Hi.", "\\input{s}"),
                 "Proj/s.tex": "Inside."})
     assert "Inside." in doc.original
-    rejected(zip_bytes({"a.tex": root, "b.tex": root}), "unreadable_file")
+    # two indistinguishable roots: one is chosen (deterministically) and the
+    # user is told which, rather than the project being refused (P29)
+    tie = load({"a.tex": root, "b.tex": root})
+    assert tie.segments[0].path in ("a.tex", "b.tex")
+    assert any("several main .tex files" in w for w in tie.warnings)
     rejected(zip_bytes({"a.tex": "x", "b.tex": "y"}), "unreadable_file")
     rejected(zip_bytes({"readme.md": SECRET}), "unreadable_file")
 
@@ -287,3 +291,27 @@ def test_cli_json_keeps_going_and_maps_sources(tmp_path, capsys):
     sources = {(s["source"]["path"], s["text"])
                for s in payload[0]["suggestions"]}
     assert ("chapters/tables.tex", "mispeled") in sources
+
+
+# --- P29 real-document bench: several \documentclass files ---------------------
+
+DOC = "\\documentclass{article}\n\\begin{document}\n{body}\n\\end{document}\n"
+
+
+def test_cover_letter_beside_the_manuscript_is_not_the_main_file():
+    files = {"manuscript.tex": DOC.replace("{body}", "The model was fitted.\n\\input{methods}"),
+             "methods.tex": "Counts were weekly.\n",
+             "cover_letter.tex": DOC.replace("{body}", "Dear Editor, please consider it.")}
+    doc = load_bytes("p.zip", zip_bytes(files))
+    assert "The model was fitted." in doc.original
+    assert "Dear Editor" not in doc.original
+    assert any("checked manuscript.tex" in w for w in doc.warnings)
+
+
+def test_two_versions_prefer_the_one_that_includes_more():
+    files = {"paper.tex": DOC.replace("{body}", "Short version."),
+             "paper_journal.tex": DOC.replace("{body}", "Long version.\n\\input{a}\n\\input{b}"),
+             "a.tex": "Part A.\n", "b.tex": "Part B.\n"}
+    doc = load_bytes("p.zip", zip_bytes(files))
+    assert "Long version." in doc.original and "Part B." in doc.original
+    assert any("paper_journal.tex" in w and "paper.tex" in w for w in doc.warnings)

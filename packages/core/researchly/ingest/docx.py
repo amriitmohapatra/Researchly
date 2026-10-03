@@ -95,9 +95,13 @@ def load_docx(filename: str, data: bytes) -> Document:
     root = _parse(read_member(zf, members["word/document.xml"], ".docx"))
     body = _child(root, "body")
     reader = _Reader(styles)
-    if body is not None:
-        reader.block(body, "body")
-    return reader.document(filename)
+    try:
+        if body is not None:
+            reader.block(body, "body")
+        return reader.document(filename)
+    except RecursionError:
+        # Belt and braces behind MAX_DEPTH: no input may crash the service.
+        raise IngestError("unreadable_file", TOO_DEEP) from None
 
 
 def _styles(root) -> dict[str, tuple[str, bool]]:
@@ -131,6 +135,20 @@ def _is_outline(level) -> bool:
     return level is not None and level.isdigit() and int(level) <= 8
 
 
+# Real documents nest tables and runs a handful of levels deep. A file
+# nested hundreds deep is malformed or hostile: a 17 KB upload with 400
+# nested tables used to exhaust Python's recursion limit (P29 bench).
+MAX_DEPTH = 100
+TOO_DEEP = ("This Word file is nested too deeply to read (tables or links "
+            "inside each other hundreds of times). Open and re-save it in "
+            "Word, then upload it again.")
+
+
+def _check_depth(depth: int) -> None:
+    if depth > MAX_DEPTH:
+        raise IngestError("unreadable_file", TOO_DEEP)
+
+
 class _Reader:
     def __init__(self, styles):
         self.styles = styles
@@ -148,18 +166,19 @@ class _Reader:
 
     # -- blocks -------------------------------------------------------------
 
-    def block(self, el, kind: str) -> None:
+    def block(self, el, kind: str, depth: int = 0) -> None:
+        _check_depth(depth)
         for c in el:
             ln = _local(c.tag)
             if ln == "p":
                 self.paragraph(c, kind)
             elif ln == "tbl":
                 first = len(self.paras)
-                self.block(c, "table")
+                self.block(c, "table", depth + 1)
                 if len(self.paras) > first:
                     self.tables.append((first, len(self.paras) - 1))
             elif ln in _BLOCK_CONTAINERS:
-                self.block(c, kind)
+                self.block(c, kind, depth + 1)
 
     def paragraph(self, p, kind: str) -> None:
         self.parts, self.length, self.has_figure = [], 0, False
@@ -199,7 +218,8 @@ class _Reader:
         self.parts.append(s)
         self.length += len(s)
 
-    def inline(self, el, index: int) -> None:
+    def inline(self, el, index: int, depth: int = 0) -> None:
+        _check_depth(depth)
         for c in el:
             ln = _local(c.tag)
             if ln in _SKIP:
@@ -223,7 +243,7 @@ class _Reader:
             else:
                 # r, hyperlink, ins, moveTo, fldSimple, smartTag, sdt,
                 # sdtContent, AlternateContent/Choice, ...
-                self.inline(c, index)
+                self.inline(c, index, depth + 1)
 
     @staticmethod
     def hidden(run) -> bool:
