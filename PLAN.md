@@ -101,10 +101,10 @@ done and what's next*. Both the owner and Claude edit it.
 - [x] LaTeX adapter on pylatexenc; multi-file `.zip` (`\input`/`\include`/`\subfile`) — 8dd7b00, 6488b8a: 106 + 38 tests; parse failure falls back to the regex masker with a visible warning; hostile zips (bomb, traversal, symlink, encrypted, fan-out) refused
 - [x] `.docx` OOXML adapter (styles incl. localised ids, headings, tables, tracked changes read as accepted; defusedxml; zip-bomb guard). Comments and footnotes ignored in S2 — 6488b8a: 37 tests incl. XXE and billion laughs; identical to the Word add-in path
 - [x] Offset round-trip property test for every adapter — seeded random round trips: 40 LaTeX, 15 zip, 20 docx
-- [ ] Cross-surface parity test (mute in one surface → muted everywhere)
-- [~] Sign-in, upload, settings + dictionary UI in web app
+- [~] Cross-surface parity test (mute in one surface → muted everywhere) — the engine applies account mutes for any caller with a token (test_accounts.py); the Word add-in joins in S3, when it moves to the hosted engine
+- [x] Sign-in, upload, settings + dictionary UI in web app — 1bb2804…b193bf6, 4b56345: magic-link sign-in (PKCE in the browser), bearer on engine calls with one refresh-and-retry, upload by button or drop with a read-only file view and per-file locations, `/settings`, Mute / Add-to-dictionary on cards, atomic mute RPCs. With the Supabase variables unset the site is exactly S1 (own e2e project). 152 unit + 59 e2e (two builds), axe clean light and dark, anti-ui-slop gate passed
 - [x] Adapters keep figures, tables, equations and captions as *structure* (not just masked text) — needed by S2b — `Document.structure`, returned as `document.structure`
-- [ ] Web layout responsive from the start (P5): report and Learn views readable on a phone
+- [x] Web layout responsive from the start (P5): checker, file view, settings, menus and dialogs at 375 and 1280 px with a no-horizontal-scroll check on every e2e run (Learn views arrive in S4)
 - [ ] **Exit check:** owner uploads a real `.tex` and `.docx` thesis chapter; offsets correct; settings sync across two browsers
 
 ## S2b — Consistency & structure checks (P2, P4)
@@ -186,6 +186,8 @@ patterns of good research writing across disciplines, not just epidemiology.
 - [ ] W5 knowledge re-mine of `Notes_On_Writing/` → authored questions, rules, Learn cards (paraphrased + cited, never reproduced) — now the primary knowledge source (D7); schedule alongside S4
 - [ ] Wire `document_type` / `aggressiveness` config into behaviour (stored but unused today)
 - [ ] LaTeX parsing (pylatexenc) costs ~5.7 s per 1M characters vs 0.23 s for the regex masker (~0.3 s per chapter); the LSP re-checks a large `.tex` on every change — measure in VS Code before S3
+- [ ] Muting a rule while viewing an uploaded file re-sends the whole file to re-check; filtering the shown results in the browser would be instant (web, S2 follow-up)
+- [ ] Upload is hidden when accounts are not configured, so local development without Supabase has no upload; consider a dev-only switch
 - [ ] Q2: run spaCy and LanguageTool in parallel inside `api.analyze()` (chapter 6.9 s engine time on Cloud Run vs 6 s target); deferred by the owner 2026-10-03
 - [ ] Lower or split very large documents server-side: a 1M-character request takes ~74 s and 2.8 GiB (backend measurement, S1)
 - [ ] Reach Q3: bring the noise floor from 14.75 to ≤ 11/1000w (top contributors: G101 779, S001 676, G106 648, LT001 566 flags)

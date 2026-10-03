@@ -42,6 +42,9 @@ with the feature that needs them (`/v1/feedback` in S3/S4).
 - `public.my_config()` — `security invoker`, returns
   `{disabled_rules, show_preferences, locale, dictionary}` for the caller in
   one round trip. RLS still applies inside it.
+- `public.mute_rule(rule_id)` / `public.unmute_rule(rule_id)` change one
+  rule atomically (security invoker). The browser must not read-modify-write
+  the whole list: two tabs muting at once would lose a change.
 - No row is created at sign-up (no trigger on `auth.users`): a missing
   `user_settings` row means defaults; the web app upserts on first save.
 

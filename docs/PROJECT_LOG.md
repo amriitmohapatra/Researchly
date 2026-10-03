@@ -1089,3 +1089,63 @@ and measured it.
 
 **Open:** Q2 latency on Cloud Run; the owner's real-chapter exit check
 (paste a chapter on the live site, compare with the CLI).
+
+## 2026-10-03 (later) — P26: S2 accounts, files and settings sync (code complete; Supabase waits on the owner)
+
+**What:** the owner chose to defer the Q2 speed-up and start S2. The lead
+wrote `docs/s2-design.md`, fixed the API contract first, and ran three
+engineers in parallel in isolated worktrees (file adapters, database,
+web), building the engine's sign-in and upload route alongside them.
+Every branch was reviewed, re-tested and merged by the lead.
+
+**Decisions (s2-design.md):**
+- Two tables only (`user_settings`, `dictionary_words`). `profiles`,
+  usage and feedback tables wait for a feature that reads them.
+- The engine verifies Supabase tokens itself (JWKS; RS256/ES256 pinned to
+  the key) and reads settings through PostgREST **with the caller's own
+  token**. It holds no secret key, and refuses to start if given one.
+- Uploads are raw bytes on `/v1/analyze-file`: multipart would spool files
+  over 1 MB to disk. The filename travels in a header (URLs get logged) and
+  is never logged.
+- With no Supabase configured, engine and site behave exactly as in S1.
+
+**Evidence:**
+- Core 475 tests (adapters: LaTeX 106, zip 38, docx 37, with seeded random
+  offset round trips and hostile inputs: zip bombs, traversal, symlinks,
+  XXE, billion laughs).
+- Engine service 145 (tokens and settings 32, uploads 21, three new canary
+  scenarios: filename, uploaded text, adapter warnings, token and user id
+  never reach a log).
+- Database 90 on Postgres 16 with a Supabase shim; all 19 deliberate
+  weakenings of the migration caught (re-run by the lead), and a race test
+  that sees the lost-update bug it guards against.
+- Web 152 unit + 59 e2e in two builds (with and without accounts); axe
+  clean in light and dark; screenshots at 375 and 1280 px.
+- The web's per-file line numbers match the real `.zip` adapter on 12,910
+  offsets of 60 random projects.
+
+**Found and fixed during integration:**
+- A filename with an invalid `%`-escape crashed the upload route (500);
+  now a 422, with a test.
+- The deploy workflow first accepted legacy `eyJ…` keys, which would also
+  accept the service-role key (same shape) and bypass RLS. Now only
+  `sb_publishable_…` keys pass, in the workflow and in the engine.
+- Muting from two tabs at once lost a change (read-modify-write of the
+  whole list). `mute_rule` / `unmute_rule` change one rule under the row
+  lock.
+- LaTeX parse fallback on pasted text was silent; `warnings` is now in
+  every response.
+
+**Lessons:**
+- **Contract first made parallel work possible.** Three engineers built
+  against the same committed shapes; the only integration change was one
+  field added after the fact (`warnings`), announced to the web engineer
+  before it finished.
+- **Ask what a test can see.** The database suite was mutation-tested and
+  the race test was run against the old behaviour to prove it fails. A
+  green test that cannot fail is decoration.
+- **A key's shape is not its permission.** Validation by prefix
+  (`sb_publishable_`) is what keeps the RLS-bypassing key out.
+
+**Waiting on the owner:** `docs/deploy.md` step 8 (Supabase project,
+migration, URL settings, two variables), then the S2 exit check.
