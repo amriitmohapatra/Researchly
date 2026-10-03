@@ -17,7 +17,7 @@ done and what's next*. Both the owner and Claude edit it.
   slice until the previous slice's exit check is ticked.
 - Substantive work still gets a dated entry in `docs/PROJECT_LOG.md`.
 
-**Current slice: S1 — Engine online** (S0 done, merged in amriitmohapatra/Researchly#1; S1 deployed and live at researchly-chi.vercel.app; open: Q2 latency and the owner's real-chapter exit check).
+**Current slice: S2 — Accounts, files, settings sync** (design: `docs/s2-design.md`). S1 is live at researchly-chi.vercel.app; on 2026-10-03 the owner chose to defer the Q2 speed-up and move on, with S1's real-chapter exit check still to do.
 
 ---
 
@@ -88,19 +88,21 @@ done and what's next*. Both the owner and Claude edit it.
 - [x] Measure Q1/Q2 latency on the real deployment — 2026-10-03, `bench.py --url` against Cloud Run (warm; measured from Claude's cloud sandbox, so wall times include the network from there, about 1.4 s per request):
   - Q1 paragraph (311 words, n=20): **server p50 484 ms (meets 800 ms)**; wall p50 1.89 s / p95 2.02 s from the sandbox. Re-measure wall time from Singapore before calling Q1 met for users.
   - Q2 chapter (10,228 words, n=3): **server p50 6.89 s; wall p95 9.35 s — misses the 6 s target.** Follow-up below.
-- [ ] Bring Q2 under 6 s on Cloud Run: run spaCy and LanguageTool in parallel inside `api.analyze()` (Inbox item, promoted), then re-measure
+- [-] Bring Q2 under 6 s on Cloud Run — deferred by the owner (2026-10-03, "no need to speed up"); back in the Inbox
 - [~] **Exit check:** owner pastes a real chapter on the deployed site and gets the same suggestions as the CLI — live vs local engine parity proven on a synthetic 10,316-word chapter (63/63 suggestions identical, 2026-10-03); waiting on the owner's real chapter **(Amriit)**
 
 ## S2 — Accounts, files, settings sync
 
-- [ ] Supabase project (region D3): auth, `profiles`, `settings`, `dictionary_words`, `usage_events`, `feedback_events`, RLS on all **(Amriit: create project)**
-- [ ] Engine verifies JWT; `user_id` from token only; remote config layer in `config.py`
-- [ ] Two-user test (read/update/delete) automated in CI (Q7)
-- [ ] LaTeX adapter on pylatexenc; multi-file `.zip` (`\input`/`\include`)
-- [ ] `.docx` OOXML adapter (styles, headings, comments; defusedxml; zip-bomb guard)
+- [ ] Supabase project (region D3) **(Amriit: create project; docs/deploy.md step 8)**
+- [~] Schema: `user_settings`, `dictionary_words`, RLS per command, `my_config()` (s2-design §2). `profiles`, `usage_events`, `feedback_events` are **not** created until a feature reads them (collect only what's needed)
+- [x] Engine verifies JWT; `user_id` from token only; remote config layer in `config.py` — 2026-10-03, 8e82b7a: JWKS verification with the algorithm pinned to the key, settings read via PostgREST with the caller's own token (no secret key in the engine; it refuses to start with one); 32 token/settings tests, 2 new canary scenarios
+- [x] `/v1/analyze-file` (raw bytes, filename never logged, 25 MiB cap, sign-in required when accounts are on) — 8e82b7a, 16 tests
+- [~] Two-user test (read/update/delete) automated in CI (Q7)
+- [~] LaTeX adapter on pylatexenc; multi-file `.zip` (`\input`/`\include`)
+- [~] `.docx` OOXML adapter (styles, headings; defusedxml; zip-bomb guard). Comments and footnotes ignored in S2
 - [ ] Offset round-trip property test for every adapter
 - [ ] Cross-surface parity test (mute in one surface → muted everywhere)
-- [ ] Settings + dictionary UI in web app
+- [~] Sign-in, upload, settings + dictionary UI in web app
 - [ ] Adapters keep figures, tables, equations and captions as *structure* (not just masked text) — needed by S2b
 - [ ] Web layout responsive from the start (P5): report and Learn views readable on a phone
 - [ ] **Exit check:** owner uploads a real `.tex` and `.docx` thesis chapter; offsets correct; settings sync across two browsers
@@ -183,7 +185,7 @@ patterns of good research writing across disciplines, not just epidemiology.
 - [ ] Harper (WASM grammar) as an alternative to LanguageTool for the private mode
 - [ ] W5 knowledge re-mine of `Notes_On_Writing/` → authored questions, rules, Learn cards (paraphrased + cited, never reproduced) — now the primary knowledge source (D7); schedule alongside S4
 - [ ] Wire `document_type` / `aggressiveness` config into behaviour (stored but unused today)
-- [-] Run spaCy parsing and LanguageTool in parallel inside `api.analyze()` — promoted into S1 (Q2 missed on Cloud Run)
+- [ ] Q2: run spaCy and LanguageTool in parallel inside `api.analyze()` (chapter 6.9 s engine time on Cloud Run vs 6 s target); deferred by the owner 2026-10-03
 - [ ] Lower or split very large documents server-side: a 1M-character request takes ~74 s and 2.8 GiB (backend measurement, S1)
 - [ ] Reach Q3: bring the noise floor from 14.75 to ≤ 11/1000w (top contributors: G101 779, S001 676, G106 648, LT001 566 flags)
 - [ ] Clean the 20 cosmetic ruff findings (17 unused imports, 3 placeholder-less f-strings) in a dedicated change, then widen `ruff.toml`
