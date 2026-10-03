@@ -94,16 +94,16 @@ done and what's next*. Both the owner and Claude edit it.
 ## S2 — Accounts, files, settings sync
 
 - [ ] Supabase project (region D3) **(Amriit: create project; docs/deploy.md step 8)**
-- [~] Schema: `user_settings`, `dictionary_words`, RLS per command, `my_config()` (s2-design §2). `profiles`, `usage_events`, `feedback_events` are **not** created until a feature reads them (collect only what's needed)
+- [x] Schema: `user_settings`, `dictionary_words`, RLS per command, `my_config()` (s2-design §2) — afc3041. `profiles`, `usage_events`, `feedback_events` are **not** created until a feature reads them (collect only what's needed)
 - [x] Engine verifies JWT; `user_id` from token only; remote config layer in `config.py` — 2026-10-03, 8e82b7a: JWKS verification with the algorithm pinned to the key, settings read via PostgREST with the caller's own token (no secret key in the engine; it refuses to start with one); 32 token/settings tests, 2 new canary scenarios
 - [x] `/v1/analyze-file` (raw bytes, filename never logged, 25 MiB cap, sign-in required when accounts are on) — 8e82b7a, 16 tests
-- [~] Two-user test (read/update/delete) automated in CI (Q7)
-- [~] LaTeX adapter on pylatexenc; multi-file `.zip` (`\input`/`\include`)
-- [~] `.docx` OOXML adapter (styles, headings; defusedxml; zip-bomb guard). Comments and footnotes ignored in S2
-- [ ] Offset round-trip property test for every adapter
+- [~] Two-user test (read/update/delete) automated in CI (Q7) — afc3041 + f5ac4b8: 85 tests on Postgres 16 with a Supabase shim, and all 19 deliberate weakenings of the migration caught (re-run independently by the lead). CI job `supabase-rls` added; tick when it has run green on GitHub
+- [x] LaTeX adapter on pylatexenc; multi-file `.zip` (`\input`/`\include`/`\subfile`) — 8dd7b00, 6488b8a: 106 + 38 tests; parse failure falls back to the regex masker with a visible warning; hostile zips (bomb, traversal, symlink, encrypted, fan-out) refused
+- [x] `.docx` OOXML adapter (styles incl. localised ids, headings, tables, tracked changes read as accepted; defusedxml; zip-bomb guard). Comments and footnotes ignored in S2 — 6488b8a: 37 tests incl. XXE and billion laughs; identical to the Word add-in path
+- [x] Offset round-trip property test for every adapter — seeded random round trips: 40 LaTeX, 15 zip, 20 docx
 - [ ] Cross-surface parity test (mute in one surface → muted everywhere)
 - [~] Sign-in, upload, settings + dictionary UI in web app
-- [ ] Adapters keep figures, tables, equations and captions as *structure* (not just masked text) — needed by S2b
+- [x] Adapters keep figures, tables, equations and captions as *structure* (not just masked text) — needed by S2b — `Document.structure`, returned as `document.structure`
 - [ ] Web layout responsive from the start (P5): report and Learn views readable on a phone
 - [ ] **Exit check:** owner uploads a real `.tex` and `.docx` thesis chapter; offsets correct; settings sync across two browsers
 
@@ -185,6 +185,7 @@ patterns of good research writing across disciplines, not just epidemiology.
 - [ ] Harper (WASM grammar) as an alternative to LanguageTool for the private mode
 - [ ] W5 knowledge re-mine of `Notes_On_Writing/` → authored questions, rules, Learn cards (paraphrased + cited, never reproduced) — now the primary knowledge source (D7); schedule alongside S4
 - [ ] Wire `document_type` / `aggressiveness` config into behaviour (stored but unused today)
+- [ ] LaTeX parsing (pylatexenc) costs ~5.7 s per 1M characters vs 0.23 s for the regex masker (~0.3 s per chapter); the LSP re-checks a large `.tex` on every change — measure in VS Code before S3
 - [ ] Q2: run spaCy and LanguageTool in parallel inside `api.analyze()` (chapter 6.9 s engine time on Cloud Run vs 6 s target); deferred by the owner 2026-10-03
 - [ ] Lower or split very large documents server-side: a 1M-character request takes ~74 s and 2.8 GiB (backend measurement, S1)
 - [ ] Reach Q3: bring the noise floor from 14.75 to ≤ 11/1000w (top contributors: G101 779, S001 676, G106 648, LT001 566 flags)
