@@ -98,7 +98,23 @@ export function errorFromResponse(
   };
 }
 
-export function networkError(timedOut: boolean): CheckError {
+/** The engine's host for the "unreachable" message, or "" if the URL won't parse. */
+function engineHost(engineUrl: string): string {
+  try {
+    return new URL(engineUrl).host;
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * `engineUrl` is named in the "unreachable" message: when a deployment is
+ * built against the wrong engine address, the fetch fails identically to a
+ * dropped connection, and the host is the one clue that tells them apart.
+ * It is public (the page's security policy already lists it).
+ */
+export function networkError(timedOut: boolean, engineUrl = ""): CheckError {
+  const host = engineHost(engineUrl);
   return timedOut
     ? {
         kind: "timeout",
@@ -110,7 +126,8 @@ export function networkError(timedOut: boolean): CheckError {
         kind: "unreachable",
         title: "Could not reach the checking engine",
         message:
-          "Your text is still here and nothing was sent anywhere else. Check your connection and try again.",
+          "Your text is still here and nothing was sent anywhere else. Check your connection and try again." +
+          (host ? ` If it keeps failing, the site may be set up with the wrong engine address (tried ${host}).` : ""),
         retryable: true,
       };
 }

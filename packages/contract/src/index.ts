@@ -27,3 +27,20 @@ export type ErrorResponse = S["ErrorResponse"];
 
 /** Mirrors schemas.MAX_CONTENT_CHARS; checked client-side for usability only. */
 export const MAX_CONTENT_CHARS = 1_000_000;
+
+import readingKey from "../reading-key.json";
+
+/** One reading-key specimen: before + flagged + after is a sentence the engine flags. */
+export type Specimen = { before: string; flagged: string; after: string; note: string };
+
+/**
+ * The reading key's specimens, one per category. Shared with the engine's test
+ * suite (packages/core/tests/test_reading_key.py), which runs each through
+ * api.analyze and checks the category, so the key cannot drift from the engine.
+ */
+export const READING_KEY: Record<Category, Specimen> = {
+  correction: readingKey.correction,
+  improvement: readingKey.improvement,
+  convention: readingKey.convention,
+  preference: readingKey.preference,
+};

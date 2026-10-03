@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { MAX_CONTENT_CHARS } from "@researchly/contract";
+import { MAX_CONTENT_CHARS, READING_KEY } from "@researchly/contract";
 import {
   degradedGrammarResponse,
   emptyResponse,
@@ -185,6 +185,8 @@ test.describe("idle state", () => {
     for (const [cat, style] of Object.entries(styles)) {
       expect(await key.locator(`.spec-${cat}`).evaluate((el) => getComputedStyle(el).textDecorationStyle), cat).toBe(style);
     }
+    // The specimens shown are the ones the engine's tests verify (reading-key.json).
+    for (const [cat, s] of Object.entries(READING_KEY)) await expect(key.locator(`.spec-${cat}`)).toHaveText(s.flagged);
     // A convention is never presented as an error, here either.
     await expect(key.locator(".key-convention")).toContainText("Never an error");
     const conv = await key.locator(".spec-convention").evaluate((el) => {
@@ -303,6 +305,7 @@ test.describe("states and errors", () => {
     const err = page.getByTestId("check-error");
     await expect(err).toHaveAttribute("data-kind", "unreachable");
     await expect(err).toContainText("Could not reach the checking engine");
+    await expect(err).toContainText(/tried [a-z0-9.:-]+/); // names the engine host it tried
     await expect(err).toBeFocused();
     await expect(page.getByLabel("Text to check")).toHaveValue(SAMPLE_TEXT);
     up = true;

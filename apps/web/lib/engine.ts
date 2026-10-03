@@ -68,7 +68,7 @@ export async function analyze(p: CheckParams, engineUrl: string = ENGINE_URL): P
   } catch (e) {
     clearTimeout(timer);
     if (p.signal?.aborted) throw e; // the user cancelled; caller handles it
-    return { ok: false, error: networkError(timeout.signal.aborted) };
+    return { ok: false, error: networkError(timeout.signal.aborted, engineUrl) };
   }
   let body: unknown = null;
   try {

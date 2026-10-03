@@ -57,6 +57,15 @@ describe("error mapping", () => {
     expect(networkError(true).kind).toBe("timeout");
   });
 
+  it("an unreachable engine is named by host, so a wrong deploy-time address is diagnosable", () => {
+    // Regression: the first live deploy was built against a stale engine URL
+    // and the page gave no clue which address it had tried.
+    const e = networkError(false, "https://researchly-engine-1.asia-southeast1.run.app");
+    expect(e.message).toContain("tried researchly-engine-1.asia-southeast1.run.app");
+    expect(networkError(false, "not a url").message).not.toMatch(/tried/);
+    expect(networkError(false).message).not.toMatch(/tried/);
+  });
+
   it("never echoes document text: messages come only from the engine's message field or fixed copy", () => {
     const secret = "CANARY-7f3a my unpublished finding";
     const e = errorFromResponse(500, { error: { code: "internal", message: "Engine error", request_id: "r" }, content: secret });
