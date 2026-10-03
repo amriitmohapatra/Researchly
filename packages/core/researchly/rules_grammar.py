@@ -1,9 +1,16 @@
-"""LT001 — optional grammar tier via LanguageTool (local server, open
-source, explicitly non-AI — honors the no-LLM decision).
+"""LT001 — optional grammar tier via LanguageTool (open source, explicitly
+non-AI — honors the no-LLM decision).
 
-Requires `pip install language-tool-python` and Java 17+; the library
-downloads and runs LanguageTool LOCALLY (no text leaves the machine).
-When unavailable, this rule is silently inert — everything else works.
+Two ways to reach LanguageTool:
+
+- **local** (default): `pip install language-tool-python` and Java 17+; the
+  library downloads and runs LanguageTool on this machine (no text leaves it).
+- **remote**: set `RESEARCHLY_LT_URL` (e.g. `http://localhost:8010`) and the
+  tier talks to that LanguageTool server instead of spawning Java. This is
+  how the hosted engine reaches its sidecar container (ARCHITECTURE.md
+  ADR-03). health.py probes the server and says so when it is unreachable.
+
+When unavailable, this rule abstains and health.py reports why.
 
 We keep only genuine grammar findings (agreement, verb forms, articles,
 word confusion) and drop LanguageTool's spelling (S001's job) and style
@@ -14,6 +21,7 @@ from __future__ import annotations
 
 import os
 import threading
+import time
 
 from .document import Document
 from .engine import Category, Suggestion, rule
@@ -46,6 +54,28 @@ _FAILED = False
 _STATE = "unstarted"        # unstarted | ready | no_package | no_java | error
 _DETAIL = ""
 _LOCALE = None              # the locale the live tool was built for
+_URL = None                 # the remote server the live tool talks to, if any
+_FAILED_AT = 0.0            # monotonic time of the last failed start
+
+# Remote LanguageTool (the hosted engine's sidecar). Unlike a missing JRE, an
+# unreachable server is usually transient — the sidecar is still starting, or
+# was restarted — so a failure is retried after this many seconds instead of
+# being sticky for the life of the process.
+REMOTE_ENV = "RESEARCHLY_LT_URL"
+REMOTE_RETRY_S = 15.0
+# Per-request timeout for the remote server. language_tool_python's default
+# is 300 s, which would hold a hosted request hostage to a hung sidecar.
+# A 1M-character document (the contract's cap) took ~27 s of LanguageTool
+# time on a 4-core dev machine; 120 s leaves room for a slower vCPU. After
+# one failure the client is dropped and re-probed (3 s), so a dead sidecar
+# costs one slow request, not every request.
+REMOTE_TIMEOUT_S = 120
+
+
+def remote_url():
+    """The LanguageTool server to use instead of a local JVM, or None."""
+    url = (os.environ.get(REMOTE_ENV) or "").strip()
+    return url.rstrip("/") or None
 
 # 'misspelling' is included because LanguageTool files rule-based word
 # confusions (a/an, their/there) under it — dictionary spelling is still
@@ -80,12 +110,16 @@ def get_tool(locale: str = "en-US"):
     writer whether grammar checking is off because the package is missing,
     because there is no JRE, or because they turned it off.
     """
-    global _TOOL, _FAILED, _STATE, _DETAIL, _LOCALE
+    global _TOOL, _FAILED, _STATE, _DETAIL, _LOCALE, _URL
+    url = remote_url()
+    if url is not None:
+        return _get_remote_tool(locale, url)
     with _LOCK:
-        if _TOOL is not None and _LOCALE == locale:
+        if _TOOL is not None and _LOCALE == locale and _URL is None:
             return _TOOL
-        if _FAILED:
-            return None
+        if _FAILED and _URL is None:      # a remote failure says nothing
+            return None                   # about the local JVM
+        _URL = None
         try:
             import language_tool_python
         except Exception as e:
@@ -114,6 +148,7 @@ def get_tool(locale: str = "en-US"):
                 _TOOL = None
             _TOOL = language_tool_python.LanguageTool(locale)
             _LOCALE, _STATE, _DETAIL = locale, "ready", ""
+            _FAILED, _URL = False, None
         except Exception as e:
             _FAILED = True
             _DETAIL = str(e)
@@ -125,6 +160,71 @@ def get_tool(locale: str = "en-US"):
             _STATE = "error" if java_available() else "no_java"
             _TOOL = None
     return _TOOL
+
+
+def _get_remote_tool(locale: str, url: str):
+    """LanguageTool client for a server at `url` (no JVM in this process).
+
+    The server is probed with a real check before the client is built
+    (capability, not presence — health.probe_remote), because constructing
+    the client would otherwise wait language_tool_python's 300 s timeout on
+    a hung server.
+    """
+    global _TOOL, _FAILED, _STATE, _DETAIL, _LOCALE, _URL, _FAILED_AT
+    with _LOCK:
+        if _TOOL is not None and _LOCALE == locale and _URL == url:
+            return _TOOL
+        if _FAILED and _URL == url and \
+                time.monotonic() - _FAILED_AT < REMOTE_RETRY_S:
+            return None
+        try:
+            import language_tool_python
+        except Exception as e:
+            _FAILED, _STATE, _FAILED_AT = True, "no_package", time.monotonic()
+            _DETAIL, _URL = str(e), url
+            _TOOL = None
+            return None
+        from .health import probe_remote
+        ok, why = probe_remote(url, use_cache=False)
+        if not ok:
+            _FAILED, _STATE, _FAILED_AT = True, "error", time.monotonic()
+            _DETAIL, _URL = why, url
+            _TOOL = None
+            return None
+        try:
+            if _TOOL is not None:
+                try:
+                    _TOOL.close()
+                except Exception:
+                    pass
+                _TOOL = None
+            tool = language_tool_python.LanguageTool(locale,
+                                                     remote_server=url)
+            # Instance attribute shadows the class's 300 s default.
+            tool._TIMEOUT = REMOTE_TIMEOUT_S
+            _TOOL, _LOCALE, _URL = tool, locale, url
+            _FAILED, _STATE, _DETAIL = False, "ready", ""
+        except Exception as e:
+            # Type name only: the client's error text can include the
+            # server's response body, which is not ours to repeat.
+            _FAILED, _STATE, _FAILED_AT = True, "error", time.monotonic()
+            _DETAIL = f"LanguageTool server did not start a session " \
+                      f"({type(e).__name__})"
+            _URL, _TOOL = url, None
+    return _TOOL
+
+
+def _drop_remote_tool() -> None:
+    """After a failed remote check: forget the client and back off.
+
+    The next check re-probes (a few seconds at most) once REMOTE_RETRY_S has
+    passed, instead of every request waiting out the full request timeout
+    on a sidecar that has died.
+    """
+    global _TOOL, _FAILED, _FAILED_AT
+    with _LOCK:
+        _TOOL = None
+        _FAILED, _FAILED_AT = True, time.monotonic()
 
 
 def available(locale: str = "en-US") -> bool:
@@ -144,7 +244,7 @@ def reset() -> None:
     running would otherwise be told "grammar is off" until they restarted
     the process, with no hint that a restart was the answer.
     """
-    global _TOOL, _FAILED, _STATE, _DETAIL, _LOCALE
+    global _TOOL, _FAILED, _STATE, _DETAIL, _LOCALE, _URL, _FAILED_AT
     with _LOCK:
         if _TOOL is not None:
             try:
@@ -154,14 +254,16 @@ def reset() -> None:
         _TOOL = None
         _FAILED = False
         _STATE, _DETAIL, _LOCALE = "unstarted", "", None
+        _URL, _FAILED_AT = None, 0.0
     from .health import reset_java_cache
     reset_java_cache()
 
 
 @rule("LT001", "grammar", Category.CORRECTION,
-      "Grammar (agreement, verb forms, articles) via local LanguageTool.",
+      "Grammar (agreement, verb forms, articles) via LanguageTool.",
       "The commodity grammar layer, delegated to LanguageTool — a mature "
-      "open-source rule engine running locally on this machine (Java). "
+      "open-source, non-AI rule engine (Java) that runs on this machine "
+      "or, in the hosted service, beside the engine in the same region. "
       "Only genuine grammar categories are used; spelling belongs to S001 "
       "and style to Researchly's own rules, so nothing is flagged twice. "
       "If this rule never fires, LanguageTool isn't installed: "
@@ -176,12 +278,22 @@ def lt001_grammar(doc, document: Document):
     tool = get_tool(locale)
     if tool is None:
         return
+    global _STATE, _DETAIL
     try:
         matches = tool.check(document.masked)
     except Exception as e:
-        global _STATE, _DETAIL
-        _STATE, _DETAIL = "error", str(e)
+        # Never str(e): a failed check's message can carry the server's
+        # response body, which may echo the document. health.py shows this
+        # detail on a status endpoint other people can read (hosted mode),
+        # so it gets the exception type and nothing else.
+        _STATE = "error"
+        _DETAIL = f"LanguageTool check failed ({type(e).__name__})"
+        if remote_url() is not None:
+            _drop_remote_tool()
         return
+    # A check that works is the ground truth: recover from an earlier
+    # failure (a sidecar restart) instead of reporting "error" forever.
+    _STATE, _DETAIL = "ready", ""
     for m in matches:
         # attribute names vary across language_tool_python versions
         issue = (getattr(m, "rule_issue_type", None)

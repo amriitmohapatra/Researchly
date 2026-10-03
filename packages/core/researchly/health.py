@@ -27,6 +27,17 @@ from .config import Config
 
 SPACY_MODEL = "en_core_web_sm"
 
+# Where this engine is running. Health details are promises to the writer
+# ("nothing leaves this machine"), so they must be true for the deployment
+# they are read in. The hosted engine sets RESEARCHLY_MODE=service; the CLI,
+# LSP and desktop surfaces leave it unset and keep the local wording.
+MODE_ENV = "RESEARCHLY_MODE"
+
+
+def service_mode() -> bool:
+    """Is this the hosted engine service (not a local surface)?"""
+    return (os.environ.get(MODE_ENV) or "").strip().lower() == "service"
+
 
 @dataclass
 class TierStatus:
@@ -260,6 +271,100 @@ def reset_java_cache() -> None:
     _JAVA_OK = _JAVA_PATH = None
 
 
+# --- remote LanguageTool (RESEARCHLY_LT_URL) ---------------------------------
+#
+# Capability, not presence: an open port proves nothing (the sidecar's JVM
+# listens before LanguageTool has loaded its rules), so the probe runs a real
+# check on a fixed synthetic sentence and requires a well-formed answer.
+
+PROBE_TEXT = "This are a probe sentence."       # synthetic; never user text
+PROBE_TIMEOUT_S = 3.0
+PROBE_TTL_S = 10.0
+_PROBE_CACHE: dict = {}      # url -> (monotonic time, ok, detail)
+
+
+def probe_remote(url: str, timeout: float = PROBE_TIMEOUT_S,
+                 use_cache: bool = True) -> tuple:
+    """(ok, detail) for a LanguageTool server at `url`. Never raises.
+
+    `detail` names the failure by exception type only — it is shown on a
+    public status endpoint in hosted mode.
+    """
+    import time
+    now = time.monotonic()
+    if use_cache:
+        hit = _PROBE_CACHE.get(url)
+        if hit is not None and now - hit[0] < PROBE_TTL_S:
+            return hit[1], hit[2]
+    ok, detail = _probe_remote_uncached(url, timeout)
+    _PROBE_CACHE[url] = (now, ok, detail)
+    return ok, detail
+
+
+def _probe_remote_uncached(url: str, timeout: float) -> tuple:
+    import json
+    import urllib.parse
+    import urllib.request
+    endpoint = url.rstrip("/") + "/v2/check"
+    data = urllib.parse.urlencode(
+        {"text": PROBE_TEXT, "language": "en-US"}).encode()
+    try:
+        req = urllib.request.Request(endpoint, data=data, method="POST")
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            body = json.loads(resp.read().decode("utf-8", "replace"))
+        if not isinstance(body, dict) or not isinstance(
+                body.get("matches"), list):
+            return False, "LanguageTool server answered, but not with " \
+                          "a check result"
+        return True, ""
+    except Exception as e:
+        return False, f"LanguageTool server is not responding " \
+                      f"({type(e).__name__})"
+
+
+def reset_probe_cache() -> None:
+    _PROBE_CACHE.clear()
+
+
+def _remote_grammar_status(cfg: Optional[Config], url: str,
+                           probe: bool) -> TierStatus:
+    """Grammar tier status when LanguageTool is a server, not a local JVM."""
+    from . import rules_grammar
+
+    hosted = service_mode()
+    ready_detail = (
+        "LanguageTool sidecar beside the engine, same region (text is "
+        "checked in memory, never stored)" if hosted else
+        f"LanguageTool server at {url} (text is sent to that server)")
+    if hosted:
+        remedy = ("the LanguageTool sidecar is down or still starting; "
+                  "check its container logs (RESEARCHLY_LT_URL)")
+    else:
+        remedy = (f"start the server at {url} (e.g. docker run -p 8010:8010 "
+                  f"erikvl87/languagetool) or unset {rules_grammar.REMOTE_ENV} "
+                  f"to use a local LanguageTool")
+
+    if not _installed("language_tool_python"):
+        return TierStatus(
+            "grammar", "Grammar", False, "missing",
+            "language-tool-python is not installed",
+            "pip install language-tool-python")
+
+    state, detail = rules_grammar.state()
+    if not probe:
+        # If a check has already run, module state is the ground truth.
+        if state == "ready":
+            return TierStatus("grammar", "Grammar", True, "ready",
+                              ready_detail)
+        if state == "error":
+            return TierStatus("grammar", "Grammar", False, "error",
+                              detail or "LanguageTool server failed", remedy)
+    ok, why = probe_remote(url, use_cache=not probe)
+    if ok:
+        return TierStatus("grammar", "Grammar", True, "ready", ready_detail)
+    return TierStatus("grammar", "Grammar", False, "error", why, remedy)
+
+
 def _parser_status(nlp=None) -> TierStatus:
     if nlp is not None:
         return TierStatus("parser", "Sentence parser", True, "ready",
@@ -284,8 +389,11 @@ def _spelling_status() -> TierStatus:
             "spelling", "Spelling", False, "missing",
             "symspellpy is not installed",
             "pip install symspellpy")
-    return TierStatus("spelling", "Spelling", True, "ready",
-                      "SymSpell + scientific lexicon + your dictionary")
+    # The hosted service has no personal dictionary until accounts land
+    # (S2), so it must not claim one.
+    detail = ("SymSpell + scientific lexicon" if service_mode() else
+              "SymSpell + scientific lexicon + your dictionary")
+    return TierStatus("spelling", "Spelling", True, "ready", detail)
 
 
 def _grammar_status(cfg: Optional[Config], probe: bool) -> TierStatus:
@@ -297,12 +405,26 @@ def _grammar_status(cfg: Optional[Config], probe: bool) -> TierStatus:
             "turned off in settings",
             "re-enable the grammar tier in settings")
 
+    url = rules_grammar.remote_url()
+    if url is not None:
+        return _remote_grammar_status(cfg, url, probe)
+
+    hosted = service_mode()
+    ready_detail = (
+        "LanguageTool inside the engine container (text is checked in "
+        "memory, never stored)" if hosted else
+        "local LanguageTool (nothing leaves this machine)")
+    no_java_remedy = (
+        "point RESEARCHLY_LT_URL at the LanguageTool sidecar (the engine "
+        "image ships no Java)" if hosted else
+        "brew install openjdk@17   (no symlink needed — it is found "
+        "even when keg-only)")
+
     state, detail = rules_grammar.state()
 
     # If a check has already run, module state is the ground truth.
     if state == "ready":
-        return TierStatus("grammar", "Grammar", True, "ready",
-                          "local LanguageTool (nothing leaves this machine)")
+        return TierStatus("grammar", "Grammar", True, "ready", ready_detail)
     if state == "no_package":
         return TierStatus(
             "grammar", "Grammar", False, "missing",
@@ -313,8 +435,7 @@ def _grammar_status(cfg: Optional[Config], probe: bool) -> TierStatus:
             "grammar", "Grammar", False, "missing",
             "no working Java 17+ runtime found (PATH, JAVA_HOME, Homebrew "
             "and /Library/Java were all searched)",
-            "brew install openjdk@17   (no symlink needed — it is found "
-            "even when keg-only)")
+            no_java_remedy)
     if state == "error":
         return TierStatus(
             "grammar", "Grammar", False, "error",
@@ -332,14 +453,12 @@ def _grammar_status(cfg: Optional[Config], probe: bool) -> TierStatus:
             "grammar", "Grammar", False, "missing",
             "no working Java 17+ runtime found (PATH, JAVA_HOME, Homebrew "
             "and /Library/Java were all searched)",
-            "brew install openjdk@17   (no symlink needed — it is found "
-            "even when keg-only)")
+            no_java_remedy)
     if probe:
         locale = getattr(cfg, "locale", None) or "en-US"
         ok = rules_grammar.available(locale)
         return _grammar_status(cfg, probe=False) if not ok else TierStatus(
-            "grammar", "Grammar", True, "ready",
-            "local LanguageTool (nothing leaves this machine)")
+            "grammar", "Grammar", True, "ready", ready_detail)
     return TierStatus(
         "grammar", "Grammar", True, "unstarted",
         "installed; starts on the first check "
@@ -368,10 +487,11 @@ def _gec_status(cfg: Optional[Config]) -> TierStatus:
             "gec", "Learned corrections", False, "disabled",
             "a local model is present but the tier is opt-in",
             "set  [tiers] gec = true  in settings to enable it")
+    where = ("runs inside the engine; text is never stored"
+             if service_mode() else "nothing leaves this machine")
     return TierStatus(
         "gec", "Learned corrections", True, "ready",
-        f"local edit tagger ({gec.get_backend().version}) — "
-        "nothing leaves this machine")
+        f"local edit tagger ({gec.get_backend().version}) — {where}")
 
 
 def engine_status(cfg: Optional[Config] = None, nlp=None,
