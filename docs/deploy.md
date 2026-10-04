@@ -224,8 +224,8 @@ working as it does now, without sign-in. Steps 8.1–8.4 can be done any time;
 > **Sign-in emails during the private beta.** Supabase's built-in email
 > sender only delivers to members of your Supabase organisation, about two
 > emails an hour. That is enough for you to test. Before anyone else can
-> sign in, Researchly needs its own email sender (custom SMTP, planned for
-> S6).
+> sign in, Researchly needs its own email sender (custom SMTP; set up in
+> S3, step 9.2, because the Word add-in's sign-in code needs it).
 
 ---
 
@@ -237,7 +237,12 @@ it with everything else. Three one-time steps, then sideloading:
 1. **Database.** Supabase **SQL Editor → New query**, paste
    `supabase/migrations/20261004120000_s3_mode.sql` (from `main`, **Copy raw
    file**), **Run**. It adds the Draft/Revise setting. Safe to run twice.
-2. **Sign-in code in the email.** Inside Word, sign-in uses a code typed
+2. **Email sender, then the sign-in code in the email.** Supabase only
+   lets you edit templates with custom SMTP (and its built-in sender only
+   reaches your Supabase team). Set up Gmail SMTP as in
+   `apps/word-addin/README.md`, "Hosted add-in (S3)" step 2 (an app
+   password from <https://myaccount.google.com/apppasswords>; host
+   `smtp.gmail.com`, port 587). Then, inside Word, sign-in uses a code typed
    into the sidebar. **Authentication → Emails → Templates**: in **Magic
    Link** and in **Confirm signup**, add a line such as
    `Your Researchly sign-in code: <strong>{{ .Token }}</strong>` and save.

@@ -33,7 +33,23 @@ supports it (WordApi 1.4: Word 2021 / Microsoft 365), and a direct edit
    Running it twice is harmless. Until it is applied, Draft/Revise is still
    remembered on each computer, and the pane says it could not be saved to
    the account.
-2. **Put the sign-in code in the email.** Sign-in inside Word uses a code,
+2. **Give Supabase an email sender (custom SMTP).** Supabase only lets you
+   edit email templates once the project sends mail through your own
+   server, and its built-in sender only reaches members of your Supabase
+   team (a few emails an hour), so this is needed before anyone else can
+   sign in anyway. Free option, through Gmail:
+   - Google Account → **Security** → turn on **2-Step Verification**.
+   - Open <https://myaccount.google.com/apppasswords>, create an app
+     password named "Supabase Researchly", copy the 16 letters.
+   - Supabase → **Authentication → Emails → SMTP Settings** (or **Set up
+     SMTP** on a template page) → enable custom SMTP: sender email = your
+     Gmail address, sender name = `Researchly`, host = `smtp.gmail.com`,
+     port = `587`, username = your Gmail address, password = the app
+     password. Save.
+   The app password goes into Supabase only (never into chat, the repo or
+   an `.env`); revoke it at the same page if it ever leaks. Gmail sends up
+   to about 500 emails a day, plenty for the beta.
+3. **Put the sign-in code in the email.** Sign-in inside Word uses a code,
    because a link would open your browser, not Word. In Supabase,
    **Authentication → Emails → Templates → Magic Link**, add the code to
    the message body, for example (do the same in the **Confirm signup**
@@ -46,7 +62,7 @@ supports it (WordApi 1.4: Word 2021 / Microsoft 365), and a direct edit
 
    Save. The code is 6 digits by default (**Authentication → Sign In /
    Providers → Email → Email OTP Length** can make it up to 10; the pane accepts 6 to 10).
-3. **Let the engine accept the website.** The engine's
+4. **Let the engine accept the website.** The engine's
    `RESEARCHLY_ALLOWED_ORIGINS` must include `https://researchly-chi.vercel.app`
    (exactly; no trailing slash). It already does if you entered that address
    in **allowed_origins** when running **Deploy engine** (docs/deploy.md
