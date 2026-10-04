@@ -80,6 +80,9 @@ jobs:
         if: always()
         run: |
           if [ -f "$OUT/report.md" ]; then cat "$OUT/report.md" >> "$GITHUB_STEP_SUMMARY"; fi
+          # The report holds counts and ids, no document text: print it so
+          # it can be read from the job log too.
+          if [ -f "$OUT/report.md" ]; then cat "$OUT/report.md"; fi
       - name: Upload report and samples
         if: always()
         uses: actions/upload-artifact@v4

@@ -146,3 +146,17 @@ def test_w211_quiet(text):
 ])
 def test_f612_quiet_on_panels_and_reference_entries(text):
     assert hits(text, "F612") == []
+
+
+def test_w211_quiet_on_two_real_words():
+    assert hits("Methods\n\nNotable cases were few. We were not able to "
+                "trace them.\n", "W211") == []
+
+
+def test_f612_quiet_in_a_latex_caption():
+    src = ("\\documentclass{article}\\begin{document}\\section{Methods}\n"
+           "We used a latent class model (LCM). The LCM fitted.\n"
+           "\\begin{figure}\\caption{Classes of the latent class model "
+           "(LCM) by age.}\\label{fig:a}\\end{figure}\n"
+           "See Figure~\\ref{fig:a}.\n\\end{document}\n")
+    assert hits(src, "F612", "latex") == []

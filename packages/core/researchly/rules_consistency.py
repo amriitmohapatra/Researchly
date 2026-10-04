@@ -75,7 +75,11 @@ def _definitions(document: Document) -> dict:
     excepted: a caption defines its abbreviations again on purpose."""
     out = defaultdict(list)
     text = document.masked
+    captions = [(i.start, i.end) for i in document.structure
+                if i.kind == "caption"]
     for m in _DEFINED.finditer(text):
+        if any(a <= m.start() < b for a, b in captions):
+            continue                     # a LaTeX or Word caption
         acr = m.group(1)
         if (not _is_acronym(acr) or acr in lx.ACRONYM_ALLOWLIST
                 or m.start() == 0 or not text[m.start() - 1].isspace()):
@@ -231,6 +235,13 @@ def n102_sentence_numeral(doc, document: Document):
 # "setup" (noun), "may be" vs "maybe", "every day" vs "everyday".
 _PARTICLES = {"up", "out", "down", "in", "on", "off", "over", "back",
               "away", "about", "through"}
+# "not able" is not "notable", "an other" not "another": an open form
+# whose first word is a function word is two words, not a compound.
+_FUNCTION_WORDS = {"not", "no", "a", "an", "the", "in", "on", "at", "to",
+                   "be", "by", "for", "with", "of", "or", "and", "as", "is",
+                   "it", "any", "some", "every", "all", "may", "can", "how",
+                   "what", "who", "where", "when", "there", "here", "so",
+                   "per", "our", "we", "my", "his", "her", "its", "one"}
 _NOT_COMPOUNDS = {"into", "onto", "maybe", "everyday", "anyone", "cannot",
                   "however", "another", "overall", "whatever", "therefore",
                   "nobody", "someone", "sometime", "sometimes", "anyway",
@@ -261,6 +272,8 @@ def w211_compound_two_ways(doc, document: Document):
         if a and text[a - 1] == "-":
             continue                     # "28-day time": not "day time"
         if text[a + len(w1):b - len(w2)] != " ":
+            continue
+        if w1.lower() in _FUNCTION_WORDS:
             continue
         split_forms[(w1 + w2).lower()].append((a, b, w2.lower()))
     for w, a, b in words:

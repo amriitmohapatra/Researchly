@@ -120,7 +120,7 @@ Built 2026-10-04 (P32): `researchly/structure.py`, `rules_structure.py`, `rules_
 - [~] Equations: numbered but never referred to (**X301**, Preference). Symbols defined near first use (F603) deferred: not deterministic enough
 - [x] Text↔table numbers: a decimal or percentage quoted with "Table N" that Table N does not hold (**X401**; rounding allowed; levels, versions, totals skipped)
 - [x] Each check: question-form message + named source (ICMJE, SI Brochure, AMA Manual of Style, guide §6/§9.1/§9.2/§9.7), fire and don't-fire tests, rule-inventory rows (Layer 8), knowledge-base §10
-- [~] Noise floor: 11.94 → 12.66 on purpose (+205 flags, all from the new consistency rules; judged sample mostly correct; baseline note). The gate holds at the new baseline. Measure the structural rules on the 115 PMC articles in the next CI run (published articles cite every figure in order: flags there are false positives)
+- [~] Noise floor: 11.94 → 12.65 on purpose (+204 flags, all from the new consistency rules; judged sample mostly correct; baseline note). The gate holds at the new baseline. Measure the structural rules on the 115 PMC articles in the next CI run (published articles cite every figure in order: flags there are false positives)
 - [ ] **Exit check:** owner checks one real chapter and reports false flags **(Amriit)**
 
 ## S3 — Word add-in, hosted

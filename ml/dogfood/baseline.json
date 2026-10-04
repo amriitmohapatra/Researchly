@@ -1,8 +1,8 @@
 {
   "documents": 8,
   "words": 284537,
-  "suggestions": 3601,
-  "per_1000_words": 12.66,
+  "suggestions": 3600,
+  "per_1000_words": 12.65,
   "by_rule": {
     "G106": 648,
     "G101": 559,
@@ -14,7 +14,7 @@
     "G107": 119,
     "C303": 114,
     "E703": 92,
-    "W211": 84,
+    "W211": 83,
     "W201": 80,
     "W204": 79,
     "G105": 69,
@@ -45,5 +45,5 @@
     "E705": 1,
     "W208": 1
   },
-  "note": "P32 (2026-10-04): S2b consistency checks added on purpose, 11.94 -> 12.66. +205 flags, all from new rules: W211 84 (compound spelled two ways), F613 53 (abbreviation defined but barely used; a Preference, hidden by default), F612 51 (abbreviation defined twice), N102 12 (sentence opens with a numeral), N101 5 (unit spacing mixed). A judged sample of 45 new flags before the last two guards: W211 ~all correct, N101 5/5, N102 ~9/12, F612 ~8/14 (the misses - references, panel letters - are now guarded). The structural rules (X1xx-X4xx) do not run on plain text. The P31 precision tune of the existing rules stays at 11.94."
+  "note": "P32 (2026-10-04): S2b consistency checks added on purpose, 11.94 -> 12.65. +204 flags, all from new rules: W211 83 (compound spelled two ways), F613 53 (abbreviation defined but barely used; a Preference, hidden by default), F612 51 (abbreviation defined twice), N102 12 (sentence opens with a numeral), N101 5 (unit spacing mixed). A judged sample of 45 new flags before the last two guards: W211 ~all correct, N101 5/5, N102 ~9/12, F612 ~8/14 (the misses - references, panel letters - are now guarded). The structural rules (X1xx-X4xx) do not run on plain text. The P31 precision tune of the existing rules stays at 11.94."
 }

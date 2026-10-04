@@ -1483,7 +1483,7 @@ deliberate errors and a launch video (PLAN Inbox).
   tutorial paper, tables cited out of order in a replication study).
 - X203 (caption abbreviation undefined) was tried and dropped: 79 flags,
   nearly all product names, formulae and initials.
-- Noise floor 11.94 → 12.66 on purpose (+205 flags from the consistency
+- Noise floor 11.94 → 12.65 on purpose (+204 flags from the consistency
   rules). Judged sample of 45: W211 nearly all correct, N101 5/5, N102 ~9/12,
   F612 ~8/14 before two more guards (reference entries, panel letters).
   Baseline updated with a note; the structural rules do not run on the
