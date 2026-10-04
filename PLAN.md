@@ -194,6 +194,8 @@ patterns of good research writing across disciplines, not just epidemiology.
 
 ## Inbox (unsorted ideas & issues)
 
+- [ ] **Demo manuscript** (owner request, 2026-10-04; later): a sample manuscript to demo Researchly in the web app and the Word add-in, as `.docx` and Overleaf `.zip`. Need not be original research: a short paper on a topic of interest (e.g. an SEIR fit to a dengue season), published online under an open licence or made up, with equations, tables and figures and **deliberate errors** the app should flag: an uncited or out-of-order figure, a broken `\ref`, a number in the text that is not in its table, an abbreviation defined twice, a short caption, passive voice in Discussion, overclaiming, a/an and spelling slips. Must stay synthetic or licence-clean (CLAUDE.md: no third-party text in `packages/`, `apps/`, `services/`) **(Claude, with owner review)**
+- [ ] **"Brag" launch video** (owner request, 2026-10-04; later): a short video showing what Researchly does, made once the demo manuscript exists (the `brag` skill) **(Claude)**
 - [ ] Browser "Private mode" (Pyodide core + ONNX parser) — revisit after S4
 - [ ] Harper (WASM grammar) as an alternative to LanguageTool for the private mode
 - [ ] W5 knowledge re-mine of `Notes_On_Writing/` → authored questions, rules, Learn cards (paraphrased + cited, never reproduced) — now the primary knowledge source (D7); schedule alongside S4
