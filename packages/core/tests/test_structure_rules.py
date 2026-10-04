@@ -219,3 +219,102 @@ def test_every_rule_module_is_loaded():
     for path in pkg.glob("rules_*.py"):
         assert f"researchly.{path.stem}" in sys.modules, path.stem
     assert api.ensure_rules_loaded() == len(REGISTRY)
+
+
+# --- X202: caption too short ----------------------------------------------------------
+
+def test_x202_fires_on_a_label_caption():
+    doc = tex("See Figure~\\ref{fig:a}.\n" + fig("fig:a", "Study area."))
+    (h,) = hits(doc, "X202")
+    assert h.text == "Study area."
+
+
+@pytest.mark.parametrize("doc", [
+    tex("See Figure~\\ref{fig:a}.\n" + fig("fig:a", "Weekly dengue cases "
+                                           "in the three northern districts.")),
+    word("See Figure 1.", cap("Figure 1. Weekly dengue cases in the three "
+                              "northern districts.")),
+])
+def test_x202_quiet_on_a_real_caption(doc):
+    assert hits(doc, "X202") == []
+
+
+def test_x202_word_counts_words_after_the_prefix():
+    (h,) = hits(word("See Figure 1.", cap("Figure 1. Study area.")), "X202")
+    assert h.text == "Study area."
+
+
+# --- X301: numbered equation never referred to (Preference) --------------------------
+
+def test_x301_fires_on_an_unreferenced_numbered_equation():
+    doc = tex("The force of infection is\n\\begin{equation}\\lambda = "
+              "\\beta I\\label{eq:foi}\\end{equation}\nwhere beta is the "
+              "transmission rate.")
+    (h,) = hits(doc, "X301")
+    assert h.text == "is"
+    assert h.category.value == "preference"
+
+
+@pytest.mark.parametrize("body", [
+    "As in \\eqref{eq:foi},\n\\begin{equation}\\lambda = \\beta I"
+    "\\label{eq:foi}\\end{equation}",
+    "The force is\n\\begin{equation*}\\lambda = \\beta I\\end{equation*}",
+    "The force is\n\\[\\lambda = \\beta I\\]",
+    "Then \\begin{align}a &= b \\nonumber\\end{align} holds.",
+])
+def test_x301_quiet(body):
+    assert hits(tex(body), "X301") == []
+
+
+# --- X401: a number quoted with "Table N" that the table lacks ---------------------
+
+ROWS = "Age 0--4 & 0.43 & 12.5\\% \\\\ Age 5--9 & 0.21 & 7.1\\% \\\\"
+
+
+def test_x401_fires_on_a_number_not_in_the_table():
+    doc = tex("The attack rate was 0.48 in young children "
+              "(Table~\\ref{tab:a}).\n" + table("tab:a", rows=ROWS))
+    (h,) = hits(doc, "X401")
+    assert h.text == "0.48" and "Table 1" in h.message
+
+
+@pytest.mark.parametrize("sentence", [
+    "The attack rate was 0.43 in young children (Table~\\ref{tab:a}).",
+    "The attack rate was 0.4 in young children (Table~\\ref{tab:a}).",
+    "Of the cases, 12.5\\% were under five (Table~\\ref{tab:a}).",
+    "Estimates are shown with 95\\% CI in Table~\\ref{tab:a}.",
+    "Differences with p < 0.05 are marked in Table~\\ref{tab:a}.",
+    # two floats cited: the number may come from the figure
+    "The rate was 0.48 (Table~\\ref{tab:a}, Figure~\\ref{fig:a}).",
+])
+def test_x401_quiet(sentence):
+    doc = tex(sentence + "\n" + table("tab:a", rows=ROWS) + fig("fig:a"))
+    assert hits(doc, "X401") == []
+
+
+def test_x401_word():
+    doc = word("The attack rate was 0.48 in young children (Table 1).",
+               cap("Table 1. Attack rate by age group in every district."),
+               {"text": "0.43", "kind": "table"},
+               {"text": "0.21", "kind": "table"})
+    (h,) = hits(doc, "X401")
+    assert h.text == "0.48"
+
+
+@pytest.mark.parametrize("sentence", [
+    # derived from a table of counts, not copied from it
+    "The method decided 99.9\\% of the machines (Table~\\ref{tab:a}).",
+    # a version number is not a value
+    "We used version 0.18.1 of the library (Table~\\ref{tab:a}).",
+])
+def test_x401_quiet_on_derived_and_version_numbers(sentence):
+    doc = tex(sentence + "\n" + table("tab:a", rows="Decided & 1203 \\\\"
+                                      "Undecided & 12 \\\\"))
+    assert hits(doc, "X401") == []
+
+
+def test_x401_quiet_on_a_total_summed_from_the_rows():
+    doc = tex("Altogether the method decided 99.9\\% of the machines "
+              "(Table~\\ref{tab:a}).\n" + table(
+                  "tab:a", rows="Step 1 & 61.2\\% \\\\ Step 2 & 38.7\\% \\\\"))
+    assert hits(doc, "X401") == []
