@@ -39,6 +39,9 @@ WORD_RATIO_BAND = (0.85, 1.15)
 TOP = 15
 
 
+S2B_RULES = ("X1", "X2", "X3", "X4", "F612", "F613", "N101", "N102", "W211")
+
+
 def _rate(flags: int, words: int) -> float:
     return round(1000 * flags / words, 2) if words else 0.0
 
@@ -153,6 +156,16 @@ def build(records: list[dict], meta: dict) -> dict:
         -e["items"], -abs(sum(v for k, v in e.items()
                               if k not in ("pair", "rule", "items")))))
 
+    # The S2b structure and consistency rules by rendering: published
+    # articles cite every figure in order, so their flags here are mostly
+    # false positives (P32).
+    s2b: dict = {}
+    for r in ran:
+        for rule, n in r["by_rule"].items():
+            if rule.startswith(S2B_RULES):
+                cell = s2b.setdefault(rule, Counter())
+                cell[_format_key(r)] += n
+
     slowest = sorted(ran, key=lambda r: -(r["parse_s"] + r["analyze_s"]))
     total_words = sum(r["prose_words"] for r in ran)
     total_flags = sum(r["flags"] for r in ran)
@@ -186,6 +199,8 @@ def build(records: list[dict], meta: dict) -> dict:
         "top_rules": [{"rule": k, "count": v, "documents": rule_docs[k]}
                       for k, v in by_rule.most_common(TOP)],
         "by_tier": dict(by_tier.most_common()),
+        "s2b_by_format": {k: dict(sorted(v.items()))
+                          for k, v in sorted(s2b.items())},
         "parity": {"items": len(parities),
                    "tolerance": meta.get("parity_tolerance"),
                    "set_aside": _set_aside(parities),
@@ -272,6 +287,13 @@ def markdown(rep: dict) -> str:
         out += _table([[r["rule"], r["count"], r["documents"]]
                        for r in rep["top_rules"]],
                       ["rule", "flags", "files"])
+
+    s2b = rep.get("s2b_by_format") or {}
+    if s2b:
+        fmts = sorted({f for v in s2b.values() for f in v})
+        out += ["## Structure and consistency checks (S2b) by format", ""]
+        out += _table([[rule] + [v.get(f, 0) for f in fmts]
+                       for rule, v in s2b.items()], ["rule"] + fmts)
 
     par = rep["parity"]
     if par["items"]:

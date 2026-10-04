@@ -346,20 +346,29 @@ def g107_noun_string(doc, document: Document):
             return True
         return False
 
+    runs: list[list] = []
     run: list = []
-    for tok in doc:
-        if tok.pos_ in {"NOUN", "PROPN"} and not tok.is_space:
+    for tok in list(doc) + [None]:
+        if tok is not None and tok.pos_ in {"NOUN", "PROPN"} \
+                and not tok.is_space:
             run.append(tok)
-        else:
-            if len(run) >= 4 and not is_citation_like(run):
-                yield Suggestion(
-                    message="Insert a preposition or split the stack.",
-                    start=run[0].idx, end=run[-1].idx + len(run[-1].text))
-            run = []
-    if len(run) >= 4 and not is_citation_like(run):
+            continue
+        if len(run) >= 4 and not is_citation_like(run):
+            runs.append(run)
+        run = []
+    # A stack the paper repeats is its term of art ("software engineering
+    # payroll share", 150 times in one converted manuscript, P33): say so
+    # once, where it first appears, not at every use.
+    uses: dict[tuple, list] = {}
+    for r in runs:
+        uses.setdefault(tuple(t.lemma_.lower() for t in r), []).append(r)
+    for same in uses.values():
+        r = same[0]
+        more = (f" (used {len(same)} times: if it is your term for one "
+                "thing, define it once and keep it)") if len(same) > 1 else ""
         yield Suggestion(
-            message="Insert a preposition or split the stack.",
-            start=run[0].idx, end=run[-1].idx + len(run[-1].text))
+            message="Insert a preposition or split the stack." + more,
+            start=r[0].idx, end=r[-1].idx + len(r[-1].text))
 
 
 # ---------------------------------------------------------------------------

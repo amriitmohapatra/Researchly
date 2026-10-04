@@ -150,8 +150,8 @@ Researchly/
   citation there in the same change. Users never see a bare code. Declare `tier=` and
   `fix_safety=` — `fix_safety="safe"` means a bulk-apply button may touch it
   unread, and is pinned to `transform.POLISH_RULES` by a test. Registration
-  happens via the imports in `engine.check()`; a new *module* must be added
-  there (the surfaces no longer import rule modules individually).
+  happens via the imports in `engine.load_rules()`; a new *module* must be
+  added there, the one list (a test fails if a `rules_*.py` is missing).
 - **Surfaces pick up engine changes automatically** — they all call
   `api.analyze()`. UI changes are per-surface.
 - **User's environment**: macOS (Apple Silicon), Homebrew Python 3.10 —
@@ -183,8 +183,11 @@ at the top of that file.
 Things a future agent will otherwise get wrong:
 
 - **The noise floor is just above target.** With every tier on, accepted
-  theses get **11.94 flags/1000w** (P31 baseline; 14.51 before the Q3
-  tune). Q3's target is ≤ 11. About 90% of the remaining S001 flags are PDF
+  theses get **11.67 flags/1000w** (P33 baseline; 12.65 after S2b added
+  its consistency rules, 14.51 before the Q3 tune). Q3's target is ≤ 11.
+  Measure with `api.get_nlp()`, never a bare `spacy.load()`: the shared
+  pipeline ends a sentence at a blank line (unless the next line carries
+  on in lower case), and a runner without it measures a different engine. About 90% of the remaining S001 flags are PDF
   extraction artefacts (words joined or split at line breaks), so part of
   the gap is the measurement: see PLAN's Q3 item before re-extracting the
   corpus. Don't hide good advice (G106 long sentences, W202 wordiness) to

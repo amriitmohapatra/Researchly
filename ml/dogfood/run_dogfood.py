@@ -18,10 +18,9 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parents[1] / "packages" / "core"))
 
-import spacy  # noqa: E402
 from researchly.document import Document  # noqa: E402
 from researchly.engine import check  # noqa: E402
-from researchly import metrics as metrics_mod  # noqa: E402
+from researchly import api, metrics as metrics_mod  # noqa: E402
 
 TEXTDIR = Path(os.environ.get("RESEARCHLY_CORPUS_TEXT", HERE / "text"))
 OUTDIR = Path(os.environ.get("RESEARCHLY_CORPUS_OUT", HERE / "results"))
@@ -36,8 +35,9 @@ NONCONTENT = re.compile(
     r"acknowledg|declaration|contents|list of|publication|dedicat|"
     r"curriculum|symbols|abbreviation", re.I)
 
-nlp = spacy.load("en_core_web_sm")
-nlp.max_length = 1_200_000
+# The pipeline every surface uses (P33): a bare spacy.load() here missed
+# the paragraph-break sentence boundaries and measured a different engine.
+nlp = api.get_nlp()
 
 corpus_stats = {}
 all_samples = defaultdict(list)

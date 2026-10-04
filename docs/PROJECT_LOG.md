@@ -1440,3 +1440,189 @@ and G101 are now mostly real advice.
   the "spelling noise" was the PDF extractor, not the checker. Measure old
   and new code on both corpora before changing the ruler.
 
+**Addendum (P30/P31 merged, 2026-10-04):** amriitmohapatra/Researchly#4
+merged to main with all 12 checks green. The full real-document run
+(37183107815, 32 min) passed: all 11 PMC preprints fetched and passed every
+invariant, though 7 came back abstract-only (PLAN follow-up). The fixes reach
+the live engine when the owner runs **Deploy engine**.
+
+## P32 — 2026-10-04 — S2b: structure and consistency checks
+
+**Context.** The owner deployed the P30/P31 engine and asked to go ahead
+with S2b (P2 consistency checks, P4 structural checks for figures, tables
+and equations). Mid-way the owner also asked to plan a demo manuscript with
+deliberate errors and a launch video (PLAN Inbox).
+
+**What was built.**
+- `researchly/structure.py`: floats (figure/table, number, label, caption,
+  appendix) and mentions. The LaTeX reader now records `\ref`s (also
+  preamble macros such as `\fig{x}` -> `fig:x`, and style macros like
+  `\figref` it cannot see) and every `\label`; `from_word` records Word
+  captions, so the add-in and an uploaded file agree. Ranges
+  (`\ref{a}--\ref{c}`), `\captionof`, `\caption*`, panel captions, chapter
+  numbering and appendices are handled. Internal `ref`/`label` items are not
+  returned by the service (the contract lists five public kinds).
+- Rules (Layer 8 in `docs/rule-inventory.md`): X101 uncited float, X102
+  out of order, X103 broken reference, X104 placed before first citation
+  (Word), X202 short caption, X301 unreferenced numbered equation
+  (Preference), X401 number not in the cited table, F612 abbreviation
+  defined twice, F613 defined but barely used (Preference), N101 unit
+  spacing mixed, N102 sentence opens with a numeral, W211 compound spelled
+  two ways. Sources: ICMJE, BIPM SI Brochure, AMA Manual of Style, guide
+  §6/§9.1/§9.2/§9.7 (knowledge-base §10).
+- `engine.load_rules()` is the one list of rule modules: `api` kept its own
+  and missed the new module (health reported 38 of 42 rules).
+
+**Evidence.**
+- 76 new tests; core 672+ passed, service 146, ruff clean.
+- Real LaTeX projects (17): the first version raised 120 structural
+  flags, most wrong; each wrong pattern became a fix and a don't-fire test
+  (labels in align/algorithm, `\fig{x}` macros, style `\figref`, ranges,
+  panel captions, `\caption*`, appendix floats, captions citing other
+  floats); 14 remain and those read are genuine (uncited figures in a
+  tutorial paper, tables cited out of order in a replication study).
+- X203 (caption abbreviation undefined) was tried and dropped: 79 flags,
+  nearly all product names, formulae and initials.
+- Noise floor 11.94 → 12.65 on purpose (+204 flags from the consistency
+  rules). Judged sample of 45: W211 nearly all correct, N101 5/5, N102 ~9/12,
+  F612 ~8/14 before two more guards (reference entries, panel letters).
+  Baseline updated with a note; the structural rules do not run on the
+  plain-text corpus.
+- Local bench (59 GitHub documents): PASS.
+
+**Open.** Tense per section (no named source), concept-level terminology
+drift, missing captions, equation symbols: deferred in PLAN. The PMC
+articles' docx/tex renderings (CI) are the real precision test for X1xx:
+published articles cite every figure in order.
+
+**Lessons.**
+- A structural check is only as good as the cross-reference model under
+  it: nearly every first-version false flag was the model missing a way
+  authors write references, not the rule being wrong.
+- Two lists of the same thing drift: the rule-module list existed twice
+  and the second copy silently left the new module out.
+
+
+## P33 — 2026-10-04 — The deliberately bad manuscript: PDF-converted Word
+
+**What.** The owner sent "a deliberately bad version of a manuscript": a
+published economics working paper (48k words) run through a PDF-to-Word
+converter. Checked in memory only; never committed, not quoted. It held
+every artefact a conversion leaves: headings run into their first
+paragraph (a 475-word "Heading 1"), table rows styled as headings, tables
+as columns aligned with spaces, displayed equations flattened to symbols
+and one-letter variables, words hyphenated across lines, captions typed in
+body style, appendix floats lettered "Table A.4". Researchly raised 604
+flags; most were about the conversion, and the Introduction was masked
+whole because it carried a heading style.
+
+**Fixes (engine, all surfaces).**
+- Run-in headings (`document.split_run_in`): a heading-styled paragraph of
+  more than 25 words is body text. A numbered heading is split off at the
+  capitalised word before the first lower-case content word ("2 Methods |
+  We fitted …"); the rest is checked as prose. New rule **X501**
+  (Correction, Word, source: Word heading styles) says so.
+- A document that uses heading styles no longer also gets keyword-guessed
+  headings ("Fit statistics" in a table re-sectioned the appendix).
+  "C Data Appendix" is an appendix, not Methods; a column-aligned line is
+  never a plain-text heading.
+- Layout lines (`document.layout_spans`, plain text and Word): a line with
+  a four-space column gap, or with a relation sign and mostly maths tokens,
+  is masked and kept as an atom. URLs and e-mail addresses are masked.
+- **A blank line ends a sentence** (`api.paragraph_breaks`, a spaCy
+  component in the shared pipeline) unless the next line carries on in
+  lower case. The first version split every blank line and hid real long
+  sentences in PDF-extracted theses, where a page break leaves a blank line
+  mid-sentence ("about 70% of\n\nall cases"); diffing every G106 flag
+  before/after caught it.
+- S001 joins a word broken across a line ("effec-\ntive" → one finding,
+  "effective") and never joins across a masked line.
+- W207 skips aligned columns, single letters (maths) and runs ("Yes Yes
+  Yes"); W201 leaves the nouns "leverage" and "endeavour" (it is a
+  bulk-safe fix: "financial use" would have been applied unread); G107
+  says a repeated noun stack once, with its count; F601 skips titles set
+  in capitals; LanguageTool's diacritics suggestions ("numéraire") are
+  skipped; 47 statistics/economics words added (winsorized, equilibria,
+  premia, transformative …).
+- Structure: captions typed in a body style ("Table 2: …"), on a line of
+  their own inside a paragraph, or run into a paragraph (X103 checks the
+  text before calling a figure missing); lettered appendix numbers
+  ("Table A.4", stored as a chapter above any real one, shown as "A.4");
+  "(continued)" captions are the same table.
+- `ml/dogfood/run_dogfood.py` and the LSP now use `api.get_nlp()`: both
+  loaded spaCy themselves, so the gate would not have seen the sentence
+  change at all (it first reported 12.40 when the engine gave 11.67).
+
+**Evidence.**
+- The manuscript: 604 → 409 flags. What remains is mostly real: words the
+  conversion ran together ("firmlevel", "softwareintensive"), apostrophes
+  split from a variable ("firm j ’s"), 15 X501, inconsistent spellings
+  (non-missing/nonmissing, scatter plot/scatterplot, down-weight/
+  downweight, non-zero/nonzero), CRSP defined twice, and Figure 2 placed
+  before the text first cites it (X104). 34 floats found (4 main text, 30
+  appendix); the first structural pass reported "Figure C.2" and "Table
+  C.4" missing, but their captions were run into paragraphs — now read.
+- Noise floor 12.65 → **11.67** (baseline updated with a note): G106
+  648 → 529, G101 559 → 482, G107 −20, S001 −19, LT001 −16, W207 −14,
+  F601 −12; G105 +8 (real "There is" openings once inside a merge). Every
+  removed W207/W203/F601/W201 flag was read: all wrong (maths "N n", URLs,
+  title pages, "this endeavour").
+- Real-document bench: PASS, 14.65 → 13.69/1000w; LaTeX G106 187 → 119,
+  each removed flag a "sentence" through an `enumerate`, code listing,
+  heading or display equation.
+- 35 new tests (`test_converted_documents.py`); core 703+ passed, service
+  146, ml 30, ruff clean, third-party scan 0 hits.
+
+**Lessons.**
+- A converted PDF is the normal case, not an edge case: students convert
+  published papers and old chapters to Word all the time. The engine must
+  read layout as layout.
+- Every runner must use the one pipeline. A measurement tool that loads
+  its own spaCy measures a different product.
+- A blank line means different things in a Word file (a paragraph) and a
+  PDF extraction (sometimes a page break): decide with the next line, and
+  diff before trusting a big drop.
+
+**Addendum (same day): the published-article run.** CI run 37190315670
+(cfddd47, before P33) read 547 files, 2.79M words, PASS. The new "S2b by
+format" table showed three noisy rules on 140 PMC articles, where a
+published article should get almost none. The sandbox cannot fetch PMC or
+download the artifact, so each was reproduced on synthetic JATS through
+the bench's own converter:
+- X401 369 in the Word rendering vs 24 in TeX. A table caption claimed the
+  *nearest* cells by distance; with every table at the end of the article,
+  Table 2's caption is as close to Table 1's cells as to its own, and the
+  tie went to Table 1. An image-only table took the next table's cells.
+  Now a caption claims the nearest unclaimed table with no other caption
+  between, preferring the one below it.
+- X202 74/82: short table titles. ICMJE asks tables for "a short or an
+  abbreviated heading"; only a figure caption must stand on its own, so
+  X202 now judges figures only.
+- X301 373 in TeX: the converter rendered every JATS formula as a numbered
+  `equation` and the text cites them by typing "Eq. (3)". X301 now counts
+  typed references against the numbers LaTeX prints (rows of an `align`,
+  less `\nonumber`); the converter numbers only formulas with a `<label>`.
+Each fix has a test that fails on the old code (one passed by luck at
+first — the wrong table held no "%", so the percentage was never judged —
+and was rewritten with decimals). Core 717 passed, service 146, ml 30,
+noise floor unchanged at 11.67, local bench PASS.
+
+**Addendum 2: the rerun.** Run 37194170115 (710436f) PASS, 14.54/1000w
+overall (15.41 before P33). X401 Word 369 → 24, equal to TeX; X202 74/82 →
+35/40, all figure captions under five words (the converter keeps the
+caption's title and paragraphs, so these are short in the article itself);
+X301 373 → 249 (a hidden Preference). One regression: X104 fired 33 times
+on the native .docx set (supplements of 20 PMC articles), 0 before — typed
+captions now count, and a supplement puts every table before the sentence
+citing it. X104 now judges captions made with Word's caption style only;
+list-of-figures entries (dot leaders, page numbers, TOC styles) are not
+captions; a typed caption repeated later is one float. The owner's
+manuscript loses its one X104 (a typed caption): 409 → 408. Lesson: a
+heuristic input (typed captions) is fine for rules that only stay silent
+on it (X103) and risky for rules that fire on it (X104).
+
+**Addendum 3: confirmed.** Run 37197496673 (73c7d5a) PASS: X104 on the
+supplement .docx files 33 → 0; X401 24/24, X202 35/40, X301 248
+unchanged. Open: X101 16, X102 12, X103 12 per rendering and X104 11 in
+the Word rendering of published articles (~1 per 10 articles); judging
+them needs the run's samples, which this sandbox cannot download.

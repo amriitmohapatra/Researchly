@@ -86,6 +86,27 @@ def code_macros_in(preamble: str) -> set[str]:
     return found
 
 
+STYLE_REF_MACROS = frozenset({
+    "figref", "Figref", "figureref", "tabref", "Tabref", "tableref",
+    "secref", "Secref", "sectionref", "eqnref", "Eqnref", "equationref",
+    "algref", "appref", "fref", "Fref", "tref"})
+_REF_BODY = re.compile(
+    r"\\(?:ref|cref|Cref|autoref|eqref|vref)\s*\{([^{}#]*)#1\}")
+
+
+def ref_macros_in(preamble: str) -> dict[str, str]:
+    """Macros the preamble defines as cross-references, with the label
+    prefix they add: `\\newcommand{\\fig}[1]{Figure~\\ref{fig:#1}}`
+    gives {"fig": "fig:"} (S2b)."""
+    found = {}
+    for m in _NEWCOMMAND.finditer(preamble):
+        body = preamble[m.end():m.end() + 200].split("\n", 1)[0]
+        ref = _REF_BODY.search(body)
+        if ref:
+            found[m.group(1)] = ref.group(1)
+    return found
+
+
 # Masked macros that stand for a word in the sentence ("see Fig.~\ref{f}",
 # "at \url{...}"), unlike \label or \vspace, which stand for nothing.
 # Definitions in the document body (glossaries, theorems): never prose.
@@ -93,6 +114,8 @@ DEFINITION_MACROS = frozenset({
     "newacronym", "newglossaryentry", "newabbreviation", "theoremstyle",
     "newtheorem", "setacronymstyle", "glsaddall"})
 
+REF_MACROS = frozenset({"ref", "eqref", "autoref", "cref", "Cref",
+                        "vref", "pageref", "nameref"})
 ATOM_MACROS = frozenset({
     "ref", "eqref", "autoref", "cref", "Cref", "vref", "pageref", "nameref",
     "url", "verb", "lstinline", "footnotemark"})
@@ -405,6 +428,12 @@ class _Masker:
         # label may come after the caption, so they are joined at the end.
         self.captions: list[tuple[StructureItem, StructureItem]] = []
         self.code_macros = set(CODE_MACROS)
+        # name -> label prefix. Conference and journal classes define
+        # \\figref-style macros the project's own files never show.
+        self.ref_macros: dict[str, str] = dict.fromkeys(STYLE_REF_MACROS, "")
+        # Where a preamble-defined \\figref without parsed arguments began:
+        # its `{label}` follows as a sibling group.
+        self.ref_from: Optional[tuple[int, str]] = None
         # Set after a code macro pylatexenc parsed without arguments (one
         # the preamble defined): its `{...}` follows as a sibling group.
         self.skip_group = False
@@ -427,6 +456,7 @@ class _Masker:
         m = _BEGIN_DOCUMENT.search(self.text, 0, self.n)
         if m:
             self.code_macros |= code_macros_in(self.text[:m.start()])
+            self.ref_macros.update(ref_macros_in(self.text[:m.start()]))
         if m:
             node, _, _ = walker.get_latex_environment(m.start(1), "document")
             nodes = [node]
@@ -452,6 +482,14 @@ class _Masker:
 
     def mask(self, a: int, b: int) -> None:
         self.out[a:b] = ["\n" if c == "\n" else " " for c in self.text[a:b]]
+
+    def add_refs(self, a: int, b: int, keys: str, prefix: str = "") -> None:
+        """Cross-references are structure (S2b): which label, where (in a
+        caption too, so a check can tell them apart)."""
+        for key in keys.split(","):
+            if key.strip():
+                self.structure.append(
+                    StructureItem("ref", a, b, prefix + key.strip()))
 
     def raw_arg(self, node) -> str:
         """Source text of an argument without its braces."""
@@ -490,10 +528,15 @@ class _Masker:
                     self.skip_group = False
                     if prose:
                         self.atoms.append((n.pos, n.pos + n.len))
+                    if self.ref_from is not None:
+                        start, prefix = self.ref_from
+                        self.add_refs(start, n.pos + n.len, self.raw_arg(n),
+                                      prefix)
+                        self.ref_from = None
                     continue                     # the code's argument
                 if not (isinstance(n, lw.LatexCharsNode)
                         and not n.chars.strip()):
-                    self.skip_group = False
+                    self.skip_group, self.ref_from = False, None
             if isinstance(n, lw.LatexCharsNode):
                 start = n.pos
                 if self.eat_dimen:
@@ -544,8 +587,12 @@ class _Masker:
                     self.captions.append((item, sink))
             return
         if name == "label":
-            if sink is not None and sink.label is None and args:
-                sink.label = self.raw_arg(args[-1]) or None
+            key = self.raw_arg(args[-1]).strip() if args else ""
+            if sink is not None and sink.label is None and key:
+                sink.label = key
+            if key:
+                # Every label, so a \ref to a section is not "broken".
+                self.structure.append(StructureItem("label", n.pos, end, key))
             return
         if name in CITE_MACROS:
             if prose:
@@ -569,6 +616,17 @@ class _Masker:
         if name in MASK_WHOLE:
             if prose and name in ATOM_MACROS:
                 self.atoms.append((n.pos, end))
+            if name in REF_MACROS and args:
+                self.add_refs(n.pos, end, self.raw_arg(args[-1]))
+            return
+        if name in self.ref_macros:
+            if prose:
+                self.atoms.append((n.pos, end))
+            prefix = self.ref_macros[name]
+            if args:
+                self.add_refs(n.pos, end, self.raw_arg(args[-1]), prefix)
+            else:
+                self.skip_group, self.ref_from = True, (n.pos, prefix)
             return
         if name in self.code_macros:
             if prose and args:

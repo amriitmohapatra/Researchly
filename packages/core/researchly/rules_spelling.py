@@ -32,10 +32,20 @@ def _sentence_start(text: str, start: int) -> bool:
     return i < 0 or text[i] in ".!?\n"
 
 
+# The halves of a word broken at a line end by a PDF: "effec-" + "tive".
+# At most a blank line between them: a masked line is a run of spaces.
+_BROKEN_AFTER = re.compile(
+    r"-[ \t]{0,3}\n(?:[ \t]{0,3}\n)?[ \t]{0,3}([a-z]+)\b")
+_BROKEN_BEFORE = re.compile(
+    r"[A-Za-z]-[ \t]{0,3}\n(?:[ \t]{0,3}\n)?[ \t]{0,3}\Z")
+
+
 def _in_url_like(text: str, start: int, end: int) -> bool:
     prev = text[start - 1] if start > 0 else " "
     nxt = text[end] if end < len(text) else " "
     if prev in "@/_-" or nxt in "@/_":
+        return True
+    if text.startswith("://", end):                   # "https://..."
         return True
     # "example.com" — a dot immediately followed by another letter
     if nxt == "." and end + 1 < len(text) and text[end + 1].isalpha():
@@ -73,7 +83,22 @@ def s001_spelling(doc, document: Document):
 
     for m in words:
         w = m.group(0)
-        if len(w) < MIN_LEN or "'" in w:
+        if "'" in w:
+            continue
+        # A word a PDF broke across a line ("effec-\ntive"): judge the whole
+        # word, once, on its first half (P33).
+        if _BROKEN_BEFORE.search(text, max(0, m.start() - 12), m.start()):
+            continue
+        broken = _BROKEN_AFTER.match(text, m.end())
+        if broken:
+            joined = w + broken.group(1)
+            if spelling.known_with_fallbacks(joined.lower()):
+                yield Suggestion(
+                    message=f"One word broken across a line — join it: "
+                            f"'{joined}'.",
+                    start=m.start(), end=broken.end(1), replacement=joined)
+                continue
+        if len(w) < MIN_LEN:
             continue
         if w.isupper():                       # acronyms → F601's business
             continue

@@ -109,16 +109,21 @@ done and what's next*. Both the owner and Claude edit it.
 
 ## S2b — Consistency & structure checks (P2, P4)
 
-- [ ] Abbreviations: defined at first use, defined once, used after definition
-- [ ] Terminology consistency (same concept → same term; e.g. "infection rate" vs "incidence" drift)
-- [ ] Tense consistency per section (Methods past, etc. — section-aware)
-- [ ] Numbers and units formatting consistency
-- [ ] Figures/tables: every one cited in text, cited in order, cited before it appears; labels exist
-- [ ] Caption quality: present, self-contained, defines abbreviations, states what/where/when/n
-- [ ] Equations: symbols defined near first use; numbered equations referenced
-- [ ] Text↔table numbers: a number quoted with "Table N" appears in Table N
-- [ ] Each check: authored question + named source, fire and don't-fire tests, rule-inventory row
-- [ ] **Exit check:** noise-floor gate holds; owner checks one real chapter and reports false flags
+Built 2026-10-04 (P32): `researchly/structure.py`, `rules_structure.py`, `rules_consistency.py`; 12 rules, 76 tests (`test_structure_rules.py`, `test_consistency_rules.py`). Structural rules run on LaTeX and Word only.
+
+- [x] Abbreviations: defined at first use (F601, existing), defined once (**F612**), used after definition (**F613**, Preference); definitions found with Schwartz & Hearst's algorithm
+- [~] Terminology consistency: the same compound written closed and open (**W211**: "dataset"/"data set"). Concept drift ("infection rate" vs "incidence") needs meaning, not spelling: not deterministic, left to the review lens
+- [ ] Tense consistency per section — deferred: no named source yet in the knowledge base (CLAUDE.md #6), and present tense is legitimate for model descriptions in Methods
+- [x] Numbers and units: mixed number–unit spacing (**N101**), sentence opening with a numeral (**N102**)
+- [x] Figures/tables: every one cited (**X101**), cited in order (**X102**), cited before it appears (**X104**, Word), labels and numbers exist (**X103**). Bench: 120 flags on the 17 real LaTeX projects at first, 14 after fixing what they showed; the ones read are genuine
+- [~] Caption quality: too short (**X202**). Abbreviations defined in the caption (X203) tried and dropped: 79 false flags on 17 projects. Missing caption (X201) deferred: a captionless float has no prose to anchor to
+- [~] Equations: numbered but never referred to (**X301**, Preference). Symbols defined near first use (F603) deferred: not deterministic enough
+- [x] Text↔table numbers: a decimal or percentage quoted with "Table N" that Table N does not hold (**X401**; rounding allowed; levels, versions, totals skipped)
+- [x] Each check: question-form message + named source (ICMJE, SI Brochure, AMA Manual of Style, guide §6/§9.1/§9.2/§9.7), fire and don't-fire tests, rule-inventory rows (Layer 8), knowledge-base §10
+- [x] Converted manuscripts (P33, the owner's deliberately bad .docx: a working paper run through a PDF-to-Word converter): 604 → 409 flags. Headings run into their paragraphs are split and flagged (X501); typed captions, lettered appendix floats ("Table A.4") and "(continued)" tables are read, and a caption run into a paragraph ("… linear. Figure C.2: …") counts as present. 35 tests
+- [x] Noise floor: 11.94 → 12.65 on purpose (+204 flags from the consistency rules), then 11.67 after P33
+- [x] Structural rules on 140 published PMC articles (CI run 37190315670 at cfddd47, PASS, 547 files): three were noisy, each reproduced on synthetic JATS and fixed with a test that fails on the old code — X401 369 (Word rendering; 24 in TeX): a table caption took the previous table's cells when journals put every table at the end, and an image-only table took the next table's; X202 74/82: short *table* titles, which ICMJE asks for (X202 now judges figure captions only); X301 373 (TeX): the converter numbered every formula and the text cites them as typed "Eq. (3)" (X301 now counts typed references; the converter numbers only formulas the article labels). Rerun 37194170115 (710436f, PASS, 14.54/1000w overall): X401 369 → 24 (Word now equals TeX), X202 74/82 → 35/40 (figure captions of under five words, read as genuine), X301 373 → 249 (a hidden Preference; many articles number equations they never cite). New regression found and fixed: X104 0 → 33 on PMC supplement .docx files once typed captions counted — X104 now judges styled captions only; list-of-figures entries and repeated typed captions are no longer floats. Confirmed by run 37197496673 (73c7d5a, PASS; 138 articles, two bioRxiv fetches rate-limited): X104 on supplement .docx 33 → 0, X401 24/24, X202 35/40, X301 248. Still open on published articles: X101 16, X102 12, X103 12 per rendering and X104 11 (Word rendering) — about one per ten articles; needs the run's samples (artifact) or a local PMC cache to judge, since the sandbox cannot reach EBI
+- [ ] **Exit check:** owner checks one real chapter and reports false flags **(Amriit)**
 
 ## S3 — Word add-in, hosted
 
@@ -150,6 +155,7 @@ done and what's next*. Both the owner and Claude edit it.
 - [x] Local run on the 59 GitHub-hosted documents: **PASS** after the P29 fixes (was FAIL: 1 crash, 21 span violations, 2 projects refused); LaTeX 19.4 → 16.2 flags/1000w
 - [x] First full run in GitHub Actions — 2026-10-03, run 37136223549 on 020bd32: **PASS** (1 h 47 min). All 115 PMC articles in three renderings (2.25M words), 74 native Word supplements from 20 articles, 17 LaTeX projects, 41 Word robustness files: no crash, every invariant held. Format parity: docx vs plain −0.44, tex vs plain −0.34 flags/1000w (mean of 118 articles). Published articles run at ~16 flags/1000w (PMC plain 16.46), like the theses (14.51)
 - [x] P28 + P29 fixes and the bench merged to main — amriitmohapatra/Researchly#3, 2026-10-04 (91e1c19). Live after the owner runs **Deploy engine** **(Amriit)**
+- [x] P30 + P31 (nested-heading sections, Q3 tune 14.51 → 11.94, PMC preprints) merged to main — amriitmohapatra/Researchly#4, 2026-10-04, all 12 checks green incl. the full real-document run. Live after the owner runs **Deploy engine** **(Amriit)**
 - [x] Preprints — 2026-10-04 (P30/P31): added 11 CC BY/CC0 preprints that PMC mirrors (NIH Preprint Pilot; ids `pmcpreprint-*`, registry `realdocs-pmc-preprints`). CI run 37183107815: all 11 fetched through Europe PMC and passed every invariant, but only 4 are full papers (6.4k–13k words); 7 returned 170–400 words (Europe PMC holds the abstract only). The original 14 stay as a weekly check on the servers
   - [ ] Replace the 7 abstract-only preprints with ones whose Europe PMC record has a body (check `fullTextXML` length before adding), or fetch them from NCBI's PMC OA service
 - [ ] Add the published-article rate to the Q3 work: tune precision against PMC articles as well as the 8 theses (they are licence-clean, so examples can be inspected in the CI artifact)
@@ -193,6 +199,8 @@ patterns of good research writing across disciplines, not just epidemiology.
 
 ## Inbox (unsorted ideas & issues)
 
+- [ ] **Demo manuscript** (owner request, 2026-10-04; later): a sample manuscript to demo Researchly in the web app and the Word add-in, as `.docx` and Overleaf `.zip`. Need not be original research: a short paper on a topic of interest (e.g. an SEIR fit to a dengue season), published online under an open licence or made up, with equations, tables and figures and **deliberate errors** the app should flag: an uncited or out-of-order figure, a broken `\ref`, a number in the text that is not in its table, an abbreviation defined twice, a short caption, passive voice in Discussion, overclaiming, a/an and spelling slips. Must stay synthetic or licence-clean (CLAUDE.md: no third-party text in `packages/`, `apps/`, `services/`) **(Claude, with owner review)**
+- [ ] **"Brag" launch video** (owner request, 2026-10-04; later): a short video showing what Researchly does, made once the demo manuscript exists (the `brag` skill) **(Claude)**
 - [ ] Browser "Private mode" (Pyodide core + ONNX parser) — revisit after S4
 - [ ] Harper (WASM grammar) as an alternative to LanguageTool for the private mode
 - [ ] W5 knowledge re-mine of `Notes_On_Writing/` → authored questions, rules, Learn cards (paraphrased + cited, never reproduced) — now the primary knowledge source (D7); schedule alongside S4
@@ -229,6 +237,7 @@ patterns of good research writing across disciplines, not just epidemiology.
   - [ ] ~90% of the remaining S001 flags are PDF-extraction artefacts: `pdftotext` drops every line-break hyphen ("laboratoryconfirmed") and page-break hyphenation leaves fragments ("coun", "tion"). A trial re-extraction (`-raw`, keep a hyphen unless the joined word is a word) gives 11.3 with this code (13.7 with the old), S001 415 → 313, but also 16k more words (300,955 vs 284,537) whose origin must be read before the gate's corpus changes; re-baseline both sides when it does
   - [ ] Pasted code and maths in plain text and Word (R listings, `log=T`): detect code-like paragraphs and mask them like LaTeX code
   - [ ] G106 (648) and G101 (559) are now mostly real advice on long sentences; reaching 11 must not come from hiding it
+  - [x] 2026-10-04 (P33, from the owner's PDF-converted manuscript): **12.65 → 11.67**, all removals of wrong flags. A blank line ends a sentence unless the next line continues in lower case (G106 648 → 529, G101 559 → 482: "sentences" run across headings, table cells, lists and equations; every flag diffed before/after); aligned-column and flattened-equation lines masked; G107 says a repeated stack once; title capitals, URLs, the noun "leverage" left alone. Bench 14.65 → 13.69
 - [ ] Clean the 20 cosmetic ruff findings (17 unused imports, 3 placeholder-less f-strings) in a dedicated change, then widen `ruff.toml`
 - [ ] `language_tool_python` client is GPL-3.0-only: fine server-side; check before bundling it into any distributed desktop installer
 - [ ] Correct `docs/eval-corpora.md`: JFLEG and CWEB *do* declare CC BY-NC-SA 4.0 (registry audit, 2026-10-03)

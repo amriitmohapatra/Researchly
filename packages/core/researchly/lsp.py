@@ -68,9 +68,9 @@ class ResearchlyServer(LanguageServer):
     def nlp(self):
         with self._nlp_lock:
             if self._nlp is None:
-                import spacy
-                self._nlp = spacy.load("en_core_web_sm")
-                self._nlp.max_length = 1_200_000
+                # The shared, identically configured pipeline (P33).
+                from .api import get_nlp
+                self._nlp = get_nlp()
         return self._nlp
 
     def schedule(self, uri: str):

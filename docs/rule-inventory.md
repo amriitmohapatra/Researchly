@@ -155,6 +155,30 @@ in-sentence citation; E705 by a "to our knowledge" softener; D902 requires
 an Introduction section of substance and searches for Shehzad's three
 signal classes (contrastives; limited/few/little; none-of/not-been/no-study).
 
+## Layer 8 — Structure and consistency (S2b, 2026-10-04; owner decisions P2, P4)
+
+Structural checks read `researchly/structure.py`: floats (figures and tables with number, label, caption) and the text that cites them (`\ref`, preamble and style `\figref` macros, written "Figure 2", ranges). They run on LaTeX and Word only; pasted plain text has no reliable structure and gets none. Consistency checks compare a document with itself, never with a house style.
+
+| ID | Rule | Type | Docs | Source | Status |
+|---|---|---|---|---|---|
+| X101 | Figure or table never cited in the text (a citation from another float's caption counts) | Convention | LaTeX, Word | ICMJE | S2b |
+| X102 | Figures/tables first cited out of numerical order (per chapter; appendix floats exempt) | Convention | LaTeX, Word | ICMJE | S2b |
+| X103 | Cross-reference to an undefined label ("??"), or "Figure 5" with four figures | Correction | LaTeX, Word | ICMJE | S2b |
+| X104 | Figure/table placed before the text first cites it | Convention | Word | ICMJE | S2b |
+| X202 | Caption under five words | Improvement | LaTeX, Word | §9.7 | S2b |
+| X301 | Numbered equation never referred to | Preference | LaTeX | §9.2 | S2b |
+| X401 | Decimal or percentage quoted with "Table N" that Table N does not hold (rounding allowed; levels, versions and totals skipped) | Correction | LaTeX, Word | §6 | S2b |
+| F612 | Abbreviation defined twice (abstract, a new chapter, captions and definitions 3,000+ words apart exempt) | Convention | all | §9.1 | S2b |
+| F613 | Abbreviation defined but then used once or not at all | Preference | all | §9.1 | S2b |
+| N101 | Number–unit spacing mixed ("5 %" and "5%"; °C, mg, km…) | Convention | all | SI Brochure | S2b |
+| N102 | Sentence begins with a numeral (years and list items exempt) | Convention | all | AMA Manual of Style | S2b |
+| W211 | Compound written closed and open/hyphenated ("dataset"/"data set") | Convention | all | §9.1 | S2b |
+| X501 | Paragraph of body text in a heading style: a heading run into its paragraph ("1 Introduction How will…"), or a table row styled as a heading. The heading is split off when it is numbered; the rest is checked as prose | Correction | Word | Word heading styles | P33 |
+
+Definitions ("full name (ACR)") are found with Schwartz & Hearst's (2003) algorithm, so notation such as "A(H1N1)" or panel letters "(D–F)" is not taken for a definition.
+
+Tried and dropped: **X203** abbreviation in a caption not defined there (79 flags on 17 real LaTeX projects, nearly all product names, chemical formulae, coders' initials). Deferred: **X201** missing caption (a captionless float has no prose to anchor a suggestion to), equation symbols defined (F603), tense consistency per section (no named source yet).
+
 ## Layer 0 — Commodity spelling & grammar (v0.3; integrated open source)
 
 | ID | Rule | Type | Backend | Status |

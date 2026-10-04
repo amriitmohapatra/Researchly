@@ -138,7 +138,9 @@ SKIP_MISREAD_RULES = {
     "NUMBERS_IN_WORDS", "POSSESSIVE_APOSTROPHE", "I_LOWERCASE", "THE_PUNCT",
     "EN_SPECIFIC_CASE", "ADMIT_ENJOY_VB",
 }
-SKIP_MISREAD_PREFIXES = ("EN_COMPOUNDS_",)
+# EN_DIACRITICS_REPLACE_*: "numeraire" -> "numéraire", "naive" -> "naïve".
+# English accepts both spellings, so this is a preference (P33).
+SKIP_MISREAD_PREFIXES = ("EN_COMPOUNDS_", "EN_DIACRITICS_REPLACE_")
 
 # LanguageTool rules that duplicate one of Researchly's own rules on the same
 # span. The S1 end-to-end run showed two cards for one "the the". Researchly's

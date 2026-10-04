@@ -195,3 +195,17 @@ def test_pasted_latex_fallback_is_visible(client):
         "content": "\\section{Results}\nThe effect {was large in every district.\n"})
     assert r.status_code == 200
     assert r.json()["warnings"], "a parse fallback must not be silent"
+
+
+def test_internal_structure_kinds_are_not_returned(client):
+    # S2b records \ref and \label for the cross-reference checks; the
+    # contract only lists what a reader sees.
+    src = ("\\documentclass{article}\n\\begin{document}\n"
+           "\\section{Results}\\label{sec:r}\nSee Figure~\\ref{fig:a}.\n"
+           "\\begin{figure}\\caption{Weekly cases in every district.}"
+           "\\label{fig:a}\\end{figure}\n\\end{document}\n")
+    r = upload(client, src.encode(), name="chapter.tex")
+    assert r.status_code == 200, r.text
+    kinds = {s["kind"] for s in r.json()["document"]["structure"]}
+    assert kinds <= {"figure", "table", "equation", "caption", "citation"}
+    assert "figure" in kinds
