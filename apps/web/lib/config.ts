@@ -30,6 +30,22 @@ export function engineOrigin(raw: string | undefined): string {
 
 export const ENGINE_URL = normaliseEngineUrl(process.env.NEXT_PUBLIC_ENGINE_URL);
 
+/**
+ * The Word add-in's "This computer" engine (ADR-02 local mode): the add-in's
+ * own server.py on the writer's machine. Fixed, so the CSP can name it.
+ */
+export const LOCAL_ENGINE_URL = "http://localhost:3517";
+
+/* ---------- reporting a problem ---------- */
+
+/** Every issue report goes to the owner's inbox (owner's request, S3). */
+export const SUPPORT_EMAIL = "amrit.mohapatra97@gmail.com";
+
+/** A mailto: link with a short subject. Never prefilled with any document text. */
+export function reportProblemHref(subject: string): string {
+  return `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}`;
+}
+
 /* ---------- accounts (Supabase), S2 ---------- */
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);

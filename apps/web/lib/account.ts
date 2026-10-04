@@ -141,3 +141,29 @@ export function deleteMyData(): Promise<AccountResult<null>> {
     return { ok: true, data: null };
   });
 }
+
+/* ---------- Draft / Revise (S3), shared by the web app and the Word add-in ---------- */
+
+export type SavedMode = "draft" | "revise";
+
+/**
+ * The account's Draft/Revise choice, or null when it has never been saved.
+ * Read on its own (not with the other settings) so an account database that
+ * has not had the S3 migration yet fails only this, never the S2 settings.
+ */
+export function loadMode(): Promise<AccountResult<SavedMode | null>> {
+  return run(async (sb) => {
+    const { data, error } = await sb.from("user_settings").select("mode").maybeSingle();
+    if (error) return { ok: false, message: accountErrorMessage(error) };
+    const mode = (data as { mode?: unknown } | null)?.mode;
+    return { ok: true, data: mode === "draft" || mode === "revise" ? mode : null };
+  });
+}
+
+/** Save the choice to the caller's own row (user_id defaults to auth.uid()). */
+export function saveMode(mode: SavedMode): Promise<AccountResult<null>> {
+  return run(async (sb) => {
+    const { error } = await sb.from("user_settings").upsert({ mode }, { onConflict: "user_id" });
+    return error ? { ok: false, message: accountErrorMessage(error) } : { ok: true, data: null };
+  });
+}

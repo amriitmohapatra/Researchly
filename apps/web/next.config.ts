@@ -1,7 +1,7 @@
 import path from "node:path";
 import type { NextConfig } from "next";
 import { normaliseEngineUrl, supabaseConfig } from "./lib/config";
-import { STATIC_SECURITY_HEADERS } from "./lib/security";
+import { NOT_WORD_SOURCE, STATIC_SECURITY_HEADERS, WORD_SECURITY_HEADERS, WORD_SOURCE } from "./lib/security";
 
 // Fail the build early on a malformed engine URL rather than shipping a page
 // whose every check fails.
@@ -23,7 +23,13 @@ const nextConfig: NextConfig = {
   turbopack: { root: repoRoot },
   outputFileTracingRoot: repoRoot,
   async headers() {
-    return [{ source: "/:path*", headers: [...STATIC_SECURITY_HEADERS] }];
+    return [
+      // Every route but the Word taskpane: unchanged since S1.
+      { source: NOT_WORD_SOURCE, headers: [...STATIC_SECURITY_HEADERS] },
+      // /word: Word on the web frames it, so no X-Frame-Options (the CSP's
+      // frame-ancestors names the Office origins instead).
+      { source: WORD_SOURCE, headers: [...WORD_SECURITY_HEADERS] },
+    ];
   },
 };
 

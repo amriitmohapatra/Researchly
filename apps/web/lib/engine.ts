@@ -14,8 +14,13 @@ import type {
   AnalyzeFileResponse,
   AnalyzeRequest,
   AnalyzeResponse,
+  AnalyzeWordRequest,
+  AnalyzeWordResponse,
   Format,
+  HealthResponse,
+  Mode,
   RuleInfo,
+  WordParagraph,
 } from "@researchly/contract";
 import { ENGINE_URL } from "./config";
 import {
@@ -288,4 +293,101 @@ export async function listRules(engineUrl: string = ENGINE_URL, signal?: AbortSi
     versioned: false,
   });
   return r.ok ? { ok: true, data: r.data.rules } : r;
+}
+
+/* ---------- the Word add-in (S3): /v1/analyze-word and /v1/health ---------- */
+
+export interface WordCheckParams {
+  paragraphs: WordParagraph[];
+  showPreferences: boolean;
+  /** Draft or Revise, always sent: the add-in's toggle decides this check. */
+  mode: Mode;
+  /** Rules to mute for this request (added to the account's own on the hosted engine). */
+  disabledRules?: string[];
+  signal?: AbortSignal;
+}
+
+export function buildWordRequest(p: Pick<WordCheckParams, "paragraphs" | "showPreferences" | "mode" | "disabledRules">): AnalyzeWordRequest {
+  return {
+    paragraphs: p.paragraphs,
+    options: {
+      show_preferences: p.showPreferences,
+      disabled_rules: p.disabledRules ?? [],
+      mode: p.mode,
+    },
+  };
+}
+
+function isNat(v: unknown): v is number {
+  return typeof v === "number" && Number.isInteger(v) && v >= 0;
+}
+
+/** Enough to render and to find each suggestion in Word: every card needs a usable location. */
+export function looksLikeAnalyzeWordResponse(body: unknown): body is AnalyzeWordResponse {
+  if (!looksLikeAnalyzeResponse(body)) return false;
+  const b = body as unknown as Record<string, unknown>;
+  const cov = b.coverage as Record<string, unknown> | null | undefined;
+  if (typeof cov !== "object" || cov === null || !isNat(cov.paragraphs) || !Array.isArray(cov.not_checked)) return false;
+  return (b.suggestions as unknown[]).every((s) => {
+    const loc = (s as { location?: Record<string, unknown> }).location;
+    return (
+      typeof loc === "object" &&
+      loc !== null &&
+      isNat(loc.paragraph) &&
+      isNat(loc.start) &&
+      isNat(loc.end) &&
+      isNat(loc.occurrence) &&
+      typeof loc.snippet === "string" &&
+      typeof loc.exact === "boolean"
+    );
+  });
+}
+
+/**
+ * Check a Word document as its paragraphs: POST /v1/analyze-word.
+ *
+ * `auth` is null for the "This computer" engine: the local server has no
+ * accounts, so the sign-in token never goes there.
+ */
+export async function analyzeWord(
+  p: WordCheckParams,
+  engineUrl: string = ENGINE_URL,
+  auth?: EngineAuth | null,
+): Promise<CheckResult<AnalyzeWordResponse>> {
+  const body = JSON.stringify(buildWordRequest(p));
+  return withBearer(auth, (token) =>
+    call(
+      `${engineUrl}/v1/analyze-word`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", accept: "application/json", ...authHeader(token) },
+        body,
+      },
+      p.signal,
+      looksLikeAnalyzeWordResponse,
+      { engineUrl },
+    ),
+  );
+}
+
+function looksLikeHealth(body: unknown): body is HealthResponse {
+  const b = body as { status?: unknown; tiers?: unknown } | null;
+  return (
+    typeof b === "object" &&
+    b !== null &&
+    (b.status === "ok" || b.status === "degraded") &&
+    Array.isArray(b.tiers) &&
+    b.tiers.every((t: unknown) => typeof t === "object" && t !== null && typeof (t as { tier?: unknown }).tier === "string")
+  );
+}
+
+/** Which tiers the engine is running: GET /v1/health. No text is sent. */
+export async function engineHealth(
+  engineUrl: string = ENGINE_URL,
+  signal?: AbortSignal,
+): Promise<CheckResult<HealthResponse>> {
+  return call(`${engineUrl}/v1/health`, { method: "GET", headers: { accept: "application/json" } }, signal, looksLikeHealth, {
+    engineUrl,
+    versioned: false,
+  });
 }

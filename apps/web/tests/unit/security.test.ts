@@ -1,6 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { engineOrigin, normaliseEngineUrl } from "@/lib/config";
-import { cspHeader, makeNonce, STATIC_SECURITY_HEADERS } from "@/lib/security";
+import {
+  cspHeader,
+  isWordPath,
+  makeNonce,
+  NOT_WORD_SOURCE,
+  OFFICE_FRAME_ANCESTORS,
+  OFFICE_JS_ORIGIN,
+  OFFICE_JS_URL,
+  STATIC_SECURITY_HEADERS,
+  WORD_SECURITY_HEADERS,
+  WORD_SOURCE,
+} from "@/lib/security";
 
 const directive = (csp: string, name: string) =>
   csp
@@ -89,5 +100,70 @@ describe("static headers and nonces", () => {
     const a = makeNonce();
     expect(a).toMatch(/^[A-Za-z0-9+/]{22}==$/);
     expect(makeNonce()).not.toBe(a);
+  });
+});
+
+describe("the Word taskpane's headers (/word, S3)", () => {
+  const site = cspHeader({ nonce: "n", engineUrl: "https://engine.example.org", supabaseUrl: "https://abcdefghij.supabase.co", dev: false });
+  const word = cspHeader({
+    nonce: "n",
+    engineUrl: "https://engine.example.org",
+    supabaseUrl: "https://abcdefghij.supabase.co",
+    dev: false,
+    surface: "word",
+  });
+
+  it("matches /word and below only", () => {
+    expect(isWordPath("/word")).toBe(true);
+    expect(isWordPath("/word/icon-32.png")).toBe(true);
+    for (const p of ["/", "/settings", "/wordy", "/words/x", "/a/word"]) expect(isWordPath(p)).toBe(false);
+  });
+
+  it("lets Word on the web frame it, and nothing else", () => {
+    expect(directive(word, "frame-ancestors")).toBe(`frame-ancestors 'self' ${OFFICE_FRAME_ANCESTORS.join(" ")}`);
+    for (const o of OFFICE_FRAME_ANCESTORS) expect(o).toMatch(/^https:\/\/\*\.[a-z0-9.]+$/);
+  });
+
+  it("allows exactly Microsoft's office.js origin for scripts, without unsafe-inline", () => {
+    const s = directive(word, "script-src")!;
+    expect(s).toBe(`script-src 'self' 'nonce-n' ${OFFICE_JS_ORIGIN}`);
+    expect(OFFICE_JS_URL).toBe("https://appsforoffice.microsoft.com/lib/1/hosted/office.js");
+    expect(s).not.toContain("unsafe");
+  });
+
+  it("connects only to itself, the engine, Supabase and the local engine on port 3517", () => {
+    expect(directive(word, "connect-src")).toBe(
+      "connect-src 'self' https://engine.example.org https://abcdefghij.supabase.co http://localhost:3517",
+    );
+    // Upgrading would turn http://localhost:3517 into an unreachable https URL.
+    expect(word).not.toContain("upgrade-insecure-requests");
+  });
+
+  it("changes nothing else, and leaves every other route exactly as before", () => {
+    const rest = (s: string) =>
+      s
+        .split(";")
+        .map((d) => d.trim())
+        .filter((d) => !/^(script-src|connect-src|frame-ancestors|upgrade-insecure-requests)\b/.test(d))
+        .join("; ");
+    expect(rest(word)).toBe(rest(site));
+    expect(site).toBe(
+      cspHeader({ nonce: "n", engineUrl: "https://engine.example.org", supabaseUrl: "https://abcdefghij.supabase.co", dev: false, surface: "site" }),
+    );
+    expect(directive(site, "frame-ancestors")).toBe("frame-ancestors 'none'");
+    expect(site).not.toContain("appsforoffice");
+    expect(site).not.toContain("3517");
+  });
+
+  it("drops only X-Frame-Options on /word; every other route keeps DENY", () => {
+    expect(WORD_SECURITY_HEADERS.map((h) => h.key)).toEqual(
+      STATIC_SECURITY_HEADERS.map((h) => h.key).filter((k) => k !== "X-Frame-Options"),
+    );
+    expect(STATIC_SECURITY_HEADERS.find((h) => h.key === "X-Frame-Options")?.value).toBe("DENY");
+    expect(WORD_SOURCE).toBe("/word/:path*");
+    // The pattern next.config.ts applies the full set to: everything but /word and below.
+    const notWord = new RegExp(`^/${NOT_WORD_SOURCE.slice("/:path".length)}$`);
+    for (const p of ["/", "/settings", "/wordy", "/_next/static/x.js", "/icon.svg"]) expect(notWord.test(p), p).toBe(true);
+    for (const p of ["/word", "/word/icon-32.png"]) expect(notWord.test(p), p).toBe(false);
   });
 });

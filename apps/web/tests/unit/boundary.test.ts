@@ -45,7 +45,7 @@ describe("confidentiality boundary (ADR-02): the Next.js app never receives docu
     const root = fixture({ "components/X.tsx": "sessionStorage.setItem('doc', text); localStorage.setItem('d', t);" });
     const out = checkBoundary(root).join("\n");
     expect(out).toMatch(/sessionStorage/);
-    expect(out).toMatch(/localStorage is only for the format preference/);
+    expect(out).toMatch(/localStorage is only for per-viewer preferences/);
   });
 
   it("fails on a network call outside lib/engine.ts", () => {

@@ -341,3 +341,21 @@ export function signInLinkErrorMessage(code: string | undefined): string {
       return "That sign-in link could not be used. Ask for a new one.";
   }
 }
+
+/** The emailed one-time code (the Word add-in, S3) could not be used. */
+export function verifyCodeErrorMessage(err: AuthErrorLike): string {
+  const code = err.code ?? "";
+  if (err.name === "AuthRetryableFetchError" || err.status === 0) {
+    return "Could not reach the sign-in service. Check your connection and try again.";
+  }
+  if (err.status === 429 || code.startsWith("over_")) {
+    return "Too many tries in a short time. Wait a few minutes, then ask for a new code.";
+  }
+  if (code === "otp_expired") {
+    return "That code has expired or has already been used. Ask for a new one.";
+  }
+  if ((err.status ?? 0) >= 500) {
+    return "The sign-in service had a problem. Try again in a few minutes.";
+  }
+  return "That code is not right. Check the latest email and try again, or ask for a new code.";
+}

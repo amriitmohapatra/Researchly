@@ -1,4 +1,4 @@
-# apps/web — Researchly web surface (PLAN.md S1, S2)
+# apps/web — Researchly web surface (PLAN.md S1, S2, S3)
 
 Paste text at a private URL and get explained, section-aware suggestions.
 With accounts configured (S2), sign in by email link to check whole files
@@ -66,6 +66,43 @@ the contract compiles as first-party source.
 - **CORS**: the engine must allow this site's origin, and should expose
   `Retry-After` and `X-Request-ID` (`Access-Control-Expose-Headers`).
 
+## The Word add-in's taskpane (`/word`, S3)
+
+Word loads `https://<site>/word` in its sidebar (manifests in
+`apps/word-addin/`; owner steps in its README, "Hosted add-in (S3)").
+
+- **Office.js** comes from Microsoft's CDN with a plain script tag
+  (`app/word/layout.tsx`), between two tiny same-origin scripts
+  (`public/word/office-guard.js`, `office-restore.js`) that keep
+  `history.pushState/replaceState` alive, because office.js removes them in
+  some hosts and Next.js's router needs them.
+- **All Office.js calls** are in `lib/word/office.ts` (read paragraphs with
+  style and table flag, find a suggestion by `snippet` + `occurrence`, select,
+  apply). Tests swap in `e2e/fake-office.ts`, which e2e serves at office.js's
+  own URL. Before selecting or replacing, the paragraph is re-read and must
+  still hold the flagged words at the recorded offsets, Word's search must
+  count the snippet as the engine did, and (to apply) the found range's text
+  must equal the snippet; otherwise nothing changes and the card says why.
+  Tracked changes only with WordApi 1.4: setting `changeTrackingMode` on
+  older Word silently fails the whole batch.
+- **Engine**: `POST /v1/analyze-word` and `GET /v1/health` from
+  `lib/engine.ts`, either to `NEXT_PUBLIC_ENGINE_URL` ("Researchly cloud",
+  with the Bearer token when signed in) or to `http://localhost:3517`
+  ("This computer": `apps/word-addin/server.py`, no token, but the account's
+  muted rules are sent as `disabled_rules`).
+- **Sign-in** by an emailed code (`signInWithOtp` then `verifyOtp`, 6 to 10
+  digits), inside the pane. Draft/Revise is saved in `user_settings.mode`
+  when signed in (migration `20261004120000_s3_mode.sql`), else in
+  localStorage with the engine choice (`lib/prefs.ts`).
+- **Headers**: `/word` has its own CSP (proxy.ts, `surface: "word"`):
+  `script-src` adds `https://appsforoffice.microsoft.com` (and drops
+  `'strict-dynamic'`, which would block office.js's parser-inserted
+  scripts), `frame-ancestors` lists the Office web origins, `connect-src`
+  adds `http://localhost:3517`, and there is no `upgrade-insecure-requests`
+  (it would break the local engine). No `X-Frame-Options` on `/word`.
+  Every other route's headers are unchanged (tests/unit/security.test.ts,
+  e2e/word.spec.ts).
+
 ## Accounts (S2, docs/s2-design.md §5)
 
 - **Browser only.** supabase-js is loaded by `lib/supabase.ts` alone (a
@@ -87,7 +124,8 @@ the contract compiles as first-party source.
   `user_settings` and `dictionary_words` straight from the browser. Inserts
   rely on the `user_id` default (`auth.uid()`); the only id the client ever
   sends is its own, as a filter on "delete my settings and dictionary".
-- **Storage**: besides the format preference, the only stored item is
+- **Storage**: besides the format preference (and, in the Word taskpane,
+  the engine choice and Draft/Revise), the only stored item is
   supabase-js's session (`sb-<ref>-auth-token`, plus its PKCE verifier while
   a link is pending). Never document text.
 
@@ -100,7 +138,8 @@ server never receives it.** This is enforced, not just intended:
   `scripts/check-boundary.mjs`, which fails on any of them, on network calls
   outside `lib/engine.ts`, on a proxy that reads request bodies, on
   `sessionStorage`/IndexedDB/cookies, and on any `localStorage` use outside
-  `lib/prefs.ts`. `tests/unit/boundary.test.ts` proves the checker catches
+  `lib/prefs.ts`. The Word taskpane obeys the same rules: document text
+  goes from Office.js straight to the chosen engine. `tests/unit/boundary.test.ts` proves the checker catches
   each case.
 - `lib/engine.ts` imports `client-only`, so importing it from server code is a
   build error.
@@ -141,14 +180,18 @@ required states, what to reject). Check UI changes against it.
 ## Layout
 
 ```
-app/            layout (dynamic, for CSP nonces), page (static chrome), globals.css
+app/            layout (dynamic, for CSP nonces), page (static chrome), globals.css,
+                word/ (the Word add-in's taskpane, S3)
 components/     Checker (form + state), ReadingKey (idle "how to read the
                 feedback" key), Results, DocumentView, SuggestionCard,
                 HealthBanner, MetricsPanel, CategoryIcon
+components/word/ Taskpane, WordCard, CodeSignIn
+lib/word/       office (every Office.js call), view (taskpane helpers)
 lib/            engine (fetch), segments (offsets + highlight segmentation),
                 categories, health, errors, validate, view, prefs, config, security
 proxy.ts        CSP nonce
 scripts/        check-boundary.mjs (confidentiality lint)
 tests/unit/     Vitest
-e2e/            Playwright specs, typed fixtures (`satisfies AnalyzeResponse`)
+e2e/            Playwright specs, typed fixtures (`satisfies AnalyzeResponse`),
+                fake-office.ts (Office.js stand-in), word*.spec.ts
 ```

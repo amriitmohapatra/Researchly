@@ -15,7 +15,7 @@ import { useSyncExternalStore } from "react";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import { ACCOUNTS_ENABLED } from "./config";
 import type { EngineAuth } from "./engine";
-import { signInErrorMessage, signInLinkErrorMessage, type AuthErrorLike } from "./errors";
+import { signInErrorMessage, signInLinkErrorMessage, verifyCodeErrorMessage, type AuthErrorLike } from "./errors";
 import { getSupabase } from "./supabase";
 
 export type AuthState =
@@ -152,6 +152,53 @@ export async function sendMagicLink(email: string): Promise<SignInResult> {
     return error ? { ok: false, message: signInErrorMessage(error) } : { ok: true };
   } catch {
     return { ok: false, message: signInErrorMessage({ status: 0 }) };
+  }
+}
+
+/* ---------- sign-in by emailed code (the Word add-in, S3) ---------- */
+
+/** Supabase's email one-time codes are 6 digits by default, and can be set up to 10. */
+export const EMAIL_CODE = /^[0-9]{6,10}$/;
+
+/** "123 456" or "123-456" as typed or pasted: digits only. */
+export function normaliseCode(raw: string): string {
+  return raw.replace(/[\s-]/g, "");
+}
+
+/**
+ * Email a one-time code (S3). Used inside the Word taskpane, where a link
+ * would open in the system browser rather than back in Word. The same email
+ * also carries the usual link, which signs the writer in on the website.
+ */
+export async function sendEmailCode(email: string): Promise<SignInResult> {
+  const pending = getSupabase();
+  if (!pending) return { ok: false, message: "Sign-in is not available here." };
+  try {
+    const sb = await pending;
+    const { error } = await sb.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.origin },
+    });
+    return error ? { ok: false, message: signInErrorMessage(error).replace("sign-in link", "sign-in code") } : { ok: true };
+  } catch {
+    return { ok: false, message: signInErrorMessage({ status: 0 }) };
+  }
+}
+
+/** Exchange the emailed code for a session, kept by supabase-js in this taskpane's own storage. */
+export async function verifyEmailCode(email: string, rawCode: string): Promise<SignInResult> {
+  const code = normaliseCode(rawCode);
+  if (!EMAIL_CODE.test(code)) return { ok: false, message: "Enter the code from the email: 6 to 10 digits." };
+  const pending = getSupabase();
+  if (!pending) return { ok: false, message: "Sign-in is not available here." };
+  try {
+    const sb = await pending;
+    const { data, error } = await sb.auth.verifyOtp({ email, token: code, type: "email" });
+    if (error || !data.session) return { ok: false, message: verifyCodeErrorMessage(error ?? {}) };
+    set({ auth: stateFrom(data.session) });
+    return { ok: true };
+  } catch {
+    return { ok: false, message: verifyCodeErrorMessage({ status: 0 }) };
   }
 }
 
