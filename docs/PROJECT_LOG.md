@@ -1620,3 +1620,9 @@ captions; a typed caption repeated later is one float. The owner's
 manuscript loses its one X104 (a typed caption): 409 → 408. Lesson: a
 heuristic input (typed captions) is fine for rules that only stay silent
 on it (X103) and risky for rules that fire on it (X104).
+
+**Addendum 3: confirmed.** Run 37197496673 (73c7d5a) PASS: X104 on the
+supplement .docx files 33 → 0; X401 24/24, X202 35/40, X301 248
+unchanged. Open: X101 16, X102 12, X103 12 per rendering and X104 11 in
+the Word rendering of published articles (~1 per 10 articles); judging
+them needs the run's samples, which this sandbox cannot download.
