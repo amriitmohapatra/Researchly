@@ -1319,3 +1319,8 @@ servers refuse automated downloads). Format parity holds on average
 (docx −0.44, tex −0.34 flags/1000w against plain). Published PLOS/eLife
 articles run at ~16 flags/1000w — no better than the theses — so Q3
 (≤ 11) must be tuned against published prose too, not only theses.
+
+**Addendum (P28/P29 merged, 2026-10-04):** amriitmohapatra/Researchly#3
+merged to main as 91e1c19, green on every check including the full
+real-document run. The fixes reach the live engine when the owner runs
+**Deploy engine**; the branch was restarted from main for the next work.
