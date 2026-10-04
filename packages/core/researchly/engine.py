@@ -146,7 +146,8 @@ def load_rules() -> int:
     modules: a module missing here never runs, anywhere."""
     # Imported here, not at the top, to avoid an import cycle.
     from . import (rules_lexical, rules_syntax,  # noqa: F401
-                   rules_spelling, rules_grammar, rules_gec, rules_structure)
+                   rules_spelling, rules_grammar, rules_gec, rules_structure,
+                   rules_consistency)
     return len(REGISTRY)
 
 

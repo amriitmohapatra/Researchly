@@ -1446,3 +1446,59 @@ merged to main with all 12 checks green. The full real-document run
 invariant, though 7 came back abstract-only (PLAN follow-up). The fixes reach
 the live engine when the owner runs **Deploy engine**.
 
+## P32 — 2026-10-04 — S2b: structure and consistency checks
+
+**Context.** The owner deployed the P30/P31 engine and asked to go ahead
+with S2b (P2 consistency checks, P4 structural checks for figures, tables
+and equations). Mid-way the owner also asked to plan a demo manuscript with
+deliberate errors and a launch video (PLAN Inbox).
+
+**What was built.**
+- `researchly/structure.py`: floats (figure/table, number, label, caption,
+  appendix) and mentions. The LaTeX reader now records `\ref`s (also
+  preamble macros such as `\fig{x}` -> `fig:x`, and style macros like
+  `\figref` it cannot see) and every `\label`; `from_word` records Word
+  captions, so the add-in and an uploaded file agree. Ranges
+  (`\ref{a}--\ref{c}`), `\captionof`, `\caption*`, panel captions, chapter
+  numbering and appendices are handled. Internal `ref`/`label` items are not
+  returned by the service (the contract lists five public kinds).
+- Rules (Layer 8 in `docs/rule-inventory.md`): X101 uncited float, X102
+  out of order, X103 broken reference, X104 placed before first citation
+  (Word), X202 short caption, X301 unreferenced numbered equation
+  (Preference), X401 number not in the cited table, F612 abbreviation
+  defined twice, F613 defined but barely used (Preference), N101 unit
+  spacing mixed, N102 sentence opens with a numeral, W211 compound spelled
+  two ways. Sources: ICMJE, BIPM SI Brochure, AMA Manual of Style, guide
+  §6/§9.1/§9.2/§9.7 (knowledge-base §10).
+- `engine.load_rules()` is the one list of rule modules: `api` kept its own
+  and missed the new module (health reported 38 of 42 rules).
+
+**Evidence.**
+- 76 new tests; core 672+ passed, service 146, ruff clean.
+- Real LaTeX projects (17): the first version raised 120 structural
+  flags, most wrong; each wrong pattern became a fix and a don't-fire test
+  (labels in align/algorithm, `\fig{x}` macros, style `\figref`, ranges,
+  panel captions, `\caption*`, appendix floats, captions citing other
+  floats); 14 remain and those read are genuine (uncited figures in a
+  tutorial paper, tables cited out of order in a replication study).
+- X203 (caption abbreviation undefined) was tried and dropped: 79 flags,
+  nearly all product names, formulae and initials.
+- Noise floor 11.94 → 12.66 on purpose (+205 flags from the consistency
+  rules). Judged sample of 45: W211 nearly all correct, N101 5/5, N102 ~9/12,
+  F612 ~8/14 before two more guards (reference entries, panel letters).
+  Baseline updated with a note; the structural rules do not run on the
+  plain-text corpus.
+- Local bench (59 GitHub documents): PASS.
+
+**Open.** Tense per section (no named source), concept-level terminology
+drift, missing captions, equation symbols: deferred in PLAN. The PMC
+articles' docx/tex renderings (CI) are the real precision test for X1xx:
+published articles cite every figure in order.
+
+**Lessons.**
+- A structural check is only as good as the cross-reference model under
+  it: nearly every first-version false flag was the model missing a way
+  authors write references, not the rule being wrong.
+- Two lists of the same thing drift: the rule-module list existed twice
+  and the second copy silently left the new module out.
+

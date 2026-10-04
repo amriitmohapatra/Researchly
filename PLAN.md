@@ -109,16 +109,19 @@ done and what's next*. Both the owner and Claude edit it.
 
 ## S2b — Consistency & structure checks (P2, P4)
 
-- [ ] Abbreviations: defined at first use, defined once, used after definition
-- [ ] Terminology consistency (same concept → same term; e.g. "infection rate" vs "incidence" drift)
-- [ ] Tense consistency per section (Methods past, etc. — section-aware)
-- [ ] Numbers and units formatting consistency
-- [ ] Figures/tables: every one cited in text, cited in order, cited before it appears; labels exist
-- [ ] Caption quality: present, self-contained, defines abbreviations, states what/where/when/n
-- [ ] Equations: symbols defined near first use; numbered equations referenced
-- [ ] Text↔table numbers: a number quoted with "Table N" appears in Table N
-- [ ] Each check: authored question + named source, fire and don't-fire tests, rule-inventory row
-- [ ] **Exit check:** noise-floor gate holds; owner checks one real chapter and reports false flags
+Built 2026-10-04 (P32): `researchly/structure.py`, `rules_structure.py`, `rules_consistency.py`; 12 rules, 76 tests (`test_structure_rules.py`, `test_consistency_rules.py`). Structural rules run on LaTeX and Word only.
+
+- [x] Abbreviations: defined at first use (F601, existing), defined once (**F612**), used after definition (**F613**, Preference); definitions found with Schwartz & Hearst's algorithm
+- [~] Terminology consistency: the same compound written closed and open (**W211**: "dataset"/"data set"). Concept drift ("infection rate" vs "incidence") needs meaning, not spelling: not deterministic, left to the review lens
+- [ ] Tense consistency per section — deferred: no named source yet in the knowledge base (CLAUDE.md #6), and present tense is legitimate for model descriptions in Methods
+- [x] Numbers and units: mixed number–unit spacing (**N101**), sentence opening with a numeral (**N102**)
+- [x] Figures/tables: every one cited (**X101**), cited in order (**X102**), cited before it appears (**X104**, Word), labels and numbers exist (**X103**). Bench: 120 flags on the 17 real LaTeX projects at first, 14 after fixing what they showed; the ones read are genuine
+- [~] Caption quality: too short (**X202**). Abbreviations defined in the caption (X203) tried and dropped: 79 false flags on 17 projects. Missing caption (X201) deferred: a captionless float has no prose to anchor to
+- [~] Equations: numbered but never referred to (**X301**, Preference). Symbols defined near first use (F603) deferred: not deterministic enough
+- [x] Text↔table numbers: a decimal or percentage quoted with "Table N" that Table N does not hold (**X401**; rounding allowed; levels, versions, totals skipped)
+- [x] Each check: question-form message + named source (ICMJE, SI Brochure, AMA Manual of Style, guide §6/§9.1/§9.2/§9.7), fire and don't-fire tests, rule-inventory rows (Layer 8), knowledge-base §10
+- [~] Noise floor: 11.94 → 12.66 on purpose (+205 flags, all from the new consistency rules; judged sample mostly correct; baseline note). The gate holds at the new baseline. Measure the structural rules on the 115 PMC articles in the next CI run (published articles cite every figure in order: flags there are false positives)
+- [ ] **Exit check:** owner checks one real chapter and reports false flags **(Amriit)**
 
 ## S3 — Word add-in, hosted
 

@@ -1,8 +1,8 @@
 {
   "documents": 8,
   "words": 284537,
-  "suggestions": 3396,
-  "per_1000_words": 11.94,
+  "suggestions": 3601,
+  "per_1000_words": 12.66,
   "by_rule": {
     "G106": 648,
     "G101": 559,
@@ -14,10 +14,13 @@
     "G107": 119,
     "C303": 114,
     "E703": 92,
+    "W211": 84,
     "W201": 80,
     "W204": 79,
     "G105": 69,
     "G104": 63,
+    "F613": 53,
+    "F612": 51,
     "W203": 48,
     "W210": 38,
     "G102": 34,
@@ -27,6 +30,7 @@
     "C301": 22,
     "C304": 14,
     "W206": 13,
+    "N102": 12,
     "E704": 11,
     "C305": 10,
     "G108": 6,
@@ -35,10 +39,11 @@
     "AB802": 5,
     "E701": 5,
     "D902": 5,
+    "N101": 5,
     "E707": 4,
     "E702": 3,
     "E705": 1,
     "W208": 1
   },
-  "note": "P31 (2026-10-04): Q3 precision tune. 14.51 -> 11.94. LT001 566->295 (LanguageTool rules that misread scientific prose: compound-spelling preferences, maths/code, 'least squares'); G101 779->559 (list commas, bracketed citations and short restrictive clauses are not interruptions); S001 611->415 (field vocabulary, author names before initials/'et al'); C303 138->114 (intransitive change verbs); F601 243->220 (Roman numerals, journal names, GDP/ROC/AUC). ~90% of the remaining S001 flags are PDF extraction artefacts (joined or split words), not the authors' spelling."
+  "note": "P32 (2026-10-04): S2b consistency checks added on purpose, 11.94 -> 12.66. +205 flags, all from new rules: W211 84 (compound spelled two ways), F613 53 (abbreviation defined but barely used; a Preference, hidden by default), F612 51 (abbreviation defined twice), N102 12 (sentence opens with a numeral), N101 5 (unit spacing mixed). A judged sample of 45 new flags before the last two guards: W211 ~all correct, N101 5/5, N102 ~9/12, F612 ~8/14 (the misses - references, panel letters - are now guarded). The structural rules (X1xx-X4xx) do not run on plain text. The P31 precision tune of the existing rules stays at 11.94."
 }

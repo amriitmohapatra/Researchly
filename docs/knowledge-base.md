@@ -148,6 +148,21 @@ journal/venue awareness goal.
 
 ---
 
+## 10. Published style references (S2b, 2026-10-04)
+
+Named in `researchly/sources.py`; cited by name only, never quoted.
+
+| Source | Principle | Rule |
+|---|---|---|
+| ICMJE Recommendations (tables and figures) | Number figures and tables consecutively in the order the text first cites them; cite each one | **X101–X104** |
+| BIPM, SI Brochure (9th ed.) | A space separates a number from its unit | **N101** (as consistency, not prescription) |
+| AMA Manual of Style (11th ed.) | Do not begin a sentence with a numeral | **N102** |
+| Guide §9.1 (owner's) | Define a term once, at first use, then use it consistently | **F612, F613, W211** (Endo's "different terms = different things" corroborates W211) |
+| Guide §9.2 | Introduce, display, interpret every equation | **X301** |
+| Guide §9.7 | A caption states the figure's point and lets it be read unaided | **X202** (Endo's figure self-sufficiency corroborates) |
+| Guide §6 | Be concrete and credible; let the numbers carry the weight | **X401** |
+| Schwartz & Hearst (2003), *A simple algorithm for identifying abbreviation definitions in biomedical text* | How definitions are recognised (not a writing rule) | F612/F613 detection |
+
 ## Shipped this phase (v0.4)
 
 **New rules (10):** E701 empty-phrase · E702 adversative-run · E703

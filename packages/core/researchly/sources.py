@@ -47,6 +47,10 @@ WORKS = {
     "symspellpy": ("SymSpell spelling engine with Researchly's scientific "
                    "lexicon"),
     "local GEC": "Researchly learned-correction tier (local model)",
+    "SI": ("BIPM, The International System of Units (SI Brochure), "
+           "9th ed., on writing a number with its unit"),
+    "AMA": ("AMA Manual of Style, 11th ed., on numbers at the start of a "
+            "sentence"),
     "ICMJE": ("International Committee of Medical Journal Editors, "
               "Recommendations for the Conduct, Reporting, Editing, and "
               "Publication of Scholarly Work in Medical Journals "
