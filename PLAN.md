@@ -148,6 +148,7 @@ Built 2026-10-04 (P32): `researchly/structure.py`, `rules_structure.py`, `rules_
 - [ ] Port `argument.py`, `guide.py`, `abstract_lens` into `tiers/discourse/`
 - [ ] Each discourse check = authored question + named source in `knowledge/`
 - [ ] `/v1/narrative` endpoint; narrative map UI (moves present/missing/out of order)
+- [ ] **Critical-reader review on the hosted surfaces** (the prototype's Review: `review.py`, Wallace & Wray's five critical-synopsis questions via NG5001 Unit 1). Works today in the CLI (`researchly review`) and the old local Word add-in only; bring it to the website and the hosted add-in (`/v1/review`, a Review tab), sharing the narrative map's evidence. Owner asked 2026-10-04; it had no PLAN item of its own
 - [ ] Learn cards for every `learn_ref`
 - [ ] Hedging trajectory read-out (never a score)
 - [ ] Discipline-pack format + the epidemiology pack (P3): reporting checklists STROBE, CONSORT, PRISMA, EPIFORGE — checks *reporting*, never the science
