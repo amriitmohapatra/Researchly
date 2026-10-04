@@ -139,6 +139,7 @@ Built 2026-10-04 (P32): `researchly/structure.py`, `rules_structure.py`, `rules_
 - [x] Custom SMTP (Gmail) set up and the sign-in code added to the Magic Link email — 2026-10-04, owner received an email with the code **(Amriit)**. (First try failed with a misleading "could not reach" message: supabase-js reports Supabase's 500 "could not send email" as a retryable fetch error; message fixed in the web app.)
 - [x] Sign-in code added to the Confirm signup email too — 2026-10-04 **(Amriit)**. (The website itself never shows a code box: it signs in by the link; only the Word add-in asks for the code.)
 - [ ] Owner steps before trying it: run the S3 migration; set up custom SMTP (Gmail app password; Supabase now allows template edits only with custom SMTP, and its built-in sender reaches only the Supabase team, so this was needed before any beta user could sign in anyway); add `{{ .Token }}` to the Magic Link and Confirm signup email templates (guide in `apps/word-addin/README.md`, "Hosted add-in (S3)"); merge, deploy the engine and the web app; sideload `manifest.hosted.xml` and fully quit Word (Cmd-Q) **(Amriit)**
+- [x] S3 merged and deployed — amriitmohapatra/Researchly#6 and the start-up fix #7 (office.js defines `Word` late; the taskpane looked for it too early), 2026-10-04; `/word` in a browser shows "Open Researchly from Word" as intended
 - [ ] **Exit check:** owner uses it on Mac Word for a week; issues logged below
 
 ## S4 — Narrative map v1
