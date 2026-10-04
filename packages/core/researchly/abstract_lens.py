@@ -167,7 +167,8 @@ def missing_moves(text: str) -> list[str]:
       "sentence frames for whatever is missing. (Belcher 2021; Pallas 2022 "
       "ch.7, via NG5001 Unit 2.)",
       sections_only=("abstract",),
-      source="NG5001-U2")
+      source="NG5001-U2",
+      scope="document")
 def ab802_abstract_completeness(doc, document: Document):
     abstracts = [h for h in document.headings if h.section == "abstract"]
     if not abstracts:

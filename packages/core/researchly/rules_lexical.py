@@ -271,7 +271,8 @@ _CAPS_RUN = re.compile(r"\b[A-Z][A-Z&'’-]+(?:\s+[A-Z][A-Z&'’-]+){2,}\b")
       "Define a term the first time you use it, once, briefly, then use it "
       "consistently. Your reader is expert — but rarely in every discipline "
       "you are combining. (Guide §9.1.)",
-      source="§9.1")
+      source="§9.1",
+      scope="document")
 def f601_acronyms(doc, document: Document):
     text = document.masked
     # v0.2: an acronym defined in a List of Abbreviations counts as defined.
@@ -504,7 +505,8 @@ def l901_serial_summary(doc, document: Document):
       "here — either the niche is missing, or it's phrased so gently the "
       "reader may not notice it. (Shehzad 2008 on CARS Move 2; Swales & "
       "Feak; guide §3.)",
-      source="Shehzad")
+      source="Shehzad",
+      scope="document")
 def d902_missing_niche(doc, document: Document):
     intro = [h for h in document.headings if h.section == "introduction"]
     if not intro:

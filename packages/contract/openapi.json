@@ -31,6 +31,13 @@
             "title": "Health",
             "type": "array"
           },
+          "hidden_by_mode": {
+            "default": 0,
+            "description": "Document-level suggestions Draft mode held back (0 in Revise).",
+            "minimum": 0.0,
+            "title": "Hidden By Mode",
+            "type": "integer"
+          },
           "hidden_preferences": {
             "minimum": 0.0,
             "title": "Hidden Preferences",
@@ -45,6 +52,11 @@
                 "type": "null"
               }
             ]
+          },
+          "mode": {
+            "$ref": "#/components/schemas/Mode",
+            "default": "revise",
+            "description": "The mode this check ran in."
           },
           "schema_version": {
             "const": "1",
@@ -105,6 +117,17 @@
             "maxItems": 200,
             "title": "Disabled Rules",
             "type": "array"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Mode"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Draft or Revise for this request. Omitted: the caller's saved setting, else revise."
           },
           "show_preferences": {
             "default": false,
@@ -168,6 +191,13 @@
             "title": "Health",
             "type": "array"
           },
+          "hidden_by_mode": {
+            "default": 0,
+            "description": "Document-level suggestions Draft mode held back (0 in Revise).",
+            "minimum": 0.0,
+            "title": "Hidden By Mode",
+            "type": "integer"
+          },
           "hidden_preferences": {
             "minimum": 0.0,
             "title": "Hidden Preferences",
@@ -182,6 +212,11 @@
                 "type": "null"
               }
             ]
+          },
+          "mode": {
+            "$ref": "#/components/schemas/Mode",
+            "default": "revise",
+            "description": "The mode this check ran in."
           },
           "schema_version": {
             "const": "1",
@@ -230,6 +265,134 @@
         "title": "AnalyzeResponse",
         "type": "object"
       },
+      "AnalyzeWordRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "options": {
+            "$ref": "#/components/schemas/AnalyzeOptions"
+          },
+          "paragraphs": {
+            "description": "The document's paragraphs in order. Held in memory for this request only; never stored or logged.",
+            "items": {
+              "$ref": "#/components/schemas/WordParagraph"
+            },
+            "maxItems": 50000,
+            "minItems": 1,
+            "title": "Paragraphs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "paragraphs"
+        ],
+        "title": "AnalyzeWordRequest",
+        "type": "object"
+      },
+      "AnalyzeWordResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "description": "Shown suggestions per category.",
+            "title": "Counts",
+            "type": "object"
+          },
+          "coverage": {
+            "$ref": "#/components/schemas/Coverage"
+          },
+          "elapsed_ms": {
+            "minimum": 0.0,
+            "title": "Elapsed Ms",
+            "type": "integer"
+          },
+          "engine": {
+            "$ref": "#/components/schemas/EngineInfo"
+          },
+          "health": {
+            "description": "Every surface must show a degraded tier (CLAUDE.md: no silent tiers).",
+            "items": {
+              "$ref": "#/components/schemas/TierHealth"
+            },
+            "title": "Health",
+            "type": "array"
+          },
+          "hidden_by_mode": {
+            "default": 0,
+            "description": "Document-level suggestions Draft mode held back (0 in Revise).",
+            "minimum": 0.0,
+            "title": "Hidden By Mode",
+            "type": "integer"
+          },
+          "hidden_preferences": {
+            "minimum": 0.0,
+            "title": "Hidden Preferences",
+            "type": "integer"
+          },
+          "metrics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metrics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mode": {
+            "$ref": "#/components/schemas/Mode",
+            "default": "revise",
+            "description": "The mode this check ran in."
+          },
+          "schema_version": {
+            "const": "1",
+            "default": "1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "sections_detected": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sections Detected",
+            "type": "array"
+          },
+          "signed_in": {
+            "default": false,
+            "description": "True when a valid account token came with the request and its settings were looked up.",
+            "title": "Signed In",
+            "type": "boolean"
+          },
+          "suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/WordSuggestion"
+            },
+            "title": "Suggestions",
+            "type": "array"
+          },
+          "warnings": {
+            "description": "What was skipped or approximated while reading the text, e.g. LaTeX that could not be parsed and was read with a simpler method. May quote the caller's own text; never logged.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "suggestions",
+          "counts",
+          "hidden_preferences",
+          "sections_detected",
+          "health",
+          "engine",
+          "elapsed_ms",
+          "coverage"
+        ],
+        "title": "AnalyzeWordResponse",
+        "type": "object"
+      },
       "Category": {
         "description": "The four-type taxonomy (CLAUDE.md #3). Conventions are never errors;\npreferences are hidden unless asked for.",
         "enum": [
@@ -240,6 +403,37 @@
         ],
         "title": "Category",
         "type": "string"
+      },
+      "Coverage": {
+        "additionalProperties": false,
+        "description": "What was and was not read, stated plainly.",
+        "properties": {
+          "not_checked": {
+            "description": "Parts of a Word document Office JS does not hand over, e.g. footnotes.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Not Checked",
+            "type": "array"
+          },
+          "paragraphs": {
+            "minimum": 0.0,
+            "title": "Paragraphs",
+            "type": "integer"
+          },
+          "table_paragraphs": {
+            "minimum": 0.0,
+            "title": "Table Paragraphs",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "paragraphs",
+          "table_paragraphs",
+          "not_checked"
+        ],
+        "title": "Coverage",
+        "type": "object"
       },
       "EngineInfo": {
         "additionalProperties": false,
@@ -423,6 +617,15 @@
         "title": "Metrics",
         "type": "object"
       },
+      "Mode": {
+        "description": "Draft / Revise (P1). Draft shows sentence-level checks only; Revise\nshows everything. A writing stage, not a quality dial.",
+        "enum": [
+          "draft",
+          "revise"
+        ],
+        "title": "Mode",
+        "type": "string"
+      },
       "RuleInfo": {
         "additionalProperties": false,
         "properties": {
@@ -439,6 +642,11 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/Scope",
+            "default": "sentence",
+            "description": "Draft mode shows sentence-level rules only."
           },
           "sections_excluded": {
             "anyOf": [
@@ -514,6 +722,15 @@
         ],
         "title": "RulesResponse",
         "type": "object"
+      },
+      "Scope": {
+        "description": "What a rule needs to judge: the sentence, or the whole document\n(figure citations, abbreviations defined once). Draft hides `document`.",
+        "enum": [
+          "sentence",
+          "document"
+        ],
+        "title": "Scope",
+        "type": "string"
       },
       "Segment": {
         "additionalProperties": false,
@@ -837,6 +1054,194 @@
         ],
         "title": "TierHealth",
         "type": "object"
+      },
+      "WordLocation": {
+        "additionalProperties": false,
+        "description": "How the add-in finds a suggestion in Word, which has no offsets:\nsearch `paragraph` for `snippet` and take match number `occurrence`.",
+        "properties": {
+          "end": {
+            "minimum": 0.0,
+            "title": "End",
+            "type": "integer"
+          },
+          "exact": {
+            "description": "False when the span is too long or unsafe to search for whole; `snippet` is then a prefix.",
+            "title": "Exact",
+            "type": "boolean"
+          },
+          "occurrence": {
+            "description": "0-based match number within the paragraph.",
+            "minimum": 0.0,
+            "title": "Occurrence",
+            "type": "integer"
+          },
+          "paragraph": {
+            "description": "Index into the request's paragraphs.",
+            "minimum": 0.0,
+            "title": "Paragraph",
+            "type": "integer"
+          },
+          "snippet": {
+            "description": "The text to search for.",
+            "title": "Snippet",
+            "type": "string"
+          },
+          "start": {
+            "description": "Offset in that paragraph's text (code points).",
+            "minimum": 0.0,
+            "title": "Start",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "paragraph",
+          "start",
+          "end",
+          "snippet",
+          "occurrence",
+          "exact"
+        ],
+        "title": "WordLocation",
+        "type": "object"
+      },
+      "WordParagraph": {
+        "additionalProperties": false,
+        "description": "One paragraph as Office JS reports it (`body.paragraphs`).",
+        "properties": {
+          "kind": {
+            "default": "body",
+            "description": "table: a table cell's paragraph (not prose).",
+            "enum": [
+              "body",
+              "table"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "style": {
+            "default": "",
+            "description": "Word style name, e.g. \"Heading 1\", \"Caption\", \"Normal\".",
+            "maxLength": 200,
+            "title": "Style",
+            "type": "string"
+          },
+          "text": {
+            "default": "",
+            "maxLength": 1000000,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "title": "WordParagraph",
+        "type": "object"
+      },
+      "WordSuggestion": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/Category"
+          },
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "fix_safety": {
+            "$ref": "#/components/schemas/FixSafety"
+          },
+          "id": {
+            "description": "Stable fingerprint of (rule_id, start, end, text); used by /v1/feedback in S2.",
+            "title": "Id",
+            "type": "string"
+          },
+          "learn_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Lesson id; Learn cards arrive in S4.",
+            "title": "Learn Ref"
+          },
+          "location": {
+            "$ref": "#/components/schemas/WordLocation"
+          },
+          "message": {
+            "description": "One-line rationale, always shown.",
+            "title": "Message",
+            "type": "string"
+          },
+          "replacement": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A concrete fix, only from deterministic rules or a ≤40-char learned edit. Never generated prose.",
+            "title": "Replacement"
+          },
+          "rule_id": {
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "rule_name": {
+            "title": "Rule Name",
+            "type": "string"
+          },
+          "section": {
+            "description": "Detected section, e.g. methods, discussion, unknown.",
+            "title": "Section",
+            "type": "string"
+          },
+          "source": {
+            "description": "Named provenance of the advice (CLAUDE.md #6).",
+            "title": "Source",
+            "type": "string"
+          },
+          "span": {
+            "$ref": "#/components/schemas/Span"
+          },
+          "text": {
+            "description": "The flagged source text, content[start:end].",
+            "title": "Text",
+            "type": "string"
+          },
+          "tier": {
+            "description": "spelling | grammar | gec | craft | lens — which engine produced it.",
+            "title": "Tier",
+            "type": "string"
+          },
+          "why": {
+            "description": "The teachable explanation.",
+            "title": "Why",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "rule_id",
+          "rule_name",
+          "category",
+          "tier",
+          "span",
+          "text",
+          "section",
+          "message",
+          "why",
+          "source",
+          "fix_safety",
+          "confidence",
+          "location"
+        ],
+        "title": "WordSuggestion",
+        "type": "object"
       }
     }
   },
@@ -1130,6 +1535,128 @@
           }
         },
         "summary": "Analyze File",
+        "tags": [
+          "analysis"
+        ]
+      }
+    },
+    "/v1/analyze-word": {
+      "post": {
+        "description": "Check a Word document sent as its paragraphs (the Word add-in, S3).\nEach suggestion says which paragraph it is in and how to find it there,\nbecause Word has no character offsets.",
+        "operationId": "analyzeWord",
+        "parameters": [
+          {
+            "description": "`Bearer <Supabase access token>` when signed in. Omit for anonymous use.",
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "`Bearer <Supabase access token>` when signed in. Omit for anonymous use.",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyzeWordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyzeWordResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Malformed request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign-in invalid or expired (unauthorized), or this needs an account (sign_in_required)"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Document too large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request failed validation"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limited"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Engine error (no document text in the body)"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign-in could not be checked (auth_unavailable)"
+          }
+        },
+        "summary": "Analyze Word",
         "tags": [
           "analysis"
         ]

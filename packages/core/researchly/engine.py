@@ -115,7 +115,15 @@ class Rule:
     # without reading. Declared per rule so both are auditable in `rules`.
     tier: str = TIER_CRAFT
     fix_safety: str = FIX_REVIEW
+    # "sentence": judged from the sentence in front of the writer.
+    # "document": needs the whole document (figure citations, abbreviations
+    # defined once, the abstract's moves). Draft mode shows sentence-level
+    # checks only (P1, S3), because a half-written chapter fails every
+    # document-level check for no fault of the sentence being written.
+    scope: str = "sentence"
 
+
+SCOPES = ("sentence", "document")
 
 REGISTRY: dict[str, Rule] = {}
 
@@ -124,8 +132,12 @@ def rule(id: str, name: str, category: Category, short: str, why: str,
          sections_only: Iterable[str] | None = None,
          sections_excluded: Iterable[str] | None = None,
          source: str = "", aggregate: bool = False,
-         tier: str = TIER_CRAFT, fix_safety: str = FIX_REVIEW):
+         tier: str = TIER_CRAFT, fix_safety: str = FIX_REVIEW,
+         scope: str = "sentence"):
     """Decorator registering a rule function."""
+    if scope not in SCOPES:
+        raise ValueError(f"rule {id}: scope must be one of {SCOPES}")
+
     def wrap(func):
         REGISTRY[id] = Rule(
             id=id, name=name, category=category, short=short, why=why,
@@ -134,7 +146,7 @@ def rule(id: str, name: str, category: Category, short: str, why: str,
             sections_excluded=(frozenset(sections_excluded)
                                if sections_excluded else None),
             source=cite(source), aggregate=aggregate,
-            tier=tier, fix_safety=fix_safety,
+            tier=tier, fix_safety=fix_safety, scope=scope,
         )
         return func
     return wrap

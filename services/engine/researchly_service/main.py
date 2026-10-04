@@ -35,6 +35,7 @@ from .errors import ApiError
 from .middleware import RateLimiter, RequestContextMiddleware
 from researchly import ingest, rules_grammar  # noqa: E402  (after _core)
 from .schemas import (AnalyzeFileResponse, AnalyzeOptions, AnalyzeRequest,
+                      AnalyzeWordRequest, AnalyzeWordResponse,
                       AnalyzeResponse, ErrorResponse, HealthResponse,
                       RulesResponse, Segment, SourceFormat, SourceInfo,
                       StructureItem)
@@ -120,6 +121,34 @@ def analyze(req: AnalyzeRequest, request: Request,
     resp = engine_adapter.run_analysis(
         req.content, req.format.value, req.options,
         grammar_enabled=s.grammar_enabled, **who)
+    _record(request, resp)
+    return resp
+
+
+@router.post("/v1/analyze-word", response_model=AnalyzeWordResponse,
+             responses=ERRORS, operation_id="analyzeWord", tags=["analysis"])
+def analyze_word(req: AnalyzeWordRequest, request: Request,
+                 authorization: Optional[str] = Header(None, description=AUTH_HEADER_DOC)
+                 ) -> AnalyzeWordResponse:
+    """Check a Word document sent as its paragraphs (the Word add-in, S3).
+    Each suggestion says which paragraph it is in and how to find it there,
+    because Word has no character offsets."""
+    paragraphs = [p.model_dump() for p in req.paragraphs]
+    st = request.state
+    st.content_chars = sum(len(p["text"]) for p in paragraphs)
+    st.format = "word"
+    s = _settings(request)
+    who = _account(request, authorization)
+    if (s.accounts_enabled and not who["signed_in"] and s.anon_max_words
+            and sum(_count_words(p["text"]) for p in paragraphs)
+            > s.anon_max_words):
+        raise ApiError(401, "sign_in_required",
+                       f"Without an account Researchly checks up to "
+                       f"{s.anon_max_words:,} words at a time. Sign in to check "
+                       "a whole chapter.")
+    resp = engine_adapter.run_analysis(
+        paragraphs, "word", req.options, grammar_enabled=s.grammar_enabled,
+        response_cls=AnalyzeWordResponse, word_paragraphs=paragraphs, **who)
     _record(request, resp)
     return resp
 

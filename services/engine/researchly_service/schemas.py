@@ -15,7 +15,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Dict, List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 SCHEMA_VERSION = "1"
 
@@ -32,6 +32,20 @@ class Format(str, Enum):
     plain = "plain"
     markdown = "markdown"
     latex = "latex"
+
+
+class Mode(str, Enum):
+    """Draft / Revise (P1). Draft shows sentence-level checks only; Revise
+    shows everything. A writing stage, not a quality dial."""
+    draft = "draft"
+    revise = "revise"
+
+
+class Scope(str, Enum):
+    """What a rule needs to judge: the sentence, or the whole document
+    (figure citations, abbreviations defined once). Draft hides `document`."""
+    sentence = "sentence"
+    document = "document"
 
 
 class Category(str, Enum):
@@ -62,6 +76,9 @@ class AnalyzeOptions(_Strict):
         description="Rule ids to mute for this request, e.g. [\"G101\"]. "
                     "For a signed-in caller these are added to the rules "
                     "muted in their account settings.")
+    mode: Optional[Mode] = Field(
+        None, description="Draft or Revise for this request. Omitted: the "
+                          "caller's saved setting, else revise.")
 
 
 class AnalyzeRequest(_Strict):
@@ -70,6 +87,34 @@ class AnalyzeRequest(_Strict):
                          description="The document text. Held in memory for "
                                      "this request only; never stored or logged.")
     options: AnalyzeOptions = Field(default_factory=AnalyzeOptions)
+
+
+MAX_WORD_PARAGRAPHS = 50_000
+
+
+class WordParagraph(_Strict):
+    """One paragraph as Office JS reports it (`body.paragraphs`)."""
+    text: str = Field("", max_length=MAX_CONTENT_CHARS)
+    style: str = Field("", max_length=200, description="Word style name, "
+                       "e.g. \"Heading 1\", \"Caption\", \"Normal\".")
+    kind: Literal["body", "table"] = Field(
+        "body", description="table: a table cell's paragraph (not prose).")
+
+
+class AnalyzeWordRequest(_Strict):
+    paragraphs: List[WordParagraph] = Field(
+        ..., min_length=1, max_length=MAX_WORD_PARAGRAPHS,
+        description="The document's paragraphs in order. Held in memory for "
+                    "this request only; never stored or logged.")
+    options: AnalyzeOptions = Field(default_factory=AnalyzeOptions)
+
+    @model_validator(mode="after")
+    def _size(self) -> "AnalyzeWordRequest":
+        total = sum(len(p.text) + 2 for p in self.paragraphs)
+        if total > MAX_CONTENT_CHARS:
+            raise ValueError(f"the document is longer than "
+                             f"{MAX_CONTENT_CHARS:,} characters")
+        return self
 
 
 # --- response --------------------------------------------------------------
@@ -140,6 +185,9 @@ class EngineInfo(_Strict):
 
 class AnalyzeResponse(_Strict):
     schema_version: Literal["1"] = SCHEMA_VERSION
+    mode: Mode = Field(Mode.revise, description="The mode this check ran in.")
+    hidden_by_mode: int = Field(0, ge=0, description="Document-level "
+                                "suggestions Draft mode held back (0 in Revise).")
     signed_in: bool = Field(False, description="True when a valid account token "
                             "came with the request and its settings were looked up.")
     suggestions: List[Suggestion]
@@ -157,6 +205,35 @@ class AnalyzeResponse(_Strict):
                     "e.g. LaTeX that could not be parsed and was read with a "
                     "simpler method. May quote the caller's own text; never "
                     "logged.")
+
+
+class WordLocation(_Strict):
+    """How the add-in finds a suggestion in Word, which has no offsets:
+    search `paragraph` for `snippet` and take match number `occurrence`."""
+    paragraph: int = Field(..., ge=0, description="Index into the request's paragraphs.")
+    start: int = Field(..., ge=0, description="Offset in that paragraph's text (code points).")
+    end: int = Field(..., ge=0)
+    snippet: str = Field(..., description="The text to search for.")
+    occurrence: int = Field(..., ge=0, description="0-based match number within the paragraph.")
+    exact: bool = Field(..., description="False when the span is too long or "
+                        "unsafe to search for whole; `snippet` is then a prefix.")
+
+
+class WordSuggestion(Suggestion):
+    location: WordLocation
+
+
+class Coverage(_Strict):
+    """What was and was not read, stated plainly."""
+    paragraphs: int = Field(..., ge=0)
+    table_paragraphs: int = Field(..., ge=0)
+    not_checked: List[str] = Field(..., description="Parts of a Word document "
+                                   "Office JS does not hand over, e.g. footnotes.")
+
+
+class AnalyzeWordResponse(AnalyzeResponse):
+    suggestions: List[WordSuggestion]
+    coverage: Coverage
 
 
 class SourceFormat(str, Enum):
@@ -220,6 +297,8 @@ class RuleInfo(_Strict):
     source: str
     tier: str
     fix_safety: FixSafety
+    scope: Scope = Field(Scope.sentence, description="Draft mode shows "
+                         "sentence-level rules only.")
     sections_only: Optional[List[str]] = None
     sections_excluded: Optional[List[str]] = None
 

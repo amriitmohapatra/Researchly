@@ -110,6 +110,8 @@ def cmd_check(args) -> int:
                              if x.strip()}
         if args.all:
             cfg.show_preferences = True
+        if args.mode:
+            cfg.mode = args.mode
 
         try:
             # .docx and Overleaf .zip are read by researchly.ingest, the
@@ -137,12 +139,15 @@ def cmd_check(args) -> int:
                 "warnings": list(document.warnings),
                 "suggestions": items,
                 "hidden_preferences": a.hidden_preferences,
+                "hidden_by_mode": a.hidden_by_mode,
+                "mode": a.config.mode,
                 "metrics": a.metrics.to_dict() if a.metrics else None,
                 "health": [t.to_dict() for t in a.health],
             })
         else:
             _render(path, document, suggestions,
                     hidden_prefs=a.hidden_preferences,
+                    hidden_by_mode=a.hidden_by_mode,
                     metrics=a.metrics, explain=args.explain, health=a.health)
         if suggestions:
             exit_code = max(exit_code, 1)
@@ -153,7 +158,7 @@ def cmd_check(args) -> int:
 
 
 def _render(path, document, suggestions, *, hidden_prefs, metrics, explain,
-            health=None):
+            health=None, hidden_by_mode=0):
     counts = {}
     for s in suggestions:
         counts[s.category] = counts.get(s.category, 0) + 1
@@ -168,6 +173,10 @@ def _render(path, document, suggestions, *, hidden_prefs, metrics, explain,
         print(_c(DIM, f"  ({hidden_prefs} preference suggestion"
                       f"{'s' if hidden_prefs != 1 else ''} hidden — "
                       "--all to show)"))
+    if hidden_by_mode:
+        print(_c(DIM, f"  (Draft mode: {hidden_by_mode} document-level "
+                      f"suggestion{'s' if hidden_by_mode != 1 else ''} held "
+                      "back — --mode revise to show)"))
     # Say which tiers did NOT run. Without this, a dead grammar engine and
     # clean prose produce identical output.
     for tier in (health or []):
@@ -420,6 +429,9 @@ def main(argv=None) -> int:
     p_check.add_argument("--disable", default="",
                          help="comma-separated rule ids to mute")
     p_check.add_argument("--no-metrics", action="store_true")
+    p_check.add_argument("--mode", choices=config_mod.MODES, default=None,
+                         help="draft: sentence-level checks only; revise: "
+                              "everything (default: your settings)")
     p_check.set_defaults(func=cmd_check)
 
     p_rules = sub.add_parser("rules", help="list all rules")

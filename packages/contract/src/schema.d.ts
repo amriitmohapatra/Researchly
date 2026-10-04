@@ -45,6 +45,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/analyze-word": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Analyze Word
+         * @description Check a Word document sent as its paragraphs (the Word add-in, S3).
+         *     Each suggestion says which paragraph it is in and how to find it there,
+         *     because Word has no character offsets.
+         */
+        post: operations["analyzeWord"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/health": {
         parameters: {
             query?: never;
@@ -107,9 +129,20 @@ export interface components {
              * @description Every surface must show a degraded tier (CLAUDE.md: no silent tiers).
              */
             health: components["schemas"]["TierHealth"][];
+            /**
+             * Hidden By Mode
+             * @description Document-level suggestions Draft mode held back (0 in Revise).
+             * @default 0
+             */
+            hidden_by_mode: number;
             /** Hidden Preferences */
             hidden_preferences: number;
             metrics?: components["schemas"]["Metrics"] | null;
+            /**
+             * @description The mode this check ran in.
+             * @default revise
+             */
+            mode: components["schemas"]["Mode"];
             /**
              * Schema Version
              * @default 1
@@ -139,6 +172,8 @@ export interface components {
              * @description Rule ids to mute for this request, e.g. ["G101"]. For a signed-in caller these are added to the rules muted in their account settings.
              */
             disabled_rules?: string[];
+            /** @description Draft or Revise for this request. Omitted: the caller's saved setting, else revise. */
+            mode?: components["schemas"]["Mode"] | null;
             /**
              * Show Preferences
              * @description Include Preference-type suggestions (hidden by default).
@@ -177,9 +212,20 @@ export interface components {
              * @description Every surface must show a degraded tier (CLAUDE.md: no silent tiers).
              */
             health: components["schemas"]["TierHealth"][];
+            /**
+             * Hidden By Mode
+             * @description Document-level suggestions Draft mode held back (0 in Revise).
+             * @default 0
+             */
+            hidden_by_mode: number;
             /** Hidden Preferences */
             hidden_preferences: number;
             metrics?: components["schemas"]["Metrics"] | null;
+            /**
+             * @description The mode this check ran in.
+             * @default revise
+             */
+            mode: components["schemas"]["Mode"];
             /**
              * Schema Version
              * @default 1
@@ -202,6 +248,69 @@ export interface components {
              */
             warnings?: string[];
         };
+        /** AnalyzeWordRequest */
+        AnalyzeWordRequest: {
+            options?: components["schemas"]["AnalyzeOptions"];
+            /**
+             * Paragraphs
+             * @description The document's paragraphs in order. Held in memory for this request only; never stored or logged.
+             */
+            paragraphs: components["schemas"]["WordParagraph"][];
+        };
+        /** AnalyzeWordResponse */
+        AnalyzeWordResponse: {
+            /**
+             * Counts
+             * @description Shown suggestions per category.
+             */
+            counts: {
+                [key: string]: number;
+            };
+            coverage: components["schemas"]["Coverage"];
+            /** Elapsed Ms */
+            elapsed_ms: number;
+            engine: components["schemas"]["EngineInfo"];
+            /**
+             * Health
+             * @description Every surface must show a degraded tier (CLAUDE.md: no silent tiers).
+             */
+            health: components["schemas"]["TierHealth"][];
+            /**
+             * Hidden By Mode
+             * @description Document-level suggestions Draft mode held back (0 in Revise).
+             * @default 0
+             */
+            hidden_by_mode: number;
+            /** Hidden Preferences */
+            hidden_preferences: number;
+            metrics?: components["schemas"]["Metrics"] | null;
+            /**
+             * @description The mode this check ran in.
+             * @default revise
+             */
+            mode: components["schemas"]["Mode"];
+            /**
+             * Schema Version
+             * @default 1
+             * @constant
+             */
+            schema_version: "1";
+            /** Sections Detected */
+            sections_detected: string[];
+            /**
+             * Signed In
+             * @description True when a valid account token came with the request and its settings were looked up.
+             * @default false
+             */
+            signed_in: boolean;
+            /** Suggestions */
+            suggestions: components["schemas"]["WordSuggestion"][];
+            /**
+             * Warnings
+             * @description What was skipped or approximated while reading the text, e.g. LaTeX that could not be parsed and was read with a simpler method. May quote the caller's own text; never logged.
+             */
+            warnings?: string[];
+        };
         /**
          * Category
          * @description The four-type taxonomy (CLAUDE.md #3). Conventions are never errors;
@@ -209,6 +318,21 @@ export interface components {
          * @enum {string}
          */
         Category: "correction" | "improvement" | "convention" | "preference";
+        /**
+         * Coverage
+         * @description What was and was not read, stated plainly.
+         */
+        Coverage: {
+            /**
+             * Not Checked
+             * @description Parts of a Word document Office JS does not hand over, e.g. footnotes.
+             */
+            not_checked: string[];
+            /** Paragraphs */
+            paragraphs: number;
+            /** Table Paragraphs */
+            table_paragraphs: number;
+        };
         /** EngineInfo */
         EngineInfo: {
             /** Core Version */
@@ -297,6 +421,13 @@ export interface components {
             /** Words */
             words: number;
         };
+        /**
+         * Mode
+         * @description Draft / Revise (P1). Draft shows sentence-level checks only; Revise
+         *     shows everything. A writing stage, not a quality dial.
+         * @enum {string}
+         */
+        Mode: "draft" | "revise";
         /** RuleInfo */
         RuleInfo: {
             category: components["schemas"]["Category"];
@@ -305,6 +436,11 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+            /**
+             * @description Draft mode shows sentence-level rules only.
+             * @default sentence
+             */
+            scope: components["schemas"]["Scope"];
             /** Sections Excluded */
             sections_excluded?: string[] | null;
             /** Sections Only */
@@ -323,6 +459,13 @@ export interface components {
             /** Rules */
             rules: components["schemas"]["RuleInfo"][];
         };
+        /**
+         * Scope
+         * @description What a rule needs to judge: the sentence, or the whole document
+         *     (figure citations, abbreviations defined once). Draft hides `document`.
+         * @enum {string}
+         */
+        Scope: "sentence" | "document";
         /**
          * Segment
          * @description A stretch of `document.text` that came from one source file.
@@ -504,6 +647,122 @@ export interface components {
              */
             tier: string;
         };
+        /**
+         * WordLocation
+         * @description How the add-in finds a suggestion in Word, which has no offsets:
+         *     search `paragraph` for `snippet` and take match number `occurrence`.
+         */
+        WordLocation: {
+            /** End */
+            end: number;
+            /**
+             * Exact
+             * @description False when the span is too long or unsafe to search for whole; `snippet` is then a prefix.
+             */
+            exact: boolean;
+            /**
+             * Occurrence
+             * @description 0-based match number within the paragraph.
+             */
+            occurrence: number;
+            /**
+             * Paragraph
+             * @description Index into the request's paragraphs.
+             */
+            paragraph: number;
+            /**
+             * Snippet
+             * @description The text to search for.
+             */
+            snippet: string;
+            /**
+             * Start
+             * @description Offset in that paragraph's text (code points).
+             */
+            start: number;
+        };
+        /**
+         * WordParagraph
+         * @description One paragraph as Office JS reports it (`body.paragraphs`).
+         */
+        WordParagraph: {
+            /**
+             * Kind
+             * @description table: a table cell's paragraph (not prose).
+             * @default body
+             * @enum {string}
+             */
+            kind: "body" | "table";
+            /**
+             * Style
+             * @description Word style name, e.g. "Heading 1", "Caption", "Normal".
+             * @default
+             */
+            style: string;
+            /**
+             * Text
+             * @default
+             */
+            text: string;
+        };
+        /** WordSuggestion */
+        WordSuggestion: {
+            category: components["schemas"]["Category"];
+            /** Confidence */
+            confidence: number;
+            fix_safety: components["schemas"]["FixSafety"];
+            /**
+             * Id
+             * @description Stable fingerprint of (rule_id, start, end, text); used by /v1/feedback in S2.
+             */
+            id: string;
+            /**
+             * Learn Ref
+             * @description Lesson id; Learn cards arrive in S4.
+             */
+            learn_ref?: string | null;
+            location: components["schemas"]["WordLocation"];
+            /**
+             * Message
+             * @description One-line rationale, always shown.
+             */
+            message: string;
+            /**
+             * Replacement
+             * @description A concrete fix, only from deterministic rules or a ≤40-char learned edit. Never generated prose.
+             */
+            replacement?: string | null;
+            /** Rule Id */
+            rule_id: string;
+            /** Rule Name */
+            rule_name: string;
+            /**
+             * Section
+             * @description Detected section, e.g. methods, discussion, unknown.
+             */
+            section: string;
+            /**
+             * Source
+             * @description Named provenance of the advice (CLAUDE.md #6).
+             */
+            source: string;
+            span: components["schemas"]["Span"];
+            /**
+             * Text
+             * @description The flagged source text, content[start:end].
+             */
+            text: string;
+            /**
+             * Tier
+             * @description spelling | grammar | gec | craft | lens — which engine produced it.
+             */
+            tier: string;
+            /**
+             * Why
+             * @description The teachable explanation.
+             */
+            why: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -662,6 +921,96 @@ export interface operations {
             };
             /** @description Not a supported file type (unsupported_file) */
             415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Engine error (no document text in the body) */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Sign-in could not be checked (auth_unavailable) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    analyzeWord: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description `Bearer <Supabase access token>` when signed in. Omit for anonymous use. */
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnalyzeWordRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyzeWordResponse"];
+                };
+            };
+            /** @description Malformed request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Sign-in invalid or expired (unauthorized), or this needs an account (sign_in_required) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Document too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };

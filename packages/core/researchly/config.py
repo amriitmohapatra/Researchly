@@ -40,6 +40,11 @@ AGGRESSIVENESS = ("light", "standard", "thorough")
 
 LOCALES = ("en-US", "en-GB")
 
+# Draft / Revise (P1, S3). Draft shows sentence-level checks only; Revise
+# shows everything. A writing stage, not a quality dial: Corrections at
+# sentence level are shown in both.
+MODES = ("draft", "revise")
+
 
 @dataclass
 class Config:
@@ -49,6 +54,7 @@ class Config:
     locale: str = "en-US"
     document_type: str = "auto"
     aggressiveness: str = "standard"
+    mode: str = "revise"
     # Tier switches. `None` means "use it if it is available" — an explicit
     # False is the user turning it off, which health.py reports differently
     # from "missing".
@@ -73,6 +79,7 @@ class Config:
             "locale": self.locale,
             "document_type": self.document_type,
             "aggressiveness": self.aggressiveness,
+            "mode": self.mode,
             "grammar_tier": self.grammar_tier,
             "gec_tier": self.gec_tier,
             "dictionary": list(self.dictionary),
@@ -135,6 +142,10 @@ def _apply(cfg: Config, data: dict) -> Config:
         val = str(rules["aggressiveness"])
         if val in AGGRESSIVENESS:
             cfg.aggressiveness = val
+    if "mode" in rules:
+        val = str(rules["mode"])
+        if val in MODES:
+            cfg.mode = val
 
     doc = data.get("document") or {}
     if "type" in doc:
@@ -171,7 +182,7 @@ def apply_remote(cfg: Config, data: dict) -> Config:
 
     `data` is the shape `my_config()` returns in Supabase:
     {"disabled_rules": [...], "show_preferences": bool, "locale": str,
-     "dictionary": [...]}. It came over the network, so every value is
+     "mode": "draft" | "revise", "dictionary": [...]}. It came over the network, so every value is
     checked and anything malformed is dropped rather than trusted; the same
     limits are enforced by the database, so dropping only bites on a bug.
     """
@@ -186,6 +197,8 @@ def apply_remote(cfg: Config, data: dict) -> Config:
         cfg.show_preferences = data["show_preferences"]
     if data.get("locale") in LOCALES:
         cfg.locale = data["locale"]
+    if data.get("mode") in MODES:
+        cfg.mode = data["mode"]
     words = data.get("dictionary")
     if isinstance(words, list):
         good = [w for w in words[:MAX_REMOTE_WORDS]
@@ -245,6 +258,7 @@ def dumps(cfg: Config) -> str:
         f"disable = {_toml_list(sorted(cfg.disabled))}",
         f"show_preferences = {'true' if cfg.show_preferences else 'false'}",
         f"aggressiveness = {_toml_str(cfg.aggressiveness)}",
+        f"mode = {_toml_str(cfg.mode)}",
         "",
         "[document]",
         f"type = {_toml_str(cfg.document_type)}",

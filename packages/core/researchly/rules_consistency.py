@@ -108,7 +108,8 @@ _REDEFINE_AFTER = 20_000
       "consistently. A second definition makes the reader wonder whether "
       "it means something new. A new chapter or paper (after its own "
       "abstract or introduction) may define it again. (Guide §9.1.)",
-      source="§9.1")
+      source="§9.1",
+      scope="document")
 def f612_defined_twice(doc, document: Document):
     for acr, spans in _definitions(document).items():
         for (a0, _), (a, b) in zip(spans, spans[1:]):
@@ -128,7 +129,8 @@ def f612_defined_twice(doc, document: Document):
       "An abbreviation costs the reader a definition to hold in mind; it "
       "pays back only when used often. Defined and then used once or not "
       "at all, the full term is easier to read. (Guide §9.1.)",
-      source="§9.1")
+      source="§9.1",
+      scope="document")
 def f613_rarely_used(doc, document: Document):
     text = document.masked
     for acr, spans in _definitions(document).items():
@@ -159,7 +161,8 @@ _UNIT_RX = re.compile(
       "(the SI Brochure puts a space before every unit, % included), but "
       "within one document the choice should not change. (BIPM, The "
       "International System of Units, number-unit spacing.)",
-      source="SI")
+      source="SI",
+      scope="document")
 def n101_unit_spacing(doc, document: Document):
     text = document.masked
     found = defaultdict(list)
@@ -260,7 +263,8 @@ _WORD = re.compile(r"[A-Za-z]+(?:-[A-Za-z]+)?")
       "'timepoint' and 'time point': each is fine, but one document should "
       "pick one, or the reader wonders whether two things are meant. "
       "(Guide §9.1: use a term consistently.)",
-      source="§9.1")
+      source="§9.1",
+      scope="document")
 def w211_compound_two_ways(doc, document: Document):
     text = document.masked
     words = [(m.group(0), m.start(), m.end()) for m in _WORD.finditer(text)]

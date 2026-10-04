@@ -24,12 +24,13 @@ from typing import List, Optional, Union
 
 from . import _core  # noqa: F401  (import path + isolation first)
 from . import __version__ as SERVICE_VERSION
-from .schemas import (AnalyzeOptions, AnalyzeResponse, Category, EngineInfo,
-                      FixSafety, Metrics, RuleInfo, Span, Suggestion,
-                      TierHealth)
+from .schemas import (AnalyzeOptions, AnalyzeResponse, AnalyzeWordResponse,
+                      Category, Coverage, EngineInfo, FixSafety, Metrics,
+                      Mode, RuleInfo, Scope, Span, Suggestion, TierHealth,
+                      WordLocation, WordSuggestion)
 
 import researchly
-from researchly import api
+from researchly import api, wordloc
 from researchly.config import Config, apply_remote
 from researchly.document import Document
 from researchly.engine import REGISTRY
@@ -81,6 +82,10 @@ def build_config(options: Optional[AnalyzeOptions],
     if options is not None:
         cfg.show_preferences = cfg.show_preferences or bool(options.show_preferences)
         cfg.disabled = set(cfg.disabled) | set(options.disabled_rules)
+        # A view choice, not a mute: the request's own mode wins (the add-in
+        # toggles it per check); otherwise the account's saved one.
+        if options.mode is not None:
+            cfg.mode = options.mode.value
     return cfg
 
 
@@ -165,9 +170,22 @@ def run_analysis(source: Union[str, Document], fmt: str,
     health = [to_tier(t) for t in a.health]
     if signed_in:
         health.append(account_tier(account_error))
+    paragraphs = extra.pop("word_paragraphs", None)
+    if paragraphs is not None:
+        doc = a.document
+        suggestions = [WordSuggestion(
+            **to_suggestion(s).model_dump(),
+            location=WordLocation(**wordloc.locate(doc, paragraphs,
+                                                   s.start, s.end)))
+            for s in a.suggestions]
+        extra["coverage"] = Coverage(**wordloc.coverage(paragraphs, doc))
+    else:
+        suggestions = [to_suggestion(s) for s in a.suggestions]
     out = response_cls(
         signed_in=signed_in,
-        suggestions=[to_suggestion(s) for s in a.suggestions],
+        mode=Mode(a.config.mode),
+        hidden_by_mode=a.hidden_by_mode,
+        suggestions=suggestions,
         counts=dict(a.counts),
         hidden_preferences=a.hidden_preferences,
         metrics=to_metrics(a.metrics),
@@ -217,6 +235,7 @@ def rule_infos() -> List[RuleInfo]:
             id=r.id, name=r.name, category=_category(r.category.value),
             short=r.short, why=r.why, source=r.source, tier=r.tier,
             fix_safety=_fix_safety(r.fix_safety),
+            scope=Scope(r.scope),
             sections_only=sorted(r.sections_only) if r.sections_only else None,
             sections_excluded=(sorted(r.sections_excluded)
                                if r.sections_excluded else None),
