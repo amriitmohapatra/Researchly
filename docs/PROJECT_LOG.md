@@ -1324,3 +1324,56 @@ articles run at ~16 flags/1000w — no better than the theses — so Q3
 merged to main as 91e1c19, green on every check including the full
 real-document run. The fixes reach the live engine when the owner runs
 **Deploy engine**; the branch was restarted from main for the next work.
+
+## P30 — 2026-10-04 — Nested headings; preprints through PMC
+
+**Context.** The owner deployed the engine (live check: BA.1 and AR(2) are
+no longer flagged; every tier healthy) and said to go ahead with the next
+steps: section inheritance, false-flag tuning (Q3), and the preprints.
+
+**Nested headings inherit their parent's section.** P28's methods report
+and P29's format-parity gap had one cause: every heading reset the
+section, so "Priors" under Methods became "other" and passive-voice advice
+meant for Discussion fired in Methods. Plain text hid it because the
+plain-text detector only keeps headings with a section word.
+- `Heading.level` comes from the markup: LaTeX command depth (`\chapter` 0,
+  `\section` 1 … `\subparagraph` 5), Markdown hashes, Word heading styles
+  ("Heading 2", the add-in's "Heading2") and, in `.docx`, a custom style's
+  outline level. Plain-text headings, the abstract environment and a Word
+  Title have none and stand alone, as before.
+- `document.resolve_sections()`: a nested heading inherits when it has no
+  section word, or when its parent is a plain section name ("Results"), so
+  "Model fit" under Results stays Results. A nested heading that is itself
+  a section name ("Limitations" under Discussion) keeps its own, and under
+  a topical title ("A model of measles transmission") a nested heading's
+  own keyword counts. `Heading.keyword` keeps the heading's own class.
+- D902 and AB802 now read the whole Introduction / Abstract, subsections
+  included, instead of stopping at the first subheading.
+
+**Evidence.** 23 tests in `test_section_nesting.py` (9 fail on the old
+code; the 3 that pass are the "unchanged" cases). Core 548, service 145,
+bench 26, ruff clean. Noise floor unchanged at 14.51 (plain text). Bench on
+the 59 GitHub documents, same cache, main vs this change: PASS both;
+G104 51 → 48, and rules limited to some sections fire where those sections
+are now recognised (C302 16 → 28, C303 31 → 35); 16.90 → 17.02 flags/1000w.
+The +12 C302 are "we prove" in a maths paper's Introduction, which used to
+be "other" after its first `\paragraph`: the sections are right, and the
+rule's misfire on proofs is now a Q3 item.
+
+**Preprints through PMC.** medRxiv/bioRxiv refused 11 of 14 downloads in
+Actions. None of the 14 has a PMC copy, but NIH-funded preprints are
+deposited in PMC (NIH Preprint Pilot). PubMed search for preprints on
+transmission/epidemiology with free full text; licences read with
+`get_copyright_status`; of 40 checked, the 10 CC BY and 1 CC0 were added
+(5 infectious-disease epidemiology, 6 biology) as `pmcpreprint-*`, fetched
+through Europe PMC like the other 115 articles. Registry entry
+`realdocs-pmc-preprints`; method in `ml/realdocs/SOURCES.md`.
+
+**Lessons.**
+- A clean before/after needs the same documents on both sides: the
+  previous local bench output came from an older engine, so the
+  comparison here re-ran main from a worktree on the same cache.
+- Recognising more of the document's structure can raise the flag count:
+  section-limited rules start to see their sections. Read the new flags
+  before calling it a regression.
+

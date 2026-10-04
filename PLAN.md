@@ -150,7 +150,7 @@ done and what's next*. Both the owner and Claude edit it.
 - [x] Local run on the 59 GitHub-hosted documents: **PASS** after the P29 fixes (was FAIL: 1 crash, 21 span violations, 2 projects refused); LaTeX 19.4 → 16.2 flags/1000w
 - [x] First full run in GitHub Actions — 2026-10-03, run 37136223549 on 020bd32: **PASS** (1 h 47 min). All 115 PMC articles in three renderings (2.25M words), 74 native Word supplements from 20 articles, 17 LaTeX projects, 41 Word robustness files: no crash, every invariant held. Format parity: docx vs plain −0.44, tex vs plain −0.34 flags/1000w (mean of 118 articles). Published articles run at ~16 flags/1000w (PMC plain 16.46), like the theses (14.51)
 - [x] P28 + P29 fixes and the bench merged to main — amriitmohapatra/Researchly#3, 2026-10-04 (91e1c19). Live after the owner runs **Deploy engine** **(Amriit)**
-- [ ] Only 3 of 14 medRxiv/bioRxiv preprints were fetched (the servers refuse automated downloads); find a JATS mirror or drop them from the manifest
+- [~] Only 3 of 14 medRxiv/bioRxiv preprints were fetched (the servers refuse automated downloads). 2026-10-04: added 11 CC BY/CC0 preprints that PMC mirrors (NIH Preprint Pilot; ids `pmcpreprint-*`, registry `realdocs-pmc-preprints`), fetched through Europe PMC like the other articles; none of the original 14 has a PMC copy, so they stay as a weekly check. Tick when a CI run fetches them
 - [ ] Add the published-article rate to the Q3 work: tune precision against PMC articles as well as the 8 theses (they are licence-clean, so examples can be inspected in the CI artifact)
 - [ ] Gate on flags/1000w per discipline once a baseline exists (reported, not gated, today)
 
@@ -210,14 +210,15 @@ patterns of good research writing across disciplines, not just epidemiology.
 - [x] Verify the real Supabase project as an outsider — done 2026-10-03 after the owner allow-listed the domain (see the S2 Supabase item). The live engine side is verified (2026-10-03): anonymous upload and >1,500-word paste get `sign_in_required`, a forged token gets `unauthorized`, every tier healthy
 - [ ] Large `.tex` (measured locally, synthetic LaTeX, grammar on): 25k words 21 s / 0.6 GB; 65k words 44 s / 1.3 GB; 120k words 74 s / 2.1 GB (×~1.5 on Cloud Run). Fixed: the browser gave up at 120 s while the engine may run 300 s; now 290 s, pinned by a test. Still open: no progress beyond a spinner, and a whole thesis waits ~2 min
 - [ ] **From the owner's first real `.tex` upload (P28, 2026-10-03), not yet fixed:**
-  - [ ] Section inheritance: a subsection with no section keyword ("Priors", "Solver") resets the section to "other" instead of inheriting its parent's ("Methods"). Headings need a level (LaTeX/Markdown/Word all know it) and resolution should inherit; a keyword in a nested heading ("Model fit" under Results) must not override its parent
+  - [x] Section inheritance — 2026-10-04: headings carry their level and nested ones inherit (`document.resolve_sections`); 23 tests in `test_section_nesting.py`, 9 of them fail on the old code. A subsection with no section keyword ("Priors", "Solver") resets the section to "other" instead of inheriting its parent's ("Methods"). Headings need a level (LaTeX/Markdown/Word all know it) and resolution should inherit; a keyword in a nested heading ("Model fit" under Results) must not override its parent
   - [ ] Topical top-level sections ("Experiment 1: the baseline SEIR") stay "other", so a methods report gets passive-voice flags meant for Discussion. Wire `document_type` (e.g. "methods report") into section defaults
   - [ ] LanguageTool's own misreads on technical prose ("who meets whom" → "meet", "No fit is…" → "now", "is well behaved" → hyphen): collect across uploads, then skip the rules that misfire repeatedly
 - [ ] **From the real-document bench (P29), not yet fixed:**
   - [ ] No language detection: a Portuguese document gets hundreds of spelling flags. Detect the language and say "Researchly checks English" instead of checking
   - [ ] A 1.8 MB LaTeX book chapter exceeds the 1M-character cap; consider per-chapter checking of large projects
   - [ ] One project (custom `\Set` macro in maths) still needs the regex reader; the parser's `$` tracking is thrown off. Collect more cases before special-casing
-  - [ ] JATS format parity on 11 eLife articles: G104 fires ~2× more and C303 ~3.5× less in docx/tex than plain — the nested-heading section bug (tracked above); re-measure after it is fixed
+  - [~] JATS format parity on 11 eLife articles: G104 fires ~2× more and C303 ~3.5× less in docx/tex than plain — the nested-heading section bug, fixed 2026-10-04; re-measure in the next CI run
+  - [ ] C302 flags "we prove" in mathematics and computer-science papers (bbchallenge: 12 more once its Introduction's `\paragraph` subsections stopped resetting the section). In a proof, "prove" is the right word: skip it near maths, theorems or proof assistants (Q3 work)
   - [ ] S001 counts Word table cells towards its "used 3+ times = vocabulary" exemption (benign; noted so it is not chased)
 - [ ] Muting a rule while viewing an uploaded file re-sends the whole file to re-check; filtering the shown results in the browser would be instant (web, S2 follow-up)
 - [ ] Upload is hidden when accounts are not configured, so local development without Supabase has no upload; consider a dev-only switch
