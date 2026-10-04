@@ -1684,3 +1684,15 @@ hand-written fixture in the consumers; run the web typecheck in the same
 change as the regeneration. A fake Office.js makes the taskpane testable,
 but it encodes our assumptions about Word — the week on Mac Word is the
 real test.
+
+**Addendum (after merge): the first live load.** The owner opened
+`/word` in a browser after deploying and got "Word's add-in library did not
+load" instead of "Open Researchly from Word". Cause: start-up required both
+`window.Office` and `window.Word` before calling `Office.onReady`, but
+office.js defines `Word` late (after fetching the host's scripts) and only
+inside Word, so every real load, in a browser and very likely in Word
+itself, looked like a failed one. The fake Office.js defined `Word` at once,
+which is why 88 e2e tests passed. Fixed: wait for `Office.onReady` with
+`Office` alone, look up `Word` afterwards; the fake now defines `Word` only
+on ready and only when the host is Word. Lesson: a fake must reproduce the
+real library's *timing*, not only its API.
