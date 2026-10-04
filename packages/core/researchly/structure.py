@@ -279,6 +279,28 @@ def _ranges(st: Structure, refs: list, masked: str) -> list:
 
 # --- Word ---------------------------------------------------------------------
 
+def _own_table(tables, cap, captions, claimed):
+    """The table this caption labels: the nearest unclaimed one within 400
+    characters with no other caption in between."""
+    def between(a: int, b: int) -> bool:
+        return any(c is not cap and a <= c.start < b for c in captions)
+    best, gap = None, (400, 0)
+    for t in tables:
+        if id(t) in claimed:
+            continue
+        if t.start >= cap.end:          # below the caption: preferred
+            d = (t.start - cap.end, 0)
+            clear = not between(cap.end, t.start)
+        elif t.end <= cap.start:
+            d = (cap.start - t.end, 1)
+            clear = not between(t.end, cap.start)
+        else:
+            continue
+        if clear and d < gap:
+            best, gap = t, d
+    return best
+
+
 _CONTINUED = re.compile(r"\(?\bcont(?:inued|'d|\.)\)?\s*[.:]?\s*$",
                         re.IGNORECASE)
 
@@ -293,7 +315,9 @@ def _word(doc: Document) -> Structure:
                 tables[-1].end = b
             else:
                 tables.append(StructureItem("table", a, b))
-    for cap in (i for i in doc.structure if i.kind == "caption"):
+    captions = [i for i in doc.structure if i.kind == "caption"]
+    claimed: set = set()
+    for cap in captions:
         m = _CAPTION_PREFIX.match(doc.original, cap.start, cap.end)
         if not m:
             continue
@@ -305,12 +329,12 @@ def _word(doc: Document) -> Structure:
             continue                    # "Table 3 (continued)": same table
         start, end = cap.start, cap.end
         if kind == "table":
-            # A table's caption sits just above (or below) its cells.
-            near = min(tables, default=None,
-                       key=lambda t: min(abs(t.start - cap.end),
-                                         abs(cap.start - t.end)))
-            if near is not None and min(abs(near.start - cap.end),
-                                        abs(cap.start - near.end)) < 400:
+            # A table's caption sits just above (or below) its cells, with
+            # no other caption between them: a table that is only an image
+            # must not take the next table's cells (P33).
+            near = _own_table(tables, cap, captions, claimed)
+            if near is not None:
+                claimed.add(id(near))
                 start, end = min(start, near.start), max(end, near.end)
         st.floats.append(Float(kind, number, start, end, None, cap,
                                appendix=_in_appendix(doc, start)

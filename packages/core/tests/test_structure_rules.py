@@ -318,3 +318,66 @@ def test_x401_quiet_on_a_total_summed_from_the_rows():
               "(Table~\\ref{tab:a}).\n" + table(
                   "tab:a", rows="Step 1 & 61.2\\% \\\\ Step 2 & 38.7\\% \\\\"))
     assert hits(doc, "X401") == []
+
+
+# --- P33: what 140 published articles showed ------------------------------------
+
+def _cells(*cells):
+    return [{"text": c, "kind": "table"} for c in cells]
+
+
+def test_x401_tables_in_a_row_each_keep_their_own_cells():
+    # Journals put every table at the end: each caption sits as close to the
+    # previous table's cells as to its own.
+    doc = word("Mean age was 45.2 years (Table 1). The rate reached 61.4 "
+               "per 1000 in the north (Table 2).",
+               cap("Table 1. Baseline characteristics."),
+               *_cells("Age", "45.2"),
+               cap("Table 2. Rates by region."),
+               *_cells("North", "61.4"))
+    assert hits(doc, "X401") == []
+
+
+def test_x401_image_table_does_not_take_the_next_tables_cells():
+    doc = word("The incidence rose to 7.8 per 1000 (Table 2).",
+               cap("Table 2. Incidence by wave."),
+               cap("Table 3. Uptake by region."),
+               *_cells("North", "61.4", "South", "48.0"))
+    assert hits(doc, "X401") == []
+
+
+def test_x401_still_fires_on_its_own_table():
+    doc = word("Mean age was 47.9 years (Table 1).",
+               cap("Table 1. Baseline characteristics."),
+               *_cells("Age", "45.2"),
+               cap("Table 2. Uptake by region."),
+               *_cells("North", "47.9"))
+    (h,) = hits(doc, "X401")
+    assert h.text == "47.9"
+
+
+def test_x202_leaves_short_table_titles_alone():
+    doc = word("The counts are in Table 1.",
+               cap("Table 1. Baseline characteristics."), *_cells("Age", "4"))
+    assert hits(doc, "X202") == []
+
+
+def _tex(body: str) -> Document:
+    return Document.from_text(
+        "\\documentclass{article}\\begin{document}\\section{Methods}\n"
+        + body + "\n\\end{document}\n", "latex")
+
+
+def test_x301_counts_a_reference_typed_by_hand():
+    doc = _tex("The model is\n\\begin{equation}y = a x\\end{equation}\n"
+               "and the prior is\n\\begin{equation}a \\sim N(0, 1)"
+               "\\end{equation}\nEquation (1) is linear; see also Eq. 2.")
+    assert hits(doc, "X301") == []
+
+
+def test_x301_counts_rows_of_an_align():
+    doc = _tex("We have\n\\begin{align}a &= b \\\\ c &= d\\end{align}\n"
+               "and\n\\begin{equation}e = f\\end{equation}\n"
+               "Equations (1)-(2) define the flows.")
+    (h,) = hits(doc, "X301")                    # (3) is never mentioned
+    assert h.category.value == "preference"

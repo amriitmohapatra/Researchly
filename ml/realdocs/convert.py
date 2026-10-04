@@ -311,8 +311,11 @@ class _Walker:
     def equation(self, el) -> None:
         tok = _math_tok(el)
         if tok is not None:
+            lab = _child(el, "label")
             self.add(Block("equation", tex=tok.tex, text=tok.text,
-                           ident=_attr(el, "id")))
+                           ident=_attr(el, "id"),
+                           label=_text(lab).strip() if lab is not None
+                           else ""))
 
 
 def _math_tok(el) -> Optional[Tok]:
@@ -754,8 +757,15 @@ def render_tex(article: Article) -> Rendering:
             body = b.tex if b.tex else "\\mathrm{" + tex_escape(b.text) + "}"
             out.new_block()
             start = out.length
-            out.add("\\begin{equation}\n" + body + "\n"
-                    + _tex_label("eq", b.ident) + "\\end{equation}")
+            # Numbered only when the article numbers it (a JATS <label>):
+            # an unnumbered formula rendered numbered made X301 fire on
+            # every one of them (P33).
+            if b.label:
+                out.add("\\begin{equation}\n" + body + "\n"
+                        + _tex_label("eq", b.ident) + "\\end{equation}")
+            else:
+                out.add("\\begin{equation*}\n" + body + "\n"
+                        "\\end{equation*}")
             out.markers.append((start, out.length))
     if env:
         out.new_block()

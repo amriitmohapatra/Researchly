@@ -230,7 +230,7 @@ _WORDS = re.compile(r"[A-Za-z][A-Za-z'-]*")
 
 
 @rule("X202", "caption-too-short", Category.IMPROVEMENT,
-      "A caption too short to be read on its own.",
+      "A figure caption too short to be read on its own.",
       "Readers look at figures and tables before they read the text, and "
       "many read nothing else. A caption should state the figure's point "
       "and define what it shows, so the figure can be read unaided; a "
@@ -239,7 +239,10 @@ _WORDS = re.compile(r"[A-Za-z][A-Za-z'-]*")
 def x202_caption_too_short(doc, document: Document):
     st = structure_of(document)
     for f in st.floats:
-        if f.caption is None or f.number is None:
+        # A table takes a short title (ICMJE: "a short or an abbreviated
+        # heading"); only a figure's caption must stand on its own. On 140
+        # published articles nearly every X202 was a table title (P33).
+        if f.caption is None or f.number is None or f.kind != "figure":
             continue
         a, body = _caption_body(document, f.caption)
         n = len(_WORDS.findall(body))
@@ -271,10 +274,25 @@ def x301_equation_not_referenced(doc, document: Document):
     st = structure_of(document)
     src = document.original
     referred = {st.resolve(m.label) for m in st.mentions if m.label}
+    written = _written_equation_numbers(document.masked)
+    chapters = sorted(h.start for h in document.headings if h.level == 0)
+    counter: dict = {}
     for it in document.structure:
-        if it.kind != "equation" or not _NUMBERED_ENV.match(src, it.start):
+        if it.kind != "equation":
+            continue
+        env = _NUMBERED_ENV.match(src, it.start)
+        if not env:
             continue
         body = src[it.start:it.end]
+        # The numbers LaTeX gives it, to match "Eq. (3)" typed by hand (P33).
+        chapter = sum(1 for c in chapters if c < it.start)
+        first = counter.get(chapter, 0) + 1
+        counter[chapter] = first - 1 + _numbers_in(env.group(1), body)
+        mine = {str(k) for k in range(first, counter[chapter] + 1)}
+        if chapters:
+            mine = {f"{chapter}.{k}" for k in mine} | mine
+        if mine & written:
+            continue
         labels = {k.strip() for k in re.findall(r"\\label\s*\{([^{}]+)\}",
                                                 body)}
         if labels & referred:
@@ -287,6 +305,34 @@ def x301_equation_not_referenced(doc, document: Document):
                     "to it — is it introduced and interpreted? If so, it "
                     "can go unnumbered.",
             start=a, end=b)
+
+
+_EQ_WRITTEN = re.compile(
+    r"\b(?:Eqs?\.?|Equations?)\s*~?((?:\(?\s*\d+(?:\.\d+)?[a-z]?\s*\)?"
+    r"(?:\s*(?:,|and|&|to|[-\u2013\u2014])\s*)?)+)", re.IGNORECASE)
+
+
+def _written_equation_numbers(text: str) -> set[str]:
+    """Numbers typed after "Eq."/"Equation(s)": "Eqs. (2)-(4)" -> 2, 3, 4."""
+    out: set[str] = set()
+    for m in _EQ_WRITTEN.finditer(text):
+        listing = m.group(1)
+        nums = re.findall(r"\d+(?:\.\d+)?", listing)
+        out.update(nums)
+        for a, b in re.findall(r"(\d+)\)?\s*(?:to|[-\u2013\u2014])\s*\(?(\d+)\b",
+                               listing):
+            if 0 < int(b) - int(a) < 50:
+                out.update(str(k) for k in range(int(a), int(b) + 1))
+    return out
+
+
+def _numbers_in(env: str, body: str) -> int:
+    """How many numbers a numbered environment prints (rows of an align,
+    less any \\nonumber / \\notag)."""
+    if env in ("equation", "multline", "dmath"):
+        return 1
+    rows = len(re.findall(r"\\\\(?!\s*\\end)", body)) + 1
+    return max(0, rows - len(re.findall(r"\\(?:nonumber|notag)\b", body)))
 
 
 # --- X401: does the number quoted from a table appear in it? ------------------------

@@ -1582,3 +1582,27 @@ whole because it carried a heading style.
 - A blank line means different things in a Word file (a paragraph) and a
   PDF extraction (sometimes a page break): decide with the next line, and
   diff before trusting a big drop.
+
+**Addendum (same day): the published-article run.** CI run 37190315670
+(cfddd47, before P33) read 547 files, 2.79M words, PASS. The new "S2b by
+format" table showed three noisy rules on 140 PMC articles, where a
+published article should get almost none. The sandbox cannot fetch PMC or
+download the artifact, so each was reproduced on synthetic JATS through
+the bench's own converter:
+- X401 369 in the Word rendering vs 24 in TeX. A table caption claimed the
+  *nearest* cells by distance; with every table at the end of the article,
+  Table 2's caption is as close to Table 1's cells as to its own, and the
+  tie went to Table 1. An image-only table took the next table's cells.
+  Now a caption claims the nearest unclaimed table with no other caption
+  between, preferring the one below it.
+- X202 74/82: short table titles. ICMJE asks tables for "a short or an
+  abbreviated heading"; only a figure caption must stand on its own, so
+  X202 now judges figures only.
+- X301 373 in TeX: the converter rendered every JATS formula as a numbered
+  `equation` and the text cites them by typing "Eq. (3)". X301 now counts
+  typed references against the numbers LaTeX prints (rows of an `align`,
+  less `\nonumber`); the converter numbers only formulas with a `<label>`.
+Each fix has a test that fails on the old code (one passed by luck at
+first — the wrong table held no "%", so the percentage was never judged —
+and was rewritten with decimals). Core 717 passed, service 146, ml 30,
+noise floor unchanged at 11.67, local bench PASS.

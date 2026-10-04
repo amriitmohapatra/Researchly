@@ -45,7 +45,8 @@ SYNTH_JATS = b"""<?xml version="1.0" encoding="UTF-8"?>
 <sec><title>Methods</title>
 <sec><title>Model structure</title>
 <p>We fitted a compartmental model with a growth rate <inline-formula><mml:math alttext="r = 0.2"><mml:mi>r</mml:mi><mml:mo>=</mml:mo><mml:mn>0.2</mml:mn></mml:math></inline-formula> per day to the invented case counts.</p>
-<disp-formula id="E1"><tex-math>\\frac{dS}{dt} = -\\beta S I</tex-math></disp-formula>
+<disp-formula id="E1"><label>(1)</label><tex-math>\\frac{dS}{dt} = -\\beta S I</tex-math></disp-formula>
+<disp-formula id="E2"><tex-math>N = S + I</tex-math></disp-formula>
 <p>The model was written in a general-purpose language and checked twice.</p>
 <list list-type="bullet"><list-item><p>Cases were counted each week.</p></list-item><list-item><p>Deaths were counted each month.</p></list-item></list>
 </sec>
@@ -92,6 +93,8 @@ def test_three_renderings_carry_the_structure(renders):
     assert "articles \\cite{B1,B2}." in tex
     assert "$R_0$" in tex and "$r = 0.2$" in tex
     assert "\\begin{equation}" in tex and "\\label{eq:E1}" in tex
+    # unnumbered in the article, unnumbered in the rendering (P33)
+    assert "\\begin{equation*}\nN = S + I" in tex
     assert "\\begin{table}" in tex and "\\caption{Weekly counts" in tex
     assert "\\label{tab:T1}" in tex and "\\label{fig:F1}" in tex
     assert "\\begin{itemize}" in tex and "\\item Cases" in tex
