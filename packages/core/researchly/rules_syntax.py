@@ -40,26 +40,67 @@ def g101_subject_verb(doc, document: Document):
     # is the *interruption* — so we now require an interrupting structure
     # (comma-bounded clause, relative clause, apposition, parenthesis) in
     # the gap, and a gap of >= 10.
-    GAP = 10
-    INTERRUPT_DEPS = {"relcl", "appos", "acl", "advcl", "parataxis"}
+    #
+    # Q3 tune (P31): of the 779 flags left on the theses, 158 were still
+    # plain long subjects. A comma that separates list items ("Chad,
+    # Iraq and Niger") or brackets holding a citation or an abbreviation
+    # ("(239, 240)", "(LASSO)") interrupt nothing; and a restrictive
+    # clause or bare apposition ("data collected from patients aged 1-17
+    # ... revealed") is part of the subject, so it needs a longer gap.
+    GAP, WEAK_GAP = 10, 15
     for tok in doc:
         if tok.dep_ in SUBJECT_DEPS and tok.head.pos_ in {"VERB", "AUX"}:
             head = tok.head
             if head.i <= tok.i:
                 continue
             between = doc[tok.i + 1:head.i]
-            gap_tokens = [t for t in between
-                          if not t.is_punct and not t.is_space]
-            interrupted = any(
-                t.text in {",", "(", "—", "–"} or t.dep_ in INTERRUPT_DEPS
-                for t in between)
-            if len(gap_tokens) >= GAP and interrupted:
+            gap = len([t for t in between
+                       if not t.is_punct and not t.is_space])
+            if gap < GAP:
+                continue
+            weak = any(t.dep_ in WEAK_INTERRUPT_DEPS for t in between)
+            if _interrupts(between) or (weak and gap >= WEAK_GAP):
                 yield Suggestion(
-                    message=f"{len(gap_tokens)} words separate "
+                    message=f"{gap} words separate "
                             f"'{tok.text}' from '{head.text}' — consider "
                             "moving the interrupting material after the verb.",
                     start=tok.idx,
                     end=head.idx + len(head.text))
+
+
+# Part of the subject rather than an aside: these interrupt only when long.
+WEAK_INTERRUPT_DEPS = {"relcl", "acl", "appos"}
+_BRACKETS = {"(": ")", "[": "]"}
+
+
+def _interrupts(span) -> bool:
+    """A dash, a bracketed aside of 3+ words, a comma that is not a list
+    separator, or an adverbial or parenthetical clause."""
+    toks = list(span)
+    i = 0
+    while i < len(toks):
+        t = toks[i]
+        i += 1
+        if t.text in {"—", "–"}:
+            return True
+        if t.text in _BRACKETS:
+            inner = []
+            for u in toks[i:]:
+                if u.text == _BRACKETS[t.text]:
+                    break
+                inner.append(u)
+            if sum(1 for u in inner if u.is_alpha) >= 3:
+                return True
+            i += len(inner) + 1               # "(12, 13)": skip it whole
+            continue
+        if t.text == ",":
+            h = t.head
+            if h.dep_ == "conj" or any(c.dep_ == "conj" for c in h.children):
+                continue                      # separates list items
+            return True
+        if t.dep_ in {"advcl", "parataxis"}:
+            return True
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -248,7 +289,7 @@ def g105_expletive(doc, document: Document):
 # ---------------------------------------------------------------------------
 
 @rule("G106", "overlong-sentence", Category.IMPROVEMENT,
-      "Sentence over 40 words — check it carries one idea.",
+      "Sentence over 50 words — check it carries one idea.",
       "Not an error — some long sentences earn their length. But past ~40 "
       "words, check: is this one idea, or two ideas sharing a sentence? "
       "If you stumble reading it aloud, the reader will stumble too. "
@@ -363,6 +404,24 @@ def c301_hedge_stack(doc, document: Document):
 # C303 — causal-language design check
 # ---------------------------------------------------------------------------
 
+# Verbs that also describe a change with no cause in view: "cases
+# increased", "antibody levels decreased after a year". Only the
+# transitive or passive use ("X increased Y", "Y was reduced by X") makes
+# a causal claim (P31: these were C303's main misfire on the theses).
+CHANGE_VERBS = {"increase", "decrease", "improve", "worsen", "lower",
+                "raise", "reduce"}
+
+
+def _has_object(tok) -> bool:
+    deps = {c.dep_ for c in tok.children}
+    if deps & {"dobj", "obj", "nsubjpass", "auxpass", "agent"}:
+        return True
+    # The small parser reads "Vaccination reduced transmission." as a
+    # subject plus "reduced" modifying "transmission": the noun it
+    # modifies is really its object.
+    return tok.dep_ == "amod" and bool(deps & SUBJECT_DEPS)
+
+
 @rule("C303", "causal-verb", Category.CONVENTION,
       "Causal verb — check the study design supports a causal claim.",
       "'Reduced', 'increased', 'prevented' assert causation. From a "
@@ -410,6 +469,8 @@ def c303_causal(doc, document: Document):
             continue  # purpose infinitive
         if is_calibrated(tok):
             continue
+        if tok.lemma_.lower() in CHANGE_VERBS and not _has_object(tok):
+            continue  # "cases increased": a change described, not caused
         key = (tok.lemma_.lower(), document.section_at(tok.idx))
         hits.setdefault(key, []).append(
             (tok.idx, tok.idx + len(tok.text), tok.text))

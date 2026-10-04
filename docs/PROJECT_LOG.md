@@ -1377,3 +1377,66 @@ through Europe PMC like the other 115 articles. Registry entry
   section-limited rules start to see their sections. Read the new flags
   before calling it a regression.
 
+## P31 — 2026-10-04 — Q3 precision tune: 14.51 → 11.94
+
+**Context.** Next step after P30: bring the thesis noise floor towards Q3
+(≤ 11 flags/1000w). Every flag on the 8-thesis corpus was dumped to the
+session scratchpad (never committed) and read rule by rule; the owner's own
+methods report was re-checked in memory for LanguageTool's misreads.
+
+**Principle.** Remove wrong flags; never hide good advice to reach the
+number. A rule or guard changed only where most of its hits were wrong.
+
+**What changed** (each with fire and don't-fire tests, 37 in
+`tests/test_q3_precision.py` and `tests/test_rules.py`; the new
+don't-fire tests fail on the old code):
+- **LT001 566 → 295.** Skipped LanguageTool rules that misread scientific
+  prose: the compound-spelling family (`EN_COMPOUNDS_*`, `MAKER_COMPOUNDS`:
+  "policy makers", "sub-tropical", "Viet Nam" — 75 hits, house style not
+  grammar), `NON_STANDARD_WORD` (67/67 on maths or R code),
+  `THE_SUPERLATIVE` (37/39 "least squares"), `NUMBERS_IN_WORDS`,
+  `POSSESSIVE_APOSTROPHE`, `I_LOWERCASE`, `THE_PUNCT`, `EN_SPECIFIC_CASE`,
+  `ADMIT_ENJOY_VB`. All 11 LT001 flags on the owner's report were misreads;
+  4 were compounds. a/an, between…to, comprises of and agreement still fire.
+- **G101 779 → 559.** A comma between list items, or brackets holding a
+  citation or a short abbreviation, is not an interruption; a restrictive
+  clause, participle or bare apposition is part of the subject and needs a
+  15-word gap. The 158 flags this dropped were read: ordinary long subjects.
+- **S001 611 → 415.** 103 correct words added to the scientific lexicon
+  (pediatric, fomites, sylvatic, licensure, a priori, in vitro…); an
+  author's name before initials or "et al" is not a typo. Real misspellings
+  in the corpus ("subsceptible", "prevalnce") are still caught (tested).
+- **C303 138 → 114.** "Cases increased" describes a change; only "X
+  increased Y" or a passive claims a cause. The small parser reads
+  "Vaccination reduced transmission" as an adjective, which is handled.
+- **F601 243 → 220.** Roman numerals, journal names, GDP/UV/ROC/AUC.
+- **C302.** "prove" in a sentence with maths or proof vocabulary (bench:
+  28 → 6, the Busy Beaver paper from P30).
+- **Reference lists are masked** (a "References"/"Bibliography" heading in
+  plain text, Markdown or Word): Word reference lists are ordinary
+  paragraphs and every rule used to run over them. A table cell reading
+  "References" masks nothing (tested). Bench: 8,909 words of reference
+  lists no longer checked, 4,055 of them one pandoc `CSLReferences` list.
+- G106's one-line description said "over 40 words"; it fires over 50.
+
+**Evidence.** Noise floor 14.51 → **11.94** (gate OK, baseline updated with
+a note). Real-document bench (59 GitHub documents): PASS, 17.02 → 14.99
+flags/1000w. Core 597 passed, service 145, bench 26, ruff clean,
+third-party scan 0 hits (after rewriting test sentences, below).
+
+**What is left (PLAN Q3 item).** ~90% of the remaining S001 flags are PDF
+extraction artefacts: `pdftotext` drops every line-break hyphen
+("laboratoryconfirmed") and page-break hyphenation leaves fragments. A
+trial re-extraction gives 11.3 (old code 13.7), but adds 16k words whose
+origin has not been read, so the gate's corpus is unchanged for now. G106
+and G101 are now mostly real advice.
+
+**Lessons.**
+- The third-party scan caught a test sentence of mine that copied 12 words
+  of a thesis sentence I had just read in the flag dump. Reading real flags
+  is necessary; writing tests from them invites paraphrase. Every test
+  sentence modelled on a corpus example was rewritten as clearly synthetic.
+- A measurement can be wrong in the same direction as the product: half of
+  the "spelling noise" was the PDF extractor, not the checker. Measure old
+  and new code on both corpora before changing the ruler.
+

@@ -26,6 +26,9 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 
 _SECTION_PATTERNS: list[tuple[str, str]] = [
+    # A reference list is not prose (P31): it is masked, never checked.
+    (r"^\W*(references|bibliography|literature cited|works cited|"
+     r"reference list|cited literature)\W*$", "references"),
     (r"abstract|summary\b", "abstract"),
     (r"introduction|background", "introduction"),
     (r"method|material|model|data\b|analys[ie]s|estimation|inference|"
@@ -59,7 +62,7 @@ _SECTION_NAME_WORDS = frozenset("""
     statistical statistics analysis analyses experimental procedures
     results result findings discussion general conclusion conclusions
     concluding remarks limitations strengths appendix appendices
-    supplementary supplemental information
+    supplementary supplemental information references bibliography
 """.split())
 _SECTION_NAME_FILLER = frozenset({"and", "of", "the", "a", "an", "s"})
 _NUMBERING = re.compile(
@@ -108,6 +111,20 @@ def resolve_sections(headings: list["Heading"]) -> None:
         else:
             h.section, auth = own, named
         stack.append((h, auth))
+
+
+def _mask_references(chars: list[str], headings: list["Heading"]) -> None:
+    """Blank every reference-list section: author names, journal
+    abbreviations and "et al" are not the author's prose. A Word reference
+    list (Zotero, EndNote) is ordinary paragraphs; LaTeX's is already
+    masked by \\bibliography and thebibliography."""
+    ordered = sorted(headings, key=lambda h: h.start)
+    for i, h in enumerate(ordered):
+        if h.section != "references":
+            continue
+        end = next((g.start for g in ordered[i + 1:]
+                    if g.section != "references"), len(chars))
+        _mask_spans(chars, [(h.start, end)])
 
 
 @dataclass
@@ -196,9 +213,11 @@ class Document:
 
     @classmethod
     def from_text(cls, text: str, kind: str = "plain", *,
-                  locate=None) -> "Document":
+                  locate=None, mask_references: bool = True) -> "Document":
         """`locate(offset) -> str` words a position in a warning; the
-        Overleaf adapter passes one that names the source file."""
+        Overleaf adapter passes one that names the source file.
+        `from_word` masks reference lists itself, once it knows which
+        "headings" were really table cells."""
         structure: list[StructureItem] = []
         warnings: list[str] = []
         if kind == "markdown":
@@ -224,8 +243,10 @@ class Document:
             end = h.end if h.end is not None else masked.find("\n", h.start)
             end = end if end != -1 else len(masked)
             _mask_spans(chars, [(h.start, end)])
-        masked = "".join(chars)
         resolve_sections(headings)
+        if mask_references:
+            _mask_references(chars, headings)
+        masked = "".join(chars)
         doc = cls(original=text, masked=masked, kind=kind, headings=headings,
                   structure=structure, warnings=warnings, atoms=atoms)
         doc._line_starts = [0] + [m.end() for m in re.finditer(r"\n", text)]
@@ -250,7 +271,7 @@ class Document:
         """
         texts = [p.get("text") or "" for p in paragraphs]
         combined = "\n\n".join(texts)
-        doc = cls.from_text(combined, kind="plain")
+        doc = cls.from_text(combined, kind="plain", mask_references=False)
 
         offsets: list[int] = []
         pos = 0
@@ -289,7 +310,8 @@ class Document:
             merged.update({h.start: h for h in style_headings})
             doc.headings = sorted(merged.values(), key=lambda h: h.start)
             resolve_sections(doc.headings)
-            doc.masked = "".join(chars)
+        _mask_references(chars, doc.headings)
+        doc.masked = "".join(chars)
         doc.kind = "word"
         return doc
 

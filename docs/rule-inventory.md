@@ -36,7 +36,7 @@ Every actionable heuristic in the writing guide, converted into a typed rule ent
 | G109 | Topic-position consistency across a passage | Improvement | all | LLM |
 | G110 | Context-before-novelty ordering | Improvement | all | LLM |
 
-**G101 — Subject–verb separation.** Readers hold their breath from subject to verb; long interruptions drain emphasis. Flag ≥10 tokens between a subject and its governing verb *when an interrupting structure (comma-bounded clause, relative clause, apposition, parenthesis) sits in the gap* — plain long subject noun phrases are ordinary academic register (v0.1.1 dogfooding tune). *"The model, which incorporates income quintiles, seasonal forcing, and age structure, and was fitted using cmdstanR, predicts…"* → move the machinery after the verb. (Guide §5.2.1.)
+**G101 — Subject–verb separation.** Readers hold their breath from subject to verb; long interruptions drain emphasis. Flag ≥10 tokens between a subject and its governing verb *when an interrupting structure (comma-bounded clause, relative clause, apposition, parenthesis) sits in the gap* — plain long subject noun phrases are ordinary academic register (v0.1.1 dogfooding tune). *P31 (Q3):* a comma that only separates list items, or brackets holding a citation or a 1–2-word abbreviation, is not an interruption; a restrictive relative clause, participle or bare apposition counts only at ≥15 tokens (it is part of the subject). *"The model, which incorporates income quintiles, seasonal forcing, and age structure, and was fitted using cmdstanR, predicts…"* → move the machinery after the verb. (Guide §5.2.1.)
 
 **G102 — Buried action.** English readers look for the action in the verb. Light verb + nominalization ("we performed an estimation of R₀", "a comparison was made") goes limp; turn the noun back into the verb ("we estimated R₀", "we compared"). Trigger: {perform, conduct, make, carry out, undertake, provide, execute, achieve, do} + direct object ending in -tion/-sion/-ment/-ance/-ence/-sis/-al. (§5.2.4.)
 
@@ -87,8 +87,8 @@ Every actionable heuristic in the writing guide, converted into a typed rule ent
 | C311 | statcheck-style p-value/statistic consistency | Correction | Results | DET |
 
 **C301 — Hedge stacking.** "Qualifiers are strength, not weakness" — but stacked hedges ("it might possibly be tentatively suggested") are as much a calibration failure as overclaiming. One hedge per claim. (§4.2.)
-**C302 — Overclaiming.** Reserve *demonstrates/establishes* for strong evidence; "prove" almost never belongs in empirical science. (§4.2.)
-**C303 — Causal verbs.** *Reduce, increase, drive, prevent, affect* assert causation. Fires as a **prompt, not a verdict**: "this is a causal claim — does the study design support it?" (The design-aware version is the research/03 near-term differentiator; v0.1 just teaches the distinction.) (§9.4; AJE 2022 word lists.)
+**C302 — Overclaiming.** Reserve *demonstrates/establishes* for strong evidence; "prove" almost never belongs in empirical science. (§4.2.) *P31:* "prove" is left alone in a sentence with maths or proof vocabulary (theorem, lemma, conjecture, a proof assistant): in mathematics a proof is the evidence.
+**C303 — Causal verbs.** *Reduce, increase, drive, prevent, affect* assert causation. Fires as a **prompt, not a verdict**: "this is a causal claim — does the study design support it?" (The design-aware version is the research/03 near-term differentiator; v0.1 just teaches the distinction.) (§9.4; AJE 2022 word lists.) *P31:* change verbs (*increase, decrease, reduce, lower, raise, improve, worsen*) fire only with an object or in the passive — "cases increased" describes a change, "X increased Y" claims a cause.
 **C305 — Assertive adverbs.** "Clearly" asserts what structure should show; if it were clear, the word would be unnecessary. (§4/§6.)
 
 ## Layer 4 — Paragraph structure (guide §5.1)
@@ -129,7 +129,7 @@ These become the on-demand **"review lens"** pass (research/04: coaching-style d
 | F610 | Mechanism-not-attribute framing for group differences (equity) | Improvement | Discussion | LLM |
 | F611 | Figure caption states the figure's point (topic sentence for figures) | Improvement | captions | LLM |
 
-F607–F610 are the thesis-aligned, nobody-else-has-this rules. F601 is the one deterministic representative in v0.1.
+F607–F610 are the thesis-aligned, nobody-else-has-this rules. F601 is the one deterministic representative in v0.1. *P31:* F601 skips Roman numerals ("phase III"), journal names (BMJ, BMC, PLOS, JAMA, NEJM) and GDP/UV/ROC/AUC.
 
 ---
 
@@ -170,9 +170,17 @@ personal dictionary (`researchly dict add`), UK/US variant mapping,
 morphological fallback (closed-class words exempt — "thiss" ≠ "this+s"),
 regex word scan (spaCy tokenizer splits some typos), 3+-use learned terms,
 proper-noun skip (sentence-start capitalized words need a distance-1
-correction to be flagged). LT001 keeps grammar/duplication/confusion
+correction to be flagged), author names followed by initials or "et al"
+(P31). Reference-list sections ("References", "Bibliography") are masked
+for every rule (P31). LT001 keeps grammar/duplication/confusion
 categories only — LanguageTool's spelling (MORFOLOGIK) and style stay off
-so the tiers never overlap with S001 or Researchly's own rules.
+so the tiers never overlap with S001 or Researchly's own rules. P31 (Q3)
+skips LanguageTool rules that misread scientific prose, each counted on the
+thesis corpus and the owner's report (`rules_grammar.SKIP_MISREAD_RULES`):
+the compound-spelling family (`EN_COMPOUNDS_*`, `MAKER_COMPOUNDS`),
+`NON_STANDARD_WORD` (maths and code), `THE_SUPERLATIVE` ("least squares"),
+`NUMBERS_IN_WORDS`, `POSSESSIVE_APOSTROPHE`, `I_LOWERCASE`, `THE_PUNCT`,
+`EN_SPECIFIC_CASE`, `ADMIT_ENJOY_VB`.
 
 ## v0.1 MVP rule set (implemented in the prototype)
 

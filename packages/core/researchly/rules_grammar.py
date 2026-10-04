@@ -117,6 +117,29 @@ SKIP_TYPO_RULES = {
     "EN_UNPAIRED_BRACKETS", "DASH_RULE", "GERMAN_QUOTES",
 }
 
+# LanguageTool rules that misread scientific prose (P31, Q3). Counted on the
+# accepted-thesis corpus (566 LT001 flags) and the owner's own methods
+# report (11 LT001 flags, every one a misread); a rule is listed only when
+# nearly all of its hits were wrong.
+#   EN_COMPOUNDS_* / MAKER_COMPOUNDS  "policy makers", "sub-tropical",
+#     "hyper-parameters", "well behaved", "Viet Nam" (the WHO spelling):
+#     75 thesis hits + 4 in the report. Open, hyphenated and closed forms
+#     are all in published use; the journal's house style decides.
+#   NON_STANDARD_WORD  67/67 on maths or R code ("log=T", "Bc,t").
+#   THE_SUPERLATIVE  37/39 on "least squares" or "nearest facility".
+#   NUMBERS_IN_WORDS  identifiers ("x0itj", "P1th", gene and strain names).
+#   POSSESSIVE_APOSTROPHE  noun adjuncts ("odds ratio", "cases isolation").
+#   I_LOWERCASE / THE_PUNCT  an index or variable named i or a ("aged a,").
+#   EN_SPECIFIC_CASE  "southern Europe", "southern hemisphere": style.
+#   ADMIT_ENJOY_VB  reads a purpose infinitive as a complement ("were
+#     considered to estimate" -> "considered estimating" changes the meaning).
+SKIP_MISREAD_RULES = {
+    "MAKER_COMPOUNDS", "NON_STANDARD_WORD", "THE_SUPERLATIVE",
+    "NUMBERS_IN_WORDS", "POSSESSIVE_APOSTROPHE", "I_LOWERCASE", "THE_PUNCT",
+    "EN_SPECIFIC_CASE", "ADMIT_ENJOY_VB",
+}
+SKIP_MISREAD_PREFIXES = ("EN_COMPOUNDS_",)
+
 # LanguageTool rules that duplicate one of Researchly's own rules on the same
 # span. The S1 end-to-end run showed two cards for one "the the". Researchly's
 # rule wins because it carries a named source and a bulk-safe fix.
@@ -328,8 +351,9 @@ def lt001_grammar(doc, document: Document):
                    or getattr(m, "errorLength", 0) or 0)
         if issue not in KEEP_ISSUE_TYPES:
             continue
-        if (rule_id.startswith(SKIP_RULE_PREFIXES)
+        if (rule_id.startswith(SKIP_RULE_PREFIXES + SKIP_MISREAD_PREFIXES)
                 or rule_id in SKIP_TYPO_RULES
+                or rule_id in SKIP_MISREAD_RULES
                 or rule_id in SKIP_COVERED_RULES):
             continue
         start = m.offset

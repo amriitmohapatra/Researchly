@@ -212,19 +212,22 @@ patterns of good research writing across disciplines, not just epidemiology.
 - [ ] **From the owner's first real `.tex` upload (P28, 2026-10-03), not yet fixed:**
   - [x] Section inheritance — 2026-10-04: headings carry their level and nested ones inherit (`document.resolve_sections`); 23 tests in `test_section_nesting.py`, 9 of them fail on the old code. A subsection with no section keyword ("Priors", "Solver") resets the section to "other" instead of inheriting its parent's ("Methods"). Headings need a level (LaTeX/Markdown/Word all know it) and resolution should inherit; a keyword in a nested heading ("Model fit" under Results) must not override its parent
   - [ ] Topical top-level sections ("Experiment 1: the baseline SEIR") stay "other", so a methods report gets passive-voice flags meant for Discussion. Wire `document_type` (e.g. "methods report") into section defaults
-  - [ ] LanguageTool's own misreads on technical prose ("who meets whom" → "meet", "No fit is…" → "now", "is well behaved" → hyphen): collect across uploads, then skip the rules that misfire repeatedly
+  - [x] LanguageTool's own misreads on technical prose — 2026-10-04 (P31): counted on the theses and the owner's report (all 11 of its LT001 flags were misreads); rules that misfired repeatedly are skipped (`SKIP_MISREAD_RULES`). One-off misreads ("who meets whom" → "meet", "No fit is…" → "now") stay until they repeat
 - [ ] **From the real-document bench (P29), not yet fixed:**
   - [ ] No language detection: a Portuguese document gets hundreds of spelling flags. Detect the language and say "Researchly checks English" instead of checking
   - [ ] A 1.8 MB LaTeX book chapter exceeds the 1M-character cap; consider per-chapter checking of large projects
   - [ ] One project (custom `\Set` macro in maths) still needs the regex reader; the parser's `$` tracking is thrown off. Collect more cases before special-casing
   - [~] JATS format parity on 11 eLife articles: G104 fires ~2× more and C303 ~3.5× less in docx/tex than plain — the nested-heading section bug, fixed 2026-10-04; re-measure in the next CI run
-  - [ ] C302 flags "we prove" in mathematics and computer-science papers (bbchallenge: 12 more once its Introduction's `\paragraph` subsections stopped resetting the section). In a proof, "prove" is the right word: skip it near maths, theorems or proof assistants (Q3 work)
+  - [x] C302 — 2026-10-04 (P31): "prove" is left alone in a sentence with maths or proof vocabulary; bench C302 28 → 6. Was: C302 flags "we prove" in mathematics and computer-science papers (bbchallenge: 12 more once its Introduction's `\paragraph` subsections stopped resetting the section). In a proof, "prove" is the right word: skip it near maths, theorems or proof assistants (Q3 work)
   - [ ] S001 counts Word table cells towards its "used 3+ times = vocabulary" exemption (benign; noted so it is not chased)
 - [ ] Muting a rule while viewing an uploaded file re-sends the whole file to re-check; filtering the shown results in the browser would be instant (web, S2 follow-up)
 - [ ] Upload is hidden when accounts are not configured, so local development without Supabase has no upload; consider a dev-only switch
 - [ ] Q2: run spaCy and LanguageTool in parallel inside `api.analyze()` (chapter 6.9 s engine time on Cloud Run vs 6 s target); deferred by the owner 2026-10-03
 - [ ] Lower or split very large documents server-side: a 1M-character request takes ~74 s and 2.8 GiB (backend measurement, S1)
-- [ ] Reach Q3: bring the noise floor from 14.51 to ≤ 11/1000w (top contributors: G101 779, G106 648, S001 611, LT001 566 flags; P28 baseline)
+- [~] Reach Q3: bring the noise floor to ≤ 11/1000w. 2026-10-04 (P31): 14.51 → **11.94** (LT001 566→295, G101 779→559, S001 611→415, C303 138→114, F601 243→220; reference lists masked), 37 fire/don't-fire tests; real-document bench 17.02 → 14.99. Remaining:
+  - [ ] ~90% of the remaining S001 flags are PDF-extraction artefacts: `pdftotext` drops every line-break hyphen ("laboratoryconfirmed") and page-break hyphenation leaves fragments ("coun", "tion"). A trial re-extraction (`-raw`, keep a hyphen unless the joined word is a word) gives 11.3 with this code (13.7 with the old), S001 415 → 313, but also 16k more words (300,955 vs 284,537) whose origin must be read before the gate's corpus changes; re-baseline both sides when it does
+  - [ ] Pasted code and maths in plain text and Word (R listings, `log=T`): detect code-like paragraphs and mask them like LaTeX code
+  - [ ] G106 (648) and G101 (559) are now mostly real advice on long sentences; reaching 11 must not come from hiding it
 - [ ] Clean the 20 cosmetic ruff findings (17 unused imports, 3 placeholder-less f-strings) in a dedicated change, then widen `ruff.toml`
 - [ ] `language_tool_python` client is GPL-3.0-only: fine server-side; check before bundling it into any distributed desktop installer
 - [ ] Correct `docs/eval-corpora.md`: JFLEG and CWEB *do* declare CC BY-NC-SA 4.0 (registry audit, 2026-10-03)
