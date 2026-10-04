@@ -1,10 +1,11 @@
 # Real-document test bench: sources
 
-`manifest.yaml` lists **208 openly licensed documents** for the CI harness to fetch at run
-time: 167 research documents and 41 Word robustness test files. The texts are never
-committed; only metadata is. Every item's licence was checked one by one on 2026-10-03,
+`manifest.yaml` lists **219 openly licensed documents** for the CI harness to fetch at run
+time: 178 research documents and 41 Word robustness test files. The texts are never
+committed; only metadata is. Every item's licence was checked one by one (2026-10-03;
+the 11 PMC-mirrored preprints 2026-10-04),
 and each row in `manifest.yaml` records where the licence was seen. The registry entries
-are the six `realdocs-*` ids in `ml/datasets.yaml`.
+are the seven `realdocs-*` ids in `ml/datasets.yaml`.
 
 ## Counts
 
@@ -24,12 +25,15 @@ are the six `realdocs-*` ids in `ml/datasets.yaml`.
 | humanities | – | – | – | 2 | 2 |
 | **Total** | **115** | **20** | **14** | **18** | **167** |
 
+Plus 11 medRxiv/bioRxiv preprints mirrored in PMC (P30): 5 epidemiology, 4 molecular
+biology, 2 neuroscience (ids `pmcpreprint-*`; see below).
+
 **By licence**
 
 | Licence | Items | permitted_use |
 |---|---|---|
-| CC-BY-4.0 | 157 (112 JATS, 20 docx, 10 preprints, 15 LaTeX) | ci_eval, train_experimental |
-| CC0-1.0 | 6 (3 JATS, 3 LaTeX) | ci_eval, train_experimental |
+| CC-BY-4.0 | 167 (112 JATS, 20 docx, 20 preprints, 15 LaTeX) | ci_eval, train_experimental |
+| CC0-1.0 | 7 (3 JATS, 1 preprint, 3 LaTeX) | ci_eval, train_experimental |
 | CC-BY-ND-4.0 / CC-BY-NC-ND-4.0 / CC-BY-NC-4.0 | 2 / 1 / 1 (preprints) | ci_eval only (D2) |
 | Apache-2.0 / MPL-2.0 / BSD-2-Clause / MIT | 24 / 12 / 3 / 2 (test files) | ci_eval only |
 
@@ -69,6 +73,15 @@ text was saved.
 1–3 May 2024), then called `get_preprint` on each candidate to read its `license` and
 `jatsxml` fields. Of 29 preprints checked, 10 were `cc_by`. 4 NC/ND ones were kept as
 ci_eval only; 3 `cc_no` and 12 further NC/ND ones were left out.
+
+**Preprints mirrored in PMC (P30, 2026-10-04).** medRxiv and bioRxiv refused 11 of the
+14 downloads above in GitHub Actions. NIH-funded preprints are also deposited in PMC (the
+NIH Preprint Pilot), where Europe PMC serves them like any other article. I searched
+PubMed for `preprint[pt] AND (transmission[tiab] OR epidemiolog*[tiab]) AND free full
+text AND (medRxiv[journal] OR bioRxiv[journal])` from 2022, read the PMC licence of the
+40 newest with `get_copyright_status`, and kept the 10 CC BY 4.0 and 1 CC0 ones (5
+infectious-disease epidemiology, 6 biology). None of the original 14 had a PMC copy
+(`convert_article_ids`), so they stay in the manifest as a weekly check on the servers.
 
 **LaTeX.** I used GitHub repository search (`license:cc-by-4.0 language:TeX paper`,
 `... manuscript`, `license:cc0-1.0 language:TeX paper`). For each repository I took a

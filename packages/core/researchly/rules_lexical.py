@@ -447,7 +447,10 @@ def d902_missing_niche(doc, document: Document):
     if not intro:
         return
     start = intro[0].start
-    ends = [h.start for h in document.headings if h.start > start]
+    # The section runs to the next heading of another section; its own
+    # subsections ("Background", "Aims") are part of it.
+    ends = [h.start for h in document.headings
+            if h.start > start and h.section != "introduction"]
     end = min(ends) if ends else len(document.masked)
     text = document.masked[start:end]
     if len(text) < 600:            # stub sections can't be judged

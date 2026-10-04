@@ -1821,6 +1821,139 @@ items:
     permitted_use: [ci_eval]
     notes: "doi:10.1101/2024.01.01.573813; version 1 posted 2024-01-02; not peer reviewed; NC/ND: evaluation only (D2)"
 
+  # ---- medRxiv / bioRxiv preprints mirrored in PMC (NIH Preprint Pilot; JATS via Europe PMC): 11 ----
+  - id: pmcpreprint-PMC13596594
+    kind: preprint
+    source: europepmc
+    format: jats
+    url: https://www.ebi.ac.uk/europepmc/webservices/rest/PMC13596594/fullTextXML
+    licence: CC-BY-4.0
+    licence_evidence: "PubMed get_copyright_status 2026-10-04: PMC licence CC BY 4.0"
+    discipline: epidemiology
+    title: "Protective association between recent insecticide-treated bed net use and falciparum malaria in three provinces of the Democratic Republic of the Congo."
+    year: 2026
+    permitted_use: [ci_eval, train_experimental]
+    notes: "medRxiv preprint in PMC via the NIH Preprint Pilot; PMID 42780165; doi:10.64898/2026.09.15.26363108; not peer reviewed. Replaces the server download, which medRxiv/bioRxiv refuse to automated clients"
+  - id: pmcpreprint-PMC13484801
+    kind: preprint
+    source: europepmc
+    format: jats
+    url: https://www.ebi.ac.uk/europepmc/webservices/rest/PMC13484801/fullTextXML
+    licence: CC-BY-4.0
+    licence_evidence: "PubMed get_copyright_status 2026-10-04: PMC licence CC BY 4.0"
+    discipline: epidemiology
+    title: "Inferring heterogeneous transmission and community introduction of antibiotic-resistant bacteria in hospital settings."
+    year: 2026
+    permitted_use: [ci_eval, train_experimental]
+    notes: "medRxiv preprint in PMC via the NIH Preprint Pilot; PMID 42620202; doi:10.64898/2026.08.02.26359521; not peer reviewed. Replaces the server download, which medRxiv/bioRxiv refuse to automated clients"
+  - id: pmcpreprint-PMC13484830
+    kind: preprint
+    source: europepmc
+    format: jats
+    url: https://www.ebi.ac.uk/europepmc/webservices/rest/PMC13484830/fullTextXML
+    licence: CC-BY-4.0
+    licence_evidence: "PubMed get_copyright_status 2026-10-04: PMC licence CC BY 4.0"
+    discipline: epidemiology
+    title: "Molecular Epidemiology of HIV in an African Epidemic with Declining HIV incidence but High Prevalence: A Longitudinal, Population-based Study in Uganda."
+    year: 2026
+    permitted_use: [ci_eval, train_experimental]
+    notes: "medRxiv preprint in PMC via the NIH Preprint Pilot; PMID 42620149; doi:10.64898/2026.08.04.26359711; not peer reviewed. Replaces the server download, which medRxiv/bioRxiv refuse to automated clients"
+  - id: pmcpreprint-PMC13484347
+    kind: preprint
+    source: europepmc
+    format: jats
+    url: https://www.ebi.ac.uk/europepmc/webservices/rest/PMC13484347/fullTextXML
+    licence: CC-BY-4.0
+    licence_evidence: "PubMed get_copyright_status 2026-10-04: PMC licence CC BY 4.0"
+    discipline: epidemiology
+    title: "Investigating pathways of vancomycin-resistant (VRE) contamination and transmission in intensive care units: a prospective genomic surveillance study."
+    year: 2026
+    permitted_use: [ci_eval, train_experimental]
+    notes: "medRxiv preprint in PMC via the NIH Preprint Pilot; PMID 42620058; doi:10.64898/2026.07.28.26359040; not peer reviewed. Replaces the server download, which medRxiv/bioRxiv refuse to automated clients"
+  - id: pmcpreprint-PMC13596371
+    kind: preprint
+    source: europepmc
+    format: jats
+    url: https://www.ebi.ac.uk/europepmc/webservices/rest/PMC13596371/fullTextXML
+    licence: CC0-1.0
+    licence_evidence: "PubMed get_copyright_status 2026-10-04: PMC licence CC0 1.0 (https://creativecommons.org/publicdomain/zero/1.0/)"
+    discipline: epidemiology
+    title: "Transmission of mutated SARS-CoV-2 variants is favored by relatively prolonged infections due to delayed immunity."
+    year: 2026
+    permitted_use: [ci_eval, train_experimental]
+    notes: "bioRxiv preprint in PMC via the NIH Preprint Pilot; PMID 42779989; doi:10.64898/2026.09.15.751875; not peer reviewed. Replaces the server download, which medRxiv/bioRxiv refuse to automated clients"
+  - id: pmcpreprint-PMC13484082
+    kind: preprint
+    source: europepmc
+    format: jats
+    url: https://www.ebi.ac.uk/europepmc/webservices/rest/PMC13484082/fullTextXML
+    licence: CC-BY-4.0
+    licence_evidence: "PubMed get_copyright_status 2026-10-04: PMC licence CC BY 4.0"
+    discipline: molecular-biology
+    title: "Molecular basis for chikungunya virus recognition of a mosquito-specific receptor."
+    year: 2026
+    permitted_use: [ci_eval, train_experimental]
+    notes: "bioRxiv preprint in PMC via the NIH Preprint Pilot; PMID 42620031; doi:10.64898/2026.07.28.741352; not peer reviewed. Replaces the server download, which medRxiv/bioRxiv refuse to automated clients"
+  - id: pmcpreprint-PMC13483925
+    kind: preprint
+    source: europepmc
+    format: jats
+    url: https://www.ebi.ac.uk/europepmc/webservices/rest/PMC13483925/fullTextXML
+    licence: CC-BY-4.0
+    licence_evidence: "PubMed get_copyright_status 2026-10-04: PMC licence CC BY 4.0"
+    discipline: molecular-biology
+    title: "Phage VP882 possesses quorum-sensing-driven lytic induction and stress-mediated host growth suppression mechanisms."
+    year: 2026
+    permitted_use: [ci_eval, train_experimental]
+    notes: "bioRxiv preprint in PMC via the NIH Preprint Pilot; PMID 42619886; doi:10.64898/2026.07.27.740977; not peer reviewed. Replaces the server download, which medRxiv/bioRxiv refuse to automated clients"
+  - id: pmcpreprint-PMC13484500
+    kind: preprint
+    source: europepmc
+    format: jats
+    url: https://www.ebi.ac.uk/europepmc/webservices/rest/PMC13484500/fullTextXML
+    licence: CC-BY-4.0
+    licence_evidence: "PubMed get_copyright_status 2026-10-04: PMC licence CC BY 4.0"
+    discipline: molecular-biology
+    title: "Single-cell transcriptomics reveals a multiphasic host infection trajectory."
+    year: 2026
+    permitted_use: [ci_eval, train_experimental]
+    notes: "bioRxiv preprint in PMC via the NIH Preprint Pilot; PMID 42620189; doi:10.64898/2026.07.29.741357; not peer reviewed. Replaces the server download, which medRxiv/bioRxiv refuse to automated clients"
+  - id: pmcpreprint-PMC13596262
+    kind: preprint
+    source: europepmc
+    format: jats
+    url: https://www.ebi.ac.uk/europepmc/webservices/rest/PMC13596262/fullTextXML
+    licence: CC-BY-4.0
+    licence_evidence: "PubMed get_copyright_status 2026-10-04: PMC licence CC BY 4.0"
+    discipline: molecular-biology
+    title: "Human-specific remodeling of an endogenous retrovirus shapes structural diversity at acrocentric nucleolar organizer regions."
+    year: 2026
+    permitted_use: [ci_eval, train_experimental]
+    notes: "bioRxiv preprint in PMC via the NIH Preprint Pilot; PMID 42779673; doi:10.64898/2026.09.11.751073; not peer reviewed. Replaces the server download, which medRxiv/bioRxiv refuse to automated clients"
+  - id: pmcpreprint-PMC13596531
+    kind: preprint
+    source: europepmc
+    format: jats
+    url: https://www.ebi.ac.uk/europepmc/webservices/rest/PMC13596531/fullTextXML
+    licence: CC-BY-4.0
+    licence_evidence: "PubMed get_copyright_status 2026-10-04: PMC licence CC BY 4.0"
+    discipline: neuroscience
+    title: "Anatomical and functional organisation of the cholinergic nervous system in the tunicate."
+    year: 2026
+    permitted_use: [ci_eval, train_experimental]
+    notes: "bioRxiv preprint in PMC via the NIH Preprint Pilot; PMID 42779898; doi:10.64898/2026.09.10.750344; not peer reviewed. Replaces the server download, which medRxiv/bioRxiv refuse to automated clients"
+  - id: pmcpreprint-PMC13483939
+    kind: preprint
+    source: europepmc
+    format: jats
+    url: https://www.ebi.ac.uk/europepmc/webservices/rest/PMC13483939/fullTextXML
+    licence: CC-BY-4.0
+    licence_evidence: "PubMed get_copyright_status 2026-10-04: PMC licence CC BY 4.0"
+    discipline: neuroscience
+    title: "Early Amyloid-beta Toxicity Disrupts Nervous System Connectivity During Aging."
+    year: 2026
+    permitted_use: [ci_eval, train_experimental]
+    notes: "bioRxiv preprint in PMC via the NIH Preprint Pilot; PMID 42619712; doi:10.64898/2026.07.27.740981; not peer reviewed. Replaces the server download, which medRxiv/bioRxiv refuse to automated clients"
   # ---- LaTeX manuscripts hosted on GitHub (arXiv licences could not be verified - see SOURCES.md): 18 ----
   - id: gh-jalemkul-gmx_tutorials_livecoms
     kind: preprint

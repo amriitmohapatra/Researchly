@@ -31,6 +31,8 @@ external entity (XXE) is rejected rather than expanded or fetched.
 
 from __future__ import annotations
 
+import re
+
 from ..document import Document, Segment, StructureItem
 from . import MAX_TEXT_CHARS, IngestError
 from ._zip import open_zip, read_member
@@ -104,8 +106,8 @@ def load_docx(filename: str, data: bytes) -> Document:
         raise IngestError("unreadable_file", TOO_DEEP) from None
 
 
-def _styles(root) -> dict[str, tuple[str, bool]]:
-    """style id -> (name, is_outline_heading), outline levels inherited
+def _styles(root) -> dict[str, tuple[str, int | None]]:
+    """style id -> (name, outline level or None), outline levels inherited
     through `w:basedOn` as Word does."""
     raw = {}
     for st in root:
@@ -126,13 +128,15 @@ def _styles(root) -> dict[str, tuple[str, bool]]:
         while cur in raw and cur not in seen and level is None:
             seen.add(cur)
             level, cur = raw[cur][1], raw[cur][2]
-        out[sid] = (name or sid, _is_outline(level))
+        out[sid] = (name or sid, _outline(level))
     return out
 
 
-def _is_outline(level) -> bool:
+def _outline(level) -> int | None:
     # Levels 0-8 are headings in the navigation pane; 9 is body text.
-    return level is not None and level.isdigit() and int(level) <= 8
+    if level is not None and level.isdigit() and int(level) <= 8:
+        return int(level)
+    return None
 
 
 # Real documents nest tables and runs a handful of levels deep. A file
@@ -187,8 +191,10 @@ class _Reader:
         text = "".join(self.parts)
         name, outline = self.style_of(p)
         style = name
-        if outline and "heading" not in name.lower() and name.lower() != "title":
-            style = "Heading"      # from_word recognises headings by name
+        if (outline is not None and name.lower() != "title"
+                and not re.search(r"heading\s*\d", name.lower())):
+            # from_word recognises headings, and their level, by name
+            style = f"Heading {outline + 1}"
         if self.has_figure:
             self.figures.append(index)
         if "caption" in name.lower() and text.strip():
@@ -201,15 +207,15 @@ class _Reader:
                               "chapter at a time.")
         self.paras.append({"text": text, "style": style, "kind": kind})
 
-    def style_of(self, p) -> tuple[str, bool]:
+    def style_of(self, p) -> tuple[str, int | None]:
         ppr = _child(p, "pPr")
         if ppr is None:
-            return "", False
+            return "", None
         ps, lvl = _child(ppr, "pStyle"), _child(ppr, "outlineLvl")
         sid = _attr(ps, "val") if ps is not None else None
-        name, outline = self.styles.get(sid, (sid or "", False))
+        name, outline = self.styles.get(sid, (sid or "", None))
         if lvl is not None:
-            outline = _is_outline(_attr(lvl, "val"))
+            outline = _outline(_attr(lvl, "val"))
         return name, outline
 
     # -- runs ---------------------------------------------------------------

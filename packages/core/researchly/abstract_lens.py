@@ -173,7 +173,10 @@ def ab802_abstract_completeness(doc, document: Document):
     if not abstracts:
         return
     start = abstracts[0].start
-    ends = [h.start for h in document.headings if h.start > start]
+    # The section runs to the next heading of another section; its own
+    # subsections ("Background", "Aims") are part of it.
+    ends = [h.start for h in document.headings
+            if h.start > start and h.section != "abstract"]
     end = min(ends) if ends else len(document.masked)
     text = document.masked[start:end].strip()
     if len(text) < 300:                     # stubs can't be judged
