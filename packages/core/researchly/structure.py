@@ -32,7 +32,20 @@ KINDS = ("figure", "table")
 
 # "Figure 3", "Fig. 2b", "Figs 1-3", "Figures 2 and 4", "Table 1", "Tables
 # S1, S2". The number list stops at the first thing that is not a number.
-_NUM = r"(?:[SA]\d+|\d+(?:\.\d+)?)[a-z]?"
+# "Table A.4": an appendix lettered A, as economics papers and many theses
+# number them (P33).
+_NUM = r"(?:[A-Z]\.\d+|[SA]\d+|\d+(?:\.\d+)?)[a-z]?"
+# A lettered appendix is stored like a chapter numbered above any real one,
+# so "A.4" sorts and groups like "2.4": (LETTERED + 0, 4).
+LETTERED = 100
+
+
+def number_text(number: tuple | None) -> str:
+    """(2, 4) -> "2.4"; (LETTERED, 4) -> "A.4"."""
+    if not number:
+        return "?"
+    return ".".join(chr(ord("A") + x - LETTERED) if i == 0 and x >= LETTERED
+                    else str(x) for i, x in enumerate(number))
 _MENTION = re.compile(
     r"\b(Fig(?:ure)?s?\.?|Tables?)~?\s*"
     rf"({_NUM}(?:\s*(?:,|and|&|–|—|-|to)\s*{_NUM})*)")
@@ -54,8 +67,7 @@ class Float:
 
     @property
     def name(self) -> str:
-        n = ".".join(str(x) for x in self.number) if self.number else "?"
-        return f"{self.kind.capitalize()} {n}"
+        return f"{self.kind.capitalize()} {number_text(self.number)}"
 
 
 @dataclass
@@ -97,6 +109,10 @@ class Structure:
 
 def _parse_number(text: str) -> tuple | None:
     text = re.sub(r"[a-z]$", "", text)            # "2b": panel b of 2
+    lettered = re.fullmatch(r"([A-Z])\.(\d+)", text)
+    if lettered:
+        return (LETTERED + ord(lettered.group(1)) - ord("A"),
+                int(lettered.group(2)))
     if not re.fullmatch(r"\d+(?:\.\d+)?", text):
         return None
     return tuple(int(x) for x in text.split("."))
@@ -111,7 +127,7 @@ def _numbers(listing: str) -> tuple[tuple, bool]:
     i = 0
     while i < len(parts):
         p = parts[i]
-        if p[0] in "SA":
+        if p[0] in "SA" and not p[1:2] == ".":
             supplementary = True
         else:
             n = _parse_number(p)
@@ -263,6 +279,10 @@ def _ranges(st: Structure, refs: list, masked: str) -> list:
 
 # --- Word ---------------------------------------------------------------------
 
+_CONTINUED = re.compile(r"\(?\bcont(?:inued|'d|\.)\)?\s*[.:]?\s*$",
+                        re.IGNORECASE)
+
+
 def _word(doc: Document) -> Structure:
     st = Structure()
     tables = [i for i in doc.structure if i.kind == "table"]
@@ -281,6 +301,8 @@ def _word(doc: Document) -> Structure:
         number = _parse_number(m.group(2))
         if number is None:                          # "Figure S1": supplement
             continue
+        if _CONTINUED.search(doc.original, cap.start, cap.end):
+            continue                    # "Table 3 (continued)": same table
         start, end = cap.start, cap.end
         if kind == "table":
             # A table's caption sits just above (or below) its cells.
@@ -291,7 +313,8 @@ def _word(doc: Document) -> Structure:
                                         abs(cap.start - near.end)) < 400:
                 start, end = min(start, near.start), max(end, near.end)
         st.floats.append(Float(kind, number, start, end, None, cap,
-                               appendix=_in_appendix(doc, start)))
+                               appendix=_in_appendix(doc, start)
+                               or number[0] >= LETTERED))
     cap_spans = [(c.caption.start, c.caption.end) for c in st.floats]
     st.mentions = _written(doc, cap_spans, doc.table_spans)
     return st

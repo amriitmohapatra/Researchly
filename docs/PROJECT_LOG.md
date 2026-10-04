@@ -1502,3 +1502,83 @@ published articles cite every figure in order.
 - Two lists of the same thing drift: the rule-module list existed twice
   and the second copy silently left the new module out.
 
+
+## P33 — 2026-10-04 — The deliberately bad manuscript: PDF-converted Word
+
+**What.** The owner sent "a deliberately bad version of a manuscript": a
+published economics working paper (48k words) run through a PDF-to-Word
+converter. Checked in memory only; never committed, not quoted. It held
+every artefact a conversion leaves: headings run into their first
+paragraph (a 475-word "Heading 1"), table rows styled as headings, tables
+as columns aligned with spaces, displayed equations flattened to symbols
+and one-letter variables, words hyphenated across lines, captions typed in
+body style, appendix floats lettered "Table A.4". Researchly raised 604
+flags; most were about the conversion, and the Introduction was masked
+whole because it carried a heading style.
+
+**Fixes (engine, all surfaces).**
+- Run-in headings (`document.split_run_in`): a heading-styled paragraph of
+  more than 25 words is body text. A numbered heading is split off at the
+  capitalised word before the first lower-case content word ("2 Methods |
+  We fitted …"); the rest is checked as prose. New rule **X501**
+  (Correction, Word, source: Word heading styles) says so.
+- A document that uses heading styles no longer also gets keyword-guessed
+  headings ("Fit statistics" in a table re-sectioned the appendix).
+  "C Data Appendix" is an appendix, not Methods; a column-aligned line is
+  never a plain-text heading.
+- Layout lines (`document.layout_spans`, plain text and Word): a line with
+  a four-space column gap, or with a relation sign and mostly maths tokens,
+  is masked and kept as an atom. URLs and e-mail addresses are masked.
+- **A blank line ends a sentence** (`api.paragraph_breaks`, a spaCy
+  component in the shared pipeline) unless the next line carries on in
+  lower case. The first version split every blank line and hid real long
+  sentences in PDF-extracted theses, where a page break leaves a blank line
+  mid-sentence ("about 70% of\n\nall cases"); diffing every G106 flag
+  before/after caught it.
+- S001 joins a word broken across a line ("effec-\ntive" → one finding,
+  "effective") and never joins across a masked line.
+- W207 skips aligned columns, single letters (maths) and runs ("Yes Yes
+  Yes"); W201 leaves the nouns "leverage" and "endeavour" (it is a
+  bulk-safe fix: "financial use" would have been applied unread); G107
+  says a repeated noun stack once, with its count; F601 skips titles set
+  in capitals; LanguageTool's diacritics suggestions ("numéraire") are
+  skipped; 47 statistics/economics words added (winsorized, equilibria,
+  premia, transformative …).
+- Structure: captions typed in a body style ("Table 2: …"), on a line of
+  their own inside a paragraph, or run into a paragraph (X103 checks the
+  text before calling a figure missing); lettered appendix numbers
+  ("Table A.4", stored as a chapter above any real one, shown as "A.4");
+  "(continued)" captions are the same table.
+- `ml/dogfood/run_dogfood.py` and the LSP now use `api.get_nlp()`: both
+  loaded spaCy themselves, so the gate would not have seen the sentence
+  change at all (it first reported 12.40 when the engine gave 11.67).
+
+**Evidence.**
+- The manuscript: 604 → 409 flags. What remains is mostly real: words the
+  conversion ran together ("firmlevel", "softwareintensive"), apostrophes
+  split from a variable ("firm j ’s"), 15 X501, inconsistent spellings
+  (non-missing/nonmissing, scatter plot/scatterplot, down-weight/
+  downweight, non-zero/nonzero), CRSP defined twice, and Figure 2 placed
+  before the text first cites it (X104). 34 floats found (4 main text, 30
+  appendix); the first structural pass reported "Figure C.2" and "Table
+  C.4" missing, but their captions were run into paragraphs — now read.
+- Noise floor 12.65 → **11.67** (baseline updated with a note): G106
+  648 → 529, G101 559 → 482, G107 −20, S001 −19, LT001 −16, W207 −14,
+  F601 −12; G105 +8 (real "There is" openings once inside a merge). Every
+  removed W207/W203/F601/W201 flag was read: all wrong (maths "N n", URLs,
+  title pages, "this endeavour").
+- Real-document bench: PASS, 14.65 → 13.69/1000w; LaTeX G106 187 → 119,
+  each removed flag a "sentence" through an `enumerate`, code listing,
+  heading or display equation.
+- 35 new tests (`test_converted_documents.py`); core 703+ passed, service
+  146, ml 30, ruff clean, third-party scan 0 hits.
+
+**Lessons.**
+- A converted PDF is the normal case, not an edge case: students convert
+  published papers and old chapters to Word all the time. The engine must
+  read layout as layout.
+- Every runner must use the one pipeline. A measurement tool that loads
+  its own spaCy measures a different product.
+- A blank line means different things in a Word file (a paragraph) and a
+  PDF extraction (sometimes a page break): decide with the next line, and
+  diff before trusting a big drop.

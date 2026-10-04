@@ -161,6 +161,7 @@ Named in `researchly/sources.py`; cited by name only, never quoted.
 | Guide §9.2 | Introduce, display, interpret every equation | **X301** |
 | Guide §9.7 | A caption states the figure's point and lets it be read unaided | **X202** (Endo's figure self-sufficiency corroborates) |
 | Guide §6 | Be concrete and credible; let the numbers carry the weight | **X401** |
+| Microsoft Word documentation (heading styles) | Heading styles build the navigation pane, the table of contents and the section structure, so body text must not carry one | **X501** (P33) |
 | Schwartz & Hearst (2003), *A simple algorithm for identifying abbreviation definitions in biomedical text* | How definitions are recognised (not a writing rule) | F612/F613 detection |
 
 ## Shipped this phase (v0.4)

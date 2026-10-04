@@ -32,9 +32,18 @@ def _finditer(pattern: str, text: str) -> Iterable[re.Match]:
 def w201_grand_words(doc, document: Document):
     for word, plain in lx.GRAND_WORDS.items():
         for m in _finditer(rf"\b{word}\b", document.masked):
+            if word in lx.GRAND_ONLY_AS_VERB and not _is_verb(doc, m.start()):
+                continue
             yield Suggestion(
                 message=f"Plainer: '{plain}'.",
                 start=m.start(), end=m.end(), replacement=plain)
+
+
+def _is_verb(doc, offset: int) -> bool:
+    if doc is None:
+        return True
+    span = doc.char_span(offset, offset + 1, alignment_mode="expand")
+    return bool(span) and span[0].pos_ in ("VERB", "AUX")
 
 
 @rule("W202", "wordy-phrase", Category.IMPROVEMENT,
@@ -117,9 +126,23 @@ def w206_redundant_pairs(doc, document: Document):
       "read-aloud test catches these. (Guide §8.)",
       source="§8", fix_safety="safe")
 def w207_doubled_word(doc, document: Document):
-    for m in re.finditer(r"\b([A-Za-z]+)[ \t]+\1\b", document.masked,
+    masked = document.masked
+    for m in re.finditer(r"\b([A-Za-z]+)[ \t]+\1\b", masked,
                          re.IGNORECASE):
         if m.group(1).lower() in {"had", "that"}:  # "had had" can be valid
+            continue
+        # Only a slip of the keyboard: one space apart, a real word, not a
+        # run. "Yes   Yes" is a table row, "s S" and "P P" are maths, and
+        # "Yes Yes Yes" a flattened row of a converted PDF (P33).
+        gap = document.original[m.end(1):m.end() - len(m.group(1))]
+        if len(gap) >= 3 and not gap.strip():     # aligned columns
+            continue
+        if len(m.group(1)) == 1 and m.group(1).lower() != "a":
+            continue
+        if re.match(rf"[ \t]+{m.group(1)}\b", masked[m.end():],
+                    re.IGNORECASE) or re.search(
+                rf"\b{m.group(1)}[ \t]+$", masked[max(0, m.start() - 40):
+                                                     m.start()], re.IGNORECASE):
             continue
         # "and $C(0)$ and": the words were never adjacent in the source.
         if document.masked_content(m.start(), m.end()):
@@ -240,6 +263,9 @@ def c304_significant(doc, document: Document):
 _ROMAN = re.compile(r"^(?=[IVX]{2,}$)X{0,3}(?:IX|IV|V?I{0,3})$")
 
 
+_CAPS_RUN = re.compile(r"\b[A-Z][A-Z&'’-]+(?:\s+[A-Z][A-Z&'’-]+){2,}\b")
+
+
 @rule("F601", "acronym-undefined", Category.CONVENTION,
       "Acronym used without definition at first use.",
       "Define a term the first time you use it, once, briefly, then use it "
@@ -266,7 +292,16 @@ def f601_acronyms(doc, document: Document):
         alpha = [c for c in window if c.isalpha()]
         if not alpha:
             return True
-        return sum(1 for c in alpha if c.isupper()) / len(alpha) > 0.55
+        if sum(1 for c in alpha if c.isupper()) / len(alpha) > 0.55:
+            return True
+        # A run of three capitalised words is a title set in capitals
+        # ("NATIONAL BUREAU OF ECONOMIC RESEARCH 1050 ...") even when an
+        # address beside it dilutes the window (P33).
+        line_a = text.rfind("\n", 0, start) + 1
+        line_b = text.find("\n", end)
+        line = text[line_a:line_b if line_b != -1 else len(text)]
+        return any(a <= start - line_a < b for a, b in (
+            (r.start(), r.end()) for r in _CAPS_RUN.finditer(line)))
 
     seen: set[str] = set()
     for m in re.finditer(r"\b([A-Z]{2,6})s?\b", text):

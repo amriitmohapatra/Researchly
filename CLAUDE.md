@@ -182,10 +182,12 @@ at the top of that file.
 
 Things a future agent will otherwise get wrong:
 
-- **The noise floor is above target.** With every tier on, accepted
-  theses get **12.65 flags/1000w** (P32 baseline): 11.94 from the existing
-  rules after the Q3 tune (14.51 before it), plus 0.71 from S2b's
-  consistency rules, added on purpose. Q3's target is ≤ 11. About 90% of the remaining S001 flags are PDF
+- **The noise floor is just above target.** With every tier on, accepted
+  theses get **11.67 flags/1000w** (P33 baseline; 12.65 after S2b added
+  its consistency rules, 14.51 before the Q3 tune). Q3's target is ≤ 11.
+  Measure with `api.get_nlp()`, never a bare `spacy.load()`: the shared
+  pipeline ends a sentence at a blank line (unless the next line carries
+  on in lower case), and a runner without it measures a different engine. About 90% of the remaining S001 flags are PDF
   extraction artefacts (words joined or split at line breaks), so part of
   the gap is the measurement: see PLAN's Q3 item before re-extracting the
   corpus. Don't hide good advice (G106 long sentences, W202 wordiness) to

@@ -120,6 +120,7 @@ Built 2026-10-04 (P32): `researchly/structure.py`, `rules_structure.py`, `rules_
 - [~] Equations: numbered but never referred to (**X301**, Preference). Symbols defined near first use (F603) deferred: not deterministic enough
 - [x] Text↔table numbers: a decimal or percentage quoted with "Table N" that Table N does not hold (**X401**; rounding allowed; levels, versions, totals skipped)
 - [x] Each check: question-form message + named source (ICMJE, SI Brochure, AMA Manual of Style, guide §6/§9.1/§9.2/§9.7), fire and don't-fire tests, rule-inventory rows (Layer 8), knowledge-base §10
+- [x] Converted manuscripts (P33, the owner's deliberately bad .docx: a working paper run through a PDF-to-Word converter): 604 → 409 flags. Headings run into their paragraphs are split and flagged (X501); typed captions, lettered appendix floats ("Table A.4") and "(continued)" tables are read, and a caption run into a paragraph ("… linear. Figure C.2: …") counts as present. 35 tests
 - [~] Noise floor: 11.94 → 12.65 on purpose (+204 flags, all from the new consistency rules; judged sample mostly correct; baseline note). The gate holds at the new baseline. Measure the structural rules on the 115 PMC articles in the next CI run (published articles cite every figure in order: flags there are false positives)
 - [ ] **Exit check:** owner checks one real chapter and reports false flags **(Amriit)**
 
@@ -235,6 +236,7 @@ patterns of good research writing across disciplines, not just epidemiology.
   - [ ] ~90% of the remaining S001 flags are PDF-extraction artefacts: `pdftotext` drops every line-break hyphen ("laboratoryconfirmed") and page-break hyphenation leaves fragments ("coun", "tion"). A trial re-extraction (`-raw`, keep a hyphen unless the joined word is a word) gives 11.3 with this code (13.7 with the old), S001 415 → 313, but also 16k more words (300,955 vs 284,537) whose origin must be read before the gate's corpus changes; re-baseline both sides when it does
   - [ ] Pasted code and maths in plain text and Word (R listings, `log=T`): detect code-like paragraphs and mask them like LaTeX code
   - [ ] G106 (648) and G101 (559) are now mostly real advice on long sentences; reaching 11 must not come from hiding it
+  - [x] 2026-10-04 (P33, from the owner's PDF-converted manuscript): **12.65 → 11.67**, all removals of wrong flags. A blank line ends a sentence unless the next line continues in lower case (G106 648 → 529, G101 559 → 482: "sentences" run across headings, table cells, lists and equations; every flag diffed before/after); aligned-column and flattened-equation lines masked; G107 says a repeated stack once; title capitals, URLs, the noun "leverage" left alone. Bench 14.65 → 13.69
 - [ ] Clean the 20 cosmetic ruff findings (17 unused imports, 3 placeholder-less f-strings) in a dedicated change, then widen `ruff.toml`
 - [ ] `language_tool_python` client is GPL-3.0-only: fine server-side; check before bundling it into any distributed desktop installer
 - [ ] Correct `docs/eval-corpora.md`: JFLEG and CWEB *do* declare CC BY-NC-SA 4.0 (registry audit, 2026-10-03)

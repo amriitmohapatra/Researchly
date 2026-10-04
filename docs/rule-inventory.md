@@ -173,6 +173,7 @@ Structural checks read `researchly/structure.py`: floats (figures and tables wit
 | N101 | Number–unit spacing mixed ("5 %" and "5%"; °C, mg, km…) | Convention | all | SI Brochure | S2b |
 | N102 | Sentence begins with a numeral (years and list items exempt) | Convention | all | AMA Manual of Style | S2b |
 | W211 | Compound written closed and open/hyphenated ("dataset"/"data set") | Convention | all | §9.1 | S2b |
+| X501 | Paragraph of body text in a heading style: a heading run into its paragraph ("1 Introduction How will…"), or a table row styled as a heading. The heading is split off when it is numbered; the rest is checked as prose | Correction | Word | Word heading styles | P33 |
 
 Definitions ("full name (ACR)") are found with Schwartz & Hearst's (2003) algorithm, so notation such as "A(H1N1)" or panel letters "(D–F)" is not taken for a definition.
 

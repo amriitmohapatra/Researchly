@@ -21,6 +21,10 @@ GRAND_WORDS = {
     "elucidate": "clarify", "elucidates": "clarifies",
     "elucidated": "clarified",
 }
+# Grand only as verbs: "financial leverage" and "this endeavour" are nouns,
+# and "use"/"try" would make nonsense of them (P33).
+GRAND_ONLY_AS_VERB = frozenset({
+    "leverage", "leverages", "leveraged", "endeavor", "endeavour"})
 
 # --- W202: wordy phrases → tighter alternatives ----------------------------
 WORDY_PHRASES = {

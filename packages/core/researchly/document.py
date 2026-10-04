@@ -29,6 +29,8 @@ _SECTION_PATTERNS: list[tuple[str, str]] = [
     # A reference list is not prose (P31): it is masked, never checked.
     (r"^\W*(references|bibliography|literature cited|works cited|"
      r"reference list|cited literature)\W*$", "references"),
+    # Before the others: "C Data Appendix" is an appendix, not Methods (P33).
+    (r"appendix|appendices|supplement", "appendix"),
     (r"abstract|summary\b", "abstract"),
     (r"introduction|background", "introduction"),
     (r"method|material|model|data\b|analys[ie]s|estimation|inference|"
@@ -37,7 +39,6 @@ _SECTION_PATTERNS: list[tuple[str, str]] = [
     (r"limitation", "limitations"),
     (r"discussion", "discussion"),
     (r"conclusion", "conclusion"),
-    (r"appendix|supplement", "appendix"),
 ]
 
 
@@ -154,11 +155,17 @@ class Segment:
     source_start: int = 0
 
 
+# A caption typed in a body style: "Table 2: ...", "Figure 3. ...".
+_TYPED_CAPTION = re.compile(
+    r"(?:Fig(?:ure)?\.?|Table)\s+(?:[A-Z]\.?)?\d+(?:\.\d+)*[a-z]?\s*[:.|]\s+\S")
+
+
 @dataclass
 class StructureItem:
     """A figure, table, equation, caption or citation (kept for S2b)."""
     kind: str            # figure | table | equation | caption | citation |
-    #                      ref | label (S2b cross-references)
+    #                      ref | label (S2b cross-references) |
+    #                      styled_body (a heading style on body text, P33)
     start: int
     end: int
     label: str | None = None
@@ -235,6 +242,13 @@ class Document:
             masked, headings = text, _detect_plain_headings(text)
         atoms = (res.atoms if kind == "latex"
                  else inline_atoms(text, kind) if kind == "markdown" else [])
+        if kind == "plain":
+            layout = layout_spans(text) + url_spans(text)
+            if layout:
+                masked = list(masked)
+                _mask_spans(masked, layout)
+                masked = "".join(masked)
+                atoms = sorted(atoms + layout)
         # Mask heading TEXT as well (after recording it): headings are not
         # sentences, and without terminal punctuation the parser merges them
         # into the following paragraph's first sentence, corrupting
@@ -293,18 +307,41 @@ class Document:
                 continue          # never a heading, never prose
             if not title:
                 continue
-            if "caption" in style:
+            if "caption" in style or _TYPED_CAPTION.match(title):
                 # Recorded here, not in the .docx reader, so the Word
-                # add-in's paragraphs and an uploaded file agree (S2b).
+                # add-in's paragraphs and an uploaded file agree (S2b). A
+                # caption typed in a body style ("Table 2: ...", common
+                # after a PDF conversion) is still a caption (P33).
                 captions.append(StructureItem(
                     "caption", offsets[i], offsets[i] + len(texts[i])))
                 continue
+            for line in re.finditer(r"\n[ \t]*([^\n]+)", texts[i]):
+                # A caption a PDF converter left inside a paragraph, on a
+                # line of its own.
+                if _TYPED_CAPTION.match(line.group(1)):
+                    captions.append(StructureItem(
+                        "caption", offsets[i] + line.start(1),
+                        offsets[i] + line.end(1)))
             if "heading" in style or style == "title":
                 lvl = re.search(r"heading(\d)", style)
+                level = int(lvl.group(1)) if lvl else None
+                start, end = offsets[i], offsets[i] + len(texts[i])
+                if len(title.split()) > (RUN_IN_WORDS if lvl else 40):
+                    # Body text in a heading style: check it as prose, and
+                    # keep the heading only if one can be split off (P33).
+                    lead = len(texts[i]) - len(texts[i].lstrip())
+                    cut = split_run_in(title)
+                    captions.append(StructureItem(
+                        "styled_body", start, end,
+                        label=None if cut is None else "run-in"))
+                    if cut is None:
+                        continue
+                    end = start + lead + cut
+                    title = texts[i][lead:lead + cut].strip()
                 style_headings.append(
-                    Heading(offsets[i], title, classify_heading(title),
-                            level=int(lvl.group(1)) if lvl else None))
-                _mask_spans(chars, [(offsets[i], offsets[i] + len(texts[i]))])
+                    Heading(start, title, classify_heading(title),
+                            end=end, level=level))
+                _mask_spans(chars, [(start, end)])
         doc.table_spans = table_spans
         doc.structure = captions
         if table_spans:
@@ -315,9 +352,10 @@ class Document:
                             if not doc.in_table(h.start)]
 
         if style_headings:
-            merged = {h.start: h for h in doc.headings}
-            merged.update({h.start: h for h in style_headings})
-            doc.headings = sorted(merged.values(), key=lambda h: h.start)
+            # A document that uses heading styles uses them for its
+            # headings: a line that merely reads like one ("Fit statistics"
+            # in a table, "Data" in a figure) is not one (P33).
+            doc.headings = sorted(style_headings, key=lambda h: h.start)
             resolve_sections(doc.headings)
         _mask_references(chars, doc.headings)
         doc.masked = "".join(chars)
@@ -564,11 +602,108 @@ def _mask_latex(text: str) -> tuple[str, list[Heading]]:
 
 # -- Plain text -------------------------------------------------------------
 
+# -- Text that came out of a PDF ---------------------------------------------
+#
+# A PDF converted to Word or pasted as text (P33) keeps the PDF's layout:
+# table rows as columns aligned with spaces, displayed equations as runs of
+# symbols and one-letter variables ("d log π j t = (1 − ε)d log mc j t").
+# Checked as prose they produced doubled-word, grammar and long-sentence
+# findings about the conversion, not the writing. Plain text and Word only:
+# LaTeX and Markdown mark their tables and maths.
+
+# Two columns: a gap of four or more spaces inside a line.
+_COLUMN_GAP = re.compile(r"\S {4,}\S")
+_MATH_CHAR = re.compile(
+    "[Ͱ-Ͽ∀-⋿←-⇿′-‷̀-ͯ"
+    "=<>+^|¡¢£¤∞]")
+_RELATION = re.compile("[=<>≤≥≈≡∈∼∝]")
+_TOKEN_PUNCT = ".,;:()[]{}\"'’“”"
+
+
+def _math_token(tok: str) -> bool | None:
+    """True for a token of flattened maths, False for a word, None for
+    punctuation or a bare number (neither)."""
+    core = tok.strip(_TOKEN_PUNCT)
+    if not core or re.fullmatch(r"[\d.,%-]+", core):
+        return None
+    if _MATH_CHAR.search(core):
+        return True
+    return len(core) == 1 and core.isalpha() and core not in "aAI"
+
+
+def layout_spans(text: str) -> list[tuple[int, int]]:
+    """Lines of a PDF's layout rather than its prose: aligned columns, and
+    displayed equations flattened to text. Masked and kept as atoms."""
+    spans = []
+    for m in re.finditer(r"[^\n]+", text):
+        line = m.group()
+        if _COLUMN_GAP.search(line.strip()):
+            spans.append((m.start(), m.end()))
+            continue
+        if not _RELATION.search(line):
+            continue
+        kinds = [k for k in map(_math_token, line.split()) if k is not None]
+        if len(kinds) >= 3 and sum(kinds) >= 0.5 * len(kinds):
+            spans.append((m.start(), m.end()))
+    return spans
+
+
+_URL = re.compile(r"\b(?:https?://|www\.)\S+|\b[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
+
+
+def url_spans(text: str) -> list[tuple[int, int]]:
+    """Web and e-mail addresses in plain text: not words to check."""
+    out = []
+    for m in _URL.finditer(text):
+        end = m.end()
+        while end > m.start() and text[end - 1] in ".,;:)]'\"":
+            end -= 1
+        out.append((m.start(), end))
+    return out
+
+
+# A heading-styled paragraph longer than this is body text carrying a
+# heading style: a PDF conversion, or a heading typed run-in ("1
+# Introduction How will ..."). Masked whole, it hid the Introduction (P33).
+RUN_IN_WORDS = 25
+_MINOR_WORDS = frozenset(
+    "a an and as at but by for from in into of on or the to vs via with"
+    .split())
+
+
+def split_run_in(title: str) -> int | None:
+    """Where the body starts in a run-in heading paragraph, else None.
+
+    "2 Methods We fitted a model ..." -> the offset of "We": the capitalised
+    word just before the first lower-case content word. The heading must be
+    numbered ("2", "3.1", "A") and keep at least one word of its own, so a
+    sentence wearing a heading style ("Appendix Figure B.1 compares ...")
+    is not split at all.
+    """
+    num = _NUMBERING.match(title)
+    if not num:
+        return None
+    words = [w for w in re.finditer(r"\S+", title) if w.start() >= num.end()]
+    for i, w in enumerate(words):
+        tok = w.group().strip(_TOKEN_PUNCT)
+        if not tok or not tok[0].islower() or tok in _MINOR_WORDS:
+            continue
+        j = i - 1
+        while j >= 0 and not words[j].group()[0].isupper():
+            j -= 1
+        if j < 1 or j > 15:
+            return None
+        return words[j].start()
+    return None
+
+
 def _detect_plain_headings(text: str) -> list[Heading]:
     """Short lines that look like section titles (no trailing period)."""
     headings = []
     for m in re.finditer(r"^([A-Z][A-Za-z &\-]{2,60})\s*$", text, re.MULTILINE):
         title = m.group(1).strip()
+        if "   " in title:                  # aligned columns: a table row
+            continue
         section = classify_heading(title)
         if section != "other":
             headings.append(Heading(m.start(), title, section))

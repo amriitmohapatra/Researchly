@@ -51,6 +51,8 @@ WORKS = {
            "9th ed., on writing a number with its unit"),
     "AMA": ("AMA Manual of Style, 11th ed., on numbers at the start of a "
             "sentence"),
+    "Word": ("Microsoft Word documentation on heading styles, which build "
+             "the navigation pane and the table of contents"),
     "ICMJE": ("International Committee of Medical Journal Editors, "
               "Recommendations for the Conduct, Reporting, Editing, and "
               "Publication of Scholarly Work in Medical Journals "

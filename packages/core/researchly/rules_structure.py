@@ -12,11 +12,14 @@ import re
 
 from .document import Document
 from .engine import Category, Suggestion, rule
-from .structure import Structure, analyse
+from .structure import Structure, analyse, number_text
 
 # "Figure 3 of Smith et al." / "Table 2 in [12]": another paper's float.
 _ELSEWHERE = re.compile(
     r"\s*(?:of|in|from)\s+(?:ref\b|refs?\.|\[|\(|[A-Z][A-Za-z'-]+\s+et\s+al)")
+
+
+_CAPTION_WORD = {"figure": r"Fig(?:ure)?\.?", "table": "Table"}
 
 
 def structure_of(document: Document) -> Structure:
@@ -165,8 +168,14 @@ def x103_broken_reference(doc, document: Document):
         chapters = {n[:-1] for n in have}
         missing = [n for n in m.numbers
                    if n not in have and n[:-1] in chapters]
+        # A caption a converter ran into a paragraph ("... linear. Figure
+        # C.2: Scatterplot of ...") was not found as a float, but the
+        # figure is there (P33).
+        missing = [n for n in missing if not re.search(
+            rf"\b{_CAPTION_WORD[m.kind]}\s+{re.escape(number_text(n))}"
+            r"\s*:\s*\S", document.original)]
         if missing:
-            name = ".".join(str(x) for x in missing[0])
+            name = number_text(missing[0])
             yield Suggestion(
                 message=f"There is no {m.kind.capitalize()} {name} in this "
                         "document — renumbered, or removed?",
@@ -373,3 +382,33 @@ _LEVEL_AFTER = re.compile(
     r"\s*(?:\\?%)?\s*(?:CI|CrI|UI|PI|HDI|confidence|credible|uncertainty|"
     r"prediction|significance)\b", re.IGNORECASE)
 _LEVEL_BEFORE = re.compile(r"(?:\bp|\bP|α|alpha|level of)\s*[<>=≤≥]?\s*$")
+
+
+# --- X501: a heading style on body text -------------------------------------------
+
+@rule("X501", "heading-style-on-body-text", Category.CORRECTION,
+      "A paragraph of body text formatted with a heading style.",
+      "Word builds the navigation pane, the table of contents and a "
+      "journal's section structure from heading styles. A paragraph of "
+      "body text in a heading style puts the whole paragraph into all "
+      "three, and a heading run into its first paragraph (common after "
+      "converting a PDF) hides where the section starts.",
+      source="Word")
+def x501_heading_style_on_body(doc, document: Document):
+    if document.kind != "word":
+        return
+    for item in document.structure:
+        if item.kind != "styled_body":
+            continue
+        text = document.original[item.start:item.end]
+        n = len(text.split())
+        a, b = _anchor(document, item.start, item.end, limit=60)
+        if item.label == "run-in":
+            msg = ("The heading runs into its first paragraph: "
+                   f"{n} words carry the heading style. Put the heading on "
+                   "its own line and give the text a body style.")
+        else:
+            msg = (f"This paragraph has a heading style but holds {n} words "
+                   "of body text — give it a body style (or make it a "
+                   "table, if it is one).")
+        yield Suggestion(message=msg, start=a, end=b)

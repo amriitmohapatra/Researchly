@@ -41,10 +41,32 @@ def get_nlp(model: str = "en_core_web_sm"):
     with _NLP_LOCK:
         if _NLP is None:
             import spacy
+            from spacy.language import Language
+            if not Language.has_factory("researchly_paragraphs"):
+                Language.component("researchly_paragraphs",
+                                   func=paragraph_breaks)
             nlp = spacy.load(model)
+            nlp.add_pipe("researchly_paragraphs", before="parser")
             nlp.max_length = MAX_LENGTH
             _NLP = nlp
     return _NLP
+
+
+def paragraph_breaks(doc):
+    """A blank line ends a sentence (P33). A Word paragraph, a TeX or
+    Markdown paragraph and a masked heading, table or display equation all
+    leave one; without this the parser ran title-page lines, table rows and
+    the sentence after a heading together into 100-word "sentences".
+
+    Unless the next line carries on in lower case: text from a PDF has a
+    blank line at every page break ("about 70% of\n\nall cases"), and a
+    sentence resumes after a displayed equation ("...\n\nwhere x is")."""
+    for tok in doc[:-1]:
+        if tok.is_space and tok.text.count("\n") >= 2:
+            nxt = doc[tok.i + 1].text
+            if not (nxt[0].islower() or nxt[0] in ",;:)(-\u2013\u2014"):
+                doc[tok.i + 1].is_sent_start = True
+    return doc
 
 
 @dataclass
