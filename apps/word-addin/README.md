@@ -1,4 +1,133 @@
-# Researchly for Word (local add-in)
+# Researchly for Word
+
+Two add-ins live here:
+
+- **Hosted (S3, the one to use):** `manifest.hosted.xml` / `manifest.json`.
+  The sidebar is served over HTTPS by the web app
+  (`https://researchly-chi.vercel.app/word`, code in `apps/web`) and checks
+  with the hosted engine, or with this folder's `server.py` when you choose
+  "This computer". See **Hosted add-in (S3)** below.
+- **Local (maintenance only):** `manifest.xml` + `server.py` + `web/`, as
+  described from "Requirements" on. It keeps working unchanged.
+
+## Hosted add-in (S3)
+
+```
+Word sidebar  https://researchly-chi.vercel.app/word  (apps/web, Vercel)
+     │ Office.js: paragraphs, styles, table flags
+     ├── "Researchly cloud" ──▶ engine /v1/analyze-word (Cloud Run)
+     └── "This computer"   ──▶ http://localhost:3517/v1/analyze-word (server.py)
+```
+
+Document text goes from Word straight to the engine you chose. It never
+goes to Vercel. Nothing in the document changes unless you press **Apply in
+document** on one card; that change is a tracked change wherever your Word
+supports it (WordApi 1.4: Word 2021 / Microsoft 365), and a direct edit
+(undo with Cmd-Z) otherwise.
+
+### Owner steps (one time)
+
+1. **Apply the S3 database change.** In Supabase, open **SQL Editor → New
+   query**, paste `supabase/migrations/20261004120000_s3_mode.sql` (from
+   `main`, **Copy raw file**), and **Run**. It adds the Draft/Revise column.
+   Running it twice is harmless. Until it is applied, Draft/Revise is still
+   remembered on each computer, and the pane says it could not be saved to
+   the account.
+2. **Give Supabase an email sender (custom SMTP).** Supabase only lets you
+   edit email templates once the project sends mail through your own
+   server, and its built-in sender only reaches members of your Supabase
+   team (a few emails an hour), so this is needed before anyone else can
+   sign in anyway. Free option, through Gmail:
+   - Google Account → **Security** → turn on **2-Step Verification**.
+   - Open <https://myaccount.google.com/apppasswords>, create an app
+     password named "Supabase Researchly", copy the 16 letters.
+   - Supabase → **Authentication → Emails → SMTP Settings** (or **Set up
+     SMTP** on a template page) → enable custom SMTP: sender email = your
+     Gmail address, sender name = `Researchly`, host = `smtp.gmail.com`,
+     port = `587`, username = your Gmail address, password = the app
+     password. Save.
+   The app password goes into Supabase only (never into chat, the repo or
+   an `.env`); revoke it at the same page if it ever leaks. Gmail sends up
+   to about 500 emails a day, plenty for the beta.
+3. **Put the sign-in code in the email.** Sign-in inside Word uses a code,
+   because a link would open your browser, not Word. In Supabase,
+   **Authentication → Emails → Templates → Magic Link**, add the code to
+   the message body, for example (do the same in the **Confirm signup**
+   template, which is what someone signing in for the first time receives):
+
+   ```html
+   <p>Your Researchly sign-in code: <strong>{{ .Token }}</strong></p>
+   <p>Or follow this link to sign in on the website: <a href="{{ .ConfirmationURL }}">Sign in</a></p>
+   ```
+
+   Save. The code is 6 digits by default (**Authentication → Sign In /
+   Providers → Email → Email OTP Length** can make it up to 10; the pane accepts 6 to 10).
+4. **Let the engine accept the website.** The engine's
+   `RESEARCHLY_ALLOWED_ORIGINS` must include `https://researchly-chi.vercel.app`
+   (exactly; no trailing slash). It already does if you entered that address
+   in **allowed_origins** when running **Deploy engine** (docs/deploy.md
+   step 5). The taskpane is a page on the same site, so nothing else is
+   needed.
+5. **Deploy the website** as usual (merge to `main`; Vercel builds it).
+   Check that `https://researchly-chi.vercel.app/word` opens: in a normal
+   browser it says "Open Researchly from Word".
+
+### Sideload on a Mac
+
+1. In Terminal, from this folder: `bash install-mac.sh hosted`. (By hand:
+   copy `manifest.hosted.xml` into
+   `~/Library/Containers/com.microsoft.Word/Data/Documents/wef/`, creating
+   the `wef` folder if it is missing.)
+2. **Fully quit Word with Cmd-Q** (closing the window is not enough: Word
+   caches add-ins), then reopen it and open a document.
+3. **Home tab → Researchly.** If the button is not there: **Insert → Add-ins
+   → My Add-ins** (or the Add-ins button) → **Developer Add-ins** →
+   Researchly.
+4. In the sidebar: **Check document**. Sign in from the top right (your
+   email, then the code from the email) to keep muted rules, your
+   dictionary and Draft/Revise in step with the website.
+
+The local add-in (`manifest.xml`) has a different Id, so both can be
+installed at once; they show as two "Researchly" entries (the local one's
+provider is "Researchly (local)").
+
+`manifest.json` is the same add-in as a unified (JSON) manifest, for
+Microsoft 365 deployment later (AppSource generates the XML for Mac Word
+from it). Its package needs the two icons in `assets-hosted/` next to it.
+
+### "This computer": check without sending anything
+
+For text that must not leave your Mac (ADR-02 local mode):
+
+1. Start the local engine: `python3.10 server.py` in this folder (it needs
+   the same Python set-up as the CLI). Leave it running.
+2. In the sidebar, open **Settings** (bottom) → **Checking engine** →
+   **This computer**. The privacy line under **Check document** changes to
+   "Checked on this computer. Nothing is sent over the network."
+3. If it says "Researchly is not running on this computer", the server is
+   not started (or not on port 3517).
+
+The choice is remembered on this computer. Signed in, your muted rules are
+sent along to the local engine; your sign-in token is not. The server
+answers only pages from `https://researchly-chi.vercel.app` (and the web
+app's dev server), and replies to the browser's private-network check that
+lets an HTTPS page talk to `localhost`.
+
+> **If "This computer" cannot connect although the server runs:** some
+> Word builds' web views treat `http://localhost` from an HTTPS page as
+> mixed content, and new Chrome-based views can ask for "local network
+> access" permission first. Neither could be tried in Word itself before
+> release. Tell us (Report a problem, at the bottom of the sidebar), and
+> use the local add-in (`manifest.xml`) meanwhile.
+
+### Reporting a problem
+
+The sidebar's **Report a problem** link opens an email to the maintainer.
+Describe what happened; please don't paste text from your document.
+
+---
+
+# The local add-in (maintenance only)
 
 The Researchly checker inside Microsoft Word: a sidebar that reads your
 document, sends it to a **local** server on your own computer (nothing is

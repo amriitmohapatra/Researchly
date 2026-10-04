@@ -29,9 +29,20 @@ export type SourceInfo = S["SourceInfo"];
 export type SourceFormat = S["SourceFormat"];
 export type Segment = S["Segment"];
 export type StructureItem = S["StructureItem"];
+export type Mode = S["Mode"];
+export type Scope = S["Scope"];
+export type WordParagraph = S["WordParagraph"];
+export type AnalyzeWordRequest = S["AnalyzeWordRequest"];
+export type AnalyzeWordResponse = S["AnalyzeWordResponse"];
+export type WordSuggestion = S["WordSuggestion"];
+export type WordLocation = S["WordLocation"];
+export type Coverage = S["Coverage"];
 
 /** Mirrors schemas.MAX_CONTENT_CHARS; checked client-side for usability only. */
 export const MAX_CONTENT_CHARS = 1_000_000;
+
+/** Mirrors schemas.MAX_WORD_PARAGRAPHS (/v1/analyze-word). */
+export const MAX_WORD_PARAGRAPHS = 50_000;
 
 /**
  * The engine's default upload cap for /v1/analyze-file (RESEARCHLY_MAX_UPLOAD_BYTES,

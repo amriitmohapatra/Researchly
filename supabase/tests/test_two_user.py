@@ -39,7 +39,8 @@ from psycopg.conninfo import make_conninfo  # noqa: E402
 
 HERE = pathlib.Path(__file__).resolve().parent
 SHIM = HERE / "shim.sql"
-MIGRATION = HERE.parent / "migrations" / "20261003120000_s2_settings.sql"
+# Every migration, applied in name (date) order, as the owner applies them.
+MIGRATIONS = sorted((HERE.parent / "migrations").glob("*.sql"))
 
 USER_A = uuid.UUID("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")
 USER_B = uuid.UUID("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb")
@@ -49,6 +50,7 @@ DEFAULT_CONFIG = {
     "disabled_rules": [],
     "show_preferences": False,
     "locale": "en-US",
+    "mode": "revise",
     "dictionary": [],
 }
 
@@ -61,7 +63,8 @@ def _apply_migration(conn):
     """Apply as the stand-in for Supabase's `postgres` role (a non-superuser)."""
     conn.execute("set role migration_owner")
     try:
-        conn.execute(MIGRATION.read_text(encoding="utf-8"))
+        for migration in MIGRATIONS:
+            conn.execute(migration.read_text(encoding="utf-8"))
     finally:
         conn.execute("reset role")
 
@@ -266,7 +269,7 @@ def test_each_user_sees_only_their_own_rows(pg):
         assert sorted(config.pop("dictionary")) == ["Stan", "brms"]
         assert config == {
             "disabled_rules": ["S001", "LT001"], "show_preferences": True,
-            "locale": "en-GB"}
+            "locale": "en-GB", "mode": "revise"}
 
     with as_user(pg, USER_B) as cur:
         cur.execute("select user_id from public.user_settings")
@@ -275,7 +278,7 @@ def test_each_user_sees_only_their_own_rows(pg):
         assert cur.fetchall() == [(USER_B, "NumPyro")]
         assert my_config(cur) == {
             "disabled_rules": ["AB802"], "show_preferences": False,
-            "locale": "en-US", "dictionary": ["NumPyro"]}
+            "locale": "en-US", "mode": "revise", "dictionary": ["NumPyro"]}
 
 
 def test_authenticated_without_sub_sees_nothing_and_cannot_write(pg):
@@ -785,3 +788,18 @@ def test_concurrent_mutes_are_both_kept(db_dsn, pg):
         rules = pg.execute("select disabled_rules from public.user_settings where user_id = %s",
                            (USER_A,)).fetchone()[0]
         assert sorted(rules) == ["G101", "W204"]
+
+
+# ---------------------------------------------------------------------------
+# S3: Draft / Revise mode
+# ---------------------------------------------------------------------------
+
+def test_mode_is_saved_per_user_and_checked(pg):
+    with as_user(pg, USER_A) as cur:
+        cur.execute("insert into public.user_settings (mode) values ('draft')")
+        assert my_config(cur)["mode"] == "draft"
+    with as_user(pg, USER_B) as cur:
+        assert my_config(cur)["mode"] == "revise"
+    with pytest.raises(errors.CheckViolation):
+        with as_user(pg, USER_A) as cur:
+            cur.execute("update public.user_settings set mode = 'chapter'")

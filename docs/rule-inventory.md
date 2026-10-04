@@ -17,6 +17,8 @@ Every actionable heuristic in the writing guide, converted into a typed rule ent
 
 **Status codes:** `MVP` = in the v0.1 Python prototype (deterministic, spaCy/regex). `DET` = deterministic, feasible next. `LLM` = needs LLM assistance. `RES` = research-grade (see research/03).
 
+**Scope and Draft mode (S3, 2026-10-04):** every rule declares a scope. *Sentence* rules judge the sentence in front of the writer; *document* rules need the whole document. Draft mode (P1) shows sentence-level rules only and says how many document-level suggestions it held back; Revise shows everything. Document-level today: X101–X104, X202, X301, X401, X501, F601, F612, F613, N101, W211, D902, AB802 (`GET /v1/rules` reports each rule's `scope`).
+
 **Section-conditioning:** rules may fire differently by IMRaD section (detected from headings in v0.1). This is the defining Researchly behavior — the same sentence gets different advice in Methods vs Discussion.
 
 ---

@@ -1805,3 +1805,250 @@ main:focus {
     min-width: 9rem;
   }
 }
+
+/* ---------- Word taskpane (/word, S3) ----------
+ * Word's sidebar is narrow (about 320 to 400px) and its height is the
+ * window's. One column, the same tokens, cards and notices as the site;
+ * smaller paddings so the cards get the width.
+ */
+
+.tp {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.tp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.tp-brand {
+  font-size: 1.05rem;
+}
+.tp-account {
+  min-width: 0;
+  max-width: 60%;
+  font-size: 0.85rem;
+  color: var(--ink-2);
+  text-align: right;
+}
+.tp-account-email {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tp-account-placeholder {
+  display: inline-block;
+  width: 4.5rem;
+  height: 36px;
+}
+.tp-main {
+  flex: 1;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding: 12px;
+}
+.tp-main .panel {
+  padding: 12px;
+}
+.tp-main .notice {
+  margin-top: 0;
+}
+.tp-connecting {
+  padding: 8px 0;
+}
+.tp-outside p + p,
+.tp-outside .panel-title + p {
+  margin-top: 8px;
+}
+.tp-check {
+  display: grid;
+  gap: 12px;
+}
+.tp-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.tp-check-btn {
+  flex: 1 1 auto;
+}
+.tp-check .privacy-line {
+  align-items: flex-start;
+  font-size: 0.9rem;
+}
+.tp-check .privacy-line svg {
+  flex: none;
+  margin-top: 4px;
+}
+
+/* Draft / Revise: two choices in one box, the chosen one filled. */
+.tp-mode {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.tp-mode .help {
+  margin-top: 6px;
+}
+.segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 4px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.segment {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  cursor: pointer;
+  font-weight: 600;
+  background: var(--surface);
+  color: var(--ink);
+}
+.segment + .segment {
+  border-left: 1px solid var(--line-strong);
+}
+.segment input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+.segment.is-on {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.segment:has(input:focus-visible) {
+  outline: 3px solid var(--focus);
+  outline-offset: -3px;
+}
+
+.tp-results {
+  display: grid;
+  gap: 10px;
+}
+.tp-results[aria-busy="true"] {
+  opacity: 0.6;
+}
+.tp-results .results-title {
+  font-size: 1.15rem;
+}
+.tp-results-meta {
+  font-size: 0.9rem;
+}
+.tp-notes {
+  display: grid;
+  gap: 6px;
+}
+.tp-note {
+  font-size: 0.9rem;
+  color: var(--ink-2);
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+.tp-cards .card {
+  padding: 10px 12px 6px;
+  cursor: pointer;
+}
+.wcard.is-applied {
+  border-left-style: dotted;
+}
+.wcard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.wcard-note {
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  border: 1px solid var(--info-line);
+  background: var(--info-bg);
+}
+.wcard-note-problem {
+  border-color: var(--error-line);
+  background: var(--error-bg);
+}
+
+.tp-settings {
+  padding: 0;
+}
+.tp-main .tp-settings {
+  padding: 0;
+}
+.tp-settings > summary {
+  padding: 10px 12px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 600;
+}
+.tp-settings-body {
+  display: grid;
+  gap: 12px;
+  padding: 0 12px 12px;
+}
+.tp-engine {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.tp-radio {
+  align-items: flex-start;
+  padding: 6px 0;
+}
+.tp-radio input {
+  margin-top: 3px;
+  flex: none;
+}
+.tp-radio-title {
+  display: block;
+  font-weight: 600;
+}
+.tp-account-settings {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+.tp-signin-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 8px;
+}
+.tp-code {
+  font-family: var(--mono);
+  letter-spacing: 0.08em;
+  max-width: 14rem;
+}
+.tp-footer {
+  padding: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 0.85rem;
+  color: var(--ink-2);
+}
+
+/* The site footer's contact line. */
+.footer-report {
+  margin-top: 8px;
+}

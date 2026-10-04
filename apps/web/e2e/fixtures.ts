@@ -62,6 +62,8 @@ export const happyResponse = {
   health: healthy,
   engine,
   elapsed_ms: 412,
+  mode: "revise",
+  hidden_by_mode: 0,
 } satisfies AnalyzeResponse;
 
 /** show_preferences: true */

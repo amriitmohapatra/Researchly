@@ -6,6 +6,8 @@ import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { degradedGrammarResponse, withPreferencesResponse, happyResponse, SAMPLE_TEXT } from "./fixtures";
 import { json, mockEngine, paste } from "./helpers";
+import { ENGINE } from "./fixtures";
+import { DEGRADED, fakeOffice, mockWordEngine } from "./word-fixtures";
 
 const DIR = process.env.SHOTS_DIR ?? "test-results/shots";
 
@@ -54,3 +56,21 @@ test("mobile 375 idle", async ({ page }) => {
   await page.goto("/");
   await page.screenshot({ path: `${DIR}/mobile-375-idle.png`, fullPage: true });
 });
+
+for (const scheme of ["light", "dark"] as const) {
+  test(`word taskpane 360 (${scheme})`, async ({ page }) => {
+    await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
+    await page.setViewportSize({ width: 360, height: 900 });
+    await fakeOffice(page);
+    await mockWordEngine(page, ENGINE, { health: DEGRADED });
+    await page.goto("/word");
+    await page.screenshot({ path: `${DIR}/word-idle-${scheme}.png`, fullPage: true });
+    await page.getByTestId("mode-draft").check();
+    await page.getByTestId("check-document").click();
+    await expect(page.getByTestId("word-card").first()).toBeVisible();
+    await page.getByTestId("word-card").first().getByTestId("apply-fix").click();
+    await page.getByTestId("word-card").nth(3).getByTestId("select-in-document").click();
+    await page.getByTestId("tp-settings").locator("summary").click();
+    await page.screenshot({ path: `${DIR}/word-results-${scheme}.png`, fullPage: true });
+  });
+}

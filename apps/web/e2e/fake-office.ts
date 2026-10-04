@@ -1,0 +1,213 @@
+/**
+ * A fake Office.js for tests: the slice of the Word API the taskpane uses
+ * (lib/word/office.ts), over an in-memory document.
+ *
+ * One implementation serves both suites:
+ * - e2e: `fakeOfficeScript()` is served in place of Microsoft's office.js by
+ *   page.route, so the page loads it exactly as it loads the real one (and
+ *   the route's CSP must allow it);
+ * - unit: `installFakeOffice({}, config)` builds the globals in Node.
+ *
+ * `installFakeOffice` must stay self-contained (no imports, no outer
+ * variables): it is sent to the browser as its own source text.
+ *
+ * Faithful where it matters:
+ * - changes are queued and applied at `context.sync()`;
+ * - setting `changeTrackingMode` without WordApi 1.4 does not throw, it
+ *   fails the whole batch at sync and nothing in it is applied (the bug that
+ *   once silently killed every Apply in the old add-in);
+ * - `search` finds non-overlapping matches, left to right, like Word.
+ */
+
+export interface FakeParagraph {
+  text: string;
+  style?: string;
+  styleBuiltIn?: string;
+  tableNestingLevel?: number;
+}
+
+export interface FakeWordConfig {
+  paragraphs: FakeParagraph[];
+  /** Office.onReady's host; null = opened outside Office. Default "Word". */
+  host?: string | null;
+  /** WordApi 1.4 (tracked changes, fields). Default true. */
+  api14?: boolean;
+  /** The writer's Track Changes setting before any apply. Default "Off". */
+  trackingMode?: string;
+  /** Paragraph indexes whose ranges sit inside a Word field (a citation). */
+  fieldParagraphs?: number[];
+  /** Mimic office.js removing history.pushState/replaceState. */
+  nullHistory?: boolean;
+}
+
+export interface FakeEdit {
+  paragraph: number;
+  start: number;
+  end: number;
+  before: string;
+  text: string;
+  tracked: boolean;
+}
+
+export interface FakeWordState {
+  paragraphs: FakeParagraph[];
+  selection: { paragraph: number; start: number; end: number; text: string } | null;
+  trackingMode: string;
+  edits: FakeEdit[];
+  failedBatches: number;
+  /** Every changeTrackingMode assignment, in order. */
+  trackingWrites: string[];
+}
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export function installFakeOffice(target: any, config: FakeWordConfig): FakeWordState {
+  const api14 = config.api14 !== false;
+  const state: FakeWordState = {
+    paragraphs: config.paragraphs.map((p) => ({ ...p })),
+    selection: null,
+    trackingMode: config.trackingMode ?? "Off",
+    edits: [],
+    failedBatches: 0,
+    trackingWrites: [],
+  };
+  target.__fakeWord = state;
+  if (config.nullHistory && target.history) {
+    target.history.pushState = null;
+    target.history.replaceState = null;
+  }
+
+  function versionAtMost(v: string | undefined, max: string): boolean {
+    const a = (v ?? "1.1").split(".").map(Number);
+    const b = max.split(".").map(Number);
+    for (let i = 0; i < 2; i++) {
+      if ((a[i] ?? 0) !== (b[i] ?? 0)) return (a[i] ?? 0) < (b[i] ?? 0);
+    }
+    return true;
+  }
+
+  function run(batch: (ctx: any) => Promise<any>) {
+    let ops: (() => void)[] = [];
+    let poisoned = false;
+
+    function makeRange(pi: number, start: number, end: number) {
+      const r: any = {
+        pi,
+        start,
+        end,
+        text: state.paragraphs[pi]!.text.slice(start, end),
+        load() {
+          r.text = state.paragraphs[r.pi]!.text.slice(r.start, r.end);
+        },
+        select() {
+          ops.push(() => {
+            state.selection = { paragraph: r.pi, start: r.start, end: r.end, text: state.paragraphs[r.pi]!.text.slice(r.start, r.end) };
+          });
+        },
+        insertText(text: string, where: string) {
+          if (where !== "Replace") throw new Error(`fake office: unsupported insert location ${where}`);
+          ops.push(() => {
+            const p = state.paragraphs[r.pi]!;
+            const before = p.text.slice(r.start, r.end);
+            p.text = p.text.slice(0, r.start) + text + p.text.slice(r.end);
+            state.edits.push({ paragraph: r.pi, start: r.start, end: r.end, before, text, tracked: state.trackingMode === "TrackAll" });
+            r.end = r.start + text.length;
+            r.text = text;
+          });
+          return r;
+        },
+      };
+      if (api14) {
+        const inField = (config.fieldParagraphs ?? []).includes(pi);
+        r.fields = { items: inField ? [{ code: "ADDIN ZOTERO_ITEM" }] : [], load() {} };
+      }
+      return r;
+    }
+
+    function makeParagraph(pi: number) {
+      const p: FakeParagraph = state.paragraphs[pi]!;
+      return {
+        text: p.text,
+        style: p.style ?? "Normal",
+        styleBuiltIn: p.styleBuiltIn ?? "Other",
+        tableNestingLevel: p.tableNestingLevel ?? 0,
+        search(needle: string, options: { matchCase?: boolean }) {
+          const hay = options?.matchCase ? p.text : p.text.toLowerCase();
+          const n = options?.matchCase ? needle : needle.toLowerCase();
+          const items: any[] = [];
+          if (n) for (let i = hay.indexOf(n); i >= 0; i = hay.indexOf(n, i + n.length)) items.push(makeRange(pi, i, i + n.length));
+          return { items, load() {} };
+        },
+      };
+    }
+
+    const paragraphs = {
+      items: state.paragraphs.map((_p, i) => makeParagraph(i)),
+      load() {
+        paragraphs.items = state.paragraphs.map((_p, i) => makeParagraph(i));
+      },
+    };
+
+    const document: any = {
+      body: { paragraphs },
+      load() {},
+    };
+    Object.defineProperty(document, "changeTrackingMode", {
+      get: () => state.trackingMode,
+      set: (mode: string) => {
+        state.trackingWrites.push(mode);
+        if (!api14) {
+          poisoned = true; // no error now: the batch fails at sync
+          return;
+        }
+        ops.push(() => {
+          state.trackingMode = mode;
+        });
+      },
+    });
+
+    const ctx = {
+      document,
+      async sync() {
+        const pending = ops;
+        ops = [];
+        if (poisoned) {
+          poisoned = false;
+          state.failedBatches++;
+          throw new Error("GeneralException: the requested operation is not supported in this Word version");
+        }
+        for (const op of pending) op();
+      },
+    };
+    return Promise.resolve().then(() => batch(ctx));
+  }
+
+  const host = config.host === undefined ? "Word" : config.host;
+  target.Office = {
+    HostType: { Word: "Word" },
+    onReady(cb?: (info: { host: string | null; platform: string | null }) => void) {
+      const info = { host, platform: host ? "PC" : null };
+      if (cb) cb(info);
+      return Promise.resolve(info);
+    },
+    context: {
+      requirements: {
+        isSetSupported(name: string, version?: string) {
+          if (name !== "WordApi") return false;
+          return versionAtMost(version, api14 ? "1.4" : "1.3");
+        },
+      },
+    },
+  };
+  target.Word = {
+    run,
+    InsertLocation: { replace: "Replace" },
+    ChangeTrackingMode: { off: "Off", trackAll: "TrackAll", trackMineOnly: "TrackMineOnly" },
+  };
+  return state;
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+/** The fake as an office.js response body: it reads its config from `window.__fakeWordConfig`. */
+export function fakeOfficeScript(): string {
+  return `(${installFakeOffice.toString()})(window, window.__fakeWordConfig || { paragraphs: [] });`;
+}

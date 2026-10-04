@@ -161,7 +161,11 @@ describe("sign-in messages", () => {
     expect(signInErrorMessage({ status: 422, code: "otp_disabled" })).toMatch(/can't be sent to this address/);
     expect(signInErrorMessage({ status: 400, code: "email_address_not_authorized" })).toMatch(/can't be sent/);
     expect(signInErrorMessage({ name: "AuthRetryableFetchError", status: 0 })).toMatch(/connection/);
-    expect(signInErrorMessage({ status: 500 })).toMatch(/few minutes/);
+    expect(signInErrorMessage({ status: 500 })).toMatch(/could not send the email/);
+    // supabase-js wraps 5xx replies as retryable fetch errors too: Supabase
+    // answered, so it is not the writer's connection (SMTP refused, say).
+    expect(signInErrorMessage({ name: "AuthRetryableFetchError", status: 500 })).toMatch(/could not send the email/);
+    expect(signInErrorMessage({ name: "AuthRetryableFetchError", status: 504 })).not.toMatch(/connection/);
     expect(signInErrorMessage({})).toMatch(/could not be sent/);
   });
   it("explains expired or reused links", () => {

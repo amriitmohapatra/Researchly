@@ -224,8 +224,47 @@ working as it does now, without sign-in. Steps 8.1–8.4 can be done any time;
 > **Sign-in emails during the private beta.** Supabase's built-in email
 > sender only delivers to members of your Supabase organisation, about two
 > emails an hour. That is enough for you to test. Before anyone else can
-> sign in, Researchly needs its own email sender (custom SMTP, planned for
-> S6).
+> sign in, Researchly needs its own email sender (custom SMTP; set up in
+> S3, step 9.2, because the Word add-in's sign-in code needs it).
+
+---
+
+## 9. The Word add-in, hosted (about 10 minutes, S3)
+
+The Word sidebar is now a page of the website (`/word`), so Vercel deploys
+it with everything else. Three one-time steps, then sideloading:
+
+1. **Database.** Supabase **SQL Editor → New query**, paste
+   `supabase/migrations/20261004120000_s3_mode.sql` (from `main`, **Copy raw
+   file**), **Run**. It adds the Draft/Revise setting. Safe to run twice.
+2. **Email sender, then the sign-in code in the email.** Supabase only
+   lets you edit templates with custom SMTP (and its built-in sender only
+   reaches your Supabase team). Set up Gmail SMTP as in
+   `apps/word-addin/README.md`, "Hosted add-in (S3)" step 2 (an app
+   password from <https://myaccount.google.com/apppasswords>; host
+   `smtp.gmail.com`, port 587). Then, inside Word, sign-in uses a code typed
+   into the sidebar. **Authentication → Emails → Templates**: in **Magic
+   Link** and in **Confirm signup**, add a line such as
+   `Your Researchly sign-in code: <strong>{{ .Token }}</strong>` and save.
+   Keep the existing link too: it still signs you in on the website.
+3. **Engine origin.** The engine's allowed origins (step 5.3,
+   `RESEARCHLY_ALLOWED_ORIGINS`) must include
+   `https://researchly-chi.vercel.app`. If that is the address you entered,
+   nothing changes; otherwise run **Deploy engine** again with it.
+4. **Sideload on your Mac:** `apps/word-addin/README.md`, "Hosted add-in
+   (S3)". In short: `bash apps/word-addin/install-mac.sh hosted`, quit Word
+   with Cmd-Q, reopen, Home tab → Researchly.
+
+"This computer" mode needs no deploy: it talks to `server.py` on your own
+Mac (`apps/word-addin`), which already allows the website's address.
+
+> **Moving to a custom domain later** also means updating both Word
+> manifests (`manifest.hosted.xml`, `manifest.json`: every
+> `researchly-chi.vercel.app`), `ALLOWED_ORIGINS` in
+> `apps/word-addin/server.py`, and sideloading the manifest again.
+
+Problems reported from the website's footer or the sidebar's **Report a
+problem** link arrive by email at the maintainer's address.
 
 ---
 
@@ -246,5 +285,5 @@ working as it does now, without sign-in. Steps 8.1–8.4 can be done any time;
 |---|---|
 | Avoid cold starts in term time | In `services/engine/deploy/cloudrun.service.yaml` set `minScale: "1"`, then redeploy the engine (~$10–15/month) |
 | Stop everything | Cloud Run → `researchly-engine` → Delete; Vercel → Project → Settings → Delete |
-| Move to a custom domain | Add it in Vercel → Domains, then redeploy the engine with the new origin in `allowed_origins`, and update Supabase's Site URL and Redirect URLs (step 8.3) |
+| Move to a custom domain | Add it in Vercel → Domains, then redeploy the engine with the new origin in `allowed_origins`, update Supabase's Site URL and Redirect URLs (step 8.3), and the Word manifests (step 9) |
 | Turn accounts off | Delete the two Supabase variables in GitHub and Vercel, then redeploy both; the site returns to paste-only without sign-in |

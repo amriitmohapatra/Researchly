@@ -83,7 +83,8 @@ def _text_mentions(st: Structure):
       "cited is either missing its sentence in the Results or not needed. "
       "(ICMJE Recommendations: number figures and tables in the order the "
       "text first cites them.)",
-      source="ICMJE")
+      source="ICMJE",
+      scope="document")
 def x101_float_not_cited(doc, document: Document):
     st = structure_of(document)
     cited = {id(f) for _, fs in _text_mentions(st) for f in fs}
@@ -113,7 +114,8 @@ def x101_float_not_cited(doc, document: Document):
       "them, so a reader meets Figure 2 before Figure 3. When the text "
       "cites Figure 3 first, either the numbering or the order of the "
       "argument needs changing. (ICMJE Recommendations.)",
-      source="ICMJE")
+      source="ICMJE",
+      scope="document")
 def x102_cited_out_of_order(doc, document: Document):
     st = structure_of(document)
     seen: set = set()
@@ -140,7 +142,8 @@ def x102_cited_out_of_order(doc, document: Document):
       "a 'Figure 5' in a document with four figures sends the reader "
       "nowhere. Usually a typo in the label or a figure that was removed. "
       "(ICMJE Recommendations.)",
-      source="ICMJE")
+      source="ICMJE",
+      scope="document")
 def x103_broken_reference(doc, document: Document):
     st = structure_of(document)
     numbered = {k: {f.number for f in st.floats
@@ -188,7 +191,8 @@ def x103_broken_reference(doc, document: Document):
       "figure itself; placed earlier, it interrupts the paragraph before "
       "it with something not yet introduced. (ICMJE Recommendations.) "
       "Word documents only: LaTeX places floats itself.",
-      source="ICMJE")
+      source="ICMJE",
+      scope="document")
 def x104_before_first_citation(doc, document: Document):
     if document.kind != "word":
         return
@@ -238,7 +242,8 @@ _WORDS = re.compile(r"[A-Za-z][A-Za-z'-]*")
       "many read nothing else. A caption should state the figure's point "
       "and define what it shows, so the figure can be read unaided; a "
       "label of two or three words cannot. (Guide §9.7.)",
-      source="§9.7")
+      source="§9.7",
+      scope="document")
 def x202_caption_too_short(doc, document: Document):
     st = structure_of(document)
     for f in st.floats:
@@ -270,7 +275,8 @@ _NUMBERED_ENV = re.compile(
       "equation the text never refers to back is often one that floats in "
       "unannounced or is never interpreted; if it is, unnumber it "
       "(equation*). (Guide §9.2.)",
-      source="§9.2")
+      source="§9.2",
+      scope="document")
 def x301_equation_not_referenced(doc, document: Document):
     if document.kind != "latex":
         return
@@ -375,7 +381,8 @@ def _in_table(value: float, decimals: int, table_text: str) -> bool:
       "usually a typo, a value from an older run, or a number from "
       "another table. Derived numbers (differences, ratios) are worth a "
       "word saying so. (Guide §6: let the numbers carry the weight.)",
-      source="§6")
+      source="§6",
+      scope="document")
 def x401_number_not_in_table(doc, document: Document):
     st = structure_of(document)
     floats_cited: dict = {}
@@ -442,7 +449,8 @@ _LEVEL_BEFORE = re.compile(r"(?:\bp|\bP|α|alpha|level of)\s*[<>=≤≥]?\s*$")
       "body text in a heading style puts the whole paragraph into all "
       "three, and a heading run into its first paragraph (common after "
       "converting a PDF) hides where the section starts.",
-      source="Word")
+      source="Word",
+      scope="document")
 def x501_heading_style_on_body(doc, document: Document):
     if document.kind != "word":
         return

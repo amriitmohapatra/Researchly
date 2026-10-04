@@ -80,7 +80,7 @@ export function checkBoundary(root) {
       flag(f, "no sessionStorage, IndexedDB or cookies in S1: the document is never persisted");
     }
     if (/\blocalStorage\b/.test(src) && f !== "lib/prefs.ts") {
-      flag(f, "localStorage is only for the format preference, in lib/prefs.ts");
+      flag(f, "localStorage is only for per-viewer preferences (format; the Word add-in's engine and Draft/Revise), in lib/prefs.ts");
     }
     if (/dangerouslySetInnerHTML|\binnerHTML\b|insertAdjacentHTML/.test(src)) {
       flag(f, "never render HTML from data; document text is rendered as text");

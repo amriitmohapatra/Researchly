@@ -92,10 +92,12 @@ export interface SentRequest {
 }
 
 export interface SupabaseState {
-  settings: { disabled_rules: string[]; show_preferences: boolean; locale: string } | null;
+  settings: { disabled_rules: string[]; show_preferences: boolean; locale: string; mode?: string } | null;
   words: string[];
   /** Response for POST /auth/v1/otp (default: 200 {}). */
   otp: { status: number; body: unknown } | null;
+  /** Response for POST /auth/v1/verify (the emailed code, S3). Default: a session when the token is "12345678". */
+  verify: { status: number; body: unknown } | null;
   /** Make the refresh-token grant fail (a revoked session). */
   refreshFails: boolean;
   /** Every request this browser sent to Supabase, for assertions. */
@@ -104,7 +106,7 @@ export interface SupabaseState {
 
 /** Mock Supabase Auth and the two settings tables. */
 export async function mockSupabase(page: Page, init: Partial<SupabaseState> = {}): Promise<SupabaseState> {
-  const state: SupabaseState = { settings: null, words: [], otp: null, refreshFails: false, sent: [], ...init };
+  const state: SupabaseState = { settings: null, words: [], otp: null, verify: null, refreshFails: false, sent: [], ...init };
   await page.route(`${SUPABASE_URL}/**`, async (route) => {
     const req = route.request();
     if (req.method() === "OPTIONS") return reply(route, 204);
@@ -126,6 +128,13 @@ export async function mockSupabase(page: Page, init: Partial<SupabaseState> = {}
       return reply(route, 200, session(grant === "pkce" ? "pkce" : "refreshed"));
     }
     if (p === "/auth/v1/otp") return reply(route, state.otp?.status ?? 200, state.otp?.body ?? {});
+    if (p === "/auth/v1/verify") {
+      if (state.verify) return reply(route, state.verify.status, state.verify.body);
+      const { token } = JSON.parse(req.postData() || "{}") as { token?: string };
+      return token === "12345678"
+        ? reply(route, 200, session("otp"))
+        : reply(route, 403, { code: 403, error_code: "otp_expired", msg: "Token has expired or is invalid" });
+    }
     if (p === "/auth/v1/logout") return reply(route, 204);
     if (p === "/auth/v1/user") return reply(route, 200, session("initial").user);
 
@@ -197,13 +206,14 @@ export async function mockEngineAuth(page: Page, handler: EngineHandler, rules: 
     if (req.method() === "OPTIONS") return reply(route, 204);
     const path = new URL(req.url()).pathname;
     if (path === "/v1/rules") return reply(route, 200, { rules });
+    if (path === "/v1/health") return reply(route, 200, { status: "ok", tiers: [], engine: { service_version: "0", core_version: "0", rules_loaded: 0 } });
     const buf = req.postDataBuffer();
     const headers = req.headers();
     const call: EngineCall = {
       path,
       authorization: headers["authorization"],
       headers,
-      json: path === "/v1/analyze" ? req.postDataJSON() : null,
+      json: path === "/v1/analyze" || path === "/v1/analyze-word" ? req.postDataJSON() : null,
       bytes: buf?.length ?? 0,
     };
     calls.push(call);

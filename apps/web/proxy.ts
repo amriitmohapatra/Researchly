@@ -7,7 +7,7 @@
  */
 import { NextResponse, type NextRequest } from "next/server";
 import { supabaseConfig } from "./lib/config";
-import { cspHeader, makeNonce } from "./lib/security";
+import { cspHeader, isWordPath, makeNonce } from "./lib/security";
 
 export function proxy(request: NextRequest) {
   const nonce = makeNonce();
@@ -20,6 +20,8 @@ export function proxy(request: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     )?.url,
     dev: process.env.NODE_ENV === "development",
+    // The Word add-in's taskpane loads office.js and is framed by Word on the web.
+    surface: isWordPath(request.nextUrl.pathname) ? "word" : "site",
   });
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);

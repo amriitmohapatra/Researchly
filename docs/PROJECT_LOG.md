@@ -1626,3 +1626,61 @@ supplement .docx files 33 → 0; X401 24/24, X202 35/40, X301 248
 unchanged. Open: X101 16, X102 12, X103 12 per rendering and X104 11 in
 the Word rendering of published articles (~1 per 10 articles); judging
 them needs the run's samples, which this sandbox cannot download.
+
+## P34 — 2026-10-04 — S3: the Word add-in moves to the hosted engine
+
+**What.** S2b merged (amriitmohapatra/Researchly#5) and the owner deployed
+it and judged it good, so S3 began: the Word add-in served over HTTPS from
+Vercel and talking to the hosted engine, with Draft / Revise mode.
+
+**Engine (lead, 0e02387).**
+- Rules declare a `scope` (sentence | document). Draft mode shows
+  sentence-level checks only and reports how many document-level ones it
+  held back (`hidden_by_mode`), the pattern of hidden preferences. Mode
+  lives in `config.py` (TOML, account, CLI `--mode`, request option), so
+  every surface shares it.
+- `POST /v1/analyze-word` takes Office JS paragraphs and returns each
+  suggestion's Word location (paragraph, offsets, search snippet,
+  occurrence) plus what was not read. The locator moved into
+  `researchly/wordloc.py` so the local server answers identically.
+- Contract regenerated; Supabase migration `20261004120000_s3_mode.sql`
+  adds `user_settings.mode`; the two-user suite now applies every migration
+  in order (run locally as an unprivileged user: initdb refuses root).
+
+**Taskpane (sub-agent, reviewed by the lead; 477d9c7, 9551525, 180c2f4).**
+- `/word` in apps/web: check, cards, click-to-select, Apply as tracked
+  changes when WordApi 1.4 is supported (and Track Changes restored),
+  re-verifying the range before any edit; mute and dictionary when signed
+  in; sign-in by emailed code (Supabase OTP) instead of an Office dialog
+  with a Microsoft provider — no Azure registration, and Office dialogs are
+  unreliable on Mac; "This computer" engine choice; "Report a problem"
+  (owner's address, with a note not to email document text).
+- Its own CSP on `/word` only: office.js's origin in script-src (no
+  'strict-dynamic', which would block what office.js inserts), Office web
+  origins in frame-ancestors, `http://localhost:3517` in connect-src, no
+  X-Frame-Options; every other route's headers unchanged (tested).
+- Manifests: `manifest.hosted.xml` (Mac sideload) and `manifest.json`;
+  the local `server.py` speaks contract v1 with CORS for the Vercel origin
+  and Chrome's private-network preflight, and never accepts a token.
+- The first commit fixed web fixtures broken by the contract change
+  (`mode`, `hidden_by_mode`, `scope` became required in the TS types).
+
+**Evidence.** Re-run by the lead: web lint + boundary, typecheck, 192 unit,
+88 e2e (7 screenshot tests skipped by design); core 761; service 158;
+contract and drift checks clean; ruff clean; third-party scan 0 hits.
+
+**Not verified.** Nothing has run in real Word: office.js under the
+/word CSP, Word's search behaviour (the fake assumes it), whether Mac
+Word's web view allows an HTTPS page to call `http://localhost`, and the
+Supabase code e-mail (needs `{{ .Token }}` in the templates). The XML
+manifest was checked offline only (Microsoft's validator returned 403
+through the sandbox proxy).
+
+**Owner request.** Problems are reported by e-mail to the owner's address
+(PLAN, S3 support contact).
+
+**Lessons.** A contract change that adds required fields breaks every
+hand-written fixture in the consumers; run the web typecheck in the same
+change as the regeneration. A fake Office.js makes the taskpane testable,
+but it encodes our assumptions about Word — the week on Mac Word is the
+real test.

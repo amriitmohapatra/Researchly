@@ -90,6 +90,34 @@ sign-in, no upload, no settings route.
 - **Dialogs** are native `<dialog>` (focus contained, Escape closes, focus
   returns to the opener).
 
+## Word taskpane (`/word`, S3)
+
+The same coach inside Word's sidebar, which is 320 to 400px wide. One
+column, the site's tokens, cards and notices; nothing new to learn.
+
+- **Order**: header (brand, Sign in or the email), then one panel with the
+  Draft / Revise choice (a two-part segmented control, 8px radius, its
+  one-line meaning under it), **Check document** (the only primary button)
+  and the privacy line for the chosen engine. Then health, errors, results,
+  and a closed **Settings** disclosure (engine, show preferences, account).
+  The footer holds "Report a problem" (mailto, never with document text).
+- **Results**: "N suggestions", then quiet grey notes: what Draft held back
+  (with "Switch to Revise"), hidden preferences (with "Show them"), and what
+  was not checked (footnotes, headers and the rest). Cards in document order.
+- **Cards** read as on the site; clicking one selects its words in Word.
+  Under the source: "Show in document", and "Apply in document" only when
+  the engine proposed a revision. Applying is one span at a time, as a
+  tracked change where Word supports it; the card then says how it was
+  applied. A refusal (the document changed) is said on the card, in words.
+- **Sign-in** replaces the main column: email, then the emailed code. No
+  dialog (Office's dialog API is not used).
+- **States**: connecting to Word, outside Word, office.js missing, idle,
+  reading, checking (cancellable), results, empty result ("not a score"),
+  empty document, engine errors with retry, sign-in required, local engine
+  not running, degraded tier (before and after a check), card selected,
+  approximate match, applied (tracked or direct), apply refused, mode not
+  saved to the account.
+
 ## States (all reachable, all covered by e2e)
 
 Idle (key + example), invalid input, loading (skeleton, cancellable),
@@ -117,6 +145,7 @@ confirm.
 ## Reject
 
 Score, grade or progress bars of any kind; red for anything that is not a
-likely error; apply-all or auto-fix buttons; em dashes in UI copy;
+likely error; apply-all or auto-fix buttons (the taskpane's Apply is per
+card, read first, tracked where Word can); em dashes in UI copy;
 uppercase tracked eyebrows; decorative gradients, glows or shadows;
 third-party scripts, fonts or analytics; any control without a real outcome.

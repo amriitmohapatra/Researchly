@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ACCOUNTS_ENABLED } from "@/lib/config";
+import { ACCOUNTS_ENABLED, reportProblemHref } from "@/lib/config";
 import { AccountMenu } from "./AccountMenu";
 
 function BrandMark() {
@@ -49,6 +49,13 @@ export function SiteFooter() {
         <p>
           Researchly is confidential by design: text is processed in memory for the length of one request, then
           dropped. It is never logged, stored or used for training.
+        </p>
+        <p className="footer-report">
+          Something wrong?{" "}
+          <a className="inline-link" href={reportProblemHref("Researchly website: a problem")} data-testid="report-problem">
+            Report a problem
+          </a>{" "}
+          by email. Please describe what happened; don&rsquo;t paste text from your draft.
         </p>
       </div>
     </footer>

@@ -23,7 +23,7 @@ from . import metrics as metrics_mod
 from .config import Config
 from . import config as config_mod
 from .document import Document
-from .engine import Category, Suggestion, check
+from .engine import REGISTRY, Category, Suggestion, check
 from .health import TierStatus, engine_status
 
 # spaCy's default cap is 1,000,000 characters. Every surface but the CLI
@@ -75,6 +75,9 @@ class Analysis:
     suggestions: list[Suggestion] = field(default_factory=list)
     counts: dict = field(default_factory=dict)
     hidden_preferences: int = 0
+    # Document-level suggestions held back by Draft mode: counted, never
+    # silently dropped (the hidden-preference pattern).
+    hidden_by_mode: int = 0
     metrics: Optional[metrics_mod.Metrics] = None
     sections_detected: list = field(default_factory=list)
     health: list = field(default_factory=list)
@@ -90,11 +93,19 @@ class Analysis:
             "suggestions": [s.to_dict() for s in self.suggestions],
             "counts": self.counts,
             "hidden_preferences": self.hidden_preferences,
+            "hidden_by_mode": self.hidden_by_mode,
             "metrics": self.metrics.to_dict() if self.metrics else None,
             "sections_detected": list(self.sections_detected),
             "health": [t.to_dict() for t in self.health],
             "config": self.config.to_dict(),
         }
+
+
+def _scope(rule_id: str) -> str:
+    """A rule's scope; findings from outside the registry (none today) are
+    treated as sentence-level, so Draft never hides them by accident."""
+    r = REGISTRY.get(rule_id)
+    return r.scope if r is not None else "sentence"
 
 
 def ensure_rules_loaded() -> int:
@@ -161,6 +172,10 @@ def analyze(source: Union[str, Path, Sequence[dict], Document],
     prefs = sum(1 for s in found if s.category is Category.PREFERENCE)
     if not cfg.show_preferences:
         found = [s for s in found if s.category is not Category.PREFERENCE]
+    by_mode = 0
+    if cfg.mode == "draft":
+        kept = [s for s in found if _scope(s.rule_id) == "sentence"]
+        by_mode, found = len(found) - len(kept), kept
 
     counts: dict = {}
     for s in found:
@@ -172,6 +187,7 @@ def analyze(source: Union[str, Path, Sequence[dict], Document],
         suggestions=found,
         counts=counts,
         hidden_preferences=0 if cfg.show_preferences else prefs,
+        hidden_by_mode=by_mode,
         metrics=mets,
         sections_detected=sorted({h.section for h in document.headings}),
         health=engine_status(cfg, nlp=nlp),
