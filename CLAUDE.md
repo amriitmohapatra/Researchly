@@ -150,8 +150,8 @@ Researchly/
   citation there in the same change. Users never see a bare code. Declare `tier=` and
   `fix_safety=` — `fix_safety="safe"` means a bulk-apply button may touch it
   unread, and is pinned to `transform.POLISH_RULES` by a test. Registration
-  happens via the imports in `engine.check()`; a new *module* must be added
-  there (the surfaces no longer import rule modules individually).
+  happens via the imports in `engine.load_rules()`; a new *module* must be
+  added there, the one list (a test fails if a `rules_*.py` is missing).
 - **Surfaces pick up engine changes automatically** — they all call
   `api.analyze()`. UI changes are per-surface.
 - **User's environment**: macOS (Apple Silicon), Homebrew Python 3.10 —

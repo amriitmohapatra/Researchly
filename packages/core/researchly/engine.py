@@ -140,6 +140,16 @@ def rule(id: str, name: str, category: Category, short: str, why: str,
     return wrap
 
 
+def load_rules() -> int:
+    """Import every rule module (registration is a side effect of import)
+    and return how many rules are registered. The one list of rule
+    modules: a module missing here never runs, anywhere."""
+    # Imported here, not at the top, to avoid an import cycle.
+    from . import (rules_lexical, rules_syntax,  # noqa: F401
+                   rules_spelling, rules_grammar, rules_gec, rules_structure)
+    return len(REGISTRY)
+
+
 def _section_allows(r: Rule, section: str) -> bool:
     # 'unknown' (no headings, e.g. a pasted paragraph) never suppresses a
     # rule: when we can't tell the section, we surface the suggestion and let
@@ -162,9 +172,7 @@ def check(document: Document, nlp, *,
     `spacy_doc` lets a caller supply an already-parsed document so the parse
     can be shared with metrics instead of repeated — see api.analyze().
     """
-    # Import here so registration happens on first use, avoiding cycles.
-    from . import (rules_lexical, rules_syntax,  # noqa: F401
-                   rules_spelling, rules_grammar, rules_gec, rules_structure)
+    load_rules()
 
     disabled = disabled or set()
     if spacy_doc is None:

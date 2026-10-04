@@ -205,3 +205,17 @@ def test_plain_text_gets_no_structural_checks():
                              "Figure 1. Weekly cases.\n")
     assert not [s for s in api.analyze(doc, nlp=NLP).suggestions
                 if s.rule_id.startswith("X")]
+
+
+def test_every_rule_module_is_loaded():
+    # api.ensure_rules_loaded() kept its own list of modules and missed
+    # rules_structure: /v1/health reported 38 rules with 42 registered.
+    import importlib
+    import pathlib
+    import sys
+    from researchly.engine import REGISTRY, load_rules
+    load_rules()
+    pkg = pathlib.Path(importlib.import_module("researchly").__file__).parent
+    for path in pkg.glob("rules_*.py"):
+        assert f"researchly.{path.stem}" in sys.modules, path.stem
+    assert api.ensure_rules_loaded() == len(REGISTRY)

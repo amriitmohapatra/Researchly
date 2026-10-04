@@ -84,10 +84,8 @@ def ensure_rules_loaded() -> int:
     to trigger registration itself, or it reports zero rules on a healthy
     engine.
     """
-    from . import (rules_lexical, rules_syntax,  # noqa: F401
-                   rules_spelling, rules_grammar, rules_gec)
-    from .engine import REGISTRY
-    return len(REGISTRY)
+    from .engine import load_rules
+    return load_rules()
 
 
 def build_document(source: Union[str, Path, Sequence[dict]],
