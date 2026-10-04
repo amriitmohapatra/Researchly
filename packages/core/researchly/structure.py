@@ -279,6 +279,27 @@ def _ranges(st: Structure, refs: list, masked: str) -> list:
 
 # --- Word ---------------------------------------------------------------------
 
+def _distinct_captions(doc: Document, captions: list) -> list:
+    """One caption per float. A typed caption repeating the number of a
+    styled one, or of a later typed one (a list of figures, a caption
+    repeated on a continuation page), is not a second float (P33)."""
+    def key(c):
+        m = _CAPTION_PREFIX.match(doc.original, c.start, c.end)
+        return (_kind_of(m.group(1)), m.group(2)) if m else None
+    captions = [c for c in captions          # "Table 3 (continued)"
+                if not _CONTINUED.search(doc.original, c.start, c.end)]
+    styled = {key(c) for c in captions if c.label != "typed"}
+    keep = []
+    for i, c in enumerate(captions):
+        k = key(c)
+        if c.label == "typed" and k is not None and (
+                k in styled or any(key(d) == k and d.label == "typed"
+                                   for d in captions[i + 1:])):
+            continue
+        keep.append(c)
+    return keep
+
+
 def _own_table(tables, cap, captions, claimed):
     """The table this caption labels: the nearest unclaimed one within 400
     characters with no other caption in between."""
@@ -315,7 +336,8 @@ def _word(doc: Document) -> Structure:
                 tables[-1].end = b
             else:
                 tables.append(StructureItem("table", a, b))
-    captions = [i for i in doc.structure if i.kind == "caption"]
+    captions = _distinct_captions(doc, [i for i in doc.structure
+                                        if i.kind == "caption"])
     claimed: set = set()
     for cap in captions:
         m = _CAPTION_PREFIX.match(doc.original, cap.start, cap.end)
@@ -325,8 +347,6 @@ def _word(doc: Document) -> Structure:
         number = _parse_number(m.group(2))
         if number is None:                          # "Figure S1": supplement
             continue
-        if _CONTINUED.search(doc.original, cap.start, cap.end):
-            continue                    # "Table 3 (continued)": same table
         start, end = cap.start, cap.end
         if kind == "table":
             # A table's caption sits just above (or below) its cells, with

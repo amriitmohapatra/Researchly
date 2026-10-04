@@ -160,6 +160,17 @@ _TYPED_CAPTION = re.compile(
     r"(?:Fig(?:ure)?\.?|Table)\s+(?:[A-Z]\.?)?\d+(?:\.\d+)*[a-z]?\s*[:.|]\s+\S")
 
 
+# A list-of-figures or contents entry: dot leaders or a page number at the
+# end ("Figure 1: Study area ..... 12"). Not a caption.
+_TOC_ENTRY = re.compile(r"(?:\.{3,}|\u2026|\t)\s*\d+\s*$|\s{2,}\d+\s*$")
+
+
+def _typed_caption(text: str, style: str) -> bool:
+    if style.startswith(("toc", "tableoffigures")):
+        return False
+    return bool(_TYPED_CAPTION.match(text)) and not _TOC_ENTRY.search(text)
+
+
 @dataclass
 class StructureItem:
     """A figure, table, equation, caption or citation (kept for S2b)."""
@@ -307,21 +318,27 @@ class Document:
                 continue          # never a heading, never prose
             if not title:
                 continue
-            if "caption" in style or _TYPED_CAPTION.match(title):
+            if "caption" in style:
                 # Recorded here, not in the .docx reader, so the Word
-                # add-in's paragraphs and an uploaded file agree (S2b). A
-                # caption typed in a body style ("Table 2: ...", common
-                # after a PDF conversion) is still a caption (P33).
+                # add-in's paragraphs and an uploaded file agree (S2b).
                 captions.append(StructureItem(
                     "caption", offsets[i], offsets[i] + len(texts[i])))
+                continue
+            if _typed_caption(title, style):
+                # A caption typed in a body style ("Table 2: ...", common
+                # after a PDF conversion) is still a caption (P33), but a
+                # weaker signal than Word's caption style: marked "typed".
+                captions.append(StructureItem(
+                    "caption", offsets[i], offsets[i] + len(texts[i]),
+                    label="typed"))
                 continue
             for line in re.finditer(r"\n[ \t]*([^\n]+)", texts[i]):
                 # A caption a PDF converter left inside a paragraph, on a
                 # line of its own.
-                if _TYPED_CAPTION.match(line.group(1)):
+                if _typed_caption(line.group(1), style):
                     captions.append(StructureItem(
                         "caption", offsets[i] + line.start(1),
-                        offsets[i] + line.end(1)))
+                        offsets[i] + line.end(1), label="typed"))
             if "heading" in style or style == "title":
                 lvl = re.search(r"heading(\d)", style)
                 level = int(lvl.group(1)) if lvl else None

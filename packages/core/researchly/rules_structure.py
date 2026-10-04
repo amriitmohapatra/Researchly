@@ -199,8 +199,11 @@ def x104_before_first_citation(doc, document: Document):
             first.setdefault(id(f), m)
     for f in st.floats:
         m = first.get(id(f))
+        # Only a caption made with Word's caption style: a typed one is a
+        # guess, and in a supplement every table precedes its sentence
+        # (33 such flags on PMC supplements, P33).
         if (m is not None and f.caption is not None and not f.appendix
-                and m.start > f.end):
+                and f.caption.label != "typed" and m.start > f.end):
             a, b = _anchor(document, f.caption.start, f.caption.end)
             yield Suggestion(
                 message=f"{f.name} comes before the text first cites it — "
@@ -308,7 +311,7 @@ def x301_equation_not_referenced(doc, document: Document):
 
 
 _EQ_WRITTEN = re.compile(
-    r"\b(?:Eqs?\.?|Equations?)\s*~?((?:\(?\s*\d+(?:\.\d+)?[a-z]?\s*\)?"
+    r"\b(?:Eqs?\.?|Eqns?\.?|Equations?)\s*~?((?:\(?\s*\d+(?:\.\d+)?[a-z]?\s*\)?"
     r"(?:\s*(?:,|and|&|to|[-\u2013\u2014])\s*)?)+)", re.IGNORECASE)
 
 

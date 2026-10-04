@@ -252,3 +252,43 @@ def test_data_appendix_is_an_appendix():
 def test_a_table_row_is_not_a_plain_heading():
     doc = Document.from_text("Statistic       Value\n\nMethods\n\nWe fit.\n")
     assert [h.text for h in doc.headings] == ["Methods"]
+
+
+# --- typed captions after the published-article run (P33) -------------------------
+
+def test_list_of_figures_entry_is_not_a_caption():
+    doc = _word_doc("Figure 1: Study area and districts ..... 12",
+                    "Figure 2: Weekly counts\t14")
+    assert doc.structure == []
+
+
+def test_list_of_figures_style_is_not_a_caption():
+    doc = Document.from_word([
+        {"text": "Figure 1: Study area and districts",
+         "style": "Table of Figures"},
+        {"text": "Results", "style": "Heading 1"},
+        {"text": "The districts are shown in Figure 1."}])
+    assert doc.structure == []
+
+
+def test_repeated_typed_caption_is_one_float():
+    from researchly.rules_structure import structure_of
+    doc = _word_doc("Figure 1: Study area and districts.",
+                    "The districts are shown in Figure 1.",
+                    "Figure 1: Study area and districts.")
+    assert len(structure_of(doc).floats) == 1
+
+
+def test_x104_judges_styled_captions_only():
+    typed = _word_doc("Table 1: Weekly counts by district.",
+                      "The counts rose (Table 1).")
+    styled = _word_doc({"text": "Table 1: Weekly counts by district.",
+                        "style": "Caption"},
+                       "The counts rose (Table 1).")
+    assert analyse(typed, "X104") == []
+    assert len(analyse(styled, "X104")) == 1
+
+
+def test_x301_counts_eqn():
+    from researchly.rules_structure import _written_equation_numbers
+    assert {"3", "4"} <= _written_equation_numbers("from Eqn. (3) and eqns 4")

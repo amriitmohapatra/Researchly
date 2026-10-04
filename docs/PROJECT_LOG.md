@@ -1606,3 +1606,17 @@ Each fix has a test that fails on the old code (one passed by luck at
 first — the wrong table held no "%", so the percentage was never judged —
 and was rewritten with decimals). Core 717 passed, service 146, ml 30,
 noise floor unchanged at 11.67, local bench PASS.
+
+**Addendum 2: the rerun.** Run 37194170115 (710436f) PASS, 14.54/1000w
+overall (15.41 before P33). X401 Word 369 → 24, equal to TeX; X202 74/82 →
+35/40, all figure captions under five words (the converter keeps the
+caption's title and paragraphs, so these are short in the article itself);
+X301 373 → 249 (a hidden Preference). One regression: X104 fired 33 times
+on the native .docx set (supplements of 20 PMC articles), 0 before — typed
+captions now count, and a supplement puts every table before the sentence
+citing it. X104 now judges captions made with Word's caption style only;
+list-of-figures entries (dot leaders, page numbers, TOC styles) are not
+captions; a typed caption repeated later is one float. The owner's
+manuscript loses its one X104 (a typed caption): 409 → 408. Lesson: a
+heuristic input (typed captions) is fine for rules that only stay silent
+on it (X103) and risky for rules that fire on it (X104).
