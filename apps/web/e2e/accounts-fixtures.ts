@@ -185,6 +185,7 @@ export const RULES: RuleInfo[] = [
     category: "improvement",
     tier: "craft",
     fix_safety: "safe",
+    scope: "sentence",
   },
   {
     id: "G101",
@@ -195,5 +196,6 @@ export const RULES: RuleInfo[] = [
     category: "correction",
     tier: "grammar",
     fix_safety: "review",
+    scope: "sentence",
   },
 ];

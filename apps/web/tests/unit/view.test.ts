@@ -15,6 +15,8 @@ function response(suggestions: Suggestion[], hidden_preferences = 0): AnalyzeRes
     health: [],
     engine: { service_version: "0", core_version: "0", rules_loaded: 0 },
     elapsed_ms: 1,
+    mode: "revise",
+    hidden_by_mode: 0,
   };
 }
 
