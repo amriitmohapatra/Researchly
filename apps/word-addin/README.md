@@ -68,7 +68,7 @@ supports it (WordApi 1.4: Word 2021 / Microsoft 365), and a direct edit
    in **allowed_origins** when running **Deploy engine** (docs/deploy.md
    step 5). The taskpane is a page on the same site, so nothing else is
    needed.
-4. **Deploy the website** as usual (merge to `main`; Vercel builds it).
+5. **Deploy the website** as usual (merge to `main`; Vercel builds it).
    Check that `https://researchly-chi.vercel.app/word` opens: in a normal
    browser it says "Open Researchly from Word".
 
