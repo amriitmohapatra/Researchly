@@ -161,7 +161,6 @@ class _Reader:
         # (paragraph index, start, end) placeholders; paragraph indexes.
         self.equations: list[tuple[int, int, int]] = []
         self.figures: list[int] = []
-        self.captions: list[int] = []
         self.tables: list[tuple[int, int]] = []
         # The paragraph being read.
         self.parts: list[str] = []
@@ -197,8 +196,6 @@ class _Reader:
             style = f"Heading {outline + 1}"
         if self.has_figure:
             self.figures.append(index)
-        if "caption" in name.lower() and text.strip():
-            self.captions.append(index)
         self.chars += len(text) + 2
         if self.chars > MAX_TEXT_CHARS:
             raise IngestError("payload_too_large",
@@ -263,7 +260,7 @@ class _Reader:
         doc = Document.from_word(self.paras)
         offs = doc.para_offsets
         masked = list(doc.masked)
-        structure: list[StructureItem] = []
+        structure: list[StructureItem] = list(doc.structure)   # captions
         for i, a, b in self.equations:
             masked[offs[i] + a:offs[i] + b] = " " * (b - a)
             structure.append(StructureItem("equation", offs[i] + a,
@@ -275,8 +272,6 @@ class _Reader:
             return offs[i], offs[i] + len(self.paras[i]["text"])
 
         structure += [StructureItem("figure", *span(i)) for i in self.figures]
-        structure += [StructureItem("caption", *span(i))
-                      for i in self.captions]
         structure += [StructureItem("table", span(a)[0], span(b)[1])
                       for a, b in self.tables]
         doc.structure = sorted(structure, key=lambda s: (s.start, s.kind))

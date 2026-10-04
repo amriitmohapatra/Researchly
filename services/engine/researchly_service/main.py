@@ -154,6 +154,8 @@ def _options(raw: Optional[str]) -> AnalyzeOptions:
                             for err in e.errors()]))
 
 
+PUBLIC_STRUCTURE = frozenset({"figure", "table", "equation", "caption",
+                              "citation"})
 INGEST_STATUS = {"unsupported_file": 415, "unreadable_file": 422,
                  "payload_too_large": 413}
 
@@ -217,8 +219,11 @@ def _analyze_file(request: Request, name: str, data: bytes,
         filename=name, format=source_format, text=doc.original,
         segments=[Segment(path=g.path, start=g.start, end=g.end,
                           source_start=g.source_start) for g in doc.segments],
+        # Cross-references and labels are the engine's own bookkeeping
+        # for the structural checks; the contract lists what a reader sees.
         structure=[StructureItem(kind=i.kind, start=i.start, end=i.end,
-                                 label=i.label) for i in doc.structure],
+                                 label=i.label) for i in doc.structure
+                   if i.kind in PUBLIC_STRUCTURE],
         warnings=list(doc.warnings))
     resp = engine_adapter.run_analysis(
         doc, doc.kind, options, grammar_enabled=grammar_enabled,

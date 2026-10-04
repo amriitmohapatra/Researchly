@@ -135,7 +135,7 @@ def test_structure_items():
            "\\begin{tabular}{l}1\\end{tabular}\\end{table}\n"
            "\\end{document}\n")
     doc = Document.from_text(src, "latex")
-    got = [(s.kind, s.label) for s in doc.structure]
+    got = [(s.kind, s.label) for s in doc.structure if s.kind in PUBLIC]
     assert got == [("citation", "k1,k2"), ("equation", "eq:r0"),
                    ("equation", None), ("table", "tab:v"),
                    ("caption", "tab:v")]
@@ -146,7 +146,8 @@ def test_subfigure_labels_name_their_own_captions():
            "\\caption{Left.}\\label{fig:a}\\end{subfigure}"
            "\\caption{Both panels.}\\label{fig:both}\\end{figure}")
     got = [(s.kind, s.label)
-           for s in Document.from_text(src, "latex").structure]
+           for s in Document.from_text(src, "latex").structure
+           if s.kind in PUBLIC]
     assert got == [("figure", "fig:both"), ("caption", "fig:a"),
                    ("caption", "fig:both")]
 
@@ -155,8 +156,22 @@ def test_label_inside_center_still_names_the_figure():
     src = ("\\begin{figure}\\begin{center}\\includegraphics{a}"
            "\\caption{Cases.}\\label{fig:c}\\end{center}\\end{figure}")
     got = [(s.kind, s.label)
-           for s in Document.from_text(src, "latex").structure]
+           for s in Document.from_text(src, "latex").structure
+           if s.kind in PUBLIC]
     assert got == [("figure", "fig:c"), ("caption", "fig:c")]
+
+
+PUBLIC = {"figure", "table", "equation", "caption", "citation"}
+
+
+def test_labels_and_refs_are_recorded_for_the_structural_checks():
+    src = ("\\begin{document}\\section{A}\\label{sec:a}\n"
+           "See \\cref{fig:x,tab:y} and Section~\\ref{sec:a}.\n"
+           "\\end{document}\n")
+    items = Document.from_text(src, "latex").structure
+    assert [s.label for s in items if s.kind == "ref"] == [
+        "fig:x", "tab:y", "sec:a"]
+    assert [s.label for s in items if s.kind == "label"] == ["sec:a"]
 
 
 def test_every_mask_whole_macro_has_an_argument_spec():

@@ -32,7 +32,9 @@ GUIDE_SECTIONS = {
     "8": "A practical workflow to beat the blank page",
     "9.1": "Write for a reader who lacks one of your fields",
     "9.3": "Uncertainty is not a caveat, it is the finding",
+    "9.2": "Equations are sentences — make them grammatical",
     "9.4": "A model is an argument, not an oracle",
+    "9.7": "Figures are arguments too",
 }
 
 WORKS = {
@@ -45,6 +47,10 @@ WORKS = {
     "symspellpy": ("SymSpell spelling engine with Researchly's scientific "
                    "lexicon"),
     "local GEC": "Researchly learned-correction tier (local model)",
+    "ICMJE": ("International Committee of Medical Journal Editors, "
+              "Recommendations for the Conduct, Reporting, Editing, and "
+              "Publication of Scholarly Work in Medical Journals "
+              "(tables and figures)"),
 }
 
 

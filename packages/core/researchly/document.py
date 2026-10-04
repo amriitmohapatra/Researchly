@@ -157,7 +157,8 @@ class Segment:
 @dataclass
 class StructureItem:
     """A figure, table, equation, caption or citation (kept for S2b)."""
-    kind: str            # figure | table | equation | caption | citation
+    kind: str            # figure | table | equation | caption | citation |
+    #                      ref | label (S2b cross-references)
     start: int
     end: int
     label: str | None = None
@@ -283,6 +284,7 @@ class Document:
         chars = list(doc.masked)
         style_headings: list[Heading] = []
         table_spans: list[tuple[int, int]] = []
+        captions: list[StructureItem] = []
         for i, p in enumerate(paragraphs):
             style = (p.get("style") or "").lower().replace(" ", "")
             title = texts[i].strip()
@@ -291,6 +293,12 @@ class Document:
                 continue          # never a heading, never prose
             if not title:
                 continue
+            if "caption" in style:
+                # Recorded here, not in the .docx reader, so the Word
+                # add-in's paragraphs and an uploaded file agree (S2b).
+                captions.append(StructureItem(
+                    "caption", offsets[i], offsets[i] + len(texts[i])))
+                continue
             if "heading" in style or style == "title":
                 lvl = re.search(r"heading(\d)", style)
                 style_headings.append(
@@ -298,6 +306,7 @@ class Document:
                             level=int(lvl.group(1)) if lvl else None))
                 _mask_spans(chars, [(offsets[i], offsets[i] + len(texts[i]))])
         doc.table_spans = table_spans
+        doc.structure = captions
         if table_spans:
             # from_text() already ran keyword heading detection over the
             # combined string, before table cells were known. A cell reading
