@@ -93,11 +93,25 @@ export function restoreHistory(win: Window & { __researchlyHistory?: HistoryFns 
   if (typeof win.history.replaceState !== "function") win.history.replaceState = saved.replaceState;
 }
 
-/** The real Office.js globals, when office.js has loaded (it is absent on the server and outside Office). */
+/**
+ * The real Office.js globals, once Word is ready. `Word` does not exist when
+ * office.js first runs: office.js fetches the host's own scripts and defines
+ * `Word` only inside Word, before Office.onReady resolves. Use
+ * waitForOffice() first; this is for the actions that come after.
+ */
 export function officeApi(): OfficeApi | null {
   if (typeof window === "undefined") return null;
   const w = window as unknown as { Office?: OfficeApi["Office"]; Word?: OfficeApi["Word"] };
   return w.Office && typeof w.Office.onReady === "function" && w.Word ? { Office: w.Office, Word: w.Word } : null;
+}
+
+/** office.js's `Office` object alone: what exists as soon as office.js has run, in Word or in a browser. */
+export type OfficeGlobal = Pick<OfficeApi, "Office">;
+
+export function officeGlobal(): OfficeGlobal | null {
+  if (typeof window === "undefined") return null;
+  const w = window as unknown as { Office?: OfficeApi["Office"] };
+  return w.Office && typeof w.Office.onReady === "function" ? { Office: w.Office } : null;
 }
 
 export type HostStatus =
@@ -116,17 +130,30 @@ export function canTrackChanges(api: OfficeApi): boolean {
   }
 }
 
-/** Wait for Office to say where it is running. Never rejects. */
-export async function waitForOffice(api: OfficeApi | null, timeoutMs = 10_000): Promise<HostStatus> {
-  if (!api) return { status: "unavailable" };
+/**
+ * Wait for Office to say where it is running. Never rejects.
+ *
+ * `office` is office.js's `Office` object (officeGlobal()); `Word` is looked
+ * up only after Office is ready, because office.js defines it late and only
+ * inside Word. Checking for `Word` up front made every real load look like a
+ * failed one (the fake Office.js defined `Word` at once, so tests passed).
+ */
+export async function waitForOffice(
+  office: OfficeGlobal | null,
+  timeoutMs = 10_000,
+  wordApi: () => OfficeApi | null = officeApi,
+): Promise<HostStatus> {
+  if (!office) return { status: "unavailable" };
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<null>((resolve) => {
     timer = setTimeout(() => resolve(null), timeoutMs);
   });
   try {
-    const info = await Promise.race([api.Office.onReady(), timeout]);
+    const info = await Promise.race([office.Office.onReady(), timeout]);
     if (!info) return { status: "unavailable" };
     if (info.host !== "Word") return { status: "not_word" };
+    const api = wordApi();
+    if (!api) return { status: "unavailable" };
     return { status: "word", trackChanges: canTrackChanges(api) };
   } catch {
     return { status: "unavailable" };

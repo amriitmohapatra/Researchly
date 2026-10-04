@@ -185,9 +185,14 @@ export function installFakeOffice(target: any, config: FakeWordConfig): FakeWord
   target.Office = {
     HostType: { Word: "Word" },
     onReady(cb?: (info: { host: string | null; platform: string | null }) => void) {
-      const info = { host, platform: host ? "PC" : null };
-      if (cb) cb(info);
-      return Promise.resolve(info);
+      // Like office.js: the host's scripts (and so `Word`) arrive
+      // asynchronously, and only inside Word, before onReady resolves.
+      return new Promise((resolve) => setTimeout(resolve, 20)).then(() => {
+        if (host === "Word") target.Word = wordNamespace;
+        const info = { host, platform: host ? "PC" : null };
+        if (cb) cb(info);
+        return info;
+      });
     },
     context: {
       requirements: {
@@ -198,11 +203,13 @@ export function installFakeOffice(target: any, config: FakeWordConfig): FakeWord
       },
     },
   };
-  target.Word = {
+  const wordNamespace = {
     run,
     InsertLocation: { replace: "Replace" },
     ChangeTrackingMode: { off: "Off", trackAll: "TrackAll", trackMineOnly: "TrackMineOnly" },
   };
+  // For unit tests that act after start-up: Word as it is once ready.
+  target.__fakeWordNamespace = wordNamespace;
   return state;
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */

@@ -25,10 +25,20 @@ const PARAS = [
   { text: "Region", tableNestingLevel: 1 },
 ];
 
+/** Word after start-up: `Word` defined, as it is once Office.onReady has resolved. */
 function fake(config: Partial<FakeWordConfig> = {}) {
+  const t = fresh(config);
+  t.target.Word = t.target.__fakeWordNamespace;
+  return t;
+}
+
+/** Word as office.js leaves it on first run: `Office` only; `Word` arrives with onReady. */
+function fresh(config: Partial<FakeWordConfig> = {}) {
   const target: Record<string, unknown> = {};
   const state = installFakeOffice(target, { paragraphs: PARAS, ...config });
-  return { api: target as unknown as OfficeApi, state };
+  const api = target as unknown as OfficeApi;
+  const wordApi = () => (target.Word ? api : null);
+  return { api, state, target, wordApi };
 }
 
 /** Where the engine would locate the n-th "the the" (0-based) in paragraph 1. */
@@ -187,14 +197,25 @@ describe("applying a fix", () => {
 
 describe("start-up", () => {
   it("reports Word, and whether tracked changes are available", async () => {
-    expect(await waitForOffice(fake().api)).toEqual({ status: "word", trackChanges: true });
-    expect(await waitForOffice(fake({ api14: false }).api)).toEqual({ status: "word", trackChanges: false });
+    // `Word` does not exist until onReady resolves: start-up must not need it earlier.
+    const a = fresh();
+    expect(a.target.Word).toBeUndefined();
+    expect(await waitForOffice(a.api, 1000, a.wordApi)).toEqual({ status: "word", trackChanges: true });
+    const b = fresh({ api14: false });
+    expect(await waitForOffice(b.api, 1000, b.wordApi)).toEqual({ status: "word", trackChanges: false });
   });
   it("says when the page is open outside Word, or office.js never loaded", async () => {
-    expect(await waitForOffice(fake({ host: null }).api)).toEqual({ status: "not_word" });
+    // In a browser office.js loads, never defines `Word`, and says host null.
+    const browser = fresh({ host: null });
+    expect(await waitForOffice(browser.api, 1000, browser.wordApi)).toEqual({ status: "not_word" });
     expect(await waitForOffice(null)).toEqual({ status: "unavailable" });
-    const never = { ...fake().api, Office: { ...fake().api.Office, onReady: () => new Promise<never>(() => {}) } } as OfficeApi;
-    expect(await waitForOffice(never, 10)).toEqual({ status: "unavailable" });
+    const f = fresh();
+    const never = { Office: { ...f.api.Office, onReady: () => new Promise<never>(() => {}) } };
+    expect(await waitForOffice(never, 10, f.wordApi)).toEqual({ status: "unavailable" });
+  });
+  it("is unavailable when Office says Word but the Word API never arrived", async () => {
+    const f = fresh();
+    expect(await waitForOffice(f.api, 1000, () => null)).toEqual({ status: "unavailable" });
   });
   it("puts back history functions office.js removed", () => {
     const push = () => {};

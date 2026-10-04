@@ -24,6 +24,7 @@ import {
   readParagraphs,
   restoreHistory,
   selectSpan,
+  officeGlobal,
   waitForOffice,
   type HostStatus,
 } from "@/lib/word/office";
@@ -109,8 +110,7 @@ export function Taskpane() {
 
   useEffect(() => {
     let live = true;
-    const api = officeApi();
-    void waitForOffice(api).then((h) => {
+    void waitForOffice(officeGlobal()).then((h) => {
       restoreHistory();
       if (live) setHost(h);
     });
