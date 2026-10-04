@@ -181,9 +181,16 @@ def ab802_abstract_completeness(doc, document: Document):
     missing = missing_moves(text)
     if not missing:
         return
+    # Highlight the abstract's first sentence. The heading's own text is not
+    # always at `start`: a LaTeX abstract environment has no title in the
+    # source, so `start + len("Abstract")` landed on "\\begin{a" (P29).
+    body = document.masked[start:end]
+    first = start + len(body) - len(body.lstrip())
+    stop = re.search(r"[.!?](\s|$)", document.masked[first:end])
+    last = first + (stop.end() if stop else min(len(body.strip()), 200))
     yield Suggestion(
         message=("Missing move" + ("s" if len(missing) > 1 else "")
                  + ": " + ", ".join(missing)
                  + ". Six-part check: background → gap → question → "
                    "methods → findings → significance."),
-        start=start, end=start + len(abstracts[0].text))
+        start=first, end=last)

@@ -238,7 +238,9 @@ PARITY = [
     "There are \\cite{jones} studies that report this.",
     "\\section{Methods}\nSamples were incubated at 37 degrees "
     "\\cite{smith2020}.\n\\section{Results}\nThe effect was significant.\n",
-    "We used \\textit{R} and \\texttt{Stan}~\\citep{a}. See Fig.~\\ref{f}.",
+    # (\\texttt is code since P28, so it is no longer a parity case: see
+    # tests/test_real_document_precision.py.)
+    "We used \\textit{R} and \\textbf{Stan}~\\citep{a}. See Fig.~\\ref{f}.",
     "\\begin{itemize}\n\\item One thing.\n\\item Another thing.\n"
     "\\end{itemize}",
     "\\begin{align}\na &= b \\\\\nc &= d\n\\end{align}\nAfter.",

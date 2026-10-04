@@ -120,6 +120,9 @@ def w207_doubled_word(doc, document: Document):
                          re.IGNORECASE):
         if m.group(1).lower() in {"had", "that"}:  # "had had" can be valid
             continue
+        # "and $C(0)$ and": the words were never adjacent in the source.
+        if document.masked_content(m.start(), m.end()):
+            continue
         yield Suggestion(
             message="Doubled word — delete one.",
             start=m.start(), end=m.end(), replacement=m.group(1))
@@ -245,6 +248,11 @@ def f601_acronyms(doc, document: Document):
         if acr in seen or acr in lx.ACRONYM_ALLOWLIST or acr in predefined:
             continue
         if in_caps_zone(m.start(), m.end()):
+            continue
+        # Names with a number attached are labels, not abbreviations to
+        # spell out: variant lineages (BA.1, XBB.1.5) and model orders
+        # (AR(2), ARIMA(1,1,0)).
+        if re.match(r"(?:\.\d|\(\d)", text[m.end():m.end() + 2]):
             continue
         # Author-initials guard ("Anderson KN," / "Chew LZX."): a short
         # caps token right after a capitalized surname, followed by

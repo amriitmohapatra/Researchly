@@ -1149,3 +1149,173 @@ Every branch was reviewed, re-tested and merged by the lead.
 
 **Waiting on the owner:** `docs/deploy.md` step 8 (Supabase project,
 migration, URL settings, two variables), then the S2 exit check.
+
+**Addendum (P26, merge):** amriitmohapatra/Researchly#2 merged on
+2026-10-03 with all 11 checks green. The first CI run caught one real test
+bug: `test_each_user_sees_only_their_own_rows` expected dictionary words in
+byte order ("Stan" before "brms"), which the local C-collation cluster used
+and CI's en_US Postgres does not. Isolation itself passed. Reproduced
+locally with an ICU en-US database, fixed to compare as sets (c975bec).
+Lesson: a test that sorts text inherits the server's collation; compare
+sets unless order is the point.
+
+## 2026-10-03 (later) — P27: accounts live; large-file pre-flight
+
+**What:** the owner completed `docs/deploy.md` step 8 and confirmed sign-in
+and sign-out work. Testing sign-in repeatedly hit Supabase's built-in email
+limit (about 2 emails an hour for the whole project): expected, and the
+reason real users need a custom email sender (S6). Staying signed in avoids
+it, since the session refreshes without email.
+
+**Verified on the live engine:** an anonymous upload and a 1,600-word
+anonymous paste are refused with `sign_in_required`; a forged token gets
+`unauthorized`; a short anonymous paste still works; every tier is ready
+and the file readers are installed (no `files` tier). Probing the Supabase
+project itself from Claude's sandbox was blocked by the sandbox's network
+policy (`*.supabase.co` not allow-listed); tracked in PLAN.
+
+**Large `.tex` pre-flight** (synthetic LaTeX, grammar on, this machine):
+
+| Words | Time | Peak memory |
+|---|---|---|
+| 25k | 21 s | 0.6 GB |
+| 65k | 44 s | 1.3 GB |
+| 120k (whole thesis) | 74 s | 2.1 GB |
+
+Cloud Run ran ~1.5× slower than local in S1, so a whole thesis takes about
+110 s there. Memory is comfortable under 4 GB; the response is ~9 MB even
+for synthetic word salad (real prose flags far less).
+
+**Found and fixed:** the browser gave up after 120 s while the engine is
+allowed 300 s, so a whole thesis would have been abandoned just before it
+finished. The browser now waits 290 s; a unit test reads the Cloud Run
+spec and keeps the two in step. The file panel says a whole thesis can
+take about two minutes.
+
+**Lesson:** a timeout has two ends. When one side's limit is raised for a
+new workload (uploads), check the other side's.
+
+## 2026-10-03 (later) — P28: precision fixes from the owner's first real `.tex`
+
+**What:** the owner shared a real 167 KB `.tex` methods report (16,600
+prose words, 190 uses of a custom `\code` macro) to test uploads. It was
+checked in memory only and is not in the repository; tests use synthetic
+sentences. It parsed cleanly in 0.6 s and analysed in ~13 s locally. The
+flags exposed bugs no corpus could: the noise-floor corpus is plain text.
+
+**Found and fixed (172 → 117 flags; 9.9 → 6.6 per 1,000 prose words):**
+- **Masked maths made words adjacent.** "and $C(0)$ and" was a doubled
+  word (all 4 W207 flags); "An $\exp(1)$ prior", "a $90\%$ interval",
+  "Student-$t$ rather" drew a/an and spacing errors (about half of the
+  LanguageTool flags). `Document.touches_masked()` now tells LT001 and W207
+  when their evidence crosses blanked maths, citations or code, across a
+  wrapped line but not a paragraph break, and never counting headings.
+- **Code read as prose.** `\texttt`, `\path`, `\addcontentsline` and any
+  preamble macro defined as a wrapper around code formatting (`\newcommand
+  {\code}[1]{\texttt{#1}}`) are now masked.
+- **Hyphenated prefixes** ("mis-ordered" → "mis") and **prefixed real words**
+  ("unstratified", "uncited", "autoregression") are no longer spelling
+  errors; the stem must be a dictionary word as written. Two regressions the
+  suite and a corpus review caught on the way: "mispeled" ("mis" + "pele" +
+  "d") and "crosssectional" (tripled letter) — both flagged again.
+- **Lexicon gaps:** decadal, simplices, programmatically, macOS,
+  parameterise/-ize families, hospitalise/-ize, softmax, treedepth,
+  walltime, hardcoded, equidispersion and others.
+- **F601:** labels with a number attached (BA.1, XBB.1.5, AR(2)) are not
+  undefined acronyms.
+
+**Evidence:** 26 new tests (fire and don't-fire); all 17 don't-fire tests
+fail on the pre-fix code. Core 502 passed. Noise floor 14.75 → 14.51
+(S001 676 → 611), baseline updated with a note; every newly accepted corpus
+word was reviewed by hand.
+
+**Not fixed, tracked in PLAN:** section inheritance for nested headings,
+a document-type default for methods reports, and LanguageTool's own
+misreads on technical prose.
+
+**Lesson:** the corpus measures the plain-text path only. One real LaTeX
+document found more LaTeX bugs in ten minutes than the suite had; every
+format needs a real-document check, not just synthetic fixtures.
+
+**Addendum (P28, same day):** the real-document bench (P29) caught a
+regression in this fix before merge. The first `touches_masked` counted
+*every* masked character, so `\emph{`, `\textbf{` and Markdown `**`
+silenced real errors beside them ("an \emph{large} increase" was no longer
+flagged; on two eLife articles with italic gene names LT001 fell from 135
+to 12). `Document.atoms` now records only the masked spans that stood for
+a word (maths, citations, references, code, URLs, Word equations), filled
+by each reader; the guard checks those. Five new tests fail on the first
+version and pass now; the owner's `.tex` result is unchanged (117 flags).
+Lesson: "masked" is not one thing. Formatting is masked because it is
+noise; maths is masked because it is content we cannot read.
+
+## 2026-10-03 (later) — P29: the real-document test bench
+
+**What:** the owner has no Word or LaTeX files to test with and asked for
+automated checking against real articles found with the PubMed and bioRxiv
+connectors, web search and GitHub. Two engineers worked in parallel: a
+corpus builder (manifest + licences) and a QA engineer (the bench).
+
+**Corpus (`ml/realdocs/manifest.yaml`, 208 documents, metadata only):**
+115 PMC Open Access articles in 9 disciplines (34 infectious-disease
+epidemiology), 20 PMC articles with native `.docx` supplements, 14
+medRxiv/bioRxiv preprints, 18 LaTeX manuscripts on GitHub, 41 Word
+robustness files (Apache POI, LibreOffice, python-docx, mammoth.js). Every
+licence was seen first-hand per item (PubMed copyright status, bioRxiv
+licence field, repository LICENSE at a pinned commit). arXiv was left out:
+its per-paper licences could not be verified from this sandbox. 27 hits
+showing only "© The Author(s)" were dropped.
+
+**Bench (`ml/realdocs/`, `.github/workflows/realdocs.yml`):** fetches at
+run time (never into the repo), renders each JATS article three ways
+(plain, a real .docx, a .tex) so format parity exposes reader bugs, and
+checks invariants on every document: masked length, segment round-trip,
+span bounds and text, no span on masked markup, no file/network/process
+access while reading (an audit hook; covers the XXE probe), no crash or
+hang. Reports carry no text; snippets go only to the CI artifact and only
+for openly licensed items.
+
+**What real documents found (all fixed, each with a regression test):**
+- **A regression in my own P28 fix**, before it merged: masked formatting
+  (`\emph{`, `**`) counted as material between words and silenced real
+  errors. Fixed in PR #3 with `Document.atoms` (b512393).
+- A 17 KB Word file with 400 nested tables crashed the reader
+  (RecursionError): depth cap + clean refusal.
+- Spans on markup: G106 started at `\documentclass`, G104 ended inside
+  `\cite{}` or was reversed, AB802 highlighted `\begin{a`. Rules fixed, and
+  `engine._trim_to_prose` now trims any span off masked blanks centrally
+  (headings exempt: D902 points at them on purpose).
+- `\vskip .5em`, `\kern 3pt`: brace-less dimensions read as prose.
+- Overleaf projects with a cover letter beside the manuscript were refused;
+  the adapter now chooses (side documents never win; most `\input`s, then
+  longest) and says which file it checked.
+- pandoc/knitr code blocks (`Shaded`/`Highlighting`) broke the parser for
+  whole R Markdown papers; glossary/theorem definitions and algorithmic
+  pseudo-code leaked as prose ("MTHM MTHM" as a doubled word).
+- On a parse failure the reader now tries pylatexenc's lenient mode and
+  keeps it only if it recovers ≥ 80% of the words (it kept 99% where it
+  worked and 19–57% where it swallowed text); otherwise the regex reader,
+  which now masks code too.
+
+**Evidence:** local bench on the 59 GitHub-hosted documents: FAIL (1
+crash, 21 span violations in 11 projects, 2 refusals) → **PASS**; LaTeX
+19.4 → 16.2 flags/1000w (engineering 38 → 18). Core 525 passed, service
+145, bench 26; noise floor unchanged at 14.51 (plain text is unaffected).
+The 149 PMC/preprint items can only be fetched in GitHub Actions: their
+first run follows the merge.
+
+**Lessons:**
+- **Real documents beat imagined ones.** One evening of 59 real files
+  found eleven reader bugs that 500 synthetic tests had not.
+- **A bench must check itself.** The first local run of the bench caught
+  my own regression in an unmerged PR; the invariants (no span on markup)
+  are what made it visible, not the flag counts.
+
+**Addendum (P29, first full CI run):** run 37136223549 (1 h 47 min) passed
+on all 208 manifest items it could fetch: 115 PMC articles × 3 renderings
+(2.25M words), 74 Word supplements, 17 LaTeX projects, 41 robustness files;
+6 refusals all expected. Only 3 of 14 preprints were fetched (the preprint
+servers refuse automated downloads). Format parity holds on average
+(docx −0.44, tex −0.34 flags/1000w against plain). Published PLOS/eLife
+articles run at ~16 flags/1000w — no better than the theses — so Q3
+(≤ 11) must be tuned against published prose too, not only theses.

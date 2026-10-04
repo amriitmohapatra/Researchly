@@ -229,3 +229,33 @@ def test_cli_checks_a_docx(tmp_path, capsys):
                                 + para(AGENT)))
     assert cli.main(["check", str(path), "--no-metrics"]) == 1
     assert "G104" in capsys.readouterr().out
+
+
+# --- P29 real-document bench: deeply nested input must be refused, not crash --
+
+@pytest.mark.parametrize("depth", [400, 2000])
+def test_deeply_nested_tables_are_refused_cleanly(depth):
+    # 400 levels is small enough to pass the size guards and reach the
+    # depth cap; 2000 is refused earlier by the zip-bomb ratio guard. Either
+    # refusal is clean; a RecursionError (the bug) is not.
+    inner = para("A cell.")
+    for _ in range(depth):
+        inner = f"<w:tbl><w:tr><w:tc>{inner}</w:tc></w:tr></w:tbl>"
+    with pytest.raises(IngestError) as e:
+        load_bytes(NAME, docx_bytes(inner))
+    assert e.value.code == ("unreadable_file" if depth == 400
+                            else "payload_too_large")
+
+
+def test_deeply_nested_hyperlinks_are_refused_cleanly():
+    inner = run("x")
+    for _ in range(1500):
+        inner = f"<w:hyperlink>{inner}</w:hyperlink>"
+    rejected(docx_bytes(f"<w:p>{inner}</w:p>"), "unreadable_file")
+
+
+def test_ordinary_nesting_still_reads():
+    inner = para("A nested cell.")
+    for _ in range(6):
+        inner = f"<w:tbl><w:tr><w:tc>{inner}</w:tc></w:tr></w:tbl>"
+    assert "A nested cell." in load(inner).original

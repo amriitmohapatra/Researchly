@@ -62,7 +62,7 @@ export function FilePanel({
         .filter(Boolean)
         .join(", ")
     : loading
-      ? "Reading and checking…"
+      ? "Reading and checking… A whole thesis can take about two minutes."
       : null;
 
   return (

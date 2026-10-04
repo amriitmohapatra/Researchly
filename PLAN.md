@@ -67,7 +67,7 @@ done and what's next*. Both the owner and Claude edit it.
 - [x] Add S001 lexicon gaps: `estimand(s)`, `urbanicity`, `prespecified`, `lockdown(s)`, `serotypic`, `tradeoff(s)`, `exergy` — 2026-10-03, ee0057d; regression test fails without, passes with
 - [x] Update CLAUDE.md / AGENTS.md / README repo map + commands to the new layout — 2026-10-03
 - [x] Noise-floor gate: `ml/dogfood/noise_gate.py` + `baseline.json` — measured **14.84/1000w** all tiers (12.5 ex-S001; 12.8 ex-LT001). Fails on a rise > 0.3 *or* a busy rule going silent (dead tier)
-- [~] **Exit check:** CI green on PR #1 ✅; `check_third_party.py` exits 0 ✅; owner merges PR #1 **(Amriit)**
+- [x] **Exit check:** CI green on PR #1 ✅; `check_third_party.py` exits 0 ✅; owner merges PR #1 **(Amriit)** ✅ (merged 2026-10-03)
 
 ## S1 — Engine online (paste text at a private URL → suggestions)
 
@@ -93,11 +93,11 @@ done and what's next*. Both the owner and Claude edit it.
 
 ## S2 — Accounts, files, settings sync
 
-- [ ] Supabase project (region D3) **(Amriit: create project; docs/deploy.md step 8)**
+- [x] Supabase project (region D3) **(Amriit: create project; docs/deploy.md step 8)** — 2026-10-03, owner signed in and out on the live site. Checked from outside: anonymous read/insert/update/delete and RPC calls refused (42501 permission denied), a forged unsigned token rejected (PGRST301), signing keys ES256
 - [x] Schema: `user_settings`, `dictionary_words`, RLS per command, `my_config()` (s2-design §2) — afc3041. `profiles`, `usage_events`, `feedback_events` are **not** created until a feature reads them (collect only what's needed)
 - [x] Engine verifies JWT; `user_id` from token only; remote config layer in `config.py` — 2026-10-03, 8e82b7a: JWKS verification with the algorithm pinned to the key, settings read via PostgREST with the caller's own token (no secret key in the engine; it refuses to start with one); 39 token/settings tests, 3 new canary scenarios
 - [x] `/v1/analyze-file` (raw bytes, filename never logged, 25 MiB cap, sign-in required when accounts are on) — 8e82b7a, 16 tests
-- [~] Two-user test (read/update/delete) automated in CI (Q7) — afc3041 + f5ac4b8: 85 tests on Postgres 16 with a Supabase shim, and all 19 deliberate weakenings of the migration caught (re-run independently by the lead). CI job `supabase-rls` added; tick when it has run green on GitHub
+- [x] Two-user test (read/update/delete) automated in CI (Q7) — afc3041 + f5ac4b8: 90 tests on Postgres 16 with a Supabase shim, and all 19 deliberate weakenings of the migration caught (re-run independently by the lead). CI job `supabase-rls` green on GitHub at c975bec (amriitmohapatra/Researchly#2, merged 2026-10-03), after fixing a test that assumed the server's sort order
 - [x] LaTeX adapter on pylatexenc; multi-file `.zip` (`\input`/`\include`/`\subfile`) — 8dd7b00, 6488b8a: 106 + 38 tests; parse failure falls back to the regex masker with a visible warning; hostile zips (bomb, traversal, symlink, encrypted, fan-out) refused
 - [x] `.docx` OOXML adapter (styles incl. localised ids, headings, tables, tracked changes read as accepted; defusedxml; zip-bomb guard). Comments and footnotes ignored in S2 — 6488b8a: 37 tests incl. XXE and billion laughs; identical to the Word add-in path
 - [x] Offset round-trip property test for every adapter — seeded random round trips: 40 LaTeX, 15 zip, 20 docx
@@ -142,6 +142,16 @@ done and what's next*. Both the owner and Claude edit it.
 - [ ] **Exit check:** flag precision on the 50 labelled paragraphs reported here
 
 ## S5 — Critic bake-off (Laya vs ModernBERT)
+
+### Real-document test bench (P29, owner request 2026-10-03; seeds S5a)
+
+- [x] Manifest of 208 openly licensed documents, every licence verified per item — `ml/realdocs/manifest.yaml`, `SOURCES.md`, six `datasets.yaml` entries: 115 PMC OA articles (9 disciplines, 34 epidemiology), 20 PMC articles with native `.docx` supplements, 14 medRxiv/bioRxiv preprints, 18 LaTeX manuscripts on GitHub (CC BY/CC0), 41 Word robustness files
+- [x] Bench: fetch at run time (never committed), three renderings per JATS article (plain/docx/tex), invariants (lengths, segment round-trip, span bounds/text, spans never on masked markup, no I/O while reading, no crash/hang), format parity, report with no text — `ml/realdocs/`, `.github/workflows/realdocs.yml` (dispatch, weekly, engine changes); 26 tests in CI
+- [x] Local run on the 59 GitHub-hosted documents: **PASS** after the P29 fixes (was FAIL: 1 crash, 21 span violations, 2 projects refused); LaTeX 19.4 → 16.2 flags/1000w
+- [x] First full run in GitHub Actions — 2026-10-03, run 37136223549 on 020bd32: **PASS** (1 h 47 min). All 115 PMC articles in three renderings (2.25M words), 74 native Word supplements from 20 articles, 17 LaTeX projects, 41 Word robustness files: no crash, every invariant held. Format parity: docx vs plain −0.44, tex vs plain −0.34 flags/1000w (mean of 118 articles). Published articles run at ~16 flags/1000w (PMC plain 16.46), like the theses (14.51)
+- [ ] Only 3 of 14 medRxiv/bioRxiv preprints were fetched (the servers refuse automated downloads); find a JATS mirror or drop them from the manifest
+- [ ] Add the published-article rate to the Q3 work: tune precision against PMC articles as well as the 8 theses (they are licence-clean, so examples can be inspected in the CI artifact)
+- [ ] Gate on flags/1000w per discipline once a baseline exists (reported, not gated, today)
 
 ### S5a — Open-access training corpus (owner request, 2026-10-03)
 
@@ -196,11 +206,23 @@ patterns of good research writing across disciplines, not just epidemiology.
   - [ ] Verify on the real Supabase project after step 8: run a quick two-user check through the REST API (the CI test uses a Postgres stand-in for Supabase's roles), and confirm `service_role` grants are as expected
   - [ ] Real users need a custom email sender (Supabase's built-in one only reaches the project team, ~2 emails/hour) — S6
   - [ ] Fold the S2 decisions from `docs/s2-design.md` into ARCHITECTURE.md when S2 closes
+- [x] Verify the real Supabase project as an outsider — done 2026-10-03 after the owner allow-listed the domain (see the S2 Supabase item). The live engine side is verified (2026-10-03): anonymous upload and >1,500-word paste get `sign_in_required`, a forged token gets `unauthorized`, every tier healthy
+- [ ] Large `.tex` (measured locally, synthetic LaTeX, grammar on): 25k words 21 s / 0.6 GB; 65k words 44 s / 1.3 GB; 120k words 74 s / 2.1 GB (×~1.5 on Cloud Run). Fixed: the browser gave up at 120 s while the engine may run 300 s; now 290 s, pinned by a test. Still open: no progress beyond a spinner, and a whole thesis waits ~2 min
+- [ ] **From the owner's first real `.tex` upload (P28, 2026-10-03), not yet fixed:**
+  - [ ] Section inheritance: a subsection with no section keyword ("Priors", "Solver") resets the section to "other" instead of inheriting its parent's ("Methods"). Headings need a level (LaTeX/Markdown/Word all know it) and resolution should inherit; a keyword in a nested heading ("Model fit" under Results) must not override its parent
+  - [ ] Topical top-level sections ("Experiment 1: the baseline SEIR") stay "other", so a methods report gets passive-voice flags meant for Discussion. Wire `document_type` (e.g. "methods report") into section defaults
+  - [ ] LanguageTool's own misreads on technical prose ("who meets whom" → "meet", "No fit is…" → "now", "is well behaved" → hyphen): collect across uploads, then skip the rules that misfire repeatedly
+- [ ] **From the real-document bench (P29), not yet fixed:**
+  - [ ] No language detection: a Portuguese document gets hundreds of spelling flags. Detect the language and say "Researchly checks English" instead of checking
+  - [ ] A 1.8 MB LaTeX book chapter exceeds the 1M-character cap; consider per-chapter checking of large projects
+  - [ ] One project (custom `\Set` macro in maths) still needs the regex reader; the parser's `$` tracking is thrown off. Collect more cases before special-casing
+  - [ ] JATS format parity on 11 eLife articles: G104 fires ~2× more and C303 ~3.5× less in docx/tex than plain — the nested-heading section bug (tracked above); re-measure after it is fixed
+  - [ ] S001 counts Word table cells towards its "used 3+ times = vocabulary" exemption (benign; noted so it is not chased)
 - [ ] Muting a rule while viewing an uploaded file re-sends the whole file to re-check; filtering the shown results in the browser would be instant (web, S2 follow-up)
 - [ ] Upload is hidden when accounts are not configured, so local development without Supabase has no upload; consider a dev-only switch
 - [ ] Q2: run spaCy and LanguageTool in parallel inside `api.analyze()` (chapter 6.9 s engine time on Cloud Run vs 6 s target); deferred by the owner 2026-10-03
 - [ ] Lower or split very large documents server-side: a 1M-character request takes ~74 s and 2.8 GiB (backend measurement, S1)
-- [ ] Reach Q3: bring the noise floor from 14.75 to ≤ 11/1000w (top contributors: G101 779, S001 676, G106 648, LT001 566 flags)
+- [ ] Reach Q3: bring the noise floor from 14.51 to ≤ 11/1000w (top contributors: G101 779, G106 648, S001 611, LT001 566 flags; P28 baseline)
 - [ ] Clean the 20 cosmetic ruff findings (17 unused imports, 3 placeholder-less f-strings) in a dedicated change, then widen `ruff.toml`
 - [ ] `language_tool_python` client is GPL-3.0-only: fine server-side; check before bundling it into any distributed desktop installer
 - [ ] Correct `docs/eval-corpora.md`: JFLEG and CWEB *do* declare CC BY-NC-SA 4.0 (registry audit, 2026-10-03)

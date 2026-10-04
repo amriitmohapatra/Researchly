@@ -29,7 +29,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
-from ..document import Heading, StructureItem, _mask_latex, classify_heading
+from ..document import (Heading, StructureItem, _mask_latex, classify_heading,
+                        inline_atoms)
 
 HEADING_MACROS = frozenset({"part", "chapter", "section", "subsection",
                             "subsubsection", "paragraph", "subparagraph"})
@@ -63,6 +64,52 @@ MASK_WHOLE = frozenset({
     # `\iffalse ... \fi` is how LaTeX authors comment out a block.
     "iffalse",
 })
+# Code, file names and table-of-contents plumbing: never prose. A preamble
+# `\newcommand{\code}[1]{\texttt{#1}}` adds `\code` to these per document
+# (_Masker.code_macros), which is how most authors spell inline code.
+CODE_MACROS = frozenset({"texttt", "code", "path", "file", "filename", "pkg",
+                         "cmd", "command", "nolinkurl", "addcontentsline"})
+_CODE_BODY = re.compile(r"\\(?:texttt|ttfamily|verb|lstinline|url|path|"
+                        r"nolinkurl|code)\b")
+_NEWCOMMAND = re.compile(
+    r"\\(?:re)?newcommand\*?\s*\{?\\([A-Za-z]+)\}?\s*(?:\[\d\])?"
+    r"\s*(?:\[[^\]]*\])?\s*\{")
+
+
+def code_macros_in(preamble: str) -> set[str]:
+    """Macros the preamble defines as wrappers around code formatting."""
+    found = set()
+    for m in _NEWCOMMAND.finditer(preamble):
+        body = preamble[m.end():m.end() + 200].split("\n", 1)[0]
+        if _CODE_BODY.search(body):
+            found.add(m.group(1))
+    return found
+
+
+# Masked macros that stand for a word in the sentence ("see Fig.~\ref{f}",
+# "at \url{...}"), unlike \label or \vspace, which stand for nothing.
+# Definitions in the document body (glossaries, theorems): never prose.
+DEFINITION_MACROS = frozenset({
+    "newacronym", "newglossaryentry", "newabbreviation", "theoremstyle",
+    "newtheorem", "setacronymstyle", "glsaddall"})
+
+ATOM_MACROS = frozenset({
+    "ref", "eqref", "autoref", "cref", "Cref", "vref", "pageref", "nameref",
+    "url", "verb", "lstinline", "footnotemark"})
+
+# TeX primitives that take a dimension or number WITHOUT braces
+# (`\\vskip .5em`, `\\kern 3pt`, `\\penalty 10000`). pylatexenc sees no
+# argument, so the dimension used to reach the checker as prose (P29).
+DIMEN_MACROS = frozenset({
+    "vskip", "hskip", "kern", "mkern", "mskip", "hspace", "vspace",
+    "raise", "lower", "moveleft", "moveright", "penalty", "hfuzz", "vfuzz",
+    "parskip", "parindent", "baselineskip", "lineskip", "linewidth"})
+_UNIT = r"(?:pt|em|ex|cm|mm|in|bp|pc|sp|dd|cc|mu|fil{1,3}|\\[a-zA-Z]+)"
+_NUM = r"[-+]?(?:\d+(?:[.,]\d*)?|[.,]\d+)"
+_DIMEN = re.compile(
+    rf"\s*=?\s*{_NUM}\s*{_UNIT}?"
+    rf"(?:\s*(?:plus|minus)\s*{_NUM}\s*{_UNIT})*")
+
 # Macros whose text is their LAST argument only (`\textcolor{red}{text}`).
 LAST_ARG_ONLY = frozenset({"textcolor", "colorbox", "fcolorbox"})
 # Escaped characters stay as written ("50\%", "R\&D"), as the regex masker
@@ -72,10 +119,16 @@ ESCAPED_CHARS = frozenset("%&$#_{}")
 MATH_ENVS = frozenset({"equation", "align", "alignat", "gather", "multline",
                        "eqnarray", "flalign", "displaymath", "math",
                        "split", "dmath"})
+# Shaded/Highlighting: the code blocks pandoc and knitr write (a fancyvrb
+# Verbatim with commands inside); they hold a literal `$` in
+# \\OperatorTok{$}, which broke the parser for whole R Markdown papers (P29).
 VERBATIM_ENVS = ("verbatim", "verbatim*", "Verbatim", "lstlisting",
-                 "minted", "comment")
+                 "minted", "comment", "Shaded", "Highlighting")
 NONPROSE_ENVS = frozenset({"tabular", "tabular*", "tabularx", "tabulary",
-                           "array", "tikzpicture", "thebibliography"})
+                           "array", "tikzpicture", "thebibliography",
+                           # pseudo-code ("\\State \\If ..."), P29
+                           "algorithmic", "algorithmicx", "algorithm",
+                           "algorithm2e"})
 TABULAR_ENVS = frozenset({"tabular", "tabular*", "tabularx", "tabulary"})
 FIGURE_ENVS = frozenset({"figure", "figure*", "wrapfigure", "sidewaysfigure",
                          "SCfigure"})
@@ -91,6 +144,9 @@ class LatexMask:
     headings: list[Heading]
     structure: list[StructureItem] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    # Spans that stood for a word in the sentence (maths, citations,
+    # references, code, URLs): see Document.atoms.
+    atoms: list[tuple[int, int]] = field(default_factory=list)
 
 
 def mask_latex(text: str,
@@ -115,7 +171,36 @@ def mask_latex(text: str,
                   "with a simpler reader; some markup may be checked as "
                   "prose.")
     masked, headings = _mask_latex(text)
-    return LatexMask(masked, headings, [], [reason])
+    # Before settling for the regex reader, try pylatexenc's lenient mode:
+    # on one bad construct (enumitem options holding an environment) it
+    # keeps almost every word with almost no markup leaking, where the
+    # regex reader leaks. But after some errors it silently swallows the
+    # rest of the file into maths, so it is kept only if it recovers at
+    # least LENIENT_MIN_SHARE of the words the regex reader finds (P29).
+    try:
+        lenient = _Masker(text, tolerant=True).run()
+        if _words(lenient.masked) >= LENIENT_MIN_SHARE * _words(masked):
+            lenient.warnings = [reason.replace(
+                "read the file with a simpler reader; some markup may be "
+                "checked as prose.",
+                "read it leniently; a little markup may be checked as prose.")]
+            return lenient
+    except Exception:
+        pass
+    return LatexMask(masked, headings, [], [reason],
+                     inline_atoms(text, "latex"))
+
+
+# On the P29 projects the lenient parse kept 99% of the words where it
+# worked, and 19-57% where it swallowed text: 0.8 separates them.
+LENIENT_MIN_SHARE = 0.8
+_WORD = re.compile(r"[A-Za-z]{2,}")
+
+
+def _words(masked: str) -> int:
+    """Real words only: the regex reader's leaked markup (", after= ]")
+    must not count in its favour."""
+    return len(_WORD.findall(masked))
 
 
 def _line_of(text: str) -> Callable[[int], str]:
@@ -268,10 +353,13 @@ def _context():
         ("affiliation", "[{"), ("affil", "[{"), ("address", "{"),
         ("email", "{"), ("institute", "{"), ("addtolength", "{{"),
         ("addtocounter", "{{"),
+        ("code", "{"), ("file", "{"), ("filename", "{"), ("pkg", "{"),
+        ("cmd", "{"), ("command", "{"), ("addcontentsline", "{{{"),
     )]
     macros += [MacroSpec(name, args_parser=RawArgs(raw, rest))
                for names, raw, rest in (
-                   (("url",), "{", ""), (("href",), "{", "{"),
+                   (("url", "path", "nolinkurl"), "{", ""),
+                   (("href",), "{", "{"),
                    (("verb", "lstinline"), "v", ""),
                    (("newcommand", "renewcommand", "providecommand"),
                     "*{[[{", ""),
@@ -302,7 +390,8 @@ def _context():
 # ---------------------------------------------------------------------------
 
 class _Masker:
-    def __init__(self, text: str):
+    def __init__(self, text: str, tolerant: bool = False):
+        self.tolerant = tolerant
         # pylatexenc fails on a macro whose optional argument would start
         # at end of input (a file ending in `\\`); a harmless `\relax`
         # after the source gives it a token to stop at. Nothing before it
@@ -315,17 +404,29 @@ class _Masker:
         # Each caption and the float or panel whose \label names it; the
         # label may come after the caption, so they are joined at the end.
         self.captions: list[tuple[StructureItem, StructureItem]] = []
+        self.code_macros = set(CODE_MACROS)
+        # Set after a code macro pylatexenc parsed without arguments (one
+        # the preamble defined): its `{...}` follows as a sibling group.
+        self.skip_group = False
+        self.atoms: list[tuple[int, int]] = []
+        # Set after a DIMEN_MACROS primitive: its dimension starts the next
+        # characters node.
+        self.eat_dimen = False
+        # Brace groups still to drop after a DEFINITION_MACROS call.
+        self.skip_definition = 0
 
     def run(self) -> LatexMask:
         from pylatexenc import latexwalker as lw
         self.lw = lw
         walker = lw.LatexWalker(self.text, latex_context=_context(),
-                                tolerant_parsing=False)
+                                tolerant_parsing=self.tolerant)
         # With a \begin{document}, only its body is prose and only it is
         # parsed: the preamble is configuration (and full of definitions
         # pylatexenc need not understand), and nothing after \end{document}
         # is typeset.
         m = _BEGIN_DOCUMENT.search(self.text, 0, self.n)
+        if m:
+            self.code_macros |= code_macros_in(self.text[:m.start()])
         if m:
             node, _, _ = walker.get_latex_environment(m.start(1), "document")
             nodes = [node]
@@ -341,7 +442,8 @@ class _Masker:
             h.end = min(h.end, self.n) if h.end is not None else None
         self.structure.sort(key=lambda s: s.start)
         return LatexMask("".join(self.out[:self.n]), self.headings,
-                         self.structure)
+                         self.structure, [],
+                         [(a, min(b, self.n)) for a, b in self.atoms if a < self.n])
 
     # -- primitives ---------------------------------------------------------
 
@@ -376,10 +478,34 @@ class _Masker:
         for n in nodes:
             if n is None:
                 continue
+            if self.skip_definition:
+                if isinstance(n, lw.LatexGroupNode) or (
+                        isinstance(n, lw.LatexCharsNode) and n.chars.strip() in ("", "*")):
+                    if isinstance(n, lw.LatexGroupNode):
+                        self.skip_definition -= 1
+                    continue
+                self.skip_definition = 0
+            if self.skip_group:
+                if isinstance(n, lw.LatexGroupNode):
+                    self.skip_group = False
+                    if prose:
+                        self.atoms.append((n.pos, n.pos + n.len))
+                    continue                     # the code's argument
+                if not (isinstance(n, lw.LatexCharsNode)
+                        and not n.chars.strip()):
+                    self.skip_group = False
             if isinstance(n, lw.LatexCharsNode):
+                start = n.pos
+                if self.eat_dimen:
+                    self.eat_dimen = False
+                    m = _DIMEN.match(n.chars)
+                    if m:
+                        start += m.end()
                 if prose:
-                    self.keep(n.pos, n.pos + n.len)
-            elif isinstance(n, lw.LatexSpecialsNode):
+                    self.keep(start, n.pos + n.len)
+                continue
+            self.eat_dimen = False
+            if isinstance(n, lw.LatexSpecialsNode):
                 # `--` and quote ligatures read as punctuation; `~` is a
                 # tie (a space) and `&` a column separator.
                 if prose and n.specials_chars not in ("~", "&"):
@@ -387,6 +513,8 @@ class _Masker:
             elif isinstance(n, lw.LatexGroupNode):
                 self.walk(n.nodelist, prose, sink)
             elif isinstance(n, lw.LatexMathNode):
+                if prose:
+                    self.atoms.append((n.pos, n.pos + n.len))
                 if n.displaytype == "display":
                     self.structure.append(StructureItem(
                         "equation", n.pos, n.pos + n.len,
@@ -421,6 +549,7 @@ class _Masker:
             return
         if name in CITE_MACROS:
             if prose:
+                self.atoms.append((n.pos, end))
                 key = self.raw_arg(args[-1]) if args else ""
                 self.structure.append(
                     StructureItem("citation", n.pos, end, key or None))
@@ -429,7 +558,22 @@ class _Masker:
             if len(args) > 1 and args[1] is not None:
                 self.walk([args[1]], prose, sink)
             return
+        if name in DEFINITION_MACROS:
+            # Arguments may not be declared to pylatexenc; mask the call
+            # and, if it parsed none, the brace groups that follow it.
+            self.skip_definition = 0 if args else 4
+            return
+        if name in DIMEN_MACROS and not args:
+            self.eat_dimen = True
+            return
         if name in MASK_WHOLE:
+            if prose and name in ATOM_MACROS:
+                self.atoms.append((n.pos, end))
+            return
+        if name in self.code_macros:
+            if prose and args:
+                self.atoms.append((n.pos, end))
+            self.skip_group = not args
             return
         if name in ESCAPED_CHARS:
             if prose:

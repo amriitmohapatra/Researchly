@@ -203,7 +203,15 @@ def g104_passive_agent(doc, document: Document):
                 or pobj[0].lemma_.lower() in PERSON_LIKE)
             if not agent_is_doer:
                 continue
-            end_tok = max(agent_subtree, key=lambda t: t.i)
+            # A masked \\cite{} after the agent is a whitespace token in
+            # its subtree; and a misparse can put the agent before the
+            # auxiliary, giving a reversed span (P29 bench).
+            words = [t for t in agent_subtree if not t.is_space]
+            if not words:
+                continue
+            end_tok = max(words, key=lambda t: t.i)
+            if end_tok.i < tok.i:
+                continue
             yield Suggestion(
                 message="Agent is stated — consider active voice: "
                         f"'{pobj[0].text} {verb.lemma_}…'.",
@@ -260,11 +268,14 @@ def g106_overlong(doc, document: Document):
         n = len(toks)
         nonword = sum(1 for t in toks if not t.is_alpha)
         if n > LIMIT and (nonword / n) < 0.25:
+            # From the first to the last real token: a sentence that follows
+            # masked markup (a LaTeX preamble) starts with whitespace tokens.
+            first = next(t for t in sent if not t.is_space)
+            last = [t for t in sent if not t.is_space][-1]
             yield Suggestion(
                 message=f"{n} words — consider splitting at a natural seam "
                         "(often at 'and', 'which', or a semicolon).",
-                start=sent.start_char,
-                end=sent.start_char + len(sent.text.rstrip()))
+                start=first.idx, end=last.idx + len(last.text))
 
 
 # ---------------------------------------------------------------------------

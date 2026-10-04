@@ -78,6 +78,11 @@ def s001_spelling(doc, document: Document):
             continue
         if _in_url_like(text, m.start(), m.end()):
             continue
+        # "mis-ordered", "non-zero", "co-circulating": a prefix before a
+        # hyphen is half of a compound, not a word on its own.
+        if text[m.end():m.end() + 1] == "-" and \
+                lower in spelling.DERIVATIONAL_PREFIXES:
+            continue
         capitalized = w[0].isupper()
         if capitalized and not _sentence_start(text, m.start()):
             continue                          # likely a proper noun

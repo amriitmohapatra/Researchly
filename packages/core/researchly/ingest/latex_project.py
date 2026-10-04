@@ -53,8 +53,10 @@ def load_zip(filename: str, data: bytes) -> Document:
                     "utf-8-sig")
             except UnicodeDecodeError:
                 files[name] = None
-    main = find_main(files)
+    main, note = choose_main(files)
     text, segments, warnings = expand(files, main)
+    if note:
+        warnings = [note] + warnings
 
     def locate(offset: int) -> str:
         path, line, _ = source_position(segments, text, offset)
@@ -67,7 +69,45 @@ def load_zip(filename: str, data: bytes) -> Document:
     return doc
 
 
+# Files that carry their own \documentclass but are not the paper: a cover
+# letter or rebuttal kept beside the manuscript is common on Overleaf, and
+# refusing such projects outright (P29 bench: 2 of 18 real projects) helped
+# nobody.
+_SIDE_DOCUMENT = re.compile(
+    r"cover|letter|response|rebuttal|reply|reviewer|supp|appendix|"
+    r"slides?|poster|highlights|graphical|abstract_only", re.IGNORECASE)
+_INCLUDES = re.compile(r"\\(?:input|include|subfile)\s*\{")
+
+
 def find_main(files: dict[str, str | None]) -> str:
+    return choose_main(files)[0]
+
+
+def choose_main(files: dict[str, str | None]) -> tuple[str, str | None]:
+    """(main file, note for the user or None). See find_main_strict for the
+    rules; when they leave several candidates, choose rather than refuse:
+    drop side documents (cover letter, response to reviewers, slides),
+    then prefer the file that \\inputs the most others, then the longest,
+    and say which file was checked."""
+    try:
+        return find_main_strict(files), None
+    except IngestError as e:
+        roots = getattr(e, "candidates", None)
+        if not roots:
+            raise
+    pool = [n for n in roots
+            if not _SIDE_DOCUMENT.search(posixpath.basename(n))] or roots
+    best = max(pool, key=lambda n: (len(_INCLUDES.findall(files[n] or "")),
+                                    len(files[n] or ""), -n.count("/"), n))
+    others = sorted(n for n in roots if n != best)
+    note = (f"This project has several main .tex files; Researchly checked "
+            f"{best} (not {', '.join(others[:3])}"
+            f"{'…' if len(others) > 3 else ''}). To check another, name it "
+            "main.tex or upload it on its own.")
+    return best, note
+
+
+def find_main_strict(files: dict[str, str | None]) -> str:
     """The file with a real `\\documentclass` (a `subfiles` chapter names
     the main file as its class, so it does not count). Several: prefer
     main.tex, then the only one at the top level. None: the only .tex."""
@@ -95,9 +135,11 @@ def find_main(files: dict[str, str | None]) -> str:
             return top[0]
     elif len(files) == 1:
         return next(iter(files))
-    raise IngestError("unreadable_file",
+    err = IngestError("unreadable_file",
                       "Researchly could not tell which .tex file is the main "
                       "one. Name it main.tex, or upload that file on its own.")
+    err.candidates = roots          # choose_main picks among these
+    raise err
 
 
 def _not_utf8() -> IngestError:

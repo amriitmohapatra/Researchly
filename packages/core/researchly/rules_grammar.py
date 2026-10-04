@@ -337,6 +337,10 @@ def lt001_grammar(doc, document: Document):
         # masked regions are spaces; never flag inside them
         if not document.masked[start:end].strip():
             continue
+        # ...nor across them: LanguageTool reads "An $\\exp(1)$ prior" as
+        # "An prior" and "$a$, $b$," as two commas in a row.
+        if document.touches_masked(start, end):
+            continue
         repl = m.replacements[0] if m.replacements else None
         yield Suggestion(
             message=f"{m.message} [{rule_id}]",

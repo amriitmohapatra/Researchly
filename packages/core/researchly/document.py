@@ -94,6 +94,10 @@ class Document:
     segments: list[Segment] = field(default_factory=list)
     structure: list[StructureItem] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    # Masked spans that stood for a word in the sentence: maths, citations,
+    # cross-references, code, URLs, Word equations. Formatting (\emph{,
+    # **, a heading) is masked too but stands for nothing, so it is not here.
+    atoms: list[tuple[int, int]] = field(default_factory=list)
     _line_starts: list[int] = field(default_factory=list, repr=False)
 
     # -- construction -------------------------------------------------------
@@ -139,6 +143,8 @@ class Document:
             structure, warnings = res.structure, res.warnings
         else:
             masked, headings = text, _detect_plain_headings(text)
+        atoms = (res.atoms if kind == "latex"
+                 else inline_atoms(text, kind) if kind == "markdown" else [])
         # Mask heading TEXT as well (after recording it): headings are not
         # sentences, and without terminal punctuation the parser merges them
         # into the following paragraph's first sentence, corrupting
@@ -150,7 +156,7 @@ class Document:
             _mask_spans(chars, [(h.start, end)])
         masked = "".join(chars)
         doc = cls(original=text, masked=masked, kind=kind, headings=headings,
-                  structure=structure, warnings=warnings)
+                  structure=structure, warnings=warnings, atoms=atoms)
         doc._line_starts = [0] + [m.end() for m in re.finditer(r"\n", text)]
         return doc
 
@@ -230,6 +236,42 @@ class Document:
         """1-based (line, col) for a character offset in the original text."""
         line_idx = bisect_right(self._line_starts, offset) - 1
         return line_idx + 1, offset - self._line_starts[line_idx] + 1
+
+    def masked_content(self, start: int, end: int) -> bool:
+        """True if [start, end) overlaps an atom: masked material that stood
+        for a word in the sentence (maths, a citation, code). Masked
+        formatting such as `\\emph{` or `**` does not count: "an
+        \\emph{large} rise" is still "an large rise" to the reader."""
+        return any(a < end and start < b for a, b in self.atoms)
+
+    def touches_masked(self, start: int, end: int) -> bool:
+        """True if masked material lies inside [start, end) or in the spaces
+        either side of it (across a wrapped line, not a paragraph break).
+
+        Masking blanks inline maths, citations and code to spaces, so the
+        words around them look adjacent: "and $C(0)$ and" reads as a doubled
+        "and and", "An $\\exp(1)$ prior" as "An prior". A finding whose
+        evidence crosses a blank is about the masking, not the writing.
+        """
+        m = self.masked
+        a = self._blank_run(start, -1)
+        b = self._blank_run(end, +1)
+        return self.masked_content(a, b)
+
+    def _blank_run(self, i: int, step: int) -> int:
+        """Walk from i over blanks in the masked text, crossing at most one
+        line break (a sentence wrapped in the source) but never a blank line
+        (a paragraph break)."""
+        m, newlines = self.masked, 0
+        while True:
+            j = i if step > 0 else i - 1
+            if j < 0 or j >= len(m) or m[j] not in " \t\n":
+                return i
+            if m[j] == "\n":
+                newlines += 1
+                if newlines > 1:
+                    return i
+            i += step
 
     def section_at(self, offset: int) -> str:
         """IMRaD section governing this offset ('unknown' if no headings)."""
@@ -315,9 +357,12 @@ _TEX_MASK_ENVS = (
     "equation", "align", "alignat", "gather", "eqnarray", "multline",
     "displaymath", "math", "verbatim", "lstlisting", "minted", "tikzpicture",
     "tabular", "array",
+    # P29 real documents: pandoc/knitr code blocks, pseudo-code
+    "Shaded", "Highlighting", "Verbatim", "algorithmic", "algorithmicx",
+    "algorithm", "comment",
 )
 _TEX_KEEP_CONTENT = (
-    "emph", "textbf", "textit", "texttt", "textsc", "underline", "mbox",
+    "emph", "textbf", "textit", "textsc", "underline", "mbox",
     "caption", "title", "textnormal", "textrm",
 )
 _TEX_MASK_WHOLE = (
@@ -325,7 +370,33 @@ _TEX_MASK_WHOLE = (
     "ref", "eqref", "autoref", "cref", "Cref", "vref", "label", "url",
     "includegraphics", "input", "include", "bibliography", "bibliographystyle",
     "usepackage", "documentclass", "footnote", "footnotemark", "href",
+    # code is not prose (P28 for the parser; P29 for this fallback)
+    "texttt", "code", "path", "verb",
+    # definitions, not text (P29: "\\newacronym{MTHM}{MTHM}" read as a
+    # doubled word)
+    "newacronym", "newglossaryentry", "newtheorem", "theoremstyle",
+    "newcommand", "renewcommand", "providecommand", "DeclareMathOperator",
 )
+
+
+# Inline material per markup: what stands for a word in the sentence.
+_ATOM_PATTERNS = {
+    "markdown": (r"`[^`\n]+`", r"\$\$.*?\$\$", r"(?<![\\$])\$[^$\n]+\$",
+                 r"\[[^\]\n]*@[^\]\n]*\]", r"(?<![\w.])@[\w:.\-]+",
+                 r"!\[[^\]]*\]\([^)]*\)"),
+    "latex": (r"\$\$.*?\$\$", r"(?<!\\)\$[^$]+\$", r"\\\[.*?\\\]",
+              r"\\\(.*?\\\)",
+              r"\\(?:[a-zA-Z]*cite[a-zA-Z]*|ref|eqref|autoref|[cC]ref|url|"
+              r"texttt|verb)\*?(?:\[[^\]]*\])*(?:\{[^{}]*\})+"),
+}
+
+
+def inline_atoms(text: str, kind: str) -> list[tuple[int, int]]:
+    """Atoms (see Document.atoms) found by pattern, for the regex maskers."""
+    spans: list[tuple[int, int]] = []
+    for pat in _ATOM_PATTERNS.get(kind, ()):
+        spans += _find_all(pat, text, re.DOTALL)
+    return sorted(spans)
 
 
 def _mask_latex(text: str) -> tuple[str, list[Heading]]:

@@ -178,6 +178,8 @@ def check(document: Document, nlp, *,
             continue
         kept: list[Suggestion] = []
         for s in r.func(spacy_doc, document):
+            if not _trim_to_prose(s, document):
+                continue
             s.rule_id, s.rule_name, s.category = r.id, r.name, r.category
             # Carry the explanation and provenance on the suggestion itself.
             # Every surface used to re-join these out of REGISTRY by hand.
@@ -197,6 +199,34 @@ def check(document: Document, nlp, *,
     out = _resolve_overlaps(out)
     out.sort(key=lambda s: (s.start, s.rule_id))
     return out
+
+
+def _trim_to_prose(s: Suggestion, document: Document) -> bool:
+    """Shrink a span off masked blanks at either end; False if nothing is
+    left or the span is reversed.
+
+    spaCy keeps masked markup as whitespace tokens, so a rule that takes a
+    sentence's or a subtree's first/last token can start at
+    `\\documentclass` or end inside `\\cite{...}` (P29 bench). A span is
+    only ever shown on prose."""
+    if s.end <= s.start or s.start < 0 or s.end > len(document.masked):
+        return False
+    # Headings are masked from the parser but are real text the reader sees;
+    # section-level rules (D902) point at them on purpose.
+    for h in document.headings:
+        h_end = h.end if h.end is not None else document.original.find("\n", h.start)
+        if h.start <= s.start < (h_end if h_end != -1 else len(document.original)):
+            return True
+    m = document.masked
+    a, b = s.start, s.end
+    while a < b and m[a].isspace():
+        a += 1
+    while b > a and m[b - 1].isspace():
+        b -= 1
+    if a >= b:
+        return False
+    s.start, s.end = a, b
+    return True
 
 
 def _overlaps(a: Suggestion, b: Suggestion) -> bool:

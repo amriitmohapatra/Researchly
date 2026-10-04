@@ -952,6 +952,173 @@ datasets:
     sha256: null
     notes: "Treat like PMC-OA: per-paper licence rows; only CC BY / CC0 papers may gain ship_* uses."
 
+  # ───────────────────────── Real-document test bench (P29; seeds S5a) ─────────────────────────
+  # Per-item rows (licence, evidence, permitted_use) live in ml/realdocs/manifest.yaml;
+  # how they were found and what was excluded: ml/realdocs/SOURCES.md. Texts are fetched
+  # in CI at run time and never committed. Built 2026-10-03.
+
+  - id: realdocs-europepmc-oa
+    name: "Real-document bench — PMC Open Access full text (JATS), 115 articles"
+    kind: eval_set
+    source: "https://www.ebi.ac.uk/europepmc/webservices/rest/{PMCID}/fullTextXML"
+    location: "ml/realdocs/manifest.yaml"
+    in_git: false
+    licence: "per item: CC-BY-4.0 (112) or CC0-1.0 (3)"
+    licence_verified: true
+    licence_evidence: >-
+      Every item checked individually with the PubMed connector
+      get_copyright_status on 2026-10-03; each manifest row quotes what was
+      seen. 106 PLOS items carry the statement 'distributed under the terms
+      of the Creative Commons Attribution License' without a version number;
+      the 4.0 version is taken from PLOS's content-licence policy
+      (https://journals.plos.org/plosone/s/content-license, seen via web
+      search). 6 items show PMC's 'CC BY 4.0' licence URL; 3 are CC0 (one
+      by statement, two by PMC licence URL).
+    commercial_ok: true
+    permitted_use: [ci_eval, train_experimental]
+    current_use: "real-document test bench (P29)"
+    shipped_today: false
+    sha256: null
+    items: "ml/realdocs/manifest.yaml — ids pmc-PMC*"
+    notes: >-
+      Nine disciplines; 34 infectious-disease epidemiology/modelling items
+      (owner's field). PLOS family plus two eLife CC0 papers. Nature
+      Communications, BMC Medicine and other eLife hits returned only
+      '© The Author(s)' from the connector, so they were left out (licence not
+      seen). ship_text / ship_model are not granted yet: add them per item
+      only after S5a's attribution plan exists (CC BY needs attribution on
+      every shipped sentence).
+
+  - id: realdocs-pmc-supplementary-docx
+    name: "Real-document bench — native Word supplements of PMC OA articles, 20 articles"
+    kind: eval_set
+    source: "https://www.ebi.ac.uk/europepmc/webservices/rest/{PMCID}/supplementaryFiles (ZIP; pick *.docx)"
+    location: "ml/realdocs/manifest.yaml"
+    in_git: false
+    licence: "CC-BY-4.0 (the parent article's licence, which PLOS applies to supporting information)"
+    licence_verified: true
+    licence_evidence: >-
+      Parent article licence per item via PubMed get_copyright_status,
+      2026-10-03 (same evidence form as realdocs-europepmc-oa). The .docx
+      format of each supplement was read from the PMC full-text record
+      (get_full_text_article lists each supporting file with its format tag,
+      e.g. '(DOCX)').
+    commercial_ok: true
+    permitted_use: [ci_eval, train_experimental]
+    current_use: "real-document test bench (P29)"
+    shipped_today: false
+    sha256: null
+    items: "ml/realdocs/manifest.yaml — ids pmcsupp-PMC*"
+    notes: >-
+      Mix of prose appendices (model definitions, supplementary methods),
+      questionnaires, interview guides, anonymised interview transcripts
+      (PMC12700414), Word tables and reporting checklists. Before using
+      checklist supplements (PRISMA, CONSORT, STROBE-type) for training,
+      exclude them: their wording comes from the checklist authors, not the
+      article. All 20 are PLOS. BMC 'Additional file' supplements were not
+      used because the connector did not show BMC licences.
+
+  - id: realdocs-medrxiv-biorxiv
+    name: "Real-document bench — medRxiv / bioRxiv CC BY preprints (JATS), 10 preprints"
+    kind: eval_set
+    source: "jatsxml URLs from the bioRxiv API (https://www.medrxiv.org|www.biorxiv.org/content/early/…/*.source.xml)"
+    location: "ml/realdocs/manifest.yaml"
+    in_git: false
+    licence: "CC-BY-4.0 (API value 'cc_by')"
+    licence_verified: true
+    licence_evidence: >-
+      bioRxiv connector get_preprint, 2026-10-03: license field 'cc_by' for
+      each item, version 1. The API value has no version number; the 4.0 is
+      from the servers' licence menu.
+    commercial_ok: true
+    permitted_use: [ci_eval, train_experimental]
+    current_use: "real-document test bench (P29)"
+    shipped_today: false
+    sha256: null
+    items: "ml/realdocs/manifest.yaml — ids medrxiv-* / biorxiv-* with licence CC-BY-4.0"
+    notes: >-
+      Not peer-reviewed. 7 medRxiv (epidemiology, public health), 3 bioRxiv
+      (ecology). Licence is per version: the manifest pins v1, and a later
+      version may carry a different licence.
+
+  - id: realdocs-medrxiv-biorxiv-nc-nd
+    name: "Real-document bench — medRxiv / bioRxiv NC or ND preprints (JATS), 4 preprints"
+    kind: eval_set
+    source: "jatsxml URLs from the bioRxiv API"
+    location: "ml/realdocs/manifest.yaml"
+    in_git: false
+    licence: "per item: CC-BY-ND-4.0 (2), CC-BY-NC-ND-4.0 (1), CC-BY-NC-4.0 (1)"
+    licence_verified: true
+    licence_evidence: "bioRxiv connector get_preprint, 2026-10-03: license 'cc_by_nd' / 'cc_by_nc_nd' / 'cc_by_nc' per item (v1)"
+    commercial_ok: false
+    permitted_use: [ci_eval]
+    current_use: "real-document test bench (P29)"
+    shipped_today: false
+    sha256: null
+    items: "ml/realdocs/manifest.yaml — ids medrxiv-* / biorxiv-* with NC or ND licences"
+    notes: "D2: NC / ND never go beyond ci_eval. Kept because they are infectious-disease modelling papers (the owner's field)."
+
+  - id: realdocs-github-latex
+    name: "Real-document bench — LaTeX manuscript sources on GitHub, 18 projects"
+    kind: eval_set
+    source: "https://github.com/{owner}/{repo}/archive/{sha}.tar.gz (commit-pinned)"
+    location: "ml/realdocs/manifest.yaml"
+    in_git: false
+    licence: "per repository: CC-BY-4.0 (15) or CC0-1.0 (3)"
+    licence_verified: true
+    licence_evidence: >-
+      The LICENSE / LICENSE.md / LICENSE.txt / LICENCE / COPYING file of each
+      repository, read at the pinned commit via raw.githubusercontent.com on
+      2026-10-03; the licence text's heading is quoted in each manifest row.
+    commercial_ok: true
+    permitted_use: [ci_eval, train_experimental]
+    current_use: "real-document test bench (P29)"
+    shipped_today: false
+    sha256: null
+    items: "ml/realdocs/manifest.yaml — ids gh-*"
+    notes: >-
+      Stands in for the planned arXiv CC BY set. arxiv.org was blocked for
+      both the shell and web fetch, and search results do not show per-paper
+      licences, so no arXiv licence could be verified first-hand and arXiv
+      was left out (see arxiv-fulltext). These are the authors' own
+      manuscript sources (ICLR, NeurIPS-workshop, ISMIR, ReScience, PLOS
+      Comp Biol, LiveCoMS, AmNat, an archaeology data paper, a linguistics
+      book, nuclear engineering), not the publishers' versions. A
+      repository-level licence covers the whole tree; any third-party
+      figures or templates inside a tree are out of scope (prose only).
+
+  - id: realdocs-docx-test-corpora
+    name: "Real-document bench — Word (.docx) robustness test files from open-source parsers, 41 files"
+    kind: eval_set
+    source: "raw.githubusercontent.com, commit-pinned: apache/poi, LibreOffice/core, python-openxml/python-docx, mwilliamson/mammoth.js"
+    location: "ml/realdocs/manifest.yaml"
+    in_git: false
+    licence: "per repository: Apache-2.0 (apache/poi, 24 files), MPL-2.0 (LibreOffice/core, 12), MIT (python-docx, 2), BSD-2-Clause (mammoth.js, 3)"
+    licence_verified: true
+    licence_evidence: >-
+      Repository licence files read at the pinned commits on 2026-10-03:
+      apache/poi legal/LICENSE (Apache License 2.0); LibreOffice/core
+      COPYING.MPL (MPL 2.0; the tree also ships COPYING (GPL-3.0) and
+      COPYING.LGPL, and its README says 'copyleft licenses'); python-docx
+      LICENSE (MIT); mammoth.js LICENSE (BSD two-clause).
+    commercial_ok: unknown
+    permitted_use: [ci_eval]
+    current_use: "real-document test bench (P29)"
+    shipped_today: false
+    sha256: null
+    items: "ml/realdocs/manifest.yaml — ids docx-*"
+    notes: >-
+      Format-robustness inputs, not prose: tracked changes, comments,
+      footnotes and endnotes, OMML and MathType equations, fields, TOC,
+      structured-document-tag citations, text boxes, Strict OOXML (two
+      producers), RTL, macro-enabled, encrypted, truncated, fuzzer-minimised
+      and an XML-external-entity probe. The test documents have no per-file
+      licence notice and several come from bug reports, so they stay ci_eval
+      only and are never training text. Apache POI files crawled from the web
+      were skipped. No file of 1 MB or more is included: the large-input
+      test is the ~1.8 MB LaTeX chapter in realdocs-github-latex
+      (cysouw/diathesis).
+
   # ───────────────────────── Base models for the S5 bake-off ─────────────────────────
 
   - id: laya
