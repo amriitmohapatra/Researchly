@@ -17,7 +17,7 @@ done and what's next*. Both the owner and Claude edit it.
   slice until the previous slice's exit check is ticked.
 - Substantive work still gets a dated entry in `docs/PROJECT_LOG.md`.
 
-**Current slice: S2 — Accounts, files, settings sync** (design: `docs/s2-design.md`). S1 is live at researchly-chi.vercel.app; on 2026-10-03 the owner chose to defer the Q2 speed-up and move on, with S1's real-chapter exit check still to do.
+**Current slice: S3 — Word add-in, hosted** (started 2026-10-04 after S2b merged as amriitmohapatra/Researchly#5 and the owner deployed it). S1's and S2's real-document exit checks are still open with the owner; S2b's passed.
 
 ---
 
@@ -123,15 +123,19 @@ Built 2026-10-04 (P32): `researchly/structure.py`, `rules_structure.py`, `rules_
 - [x] Converted manuscripts (P33, the owner's deliberately bad .docx: a working paper run through a PDF-to-Word converter): 604 → 409 flags. Headings run into their paragraphs are split and flagged (X501); typed captions, lettered appendix floats ("Table A.4") and "(continued)" tables are read, and a caption run into a paragraph ("… linear. Figure C.2: …") counts as present. 35 tests
 - [x] Noise floor: 11.94 → 12.65 on purpose (+204 flags from the consistency rules), then 11.67 after P33
 - [x] Structural rules on 140 published PMC articles (CI run 37190315670 at cfddd47, PASS, 547 files): three were noisy, each reproduced on synthetic JATS and fixed with a test that fails on the old code — X401 369 (Word rendering; 24 in TeX): a table caption took the previous table's cells when journals put every table at the end, and an image-only table took the next table's; X202 74/82: short *table* titles, which ICMJE asks for (X202 now judges figure captions only); X301 373 (TeX): the converter numbered every formula and the text cites them as typed "Eq. (3)" (X301 now counts typed references; the converter numbers only formulas the article labels). Rerun 37194170115 (710436f, PASS, 14.54/1000w overall): X401 369 → 24 (Word now equals TeX), X202 74/82 → 35/40 (figure captions of under five words, read as genuine), X301 373 → 249 (a hidden Preference; many articles number equations they never cite). New regression found and fixed: X104 0 → 33 on PMC supplement .docx files once typed captions counted — X104 now judges styled captions only; list-of-figures entries and repeated typed captions are no longer floats. Confirmed by run 37197496673 (73c7d5a, PASS; 138 articles, two bioRxiv fetches rate-limited): X104 on supplement .docx 33 → 0, X401 24/24, X202 35/40, X301 248. Still open on published articles: X101 16, X102 12, X103 12 per rendering and X104 11 (Word rendering) — about one per ten articles; needs the run's samples (artifact) or a local PMC cache to judge, since the sandbox cannot reach EBI
-- [ ] **Exit check:** owner checks one real chapter and reports false flags **(Amriit)**
+- [x] S2b + P33 merged to main — amriitmohapatra/Researchly#5, 2026-10-04; owner deployed the engine
+- [x] **Exit check:** owner checks one real chapter and reports false flags **(Amriit)** — 2026-10-04, owner: "It's good"
 
 ## S3 — Word add-in, hosted
 
-- [ ] Taskpane served over HTTPS from Vercel; calls hosted engine
-- [ ] Sign-in via Office dialog + Supabase (Microsoft provider)
-- [ ] Unified JSON manifest (+ XML for Mac via `alternateIcons`)
-- [ ] Optional local-engine mode retained (localhost)
-- [ ] Draft / Revise mode (P1) in `config.py`, so it is shared by every surface; Draft shows sentence-level checks only
+- [x] Engine contract for Word: `POST /v1/analyze-word` takes Office JS paragraphs and returns each suggestion's Word location (paragraph, offsets, search snippet, occurrence) and what was not read — 2026-10-04, 0e02387; locator shared with the local server (`researchly/wordloc.py`); 12 service tests incl. a privacy canary on the new route
+- [~] Taskpane served over HTTPS from Vercel (`/word` in apps/web); calls hosted engine — in progress
+- [~] Sign-in by an emailed code inside the taskpane (Supabase OTP). Changed from "Office dialog + Microsoft provider": no Azure app registration for the owner, and Office dialogs are unreliable on Mac Word; the Microsoft provider can be added later. Owner step: put `{{ .Token }}` in the Supabase Magic Link email template **(Amriit)**
+- [~] XML manifest for Mac sideloading + unified JSON manifest
+- [~] Optional local-engine mode retained: "This computer" engine choice in the hosted taskpane, and the old localhost taskpane kept as the maintenance path
+- [x] Draft / Revise mode (P1) in `config.py`, so it is shared by every surface; Draft shows sentence-level checks only — 2026-10-04, 0e02387: rules declare `scope`; Draft holds back document-level checks and says how many (`hidden_by_mode`); TOML, account (`user_settings.mode`, migration `20261004120000_s3_mode.sql`), CLI `--mode`, request `options.mode`; 9 core tests, Supabase two-user suite extended
+- [ ] Apply migration `supabase/migrations/20261004120000_s3_mode.sql` in the Supabase SQL Editor **(Amriit)**
+- [~] Support contact: every surface tells users to report problems by email to **amrit.mohapatra97@gmail.com** (owner's request, 2026-10-04) — a "Report a problem" link in the add-in and the web app, with a note not to paste confidential document text into the email; README and docs say the same
 - [ ] **Exit check:** owner uses it on Mac Word for a week; issues logged below
 
 ## S4 — Narrative map v1
