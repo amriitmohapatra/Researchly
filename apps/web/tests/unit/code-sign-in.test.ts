@@ -18,6 +18,7 @@ describe("sign-in by emailed code (Word taskpane)", () => {
     expect(verifyCodeErrorMessage({ code: "otp_expired", status: 403 })).toMatch(/expired or has already been used/);
     expect(verifyCodeErrorMessage({ status: 429 })).toMatch(/Too many tries/);
     expect(verifyCodeErrorMessage({ name: "AuthRetryableFetchError" })).toMatch(/Could not reach/);
+    expect(verifyCodeErrorMessage({ name: "AuthRetryableFetchError", status: 500 })).toMatch(/had a problem/);
     expect(verifyCodeErrorMessage({ status: 400 })).toMatch(/not right/);
   });
 });

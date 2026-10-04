@@ -300,9 +300,20 @@ export interface AuthErrorLike {
  * A Supabase sign-in failure, in words a writer can act on. Supabase's own
  * text is not shown: it is written for developers.
  */
+/**
+ * True only when the request never got an answer. supabase-js also raises
+ * AuthRetryableFetchError for 5xx replies (500 included), and Supabase
+ * answers 500 when it cannot send the email (e.g. custom SMTP refused the
+ * login): blaming the writer's connection then sent them the wrong way.
+ */
+function unreachable(err: AuthErrorLike): boolean {
+  const status = err.status ?? 0;
+  return status === 0 && (err.name === "AuthRetryableFetchError" || err.status === 0);
+}
+
 export function signInErrorMessage(err: AuthErrorLike): string {
   const code = err.code ?? "";
-  if (err.name === "AuthRetryableFetchError" || err.status === 0) {
+  if (unreachable(err)) {
     return "Could not reach the sign-in service. Check your connection and try again.";
   }
   if (err.status === 429 || code.startsWith("over_")) {
@@ -321,7 +332,7 @@ export function signInErrorMessage(err: AuthErrorLike): string {
     return "A sign-in link can't be sent to this address. Check that it is typed correctly.";
   }
   if ((err.status ?? 0) >= 500) {
-    return "The sign-in service had a problem. Try again in a few minutes.";
+    return "The sign-in service could not send the email. Try again in a few minutes; if it keeps happening, use Report a problem.";
   }
   return "The sign-in link could not be sent. Try again in a moment.";
 }
@@ -345,7 +356,7 @@ export function signInLinkErrorMessage(code: string | undefined): string {
 /** The emailed one-time code (the Word add-in, S3) could not be used. */
 export function verifyCodeErrorMessage(err: AuthErrorLike): string {
   const code = err.code ?? "";
-  if (err.name === "AuthRetryableFetchError" || err.status === 0) {
+  if (unreachable(err)) {
     return "Could not reach the sign-in service. Check your connection and try again.";
   }
   if (err.status === 429 || code.startsWith("over_")) {
