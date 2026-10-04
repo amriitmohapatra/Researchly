@@ -1,18 +1,18 @@
 {
   "documents": 8,
   "words": 284537,
-  "suggestions": 4130,
-  "per_1000_words": 14.51,
+  "suggestions": 3396,
+  "per_1000_words": 11.94,
   "by_rule": {
-    "G101": 779,
     "G106": 648,
-    "S001": 611,
-    "LT001": 566,
-    "F601": 243,
+    "G101": 559,
+    "S001": 415,
+    "LT001": 295,
+    "F601": 220,
     "G103": 182,
     "W202": 152,
-    "C303": 138,
     "G107": 119,
+    "C303": 114,
     "E703": 92,
     "W201": 80,
     "W204": 79,
@@ -40,5 +40,5 @@
     "E705": 1,
     "W208": 1
   },
-  "note": "P28 (2026-10-03): fixes from the owner's first real .tex upload. S001 676->611: prefixed real words (un-/non-/sub-/multi-...) and a small lexicon addition; F601 244->243: lineage/model-order labels (BA.1, AR(2)). LaTeX-only fixes (maths adjacency, code macros) do not touch this plain-text corpus."
+  "note": "P31 (2026-10-04): Q3 precision tune. 14.51 -> 11.94. LT001 566->295 (LanguageTool rules that misread scientific prose: compound-spelling preferences, maths/code, 'least squares'); G101 779->559 (list commas, bracketed citations and short restrictive clauses are not interruptions); S001 611->415 (field vocabulary, author names before initials/'et al'); C303 138->114 (intransitive change verbs); F601 243->220 (Roman numerals, journal names, GDP/ROC/AUC). ~90% of the remaining S001 flags are PDF extraction artefacts (joined or split words), not the authors' spelling."
 }

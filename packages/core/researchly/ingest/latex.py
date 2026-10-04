@@ -29,8 +29,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
-from ..document import (Heading, StructureItem, _mask_latex, classify_heading,
-                        inline_atoms)
+from ..document import (TEX_LEVELS, Heading, StructureItem, _mask_latex,
+                        classify_heading, inline_atoms)
 
 HEADING_MACROS = frozenset({"part", "chapter", "section", "subsection",
                             "subsubsection", "paragraph", "subparagraph"})
@@ -596,7 +596,8 @@ class _Masker:
         self.mask(n.pos, n.pos + n.len)
         if title:
             self.headings.append(Heading(n.pos, title, classify_heading(title),
-                                         end=n.pos + n.len))
+                                         end=n.pos + n.len,
+                                         level=TEX_LEVELS[n.macroname]))
 
     def environment(self, n, prose: bool,
                     sink: Optional[StructureItem]) -> None:

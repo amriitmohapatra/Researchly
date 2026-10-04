@@ -26,6 +26,9 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 
 _SECTION_PATTERNS: list[tuple[str, str]] = [
+    # A reference list is not prose (P31): it is masked, never checked.
+    (r"^\W*(references|bibliography|literature cited|works cited|"
+     r"reference list|cited literature)\W*$", "references"),
     (r"abstract|summary\b", "abstract"),
     (r"introduction|background", "introduction"),
     (r"method|material|model|data\b|analys[ie]s|estimation|inference|"
@@ -46,6 +49,84 @@ def classify_heading(text: str) -> str:
     return "other"
 
 
+# Depth of each LaTeX sectioning command (smaller = higher up).
+TEX_LEVELS = {"part": -1, "chapter": 0, "section": 1, "subsection": 2,
+              "subsubsection": 3, "paragraph": 4, "subparagraph": 5}
+
+# Words a heading may consist of and still be a plain section name
+# ("Materials and methods", "3.2 Statistical analysis") rather than a
+# topical title ("A model of measles transmission").
+_SECTION_NAME_WORDS = frozenset("""
+    abstract summary introduction background literature review aims aim
+    objectives methods method methodology materials material data
+    statistical statistics analysis analyses experimental procedures
+    results result findings discussion general conclusion conclusions
+    concluding remarks limitations strengths appendix appendices
+    supplementary supplemental information references bibliography
+""".split())
+_SECTION_NAME_FILLER = frozenset({"and", "of", "the", "a", "an", "s"})
+_NUMBERING = re.compile(
+    r"^\s*(?:(?:chapter|part|section|appendix)\s+)?"
+    r"(?:[0-9]+|[ivxlc]+|[a-z])(?:[.:][0-9]+)*[.:)]?\s+", re.IGNORECASE)
+
+
+def is_section_name(title: str) -> bool:
+    """True for a heading that is just a section name, numbered or not."""
+    words = re.findall(r"[a-z]+", _NUMBERING.sub("", title.lower()))
+    words = [w for w in words if w not in _SECTION_NAME_FILLER]
+    return bool(words) and all(w in _SECTION_NAME_WORDS for w in words)
+
+
+def resolve_sections(headings: list["Heading"]) -> None:
+    """Give nested headings their parent's section (P28).
+
+    A subsection with no section word ("Priors", "Solver") used to reset
+    the section to "other", and one with a stray keyword ("Model fit" under
+    Results) used to switch to Methods. Now a heading inherits when it has
+    no section word of its own, or when its parent is a plain section name
+    ("Results"). A nested heading that is itself a plain section name
+    ("Limitations" under Discussion) keeps its own, and so does any nested
+    heading under a topical title ("A model of measles transmission").
+    Headings without a level (plain text, the abstract environment, a Word
+    Title) stand alone and end every open section, as before.
+    """
+    stack: list[tuple["Heading", bool]] = []     # (heading, authoritative)
+    for h in sorted(headings, key=lambda h: h.start):
+        if not h.keyword:
+            h.keyword = h.section
+        own, named = h.keyword, is_section_name(h.text)
+        if h.level is None:
+            stack = []
+            h.section = own
+            continue
+        while stack and stack[-1][0].level >= h.level:
+            stack.pop()
+        parent, authority = stack[-1] if stack else (None, False)
+        if parent is None or parent.section == "other":
+            h.section, auth = own, named
+        elif own == "other":
+            h.section, auth = parent.section, authority
+        elif authority and not named:
+            h.section, auth = parent.section, True
+        else:
+            h.section, auth = own, named
+        stack.append((h, auth))
+
+
+def _mask_references(chars: list[str], headings: list["Heading"]) -> None:
+    """Blank every reference-list section: author names, journal
+    abbreviations and "et al" are not the author's prose. A Word reference
+    list (Zotero, EndNote) is ordinary paragraphs; LaTeX's is already
+    masked by \\bibliography and thebibliography."""
+    ordered = sorted(headings, key=lambda h: h.start)
+    for i, h in enumerate(ordered):
+        if h.section != "references":
+            continue
+        end = next((g.start for g in ordered[i + 1:]
+                    if g.section != "references"), len(chars))
+        _mask_spans(chars, [(h.start, end)])
+
+
 @dataclass
 class Heading:
     start: int
@@ -55,6 +136,12 @@ class Heading:
     # is right for Markdown and Word; a LaTeX `\paragraph{Title.} Text...`
     # shares its line with prose that must not be masked with it.
     end: int | None = None
+    # Depth when the markup says (1 = `#`/Heading 1/\section, 0 = \chapter);
+    # None for plain text, where headings are guessed and stand alone.
+    level: int | None = None
+    # The heading's own classification; `section` is the effective one
+    # after resolve_sections().
+    keyword: str = ""
 
 
 @dataclass
@@ -126,9 +213,11 @@ class Document:
 
     @classmethod
     def from_text(cls, text: str, kind: str = "plain", *,
-                  locate=None) -> "Document":
+                  locate=None, mask_references: bool = True) -> "Document":
         """`locate(offset) -> str` words a position in a warning; the
-        Overleaf adapter passes one that names the source file."""
+        Overleaf adapter passes one that names the source file.
+        `from_word` masks reference lists itself, once it knows which
+        "headings" were really table cells."""
         structure: list[StructureItem] = []
         warnings: list[str] = []
         if kind == "markdown":
@@ -154,6 +243,9 @@ class Document:
             end = h.end if h.end is not None else masked.find("\n", h.start)
             end = end if end != -1 else len(masked)
             _mask_spans(chars, [(h.start, end)])
+        resolve_sections(headings)
+        if mask_references:
+            _mask_references(chars, headings)
         masked = "".join(chars)
         doc = cls(original=text, masked=masked, kind=kind, headings=headings,
                   structure=structure, warnings=warnings, atoms=atoms)
@@ -179,7 +271,7 @@ class Document:
         """
         texts = [p.get("text") or "" for p in paragraphs]
         combined = "\n\n".join(texts)
-        doc = cls.from_text(combined, kind="plain")
+        doc = cls.from_text(combined, kind="plain", mask_references=False)
 
         offsets: list[int] = []
         pos = 0
@@ -200,8 +292,10 @@ class Document:
             if not title:
                 continue
             if "heading" in style or style == "title":
+                lvl = re.search(r"heading(\d)", style)
                 style_headings.append(
-                    Heading(offsets[i], title, classify_heading(title)))
+                    Heading(offsets[i], title, classify_heading(title),
+                            level=int(lvl.group(1)) if lvl else None))
                 _mask_spans(chars, [(offsets[i], offsets[i] + len(texts[i]))])
         doc.table_spans = table_spans
         if table_spans:
@@ -215,7 +309,9 @@ class Document:
             merged = {h.start: h for h in doc.headings}
             merged.update({h.start: h for h in style_headings})
             doc.headings = sorted(merged.values(), key=lambda h: h.start)
-            doc.masked = "".join(chars)
+            resolve_sections(doc.headings)
+        _mask_references(chars, doc.headings)
+        doc.masked = "".join(chars)
         doc.kind = "word"
         return doc
 
@@ -345,7 +441,8 @@ def _mask_markdown(text: str) -> tuple[str, list[Heading]]:
     for m3 in re.finditer(r"^(#{1,6})[ \t]+([^\n{]+)", masked_so_far, re.MULTILINE):
         title = m3.group(2).strip()
         if title:
-            headings.append(Heading(m3.start(), title, classify_heading(title)))
+            headings.append(Heading(m3.start(), title, classify_heading(title),
+                                    level=len(m3.group(1))))
         _mask_spans(chars, [(m3.start(1), m3.end(1))])
 
     return "".join(chars), headings
@@ -422,10 +519,12 @@ def _mask_latex(text: str) -> tuple[str, list[Heading]]:
     # Sectioning: record heading, keep title text, mask the command wrapper
     headings: list[Heading] = []
     for m in re.finditer(
-            r"\\(section|subsection|subsubsection|chapter|paragraph)\*?"
+            r"\\(part|chapter|section|subsection|subsubsection|paragraph|"
+            r"subparagraph)\*?"
             r"\{([^{}]+)\}", text):
         title = m.group(2).strip()
-        headings.append(Heading(m.start(), title, classify_heading(title)))
+        headings.append(Heading(m.start(), title, classify_heading(title),
+                                level=TEX_LEVELS[m.group(1)]))
         spans.append((m.start(), m.start(2)))
         spans.append((m.end(2), m.end()))
 

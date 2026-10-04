@@ -1319,3 +1319,124 @@ servers refuse automated downloads). Format parity holds on average
 (docx −0.44, tex −0.34 flags/1000w against plain). Published PLOS/eLife
 articles run at ~16 flags/1000w — no better than the theses — so Q3
 (≤ 11) must be tuned against published prose too, not only theses.
+
+**Addendum (P28/P29 merged, 2026-10-04):** amriitmohapatra/Researchly#3
+merged to main as 91e1c19, green on every check including the full
+real-document run. The fixes reach the live engine when the owner runs
+**Deploy engine**; the branch was restarted from main for the next work.
+
+## P30 — 2026-10-04 — Nested headings; preprints through PMC
+
+**Context.** The owner deployed the engine (live check: BA.1 and AR(2) are
+no longer flagged; every tier healthy) and said to go ahead with the next
+steps: section inheritance, false-flag tuning (Q3), and the preprints.
+
+**Nested headings inherit their parent's section.** P28's methods report
+and P29's format-parity gap had one cause: every heading reset the
+section, so "Priors" under Methods became "other" and passive-voice advice
+meant for Discussion fired in Methods. Plain text hid it because the
+plain-text detector only keeps headings with a section word.
+- `Heading.level` comes from the markup: LaTeX command depth (`\chapter` 0,
+  `\section` 1 … `\subparagraph` 5), Markdown hashes, Word heading styles
+  ("Heading 2", the add-in's "Heading2") and, in `.docx`, a custom style's
+  outline level. Plain-text headings, the abstract environment and a Word
+  Title have none and stand alone, as before.
+- `document.resolve_sections()`: a nested heading inherits when it has no
+  section word, or when its parent is a plain section name ("Results"), so
+  "Model fit" under Results stays Results. A nested heading that is itself
+  a section name ("Limitations" under Discussion) keeps its own, and under
+  a topical title ("A model of measles transmission") a nested heading's
+  own keyword counts. `Heading.keyword` keeps the heading's own class.
+- D902 and AB802 now read the whole Introduction / Abstract, subsections
+  included, instead of stopping at the first subheading.
+
+**Evidence.** 23 tests in `test_section_nesting.py` (9 fail on the old
+code; the 3 that pass are the "unchanged" cases). Core 548, service 145,
+bench 26, ruff clean. Noise floor unchanged at 14.51 (plain text). Bench on
+the 59 GitHub documents, same cache, main vs this change: PASS both;
+G104 51 → 48, and rules limited to some sections fire where those sections
+are now recognised (C302 16 → 28, C303 31 → 35); 16.90 → 17.02 flags/1000w.
+The +12 C302 are "we prove" in a maths paper's Introduction, which used to
+be "other" after its first `\paragraph`: the sections are right, and the
+rule's misfire on proofs is now a Q3 item.
+
+**Preprints through PMC.** medRxiv/bioRxiv refused 11 of 14 downloads in
+Actions. None of the 14 has a PMC copy, but NIH-funded preprints are
+deposited in PMC (NIH Preprint Pilot). PubMed search for preprints on
+transmission/epidemiology with free full text; licences read with
+`get_copyright_status`; of 40 checked, the 10 CC BY and 1 CC0 were added
+(5 infectious-disease epidemiology, 6 biology) as `pmcpreprint-*`, fetched
+through Europe PMC like the other 115 articles. Registry entry
+`realdocs-pmc-preprints`; method in `ml/realdocs/SOURCES.md`.
+
+**Lessons.**
+- A clean before/after needs the same documents on both sides: the
+  previous local bench output came from an older engine, so the
+  comparison here re-ran main from a worktree on the same cache.
+- Recognising more of the document's structure can raise the flag count:
+  section-limited rules start to see their sections. Read the new flags
+  before calling it a regression.
+
+## P31 — 2026-10-04 — Q3 precision tune: 14.51 → 11.94
+
+**Context.** Next step after P30: bring the thesis noise floor towards Q3
+(≤ 11 flags/1000w). Every flag on the 8-thesis corpus was dumped to the
+session scratchpad (never committed) and read rule by rule; the owner's own
+methods report was re-checked in memory for LanguageTool's misreads.
+
+**Principle.** Remove wrong flags; never hide good advice to reach the
+number. A rule or guard changed only where most of its hits were wrong.
+
+**What changed** (each with fire and don't-fire tests, 37 in
+`tests/test_q3_precision.py` and `tests/test_rules.py`; the new
+don't-fire tests fail on the old code):
+- **LT001 566 → 295.** Skipped LanguageTool rules that misread scientific
+  prose: the compound-spelling family (`EN_COMPOUNDS_*`, `MAKER_COMPOUNDS`:
+  "policy makers", "sub-tropical", "Viet Nam" — 75 hits, house style not
+  grammar), `NON_STANDARD_WORD` (67/67 on maths or R code),
+  `THE_SUPERLATIVE` (37/39 "least squares"), `NUMBERS_IN_WORDS`,
+  `POSSESSIVE_APOSTROPHE`, `I_LOWERCASE`, `THE_PUNCT`, `EN_SPECIFIC_CASE`,
+  `ADMIT_ENJOY_VB`. All 11 LT001 flags on the owner's report were misreads;
+  4 were compounds. a/an, between…to, comprises of and agreement still fire.
+- **G101 779 → 559.** A comma between list items, or brackets holding a
+  citation or a short abbreviation, is not an interruption; a restrictive
+  clause, participle or bare apposition is part of the subject and needs a
+  15-word gap. The 158 flags this dropped were read: ordinary long subjects.
+- **S001 611 → 415.** 103 correct words added to the scientific lexicon
+  (pediatric, fomites, sylvatic, licensure, a priori, in vitro…); an
+  author's name before initials or "et al" is not a typo. Real misspellings
+  in the corpus ("subsceptible", "prevalnce") are still caught (tested).
+- **C303 138 → 114.** "Cases increased" describes a change; only "X
+  increased Y" or a passive claims a cause. The small parser reads
+  "Vaccination reduced transmission" as an adjective, which is handled.
+- **F601 243 → 220.** Roman numerals, journal names, GDP/UV/ROC/AUC.
+- **C302.** "prove" in a sentence with maths or proof vocabulary (bench:
+  28 → 6, the Busy Beaver paper from P30).
+- **Reference lists are masked** (a "References"/"Bibliography" heading in
+  plain text, Markdown or Word): Word reference lists are ordinary
+  paragraphs and every rule used to run over them. A table cell reading
+  "References" masks nothing (tested). Bench: 8,909 words of reference
+  lists no longer checked, 4,055 of them one pandoc `CSLReferences` list.
+- G106's one-line description said "over 40 words"; it fires over 50.
+
+**Evidence.** Noise floor 14.51 → **11.94** (gate OK, baseline updated with
+a note). Real-document bench (59 GitHub documents): PASS, 17.02 → 14.99
+flags/1000w. Core 597 passed, service 145, bench 26, ruff clean,
+third-party scan 0 hits (after rewriting test sentences, below).
+
+**What is left (PLAN Q3 item).** ~90% of the remaining S001 flags are PDF
+extraction artefacts: `pdftotext` drops every line-break hyphen
+("laboratoryconfirmed") and page-break hyphenation leaves fragments. A
+trial re-extraction gives 11.3 (old code 13.7), but adds 16k words whose
+origin has not been read, so the gate's corpus is unchanged for now. G106
+and G101 are now mostly real advice.
+
+**Lessons.**
+- The third-party scan caught a test sentence of mine that copied 12 words
+  of a thesis sentence I had just read in the flag dump. Reading real flags
+  is necessary; writing tests from them invites paraphrase. Every test
+  sentence modelled on a corpus example was rewritten as clearly synthetic.
+- A measurement can be wrong in the same direction as the product: half of
+  the "spelling noise" was the PDF extractor, not the checker. Measure old
+  and new code on both corpora before changing the ruler.
+

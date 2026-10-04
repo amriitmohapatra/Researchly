@@ -252,6 +252,9 @@ ACRONYM_ALLOWLIST = {
     # statistics reporting conventions
     "CI", "SD", "SE", "IQR", "OR", "RR", "HR", "AIC", "BIC", "MCMC",
     "ESS", "HMC", "NUTS", "GLM", "GAM", "ODE", "SIR", "SEIR", "SEIRD",
+    # P31 (Q3): reporting conventions and names, not abbreviations to define
+    "GDP", "UV", "ROC", "AUC",
+    "BMJ", "BMC", "PLOS", "JAMA", "NEJM",          # journal names
     # currency codes (dogfooding: "SGD$10 (~USD8)")
     "SGD", "USD", "EUR", "GBP", "CNY", "JPY", "INR", "MYR", "IDR", "THB",
 }

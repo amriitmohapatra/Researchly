@@ -208,8 +208,8 @@ def test_part_and_subparagraph_are_headings():
 # --- headings ---------------------------------------------------------------
 
 def test_headings_and_sections():
-    src = ("\\chapter{Introduction}\nText.\n\\section*{Materials and methods}"
-           "\nText.\n\\subsection[Short]{Main \\emph{results}}\nText.\n"
+    src = ("\\section{Introduction}\nText.\n\\section*{Materials and methods}"
+           "\nText.\n\\section[Short]{Main \\emph{results}}\nText.\n"
            "\\subsubsection{Discussion}\nText.\n")
     doc = Document.from_text(src, "latex")
     assert [(h.text, h.section) for h in doc.headings] == [

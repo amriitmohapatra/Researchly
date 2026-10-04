@@ -43,6 +43,14 @@ def _in_url_like(text: str, start: int, end: int) -> bool:
     return False
 
 
+# What follows a surname in a citation or reference entry: initials
+# ("Lau H, Khosrawipour V", "Zhang, Y.") or "et al". A dictionary cannot
+# judge a name, and at a sentence start (a numbered reference, "Ruan et
+# al. found") the proper-noun guard in s001 does not apply (P31).
+_AUTHOR_NAME = re.compile(
+    r",?\s+(?:et\s+al\b|[A-Z]{1,3}(?:[,.;]|\s+[A-Z][a-z])|[A-Z]\.)")
+
+
 @rule("S001", "spelling", Category.CORRECTION,
       "Possible misspelling (SymSpell dictionary + scientific lexicon).",
       "Basic spelling against a frequency dictionary plus a scientific "
@@ -86,6 +94,8 @@ def s001_spelling(doc, document: Document):
         capitalized = w[0].isupper()
         if capitalized and not _sentence_start(text, m.start()):
             continue                          # likely a proper noun
+        if capitalized and _AUTHOR_NAME.match(text, m.end()):
+            continue                          # "Lau H, ...", "Ruan et al."
         if spelling.known_with_fallbacks(lower):
             continue
 

@@ -202,6 +202,24 @@ def test_c303_quiet_in_methods():
     assert "C303" not in ids(t)
 
 
+@pytest.mark.parametrize("t", [
+    # P31 (Q3): a change described, no cause in view
+    "Results\n\nThe ward occupancy fell back to its usual level after "
+    "the holiday.",
+    "Results\n\nWeekly admissions increased sharply in the third month.",
+])
+def test_c303_quiet_on_intransitive_change(t):
+    assert "C303" not in ids(t)
+
+
+@pytest.mark.parametrize("t", [
+    "Results\n\nBed nets lowered the incidence of malaria in every province.",
+    "Results\n\nTransmission was reduced by the school closures.",
+])
+def test_c303_fires_on_transitive_or_passive_claims(t):
+    assert "C303" in ids(t)
+
+
 def test_c304_bare_significant():
     t = "Results\n\nThe difference between quintiles was significant."
     assert "C304" in ids(t)
@@ -290,6 +308,40 @@ def test_g101_quiet_on_plain_long_subject_np():
     t = ("The proportion of cases in the oldest age band of the rural "
          "cohort is shown below.")
     assert "G101" not in ids(t)
+
+
+@pytest.mark.parametrize("t", [
+    # P31 (Q3): list commas and bracketed citations/abbreviations are not
+    # interruptions; a restrictive clause is part of a short-enough subject.
+    "Wards with no admissions, transfers or discharges during the whole "
+    "audit window were dropped.",
+    "Every ward in the hospital building that reported fewer than "
+    "three cases in the year was merged with a neighbour.",
+    "Penalised splines with a smoothing parameter chosen by restricted "
+    "maximum likelihood estimation (REML) worked well.",
+    "The incidence rate in the northern and eastern districts of the city "
+    "(12, 13) was "
+    "lower than expected.",
+])
+def test_g101_quiet_on_lists_citations_and_short_restrictive_clauses(t):
+    assert "G101" not in ids(t)
+
+
+@pytest.mark.parametrize("t", [
+    # a comma-bounded aside, a dash-bounded aside, a bracketed aside
+    "The rainy season in the three lowland provinces, when standing water "
+    "and breeding sites multiply, brings the yearly peak.",
+    "The reporting delay — which varied between districts, between years "
+    "and between the two laboratories — biased the early estimates.",
+    "The attack rate (estimated from the serological survey of primary "
+    "school children in the two northern districts) was higher than "
+    "expected.",
+    # a restrictive clause long enough to lose the reader
+    "The proportion of household contacts who developed symptoms within "
+    "two weeks of the index case being admitted to hospital was high.",
+])
+def test_g101_still_fires_on_real_interruptions(t):
+    assert "G101" in ids(t)
 
 
 def test_g104_quiet_on_method_by_phrase():

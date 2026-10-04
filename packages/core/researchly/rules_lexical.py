@@ -7,6 +7,7 @@ LaTeX commands can never match. All offsets map 1:1 to the source file.
 from __future__ import annotations
 
 import re
+from bisect import bisect_right
 from typing import Iterable
 
 from . import lexicons as lx
@@ -158,6 +159,21 @@ def w209_in_terms_of(doc, document: Document):
 # C3xx — calibration and claims
 # ---------------------------------------------------------------------------
 
+# In mathematics a proof is the evidence: "We prove that S(5) = 47,176,870"
+# is calibrated, not an overclaim (P30 bench: 12 flags in one Busy Beaver
+# paper). A sentence with maths in it, or the vocabulary of proofs, keeps
+# its "prove".
+_PROOF_WORDS = re.compile(
+    r"\b(?:theorem|lemma|corollary|proposition|conjecture|axiom|"
+    r"by induction|formally|formal proof|proof assistant|Coq|Lean|"
+    r"Isabelle|Agda)\b", re.IGNORECASE)
+
+
+def _is_mathematical(document: Document, a: int, b: int) -> bool:
+    return (document.masked_content(a, b)
+            or bool(_PROOF_WORDS.search(document.masked, a, b)))
+
+
 @rule("C302", "overclaim", Category.CONVENTION,
       "Overclaiming (prove, conclusively) exceeds what empirical evidence supports.",
       "Reserve strong verbs for strong evidence. An unqualified claim reads "
@@ -169,8 +185,15 @@ def w209_in_terms_of(doc, document: Document):
                      "introduction", "limitations"),
       source="§4")
 def c302_overclaim(doc, document: Document):
+    sents = [(sent.start_char, sent.end_char) for sent in doc.sents]
+    starts = [a for a, _ in sents]
     for pat in lx.OVERCLAIM_PATTERNS:
         for m in _finditer(pat, document.masked):
+            if m.group(0).lower().startswith("prov"):
+                i = max(0, bisect_right(starts, m.start()) - 1)
+                a, b = sents[i] if sents else (0, len(document.masked))
+                if _is_mathematical(document, a, b):
+                    continue
             yield Suggestion(
                 message="Calibrate: 'suggests', 'indicates', 'is consistent "
                         "with' — unless the evidence truly compels.",
@@ -214,6 +237,9 @@ def c304_significant(doc, document: Document):
             start=m.start(), end=m.end())
 
 
+_ROMAN = re.compile(r"^(?=[IVX]{2,}$)X{0,3}(?:IX|IV|V?I{0,3})$")
+
+
 @rule("F601", "acronym-undefined", Category.CONVENTION,
       "Acronym used without definition at first use.",
       "Define a term the first time you use it, once, briefly, then use it "
@@ -246,6 +272,8 @@ def f601_acronyms(doc, document: Document):
     for m in re.finditer(r"\b([A-Z]{2,6})s?\b", text):
         acr = m.group(1)
         if acr in seen or acr in lx.ACRONYM_ALLOWLIST or acr in predefined:
+            continue
+        if _ROMAN.match(acr):                 # "Phase III", "Chapter II"
             continue
         if in_caps_zone(m.start(), m.end()):
             continue
@@ -447,7 +475,10 @@ def d902_missing_niche(doc, document: Document):
     if not intro:
         return
     start = intro[0].start
-    ends = [h.start for h in document.headings if h.start > start]
+    # The section runs to the next heading of another section; its own
+    # subsections ("Background", "Aims") are part of it.
+    ends = [h.start for h in document.headings
+            if h.start > start and h.section != "introduction"]
     end = min(ends) if ends else len(document.masked)
     text = document.masked[start:end]
     if len(text) < 600:            # stub sections can't be judged

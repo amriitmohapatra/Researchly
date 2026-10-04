@@ -1041,6 +1041,32 @@ datasets:
       (ecology). Licence is per version: the manifest pins v1, and a later
       version may carry a different licence.
 
+  - id: realdocs-pmc-preprints
+    name: "Real-document bench — medRxiv / bioRxiv preprints mirrored in PMC (JATS), 11 preprints"
+    kind: eval_set
+    source: "Europe PMC fullTextXML for PMC records of NIH Preprint Pilot preprints (https://www.ebi.ac.uk/europepmc/webservices/rest/{PMCID}/fullTextXML)"
+    location: "ml/realdocs/manifest.yaml"
+    in_git: false
+    licence: "per item: CC-BY-4.0 (10), CC0-1.0 (1)"
+    licence_verified: true
+    licence_evidence: >-
+      PubMed get_copyright_status, 2026-10-04: PMC licence 'CC BY 4.0' or
+      https://creativecommons.org/publicdomain/zero/1.0/ per item. Found with
+      PubMed search preprint[pt] AND (transmission OR epidemiolog*) AND free
+      full text AND (medRxiv OR bioRxiv) from 2022; 40 checked, the 11 CC BY /
+      CC0 ones kept, NC/ND/unlicensed left out.
+    commercial_ok: true
+    permitted_use: [ci_eval, train_experimental]
+    current_use: "real-document test bench (P30)"
+    shipped_today: false
+    sha256: null
+    items: "ml/realdocs/manifest.yaml — ids pmcpreprint-*"
+    notes: >-
+      Not peer-reviewed. 4 medRxiv (epidemiology), 7 bioRxiv (1 within-host
+      transmission model, 6 biology). medRxiv and bioRxiv refuse automated
+      downloads (11 of the 14 realdocs-medrxiv-biorxiv items, P29), so these
+      come through PMC like the other articles.
+
   - id: realdocs-medrxiv-biorxiv-nc-nd
     name: "Real-document bench — medRxiv / bioRxiv NC or ND preprints (JATS), 4 preprints"
     kind: eval_set

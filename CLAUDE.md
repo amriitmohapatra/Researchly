@@ -182,9 +182,13 @@ at the top of that file.
 
 Things a future agent will otherwise get wrong:
 
-- **The noise floor is above target.** With every tier on, accepted theses
-  get **14.51 flags/1000w** (P28 baseline, LanguageTool 6.8; 14.75 in S1,
-  when ex-S001 was 12.5 and ex-LT001 12.8). Q3's target is ≤ 11. The
+- **The noise floor is just above target.** With every tier on, accepted
+  theses get **11.94 flags/1000w** (P31 baseline; 14.51 before the Q3
+  tune). Q3's target is ≤ 11. About 90% of the remaining S001 flags are PDF
+  extraction artefacts (words joined or split at line breaks), so part of
+  the gap is the measurement: see PLAN's Q3 item before re-extracting the
+  corpus. Don't hide good advice (G106 long sentences, W202 wordiness) to
+  reach the number — remove wrong flags. The
   corpus is plain text, so it cannot see LaTeX masking bugs; the owner's
   real `.tex` upload (P28) found those. The gate
   (`ml/dogfood/noise_gate.py`) blocks regressions *and* a busy rule going
