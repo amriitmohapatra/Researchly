@@ -1440,3 +1440,9 @@ and G101 are now mostly real advice.
   the "spelling noise" was the PDF extractor, not the checker. Measure old
   and new code on both corpora before changing the ruler.
 
+**Addendum (P30/P31 merged, 2026-10-04):** amriitmohapatra/Researchly#4
+merged to main with all 12 checks green. The full real-document run
+(37183107815, 32 min) passed: all 11 PMC preprints fetched and passed every
+invariant, though 7 came back abstract-only (PLAN follow-up). The fixes reach
+the live engine when the owner runs **Deploy engine**.
+
