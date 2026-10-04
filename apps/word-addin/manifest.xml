@@ -9,7 +9,7 @@
   <ProviderName>Researchly (local)</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
 
-  <DisplayName DefaultValue="Researchly" />
+  <DisplayName DefaultValue="Researchly (local)" />
   <Description DefaultValue="Section-aware, explainable writing suggestions for scientific documents. Runs entirely on your computer via a local server." />
 
   <IconUrl DefaultValue="http://localhost:3517/assets/icon-32.png" />

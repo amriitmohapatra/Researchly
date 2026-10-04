@@ -88,8 +88,20 @@ supports it (WordApi 1.4: Word 2021 / Microsoft 365), and a direct edit
    dictionary and Draft/Revise in step with the website.
 
 The local add-in (`manifest.xml`) has a different Id, so both can be
-installed at once; they show as two "Researchly" entries (the local one's
-provider is "Researchly (local)").
+installed at once; it is named "Researchly (local)" and works only while
+`server.py` runs. If the old copy of it (installed before 2026-10-04) is
+still in `wef`, it shows as a second plain "Researchly": remove it, or
+replace it with the current `manifest.xml`.
+
+**If Researchly is listed but does not open:**
+1. Keep only the add-in you want in the `wef` folder (above).
+2. Quit Word (Cmd-Q) and clear Word's add-in cache: delete the *contents*
+   of `~/Library/Containers/com.microsoft.Word/Data/Library/Caches/` and,
+   if it exists,
+   `~/Library/Containers/com.microsoft.Word/Data/Library/Application Support/Microsoft/Office/16.0/Wef/`.
+3. Reopen Word and the document, then Researchly again.
+4. Still nothing? Report what happens (nothing / blank panel / an error /
+   the old panel) with a screenshot and **Word → About Word**.
 
 `manifest.json` is the same add-in as a unified (JSON) manifest, for
 Microsoft 365 deployment later (AppSource generates the XML for Mac Word

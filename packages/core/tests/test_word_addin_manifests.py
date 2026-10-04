@@ -119,3 +119,14 @@ def test_json_manifest_points_at_the_same_taskpane_and_icons():
     # App-level icons are files in the app package, next to the manifest.
     for rel in m["icons"].values():
         assert (ADDIN / rel).is_file(), rel
+
+
+def test_local_and_hosted_add_ins_have_different_names():
+    """Both can be installed at once; with the same name the owner could not
+    tell which one they were opening (the local one needs server.py)."""
+    import re
+    here = Path(__file__).resolve().parents[3] / "apps" / "word-addin"
+    names = [re.search(r'<DisplayName DefaultValue="([^"]+)"',
+                       (here / f).read_text(encoding="utf-8")).group(1)
+             for f in ("manifest.xml", "manifest.hosted.xml")]
+    assert names[0] != names[1]
