@@ -5,6 +5,13 @@
   engine, or with this computer's server.py when "This computer" is chosen
   in its Settings (ADR-02 local mode).
 
+  Word for Mac drops a manifest that breaks a schema rule WITHOUT any
+  message (the add-in simply is not listed). Rules that bit us: every
+  resource id / resid is at most 32 characters (we had 33, 2026-10-04).
+  No <Requirements>: Word also hides an add-in whose requirement sets it
+  does not report; the taskpane checks API support at run time instead.
+  tests/test_word_addin_manifests.py enforces the documented limits.
+
   Its Id differs from manifest.xml (the local, maintenance-only add-in), so
   both can be installed side by side. Sideloading on a Mac: README.md,
   "Hosted add-in (S3)".
@@ -17,7 +24,7 @@
   xsi:type="TaskPaneApp">
 
   <Id>af2a002b-faeb-4373-aa52-40a63ffc9a06</Id>
-  <Version>0.3.0.0</Version>
+  <Version>0.3.1.0</Version>
   <ProviderName>Researchly</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
 
@@ -36,12 +43,6 @@
     <Host Name="Document" />
   </Hosts>
 
-  <Requirements>
-    <Sets DefaultMinVersion="1.3">
-      <Set Name="WordApi" MinVersion="1.3" />
-    </Sets>
-  </Requirements>
-
   <DefaultSettings>
     <SourceLocation DefaultValue="https://researchly-chi.vercel.app/word" />
   </DefaultSettings>
@@ -54,34 +55,33 @@
       <Host xsi:type="Document">
         <DesktopFormFactor>
           <GetStarted>
-            <Title resid="Researchly.GetStarted.Title" />
-            <Description resid="Researchly.GetStarted.Description" />
-            <LearnMoreUrl resid="Researchly.Site.Url" />
+            <Title resid="RL.GetStartedTitle" />
+            <Description resid="RL.GetStartedDesc" />
+            <LearnMoreUrl resid="RL.SiteUrl" />
           </GetStarted>
-          <FunctionFile resid="Researchly.Taskpane.Url" />
           <ExtensionPoint xsi:type="PrimaryCommandSurface">
             <OfficeTab id="TabHome">
               <Group id="Researchly.Group">
-                <Label resid="Researchly.Group.Label" />
+                <Label resid="RL.GroupLabel" />
                 <Icon>
-                  <bt:Image size="16" resid="Researchly.Icon.16" />
-                  <bt:Image size="32" resid="Researchly.Icon.32" />
-                  <bt:Image size="80" resid="Researchly.Icon.80" />
+                  <bt:Image size="16" resid="RL.Icon16" />
+                  <bt:Image size="32" resid="RL.Icon32" />
+                  <bt:Image size="80" resid="RL.Icon80" />
                 </Icon>
                 <Control xsi:type="Button" id="Researchly.Open">
-                  <Label resid="Researchly.Open.Label" />
+                  <Label resid="RL.OpenLabel" />
                   <Supertip>
-                    <Title resid="Researchly.Open.Label" />
-                    <Description resid="Researchly.Open.Tip" />
+                    <Title resid="RL.OpenLabel" />
+                    <Description resid="RL.OpenTip" />
                   </Supertip>
                   <Icon>
-                    <bt:Image size="16" resid="Researchly.Icon.16" />
-                    <bt:Image size="32" resid="Researchly.Icon.32" />
-                    <bt:Image size="80" resid="Researchly.Icon.80" />
+                    <bt:Image size="16" resid="RL.Icon16" />
+                    <bt:Image size="32" resid="RL.Icon32" />
+                    <bt:Image size="80" resid="RL.Icon80" />
                   </Icon>
                   <Action xsi:type="ShowTaskpane">
                     <TaskpaneId>ResearchlyTaskpane</TaskpaneId>
-                    <SourceLocation resid="Researchly.Taskpane.Url" />
+                    <SourceLocation resid="RL.TaskpaneUrl" />
                   </Action>
                 </Control>
               </Group>
@@ -92,22 +92,22 @@
     </Hosts>
     <Resources>
       <bt:Images>
-        <bt:Image id="Researchly.Icon.16" DefaultValue="https://researchly-chi.vercel.app/word/icon-16.png" />
-        <bt:Image id="Researchly.Icon.32" DefaultValue="https://researchly-chi.vercel.app/word/icon-32.png" />
-        <bt:Image id="Researchly.Icon.80" DefaultValue="https://researchly-chi.vercel.app/word/icon-80.png" />
+        <bt:Image id="RL.Icon16" DefaultValue="https://researchly-chi.vercel.app/word/icon-16.png" />
+        <bt:Image id="RL.Icon32" DefaultValue="https://researchly-chi.vercel.app/word/icon-32.png" />
+        <bt:Image id="RL.Icon80" DefaultValue="https://researchly-chi.vercel.app/word/icon-80.png" />
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="Researchly.Taskpane.Url" DefaultValue="https://researchly-chi.vercel.app/word" />
-        <bt:Url id="Researchly.Site.Url" DefaultValue="https://researchly-chi.vercel.app/" />
+        <bt:Url id="RL.TaskpaneUrl" DefaultValue="https://researchly-chi.vercel.app/word" />
+        <bt:Url id="RL.SiteUrl" DefaultValue="https://researchly-chi.vercel.app/" />
       </bt:Urls>
       <bt:ShortStrings>
-        <bt:String id="Researchly.Group.Label" DefaultValue="Researchly" />
-        <bt:String id="Researchly.Open.Label" DefaultValue="Researchly" />
-        <bt:String id="Researchly.GetStarted.Title" DefaultValue="Researchly is ready" />
+        <bt:String id="RL.GroupLabel" DefaultValue="Researchly" />
+        <bt:String id="RL.OpenLabel" DefaultValue="Researchly" />
+        <bt:String id="RL.GetStartedTitle" DefaultValue="Researchly is ready" />
       </bt:ShortStrings>
       <bt:LongStrings>
-        <bt:String id="Researchly.Open.Tip" DefaultValue="Open Researchly: explained, section-aware suggestions for this document." />
-        <bt:String id="Researchly.GetStarted.Description" DefaultValue="Choose Researchly on the Home tab, then Check document." />
+        <bt:String id="RL.OpenTip" DefaultValue="Open Researchly: explained, section-aware suggestions for this document." />
+        <bt:String id="RL.GetStartedDesc" DefaultValue="Choose Researchly on the Home tab, then Check document." />
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>

@@ -1696,3 +1696,17 @@ which is why 88 e2e tests passed. Fixed: wait for `Office.onReady` with
 `Office` alone, look up `Word` afterwards; the fake now defines `Word` only
 on ready and only when the host is Word. Lesson: a fake must reproduce the
 real library's *timing*, not only its API.
+
+**Addendum: the add-in would not appear in Word.** With the old local
+add-in removed from `wef`, Word listed nothing: the hosted manifest was
+being dropped silently. Microsoft's docs (read from their GitHub source;
+learn.microsoft.com and the validator service are blocked from the
+sandbox) limit every resource id to 32 characters, and
+`Researchly.GetStarted.Description` had 33. Fixed with short ids
+(`RL.*`), and removed `<FunctionFile>` (it pointed at the whole taskpane)
+and `<Requirements>` (another way Word hides an add-in; the pane checks API
+support at run time). A test now enforces the documented limits on both
+manifests and fails on the old file. The local manifest is now named
+"Researchly (local)" so the two cannot be confused. Lesson: Mac Word gives
+no error for a bad manifest; validate against the documented limits in CI,
+since Microsoft's validator is unreachable here.
