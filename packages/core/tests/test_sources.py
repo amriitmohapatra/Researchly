@@ -28,7 +28,9 @@ def test_every_rule_source_is_a_full_citation():
 def test_guide_sections_are_named_not_just_numbered():
     cited = sources.cite("§4")
     assert "The Craft of Scientific Writing" in cited
-    assert "§4" in cited and "Warranting" in cited
+    assert "Warranting" in cited
+    # Named, never numbered: no reader can look up a section number.
+    assert "§" not in cited
 
 
 def test_composite_codes_cite_every_part():
@@ -49,3 +51,13 @@ def test_suggestions_carry_the_expanded_citation():
                     kind="plain")
     hits = [s for s in a.suggestions if s.rule_id in ("C302", "C301", "C305")]
     assert hits and all("The Craft of Scientific Writing" in s.source for s in hits)
+
+
+def test_no_citation_a_user_sees_carries_a_section_number():
+    from researchly import learn, packs
+    from researchly.discourse import moves
+    cites = [r.source for r in REGISTRY.values()]
+    cites += [c.citation for c in learn.CARDS.values()]
+    cites += [m.citation for m in moves.MOVES.values()]
+    cites += [c.citation for c in packs.checklists().values()]
+    assert [c for c in cites if "§" in c] == []

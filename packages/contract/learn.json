@@ -9,7 +9,7 @@
       "before": "The reproduction number, which we estimated for each district from weekly counts in the national register with a renewal model and a seven-day generation interval, fell below one in June.",
       "after": "The reproduction number fell below one in June. We estimated it for each district from weekly counts in the national register, with a renewal model and a seven-day generation interval.",
       "habit": "Underline the subject and the verb of each long sentence. If more than a line separates them, move what sits between.",
-      "source": "The Craft of Scientific Writing (Researchly's founding guide), §5.2.1 Keep subject and verb close together (after Gopen & Swan)",
+      "source": "The Craft of Scientific Writing (Researchly's founding guide): Keep subject and verb close together (after Gopen & Swan)",
       "rules": [
         "G101"
       ],
@@ -24,7 +24,7 @@
       "before": "An estimation of transmission was performed through the application of a renewal model.",
       "after": "We estimated transmission with a renewal model.",
       "habit": "Circle every -tion noun in a paragraph. Wherever someone does that action, try saying it as a verb.",
-      "source": "The Craft of Scientific Writing (Researchly's founding guide), §5.2.4 Put the action in the verb (after Gopen & Swan)",
+      "source": "The Craft of Scientific Writing (Researchly's founding guide): Put the action in the verb (after Gopen & Swan)",
       "rules": [
         "G102",
         "G103"
@@ -40,7 +40,7 @@
       "before": "A similar pattern was reported by Lim and colleagues in a neighbouring region.",
       "after": "Lim and colleagues reported a similar pattern in a neighbouring region.",
       "habit": "In your Discussion, look for 'by' after 'was' or 'were'. Each one is a sentence you could turn round.",
-      "source": "The Craft of Scientific Writing (Researchly's founding guide), §5.2.3 Put whose story it is in the topic position (after Gopen & Swan); The Craft of Scientific Writing (Researchly's founding guide), §6 Language and tone",
+      "source": "The Craft of Scientific Writing (Researchly's founding guide): Put whose story it is in the topic position (after Gopen & Swan); The Craft of Scientific Writing (Researchly's founding guide): Language and tone",
       "rules": [
         "G104"
       ],
@@ -55,7 +55,7 @@
       "before": "It is important to note that transmission was highest in the densest district, according to our estimates.",
       "after": "In our estimates, transmission was highest in the densest district.",
       "habit": "Read only the last few words of each sentence in a paragraph. They should be the points you want remembered.",
-      "source": "The Craft of Scientific Writing (Researchly's founding guide), §5.2.2 Put the emphasis at the end, the stress position (after Gopen & Swan); The Craft of Scientific Writing (Researchly's founding guide), §5.2.3 Put whose story it is in the topic position (after Gopen & Swan)",
+      "source": "The Craft of Scientific Writing (Researchly's founding guide): Put the emphasis at the end, the stress position (after Gopen & Swan); The Craft of Scientific Writing (Researchly's founding guide): Put whose story it is in the topic position (after Gopen & Swan)",
       "rules": [
         "G105",
         "G108"
@@ -71,7 +71,7 @@
       "before": "We fitted the model to the three districts jointly because a joint fit lets them share information about the incubation period, which no single district identifies well, and because it shows whether the districts differ in transmission or only in reporting, which decides where control should go first.",
       "after": "We fitted the model to the three districts jointly. A joint fit lets them share information about the incubation period, which no single district identifies well. It also shows whether the districts differ in transmission or only in reporting, which decides where control should go first.",
       "habit": "If you need to breathe twice to read a sentence aloud, look for the place to split it.",
-      "source": "The Craft of Scientific Writing (Researchly's founding guide), §5.2 The sentence: Gopen & Swan's reader-expectation principles",
+      "source": "The Craft of Scientific Writing (Researchly's founding guide): The sentence: Gopen & Swan's reader-expectation principles",
       "rules": [
         "G106"
       ],
@@ -86,7 +86,7 @@
       "before": "The district case report delay distribution was estimated first.",
       "after": "We first estimated the distribution of delays in reporting cases from each district.",
       "habit": "Look for runs of nouns with no 'of', 'in' or 'for' between them, and read each run to a colleague outside your field.",
-      "source": "The Craft of Scientific Writing (Researchly's founding guide), §5.2 The sentence: Gopen & Swan's reader-expectation principles; The Craft of Scientific Writing (Researchly's founding guide), §9.1 Write for a reader who lacks one of your fields",
+      "source": "The Craft of Scientific Writing (Researchly's founding guide): The sentence: Gopen & Swan's reader-expectation principles; The Craft of Scientific Writing (Researchly's founding guide): Write for a reader who lacks one of your fields",
       "rules": [
         "G107"
       ],
@@ -101,7 +101,7 @@
       "before": "Cases rose in May. However, reporting was delayed. However, the peak was clear. This suggests early control.",
       "after": "Cases rose in May. Reporting was delayed, but the peak was still clear. This early peak suggests that control should start in April.",
       "habit": "Read only the first three words of each sentence in a paragraph: they should hand the reader from one idea to the next.",
-      "source": "The Craft of Scientific Writing (Researchly's founding guide), §5.1 The paragraph; Amriit's learnings from scientific-writing training (Researchly notes)",
+      "source": "The Craft of Scientific Writing (Researchly's founding guide): The paragraph; Amriit's learnings from scientific-writing training (Researchly notes)",
       "rules": [
         "E702",
         "E703"
@@ -117,7 +117,7 @@
       "before": "Due to the fact that reporting was delayed, it should be noted that the most recent weeks were excluded in terms of the fit.",
       "after": "Because reporting was delayed, we excluded the most recent weeks from the fit.",
       "habit": "Cut every phrase you could delete without changing what the sentence claims.",
-      "source": "The Craft of Scientific Writing (Researchly's founding guide), §6 Language and tone",
+      "source": "The Craft of Scientific Writing (Researchly's founding guide): Language and tone",
       "rules": [
         "W202",
         "W205",
@@ -135,7 +135,7 @@
       "before": "This novel framework sheds light on the relatively high burden in very dense districts.",
       "after": "The model attributes 60% of cases to the two densest districts, which hold 35% of the population.",
       "habit": "For every adjective of size or importance, ask: compared with what? Then give that comparison.",
-      "source": "The Craft of Scientific Writing (Researchly's founding guide), §6 Language and tone; Amriit's learnings from scientific-writing training (Researchly notes)",
+      "source": "The Craft of Scientific Writing (Researchly's founding guide): Language and tone; Amriit's learnings from scientific-writing training (Researchly notes)",
       "rules": [
         "W201",
         "W203",
@@ -154,7 +154,7 @@
       "before": "The extrinsic incubation period (EIP) shortens with heat. Later: the extrinsic incubation period (EIP) was fixed, and the data set and the dataset were merged.",
       "after": "The extrinsic incubation period (EIP) shortens with heat. Later: the EIP was fixed at ten days, and the two datasets were merged.",
       "habit": "Search for each abbreviation's definition: there should be exactly one, before its first use.",
-      "source": "The Craft of Scientific Writing (Researchly's founding guide), §9.1 Write for a reader who lacks one of your fields",
+      "source": "The Craft of Scientific Writing (Researchly's founding guide): Write for a reader who lacks one of your fields",
       "rules": [
         "F601",
         "F612",
@@ -172,7 +172,7 @@
       "before": "These results may possibly suggest that the campaign clearly reduced transmission.",
       "after": "These results suggest that the campaign reduced transmission.",
       "habit": "Read your Discussion for hedges and boosters only. Each claim should carry one, matched to its evidence.",
-      "source": "The Craft of Scientific Writing (Researchly's founding guide), §4 Warranting your arguments; The Craft of Scientific Writing (Researchly's founding guide), §9.3 Uncertainty is not a caveat, it is the finding",
+      "source": "The Craft of Scientific Writing (Researchly's founding guide): Warranting your arguments; The Craft of Scientific Writing (Researchly's founding guide): Uncertainty is not a caveat, it is the finding",
       "rules": [
         "C301",
         "C305"
@@ -188,7 +188,7 @@
       "before": "This proves that housing density drives transmission.",
       "after": "This is consistent with housing density driving transmission, although the districts also differ in other ways.",
       "habit": "Search your draft for 'prove' and 'demonstrate'. Keep them only where a reviewer could not reasonably disagree.",
-      "source": "The Craft of Scientific Writing (Researchly's founding guide), §4 Warranting your arguments",
+      "source": "The Craft of Scientific Writing (Researchly's founding guide): Warranting your arguments",
       "rules": [
         "C302"
       ],
@@ -203,7 +203,7 @@
       "before": "Vector control reduced dengue incidence by 30%.",
       "after": "Districts with vector control had 30% lower incidence; the difference may partly reflect other differences between districts.",
       "habit": "For each causal verb, ask what would have to be true of the design for a sceptic to accept it.",
-      "source": "The Craft of Scientific Writing (Researchly's founding guide), §9.4 A model is an argument, not an oracle",
+      "source": "The Craft of Scientific Writing (Researchly's founding guide): A model is an argument, not an oracle",
       "rules": [
         "C303"
       ],
@@ -218,7 +218,7 @@
       "before": "The effect of rainfall was significant.",
       "after": "Each additional 10 mm of weekly rainfall was associated with 4% more cases (95% CI 1% to 7%).",
       "habit": "Replace every bare 'significant' with the number it summarises.",
-      "source": "The Craft of Scientific Writing (Researchly's founding guide), §9.3 Uncertainty is not a caveat, it is the finding",
+      "source": "The Craft of Scientific Writing (Researchly's founding guide): Uncertainty is not a caveat, it is the finding",
       "rules": [
         "C304"
       ],
@@ -233,7 +233,7 @@
       "before": "It is known that dengue transmission is sensitive to temperature, and this has never been studied in lowland districts.",
       "after": "Dengue transmission is sensitive to temperature (Lim et al., 2021). To our knowledge, no study has measured this in lowland districts.",
       "habit": "Highlight every sentence about what is known or unknown. Each one needs a citation or 'to our knowledge'.",
-      "source": "Amriit's learnings from scientific-writing training (Researchly notes); The Craft of Scientific Writing (Researchly's founding guide), §4 Warranting your arguments",
+      "source": "Amriit's learnings from scientific-writing training (Researchly notes); The Craft of Scientific Writing (Researchly's founding guide): Warranting your arguments",
       "rules": [
         "E704",
         "E705"
@@ -249,7 +249,7 @@
       "before": "Transmission was highest in Marrowick. Housing is densest there. Control should focus on Marrowick.",
       "after": "Transmission was highest in Marrowick, where housing is densest; denser housing brings people and mosquitoes closer, which would raise transmission. Control should therefore start there.",
       "habit": "For each claim in your Discussion, find its 'because'. If it is missing, add it.",
-      "source": "M. Wallace & A. Wray (2016), Critical Reading and Writing for Postgraduates, 3rd ed., SAGE; S. E. Toulmin (1958), The Uses of Argument, Cambridge University Press (claim, grounds, warrant); The Craft of Scientific Writing (Researchly's founding guide), §4 Warranting your arguments",
+      "source": "M. Wallace & A. Wray (2016), Critical Reading and Writing for Postgraduates, 3rd ed., SAGE; S. E. Toulmin (1958), The Uses of Argument, Cambridge University Press (claim, grounds, warrant); The Craft of Scientific Writing (Researchly's founding guide): Warranting your arguments",
       "rules": [],
       "moves": []
     },
@@ -262,7 +262,7 @@
       "before": "Figure 2 shows the model fit. Figure 1 shows the cases by district.",
       "after": "Cases peaked three weeks earlier in Marrowick than in Oldmere (Figure 1), and the model reproduced the timing in every district (Figure 2).",
       "habit": "List your figures and tables in the order the text first cites them. The list should read 1, 2, 3.",
-      "source": "International Committee of Medical Journal Editors, Recommendations for the Conduct, Reporting, Editing, and Publication of Scholarly Work in Medical Journals (tables and figures); The Craft of Scientific Writing (Researchly's founding guide), §9.7 Figures are arguments too; Amriit's learnings from scientific-writing training (Researchly notes)",
+      "source": "International Committee of Medical Journal Editors, Recommendations for the Conduct, Reporting, Editing, and Publication of Scholarly Work in Medical Journals (tables and figures); The Craft of Scientific Writing (Researchly's founding guide): Figures are arguments too; Amriit's learnings from scientific-writing training (Researchly notes)",
       "rules": [
         "X101",
         "X102",
@@ -282,7 +282,7 @@
       "before": "The attack rate was 4.8% in Marrowick (Table 1, which says 4.2%). 26 weeks were analysed, with incubation of 5.9days.",
       "after": "The attack rate was 4.2% in Marrowick (Table 1). We analysed 26 weeks, with a mean incubation period of 5.9 days.",
       "habit": "Check each number in your Results against its table, line by line, once, before you submit.",
-      "source": "The Craft of Scientific Writing (Researchly's founding guide), §6 Language and tone; BIPM, The International System of Units (SI Brochure), 9th ed., on writing a number with its unit; AMA Manual of Style, 11th ed., on numbers at the start of a sentence",
+      "source": "The Craft of Scientific Writing (Researchly's founding guide): Language and tone; BIPM, The International System of Units (SI Brochure), 9th ed., on writing a number with its unit; AMA Manual of Style, 11th ed., on numbers at the start of a sentence",
       "rules": [
         "X401",
         "N101",
@@ -299,7 +299,7 @@
       "before": "We assume mass action. [λ = βI/N] N is the population.",
       "after": "Under mass action, the force of infection is [λ = βI/N], where N is the population.",
       "habit": "Read each equation aloud as part of its sentence. If the sentence does not survive, add the lead-in or the 'where'.",
-      "source": "The Craft of Scientific Writing (Researchly's founding guide), §9.2 Equations are sentences — make them grammatical",
+      "source": "The Craft of Scientific Writing (Researchly's founding guide): Equations are sentences — make them grammatical",
       "rules": [
         "X301",
         "X302"
@@ -331,7 +331,7 @@
       "before": "There are many studies on dengue. Lim et al. studied temperature. Quintero studied rainfall. We studied three districts.",
       "after": "Dengue seasons vary widely between districts. Earlier studies linked this to temperature and rainfall, but none separated transmission from reporting. We therefore asked whether the districts differ in transmission or only in what is reported.",
       "habit": "Find the sentence in your introduction that says what is unknown. If you cannot point to it, write it.",
-      "source": "J. M. Swales (1990), Genre Analysis, on the three moves of a research introduction; W. Shehzad (2008), \"Move two: establishing a niche\"; The Craft of Scientific Writing (Researchly's founding guide), §3 The Introduction, move by move",
+      "source": "J. M. Swales (1990), Genre Analysis, on the three moves of a research introduction; W. Shehzad (2008), \"Move two: establishing a niche\"; The Craft of Scientific Writing (Researchly's founding guide): The Introduction, move by move",
       "rules": [
         "D902",
         "L901"
@@ -347,7 +347,7 @@
       "before": "A model was used on the data.",
       "after": "We used weekly dengue counts from the clinics of three districts, April to September 2022, and fitted an SEIR model to them by Hamiltonian Monte Carlo, assuming a mean infectious period of five days.",
       "habit": "Give your methods to a colleague and ask what they would need to redo the analysis. Add it.",
-      "source": "The Craft of Scientific Writing (Researchly's founding guide), §2 Structure from the top down: the paper is a story; The Craft of Scientific Writing (Researchly's founding guide), §9.5 Reproducibility is part of the writing",
+      "source": "The Craft of Scientific Writing (Researchly's founding guide): Structure from the top down: the paper is a story; The Craft of Scientific Writing (Researchly's founding guide): Reproducibility is part of the writing",
       "rules": [],
       "moves": []
     },
@@ -360,7 +360,7 @@
       "before": "Table 2 shows the estimates.",
       "after": "The basic reproduction number was highest in Marrowick, at 2.1 (95% CrI 1.8 to 2.4; Table 2).",
       "habit": "Check that every paragraph of your Results starts with a finding, not with a figure.",
-      "source": "The Craft of Scientific Writing (Researchly's founding guide), §2 Structure from the top down: the paper is a story; The Craft of Scientific Writing (Researchly's founding guide), §9.3 Uncertainty is not a caveat, it is the finding; The Craft of Scientific Writing (Researchly's founding guide), §9.7 Figures are arguments too",
+      "source": "The Craft of Scientific Writing (Researchly's founding guide): Structure from the top down: the paper is a story; The Craft of Scientific Writing (Researchly's founding guide): Uncertainty is not a caveat, it is the finding; The Craft of Scientific Writing (Researchly's founding guide): Figures are arguments too",
       "rules": [],
       "moves": []
     },
@@ -373,7 +373,7 @@
       "before": "Our results are interesting. Further research is needed.",
       "after": "Transmission, not reporting, explained the difference between districts, as earlier work in a neighbouring region suggested. Our weekly data cannot show the direction of spread. Vector control should start first in the densest district.",
       "habit": "Mark the five moves in your discussion's margin: finding, meaning, comparison, limitation, implication.",
-      "source": "The Craft of Scientific Writing (Researchly's founding guide), §2 Structure from the top down: the paper is a story; M. Wallace & A. Wray (2016), Critical Reading and Writing for Postgraduates, 3rd ed., SAGE; The Craft of Scientific Writing (Researchly's founding guide), §9.8 Translate for the decision-maker",
+      "source": "The Craft of Scientific Writing (Researchly's founding guide): Structure from the top down: the paper is a story; M. Wallace & A. Wray (2016), Critical Reading and Writing for Postgraduates, 3rd ed., SAGE; The Craft of Scientific Writing (Researchly's founding guide): Translate for the decision-maker",
       "rules": [],
       "moves": []
     },
@@ -386,7 +386,7 @@
       "before": "We fitted an renewal model to the the weekly counts.",
       "after": "We fitted a renewal model to the weekly counts.",
       "habit": "Before you send a draft, read it aloud once, slowly: the ear catches doubled words the eye skips.",
-      "source": "The Craft of Scientific Writing (Researchly's founding guide), §6 Language and tone; LanguageTool, open-source grammar checker; SymSpell spelling engine with Researchly's scientific lexicon",
+      "source": "The Craft of Scientific Writing (Researchly's founding guide): Language and tone; LanguageTool, open-source grammar checker; SymSpell spelling engine with Researchly's scientific lexicon",
       "rules": [
         "S001",
         "LT001",

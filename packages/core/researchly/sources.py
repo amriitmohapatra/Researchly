@@ -89,8 +89,12 @@ WORKS = {
 def _one(code: str) -> str:
     code = code.strip()
     if code.startswith("§"):
+        # The section is named, never numbered: a reader outside this
+        # project cannot look up "§6" (CLAUDE.md #6; the owner's P35
+        # feedback). The code keeps the number for provenance.
         number = code[1:]
-        return f"{GUIDE}, §{number} {GUIDE_SECTIONS[number]}"
+        title = GUIDE_SECTIONS[number]
+        return f"{GUIDE}: {title}"
     return WORKS[code]
 
 
