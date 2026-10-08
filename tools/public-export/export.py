@@ -74,6 +74,7 @@ EMAIL_RX = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
 PLACEHOLDER_EMAIL_RX = re.compile(
     r"@(?:[a-z0-9.\-]*\.)?(?:example\.(?:com|org|net|edu)|example\.ac\.uk|"
     r"exampl\.com|host\.org|b\.co|[a-z]+\.supabase\.co)$|^noreply@|"
+    r"^name@university\.|"
     r"@users\.noreply\.github\.com$", re.I)
 
 

@@ -25,6 +25,10 @@ demo/
 ml/eval/
 ml/realdocs/
 
+# The weekly real-document bench (public articles only). The public CI is
+# overlay/.github/workflows/ci.yml; deploy and noise-floor workflows stay private.
+.github/workflows/realdocs.yml
+
 # Documentation written for people who run or contribute to the project.
 docs/deploy.md
 docs/labelling-guide.md

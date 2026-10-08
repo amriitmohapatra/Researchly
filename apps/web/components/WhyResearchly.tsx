@@ -36,8 +36,8 @@ export function WhyResearchly() {
           generative AI is restricted.
         </li>
         <li>
-          <strong>Its noise is measured.</strong> How often it flags accepted theses and published papers is tracked in
-          the open, as a check on false alarms; precision from labelled paragraphs is being added.
+          <strong>Its noise is measured.</strong> How often it flags accepted theses and published papers is tracked as
+          a check on false alarms; precision from labelled paragraphs is being added.
         </li>
         <li>
           <strong>Checks across the whole draft.</strong> Figures and tables cited in order, abbreviations defined once,

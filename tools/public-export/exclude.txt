@@ -35,7 +35,9 @@ ml/datasets.yaml
 ml/tools/
 tools/
 .claude/
-.github/
+.github/workflows/ci.yml
+.github/workflows/deploy-engine.yml
+.github/workflows/noise-floor.yml
 
 # Environment files are never committed, but if one ever is, it stays here.
 # (`.env.example` templates hold placeholders only and are admitted; the
