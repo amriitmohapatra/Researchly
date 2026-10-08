@@ -1,0 +1,4 @@
+# Email addresses the public repository may contain. The support address is
+# already shown on the live site's "Report a problem" link (owner decision,
+# 2026-10-04); listing it here keeps that a deliberate choice.
+amrit.mohapatra97@gmail.com

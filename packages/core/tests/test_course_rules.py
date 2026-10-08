@@ -1,5 +1,6 @@
-"""Fire / don't-fire tests for the rules mined from the Notes_on_writing
-corpus (Endo lecture, NG5001 course, Shehzad 2008, Pallas 2022)."""
+"""Fire / don't-fire tests for the rules mined from the owner's course and
+lecture notes, Shehzad 2008 and Pallas 2022 (provenance in the private
+knowledge base)."""
 
 import spacy
 
@@ -45,7 +46,7 @@ def test_e702_quiet_on_single_however():
 # --- E703 naked this --------------------------------------------------------
 
 def test_e703_fires_on_naked_this():
-    # long preceding sentence = multiple candidate referents (Endo's caveat)
+    # long preceding sentence = multiple candidate referents (the lecture's caveat)
     t = ("Hospital admissions in the northern districts rose for six "
          "consecutive weeks while testing capacity stayed flat and the "
          "share of positive tests doubled across every age group. "
@@ -175,7 +176,7 @@ def test_d902_quiet_without_intro_section():
                              "lowest quintile of income.")
 
 
-# --- W201 additions from Endo avoid-list ------------------------------------
+# --- W201 additions from the lecture's avoid-list ---------------------------
 
 def test_w201_leverage_and_elucidate():
     found = ids("We leveraged survey data to elucidate contact patterns.")

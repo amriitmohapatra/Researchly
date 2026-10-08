@@ -90,7 +90,7 @@ Calibration and claims: C301 hedge stacking · C302 overclaiming ·
 C303 causal verbs (design-check prompt) · C304 bare "significant" ·
 C305 assertive adverbs · F601 undefined acronyms.
 
-From the Notes_on_writing corpus (Endo lecture, NG5001 course, Shehzad
+From the owner's lecture and course notes and Shehzad
 2008 — provenance in `../docs/knowledge-base.md`): E701 empty phrases ·
 E702 adversative runs · E703 naked "This" · E704 uncited "is known to be" ·
 E705 absolute novelty claims · E706 "relatively" without comparator ·

@@ -157,8 +157,15 @@ lecture (§1) and from the NG5001 course (§§2–9) show the source
 to the public could read as their endorsement, which is theirs to give.
 Rules from the owner's own guide cite the guide and its section; published
 works (Shehzad 2008, ICMJE, the SI Brochure, the AMA Manual) are cited by
-name. The `source=` codes on the rules are unchanged, so this map still
-traces every rule to where it came from.
+name. The `source=` codes on the rules still trace every rule to where it
+came from, through this map.
+
+**Neutral codes (2026-10-08, for the public repository).** So that the
+engine's own code never names them either, the codes were renamed: `lecture`
+is Dr Endo's lecture (§1), `course-U1` and `course-U2` are units 1 and 2 of
+the NG5001 course (§2, §3). This document, and the private terms list in
+`tools/public-export/private-terms.txt`, are the only places that name
+them; neither is ever exported.
 
 ## 10. Published style references (S2b, 2026-10-04)
 

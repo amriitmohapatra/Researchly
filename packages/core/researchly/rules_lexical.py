@@ -408,8 +408,8 @@ def g108_stress_position(doc, document: Document):
 
 
 # ---------------------------------------------------------------------------
-# E7xx — rules mined from Dr Akira Endo's "Scientific writing for infectious
-# disease modelling" lecture (Notes_on_writing/writing.pdf)
+# E7xx — rules mined from the owner's lecture notes on scientific writing for
+# infectious disease modelling (provenance: docs/knowledge-base.md §1)
 # ---------------------------------------------------------------------------
 
 @rule("E701", "empty-phrase", Category.CONVENTION,
@@ -422,7 +422,7 @@ def g108_stress_position(doc, document: Document):
       plain=("This phrase sounds important but says nothing specific. 'Sheds "
              "light on' or 'a holistic understanding' could describe any paper. "
              'Say exactly what your work shows or measures.'),
-      source="Endo", aggregate=True)
+      source="lecture", aggregate=True)
 def e701_empty_phrase(doc, document: Document):
     for phrase in lx.EMPTY_PHRASES:
         for m in _finditer(rf"\b{re.escape(phrase)}\b", document.masked):
@@ -441,7 +441,7 @@ def e701_empty_phrase(doc, document: Document):
       plain=("'Is known to be' or 'is considered' does not say who knows or "
              'considers it. If it is established, add a citation. If it is your '
              "own view, say 'we consider'."),
-      source="Endo", aggregate=True)
+      source="lecture", aggregate=True)
 def e704_uncited_consensus(doc, document: Document):
     for sent in doc.sents:
         m = re.search(lx.CONSENSUS_RX, sent.text)
@@ -469,7 +469,7 @@ def e704_uncited_consensus(doc, document: Document):
       plain=("Saying something 'has never been studied' is risky. The literature "
              'is large, and one counter-example from a reviewer will weaken your '
              "claim. Write 'to our knowledge' and cite the closest earlier work."),
-      source="Endo", aggregate=True)
+      source="lecture", aggregate=True)
 def e705_absolute_novelty(doc, document: Document):
     for sent in doc.sents:
         low = sent.text.lower()
@@ -496,7 +496,7 @@ def e705_absolute_novelty(doc, document: Document):
       plain=("'Relatively', 'higher' or 'additional' need a comparison: relative "
              'to what? Name the thing you are comparing with, or remove the word '
              'if the sentence works without it.'),
-      source="Endo", aggregate=True)
+      source="lecture", aggregate=True)
 def e706_missing_comparator(doc, document: Document):
     for m in _finditer(r"\brelatively\b", document.masked):
         yield Suggestion(
@@ -514,7 +514,7 @@ def e706_missing_comparator(doc, document: Document):
              'they are. Readers decide from the abstract whether to read on. '
              'Give them at least one real finding.'),
       sections_only=("abstract",),
-      source="NG5001-U2", aggregate=True)
+      source="course-U2", aggregate=True)
 def ab801_vague_forward(doc, document: Document):
     for m in _finditer(lx.ABSTRACT_VAGUE_RX, document.masked):
         yield Suggestion(
@@ -534,7 +534,7 @@ def ab801_vague_forward(doc, document: Document):
       plain=("'There are many studies on' lists the literature instead of making "
              'a point. Start with what the studies show together, then use them '
              'as support, and lead to what is still missing.'),
-      source="NG5001-U1", aggregate=True)
+      source="course-U1", aggregate=True)
 def l901_serial_summary(doc, document: Document):
     for rx in lx.LITREVIEW_FILLER:
         for m in _finditer(rx, document.masked):
@@ -604,7 +604,7 @@ from .discourse import abstract_lens  # noqa: E402,F401
       plain=('The same word is spelled in both British and American ways, such '
              "as 'modelling' and 'modeling'. Pick the one your journal uses and "
              'keep it the same throughout.'),
-      source="§6+Endo")
+      source="§6+lecture")
 def w210_variant_consistency(doc, document: Document):
     text = document.masked.lower()
     words = re.findall(r"[a-z]+", text)

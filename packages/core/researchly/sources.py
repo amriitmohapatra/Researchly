@@ -1,6 +1,6 @@
 """Short source codes -> full citations a student can look up (CLAUDE.md #6).
 
-Rules declare compact codes (`source="§4"`, `"Endo"`, `"§6+Endo"`) because
+Rules declare compact codes (`source="§4"`, `"lecture"`, `"§6+lecture"`) because
 they are easy to audit next to the rule. Users must never see the code
 alone: "§4" means nothing outside this repository. The rule registry expands
 every code through `cite()` at registration, so every surface (CLI, Word,
@@ -50,9 +50,11 @@ GUIDE_SECTIONS = {
 LEARNINGS = "Amriit's learnings from scientific-writing training (Researchly notes)"
 
 WORKS = {
-    "Endo": LEARNINGS,
-    "NG5001-U1": LEARNINGS,
-    "NG5001-U2": LEARNINGS,
+    # The lecture and the course's units 1 and 2; docs/knowledge-base.md
+    # §1-§3 names them (private provenance, never shipped by name).
+    "lecture": LEARNINGS,
+    "course-U1": LEARNINGS,
+    "course-U2": LEARNINGS,
     "Shehzad": 'W. Shehzad (2008), "Move two: establishing a niche"',
     "Swales": ("J. M. Swales (1990), Genre Analysis, on the three moves "
                "of a research introduction"),

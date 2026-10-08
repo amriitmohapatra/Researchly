@@ -7,7 +7,7 @@ are a trust feature (research/04).
 """
 
 # --- W201: single grand words → plain alternatives -------------------------
-# (employ/leverage/elucidate added from Endo's avoid-list, which treats
+# (employ/leverage/elucidate added from the lecture's avoid-list, which treats
 #  them as needlessly grand where plain 'use' or 'clarify' would do)
 GRAND_WORDS = {
     "utilize": "use", "utilizes": "uses", "utilized": "used",
@@ -203,10 +203,10 @@ TRAILING_QUALIFIERS = (
     r", in (?:our|this) (?:study|analysis|simulations?|model)$",
 )
 
-# --- E7xx: rules mined from Dr Akira Endo's scientific-writing lecture ------
+# --- E7xx: rules mined from the owner's lecture notes on scientific writing -
 
 # E701: low-information phrases that sound substantive but say nothing
-# (Endo lecture, 'Information density')
+# (the lecture, 'Information density')
 EMPTY_PHRASES = (
     "holistic understanding",
     "comprehensive understanding of the complex",
@@ -254,7 +254,7 @@ ABSTRACT_VAGUE_RX = (r"\b(?:results?|findings?|implications?|data|outcomes?)"
                      r"(?:discussed|presented|explored|described|reported|"
                      r"examined)\b")
 
-# --- L901: serial-summary literature-review openers (NG5001 Unit 1) --------
+# --- L901: serial-summary literature-review openers (the course, unit 1) --------
 LITREVIEW_FILLER = (
     r"\bthere\s+(?:are|have\s+been|is\s+a\s+growing\s+body\s+of)\s+"
     r"(?:many|several|numerous|various|a\s+number\s+of)?\s*"
@@ -281,7 +281,7 @@ ACRONYM_ALLOWLIST = {
     "SGD", "USD", "EUR", "GBP", "CNY", "JPY", "INR", "MYR", "IDR", "THB",
 }
 
-# --- Metadiscourse meter (Hyland's interactional resources; NG5001 U2) ------
+# --- Metadiscourse meter (Hyland's interactional resources; the course, unit 2) ------
 # Boosters assert certainty; the hedge/booster balance is a calibration
 # read-out ("confidence without cockiness" — Wellington et al.).
 BOOSTER_TOKENS = {

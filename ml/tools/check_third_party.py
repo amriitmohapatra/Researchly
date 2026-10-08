@@ -240,8 +240,9 @@ def _candidate_files(root: Path):
         return sorted(files)
 
 
-def iter_targets(root: Path):
-    for p in _candidate_files(root):
+def iter_text_files(root: Path, files):
+    """(relpath, text) for each scannable text file among `files` under root."""
+    for p in files:
         if not p.is_file():
             continue
         rel = p.relative_to(root)
@@ -259,9 +260,17 @@ def iter_targets(root: Path):
         yield rel, raw.decode("utf-8", "replace")
 
 
-def scan(root: Path, index: dict, allowed: set):
-    """Yield (relpath, line, phrase, sources, n_words) per matching run."""
-    for rel, text in iter_targets(root):
+def iter_targets(root: Path):
+    yield from iter_text_files(root, _candidate_files(root))
+
+
+def scan(root: Path, index: dict, allowed: set, targets=None):
+    """Yield (relpath, line, phrase, sources, n_words) per matching run.
+
+    `targets` is an iterable of (relpath, text); by default the shippable
+    files under SCAN_ROOTS. The public export passes every exported file.
+    """
+    for rel, text in (iter_targets(root) if targets is None else targets):
         folded, orig, lines = tokens_with_lines(text)
         hit = [False] * len(folded)
         srcs: dict = {}

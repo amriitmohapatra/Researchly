@@ -1,6 +1,6 @@
 """The abstract lens — Belcher/Pallas six-part completeness check.
 
-From the NG5001 course materials (Belcher 2021; Pallas 2022 ch.7): a good
+From the owner's course materials (Belcher 2021; Pallas 2022 ch.7): a good
 SciQua abstract contains six moves —
 
   1. background      — the conventional wisdom on the topic
@@ -168,7 +168,7 @@ def missing_moves(text: str) -> list[str]:
              'why it matters. One of these is missing here. Reviewers look for '
              'all six.'),
       sections_only=("abstract",),
-      source="NG5001-U2",
+      source="course-U2",
       scope="document")
 def ab802_abstract_completeness(doc, document: Document):
     abstracts = [h for h in document.headings if h.section == "abstract"]

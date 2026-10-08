@@ -343,7 +343,7 @@ def cmd_abstract(args) -> int:
 
     result = analyze(text)
     print(f"\n{_c(BOLD, 'Abstract lens — six-part completeness')} "
-          f"{_c(DIM, '(Belcher 2021 / Pallas 2022, via NG5001)')}\n")
+          f"{_c(DIM, '(Belcher 2021 / Pallas 2022)')}\n")
     missing = []
     for move in MOVES:
         r = result[move]

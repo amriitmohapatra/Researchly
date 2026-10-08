@@ -156,7 +156,7 @@ _CARDS = (
          "clear. This early peak suggests that control should start in April.",
          "Read only the first three words of each sentence in a paragraph: "
          "they should hand the reader from one idea to the next.",
-         "§5.1+Endo", rules=("E702", "E703")),
+         "§5.1+lecture", rules=("E702", "E703")),
     # --- Words ----------------------------------------------------------------------
     Card("concise-words", "Say it in fewer words", "Words",
          "Padding phrases add length, not meaning.",
@@ -186,7 +186,7 @@ _CARDS = (
          "which hold 35% of the population.",
          "For every adjective of size or importance, ask: compared with what? "
          "Then give that comparison.",
-         "§6+Endo", rules=("W201", "W203", "W204", "E701", "E706")),
+         "§6+lecture", rules=("W201", "W203", "W204", "E701", "E706")),
     Card("abbreviations-and-terms", "Define once, then keep to it", "Words",
          "One definition, before first use; one form of each term.",
          "Define an abbreviation at its first use, once, and then use it. An "
@@ -270,7 +270,7 @@ _CARDS = (
          "To our knowledge, no study has measured this in lowland districts.",
          "Highlight every sentence about what is known or unknown. Each one "
          "needs a citation or 'to our knowledge'.",
-         "Endo+§4", rules=("E704", "E705")),
+         "lecture+§4", rules=("E704", "E705")),
     Card("warranting", "Claims need a warrant", "Claims and evidence",
          "Say why the evidence supports the claim: the 'because'.",
          "An argument has three parts: the claim, the evidence for it, and "
@@ -301,7 +301,7 @@ _CARDS = (
          "(Figure 2).",
          "List your figures and tables in the order the text first cites "
          "them. The list should read 1, 2, 3.",
-         "ICMJE+§9.7+Endo",
+         "ICMJE+§9.7+lecture",
          rules=("X101", "X102", "X103", "X104", "X202", "E707")),
     Card("numbers-and-units", "Numbers that agree", "Figures, tables and numbers",
          "A number in the text must be the number in its table.",
@@ -347,7 +347,7 @@ _CARDS = (
          "reporting was similar, so control should start there.",
          "Label each sentence of your abstract with one of the six moves. "
          "Every move should appear once, in order.",
-         "NG5001-U2", rules=("AB801", "AB802")),
+         "course-U2", rules=("AB801", "AB802")),
     Card("introduction", "The introduction: territory, gap, aim",
          "Structure and argument",
          "Why it matters, what is unknown, how this work fills it.",

@@ -8,6 +8,7 @@ the new equation-in-a-sentence rule. Synthetic text only.
 """
 
 import re
+from pathlib import Path
 
 import pytest
 
@@ -20,9 +21,16 @@ NLP = api.get_nlp()
 # What must never reach a card: section numbers of the internal guide,
 # course codes, lecturer names, book citations that belong on the Source
 # line, command-line instructions, and code formatting.
+# Course codes are caught by shape; the lecturer's and course's names are
+# private and live only in the private repository's terms list, which this
+# test reads when it is there (the public copy has no such file).
+_TERMS = Path(__file__).resolve().parents[3] / "tools" / "public-export" / "private-terms.txt"
+PRIVATE = [ln.strip() for ln in (_TERMS.read_text("utf-8").splitlines() if _TERMS.exists() else [])
+           if ln.strip() and not ln.lstrip().startswith("#")]
 INTERNAL = re.compile(
-    r"§|`|NG5001|\bGuide\b|\bEndo\b|Belcher|Pallas|Shehzad|Swales|Gopen|"
-    r"researchly (?:abstract|review|check|dict)|pip install")
+    r"§|`|\b[A-Z]{2,3} ?\d{4}\b|\bGuide\b|Belcher|Pallas|Shehzad|Swales|Gopen|"
+    r"researchly (?:abstract|review|check|dict)|pip install"
+    + "".join("|(?i:%s)" % t for t in PRIVATE))
 
 
 def hits(text: str, rule_id: str, kind: str = "plain"):
@@ -60,12 +68,12 @@ def test_course_and_lecture_rules_cite_the_owners_learnings():
     load_rules()
     for rid in ("E703", "L901", "AB801"):
         assert REGISTRY[rid].source == sources.LEARNINGS
-    assert "NG5001" not in sources.LEARNINGS and "Endo" not in sources.LEARNINGS
+    assert not INTERNAL.search(sources.LEARNINGS)
 
 
 def test_combined_source_codes_do_not_repeat_a_citation():
-    assert sources.cite("Endo+NG5001-U1") == sources.LEARNINGS
-    assert sources.cite("§6+Endo").count(sources.LEARNINGS) == 1
+    assert sources.cite("lecture+course-U1") == sources.LEARNINGS
+    assert sources.cite("§6+lecture").count(sources.LEARNINGS) == 1
 
 
 # --- S001: Latin phrases --------------------------------------------------------------

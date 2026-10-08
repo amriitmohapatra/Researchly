@@ -1,0 +1,21 @@
+# Private terms: the export gate refuses a public tree whose paths or text
+# match any of these (case-insensitive regular expressions, one per line).
+# This file itself is never exported. The engine's explanation test also
+# reads it, so no user-visible text can name them either.
+#
+# The lecturer and the course (the owner's decision, 2026-10-08: credited
+# only in the private provenance map, docs/knowledge-base.md).
+\bEndo\b
+\bAkira\b
+\bNG ?5001\b
+# Course codes of the owner's programme.
+\bSPH ?\d{4}\b
+# Authors of the eight sample theses (their file names) and student ids.
+\bChenY\b
+\bKoh[ _]?Wee[ _]?Ming\b
+\bLimJT\b
+\bPremK\b
+\bSun[ _]?Haoyang\b
+\bZHAOZX\b
+\bChao[ _]?Fengqing\b
+\bA\d{7}[A-Z]\b

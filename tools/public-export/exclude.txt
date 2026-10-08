@@ -1,0 +1,47 @@
+# Never exported, even when include.txt would admit the path. Defence in
+# depth: these hold third-party material, private planning, or build output.
+
+# Third-party material (CLAUDE.md, "Before this repository is ever made public").
+Sample_thesis_drafts/
+Notes_On_Writing/
+ml/dogfood/
+legacy/
+_to_delete/
+**/*.pdf
+
+# Trained artefacts and archives whose provenance is not public.
+**/*.joblib
+**/*.pkl
+**/*.pickle
+**/*.tar.gz
+**/*.dmg
+shipping/
+
+# Private planning, reviews and agent instructions.
+CLAUDE.md
+AGENTS.md
+PLAN.md
+ARCHITECTURE.md
+Codex_Review*.md
+The-Craft-of-Scientific-Writing.md
+Rough Drafts.docx
+research/
+docs/PROJECT_LOG.md
+docs/knowledge-base.md
+docs/dogfooding-report.md
+docs/rule-inventory.md
+docs/roadmap-rewrite-and-desktop.md
+ml/datasets.yaml
+ml/tools/
+tools/
+.claude/
+.github/
+
+# Environment files are never committed, but if one ever is, it stays here.
+# (`.env.example` templates hold placeholders only and are admitted; the
+# secret scan still reads them.)
+**/.env
+**/.env.local
+**/.env.*.local
+**/.env.production
+**/.env.development

@@ -35,7 +35,7 @@ from . import sources
 from .document import Document
 from .engine import REGISTRY, check
 
-SOURCE = sources.cite("WW+NG5001-U1")
+SOURCE = sources.cite("WW+course-U1")
 
 DISCLAIMER = ("This brief points to what a critical reader would ask, "
               "from signals in the wording. It does not establish whether "

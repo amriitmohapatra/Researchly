@@ -176,7 +176,7 @@ MOVES: dict = {m.id: m for m in (
              r"\bour (aim|objective|goal|purpose|question) (was|is|were)\b")),
     Move("background", "What is known",
          "Does the abstract open with what is already known?",
-         "NG5001-U2",
+         "course-U2",
          "An abstract starts from the reader's current understanding, in "
          "one sentence, before it says what was missing.",
          "“Studies of [topic] generally find that [current "
@@ -184,7 +184,7 @@ MOVES: dict = {m.id: m for m in (
          tuple(_R["background"]), opening=True),
     Move("methods", "How it was done",
          "Does the abstract say how the question was answered?",
-         "NG5001-U2",
+         "course-U2",
          "One sentence on the design, the data and the analysis lets the "
          "reader judge the findings before reading them.",
          "“We [fitted / analysed / surveyed] [model, design or data] "
@@ -192,7 +192,7 @@ MOVES: dict = {m.id: m for m in (
          tuple(_A["methods"])),
     Move("findings", "What was found",
          "Does this section state what was found, with substance?",
-         "NG5001-U2+§2",
+         "course-U2+§2",
          "Findings are the point of the paper: give the main result with "
          "its size and its uncertainty, not a promise that results will "
          "be discussed.",
@@ -202,7 +202,7 @@ MOVES: dict = {m.id: m for m in (
     Move("significance", "Why it matters now",
          "Does the ending say what the findings mean for the field or "
          "for practice?",
-         "NG5001-U2+§2",
+         "course-U2+§2",
          "The last move widens back out: what should change, and for "
          "whom, because of what was found.",
          "“This means that [field / practice] should [specific "
