@@ -61,3 +61,13 @@ def test_no_citation_a_user_sees_carries_a_section_number():
     cites += [m.citation for m in moves.MOVES.values()]
     cites += [c.citation for c in packs.checklists().values()]
     assert [c for c in cites if "§" in c] == []
+
+
+def test_several_guide_sections_name_the_guide_once():
+    both = sources.cite("§4+§9.3")
+    assert both.count(sources.GUIDE) == 1
+    assert sources.GUIDE_SECTIONS["4"] in both and sources.GUIDE_SECTIONS["9.3"] in both
+    # A section cited twice is listed once; other works keep their place.
+    mixed = sources.cite("WW+§4+§4")
+    assert mixed.count(sources.GUIDE_SECTIONS["4"]) == 1
+    assert mixed.startswith(sources.WORKS["WW"])

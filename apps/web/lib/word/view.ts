@@ -111,17 +111,12 @@ export function sectionSummary(split: SectionSplit<WordSuggestion>, focus: Secti
 /* ---------- what the check ran as (S4c) ---------- */
 
 /**
- * The profile line in the pane. For a guessed type it names the headings the
- * guess rested on ("from the headings: Methods, Results"), so the writer can
- * see why and choose otherwise; everything else is the shared line.
+ * The profile line in the pane: the website's line, which names the headings
+ * a guess rested on ("from the headings: Methods, Results"), so the writer
+ * can see why and choose otherwise. One helper, so the two never differ.
  */
 export function wordProfileLine(profile: ProfileInfo | null | undefined): string | null {
-  const base = profileLine(profile);
-  if (!profile || !base || !profile.guessed) return base;
-  const evidence = (profile.evidence ?? "").trim();
-  if (!evidence) return base;
-  if (profile.note.trim()) return `${profile.note.trim()} The guess came from the headings: ${evidence}.`;
-  return `Checked as ${profile.label} (from the headings: ${evidence}).`;
+  return profileLine(profile);
 }
 
 /* ---------- after an edit in the document (S4c, Codex review R3) ---------- */

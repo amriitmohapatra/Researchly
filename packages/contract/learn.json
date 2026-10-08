@@ -40,7 +40,7 @@
       "before": "A similar pattern was reported by Lim and colleagues in a neighbouring region.",
       "after": "Lim and colleagues reported a similar pattern in a neighbouring region.",
       "habit": "In your Discussion, look for 'by' after 'was' or 'were'. Each one is a sentence you could turn round.",
-      "source": "The Craft of Scientific Writing (Researchly's founding guide): Put whose story it is in the topic position (after Gopen & Swan); The Craft of Scientific Writing (Researchly's founding guide): Language and tone",
+      "source": "The Craft of Scientific Writing (Researchly's founding guide): “Put whose story it is in the topic position (after Gopen & Swan)” and “Language and tone”",
       "rules": [
         "G104"
       ],
@@ -55,7 +55,7 @@
       "before": "It is important to note that transmission was highest in the densest district, according to our estimates.",
       "after": "In our estimates, transmission was highest in the densest district.",
       "habit": "Read only the last few words of each sentence in a paragraph. They should be the points you want remembered.",
-      "source": "The Craft of Scientific Writing (Researchly's founding guide): Put the emphasis at the end, the stress position (after Gopen & Swan); The Craft of Scientific Writing (Researchly's founding guide): Put whose story it is in the topic position (after Gopen & Swan)",
+      "source": "The Craft of Scientific Writing (Researchly's founding guide): “Put the emphasis at the end, the stress position (after Gopen & Swan)” and “Put whose story it is in the topic position (after Gopen & Swan)”",
       "rules": [
         "G105",
         "G108"
@@ -86,7 +86,7 @@
       "before": "The district case report delay distribution was estimated first.",
       "after": "We first estimated the distribution of delays in reporting cases from each district.",
       "habit": "Look for runs of nouns with no 'of', 'in' or 'for' between them, and read each run to a colleague outside your field.",
-      "source": "The Craft of Scientific Writing (Researchly's founding guide): The sentence: Gopen & Swan's reader-expectation principles; The Craft of Scientific Writing (Researchly's founding guide): Write for a reader who lacks one of your fields",
+      "source": "The Craft of Scientific Writing (Researchly's founding guide): “The sentence: Gopen & Swan's reader-expectation principles” and “Write for a reader who lacks one of your fields”",
       "rules": [
         "G107"
       ],
@@ -172,7 +172,7 @@
       "before": "These results may possibly suggest that the campaign clearly reduced transmission.",
       "after": "These results suggest that the campaign reduced transmission.",
       "habit": "Read your Discussion for hedges and boosters only. Each claim should carry one, matched to its evidence.",
-      "source": "The Craft of Scientific Writing (Researchly's founding guide): Warranting your arguments; The Craft of Scientific Writing (Researchly's founding guide): Uncertainty is not a caveat, it is the finding",
+      "source": "The Craft of Scientific Writing (Researchly's founding guide): “Warranting your arguments” and “Uncertainty is not a caveat, it is the finding”",
       "rules": [
         "C301",
         "C305"
@@ -347,7 +347,7 @@
       "before": "A model was used on the data.",
       "after": "We used weekly dengue counts from the clinics of three districts, April to September 2022, and fitted an SEIR model to them by Hamiltonian Monte Carlo, assuming a mean infectious period of five days.",
       "habit": "Give your methods to a colleague and ask what they would need to redo the analysis. Add it.",
-      "source": "The Craft of Scientific Writing (Researchly's founding guide): Structure from the top down: the paper is a story; The Craft of Scientific Writing (Researchly's founding guide): Reproducibility is part of the writing",
+      "source": "The Craft of Scientific Writing (Researchly's founding guide): “Structure from the top down: the paper is a story” and “Reproducibility is part of the writing”",
       "rules": [],
       "moves": []
     },
@@ -360,7 +360,7 @@
       "before": "Table 2 shows the estimates.",
       "after": "The basic reproduction number was highest in Marrowick, at 2.1 (95% CrI 1.8 to 2.4; Table 2).",
       "habit": "Check that every paragraph of your Results starts with a finding, not with a figure.",
-      "source": "The Craft of Scientific Writing (Researchly's founding guide): Structure from the top down: the paper is a story; The Craft of Scientific Writing (Researchly's founding guide): Uncertainty is not a caveat, it is the finding; The Craft of Scientific Writing (Researchly's founding guide): Figures are arguments too",
+      "source": "The Craft of Scientific Writing (Researchly's founding guide): “Structure from the top down: the paper is a story”, “Uncertainty is not a caveat, it is the finding” and “Figures are arguments too”",
       "rules": [],
       "moves": []
     },
@@ -373,7 +373,7 @@
       "before": "Our results are interesting. Further research is needed.",
       "after": "Transmission, not reporting, explained the difference between districts, as earlier work in a neighbouring region suggested. Our weekly data cannot show the direction of spread. Vector control should start first in the densest district.",
       "habit": "Mark the five moves in your discussion's margin: finding, meaning, comparison, limitation, implication.",
-      "source": "The Craft of Scientific Writing (Researchly's founding guide): Structure from the top down: the paper is a story; M. Wallace & A. Wray (2016), Critical Reading and Writing for Postgraduates, 3rd ed., SAGE; The Craft of Scientific Writing (Researchly's founding guide): Translate for the decision-maker",
+      "source": "The Craft of Scientific Writing (Researchly's founding guide): “Structure from the top down: the paper is a story” and “Translate for the decision-maker”; M. Wallace & A. Wray (2016), Critical Reading and Writing for Postgraduates, 3rd ed., SAGE",
       "rules": [],
       "moves": []
     },

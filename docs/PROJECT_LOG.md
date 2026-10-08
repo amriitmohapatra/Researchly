@@ -2044,3 +2044,98 @@ map page with every sentence open. One style change outside the map: the
 tab strip now wraps, since three tabs overflowed a phone and the pane.
 Draft mode gets the same one-line "needs Revise" as the brief.
 
+
+## P38 — 2026-10-08 — S4c: lessons, reporting checklists, progress, labelling; the Codex review
+
+**Why.** The owner asked to finish the S4 series end to end and open a PR,
+and to implement the Codex review (`Codex_Review_8Oct2026.md`) "as you deem
+fit". The same request asked for a two-minute deck and a "brag" video
+(the video later with a voiceover).
+
+**What.**
+- **Learn cards** (`researchly/learn.py`): 26 short lessons in six groups.
+  Each has a plain lesson, an invented before-and-after pair, a habit and
+  a source. Every rule, narrative move and argument link carries a
+  `learn_ref` that resolves to a card. The cards ship as
+  `packages/contract/learn.json` (a test fails when it is stale), behind
+  `GET /v1/learn`. The website shows "The lesson" on each card and on the
+  map, plus `/learn` pages.
+- **Epidemiology pack** (`researchly/packs/`): STROBE, CONSORT, PRISMA and
+  EPIFORGE as paraphrased items, chosen by the writer or suggested from the
+  text. Each item reads "reported" with the writer's sentence or "needs
+  your check", never "missing", and "Not applicable" is the writer's
+  session-only call. Both surfaces get a Checklist tab, Revise only in Word.
+- **Progress, opt-in**: the `progress_events` table stores rule-id counts
+  only. The database refuses a row unless the user opted in, and keeps the
+  newest 1,000. `/progress` draws one sparkline per rule with words, never
+  a score. Local checks never record.
+- **Labelling**: `docs/labelling-guide.md`; `/label` exports rule ids and
+  verdicts only. `ml/eval/label_precision.py` reports precision with
+  Wilson intervals and refuses a file that carries text.
+- **Codex review**:
+  - R1: local-server contract parity, proved by a test that posts every
+    option to the real handler.
+  - R2: Auto lets research structure win over policy headings, and shows
+    the headings a guess rests on.
+  - R3: Word Apply fails closed, with four honest outcomes and stale cards.
+  - R4: brief statuses, abstention and a disclaimer.
+  - R5: local claim/warrant/grounds links from the shared parse.
+  - R6: the web sends the mode explicitly.
+  - R7: LSP UTF-16 ranges; stale results are dropped.
+  - R8: the printed report carries its context.
+  - Proposals 2, 6 and 9 were built (dismissal with Undo, checklists,
+    lessons), and the landing-page claims were bounded.
+  - The rest are in PLAN with the review's acceptance evidence.
+- **Citations**: user-visible source lines no longer carry the guide's
+  section numbers (CLAUDE.md #6). Several sections of the guide name the
+  guide once.
+- **Demo on the site**: "Try the demo paper" loads `public/demo/`, a
+  byte-identical copy of `demo/dist/`.
+
+**How.** The lead built the engine, service, contract and database
+(03d98d4, 082794d, ad0c9c4, d0fe13e). Two sub-agents worked in their own
+worktrees: one on the web results (f8bb433), one on Word and the new pages
+(f891213). Their commits were cherry-picked and conflicts resolved:
+`globals.css` was append-only on one side, and `lib/learn.ts` was a union.
+Three seams between them were fixed by the lead:
+- the account tests' exact-options checks now expect `mode: "revise"`;
+- the Word profile line now delegates to the web's, so a guessed type's
+  evidence shows after the engine's note on both surfaces;
+- DESIGN.md gained the Word, Lessons, Progress and Label notes.
+
+The deck (seven slides, Slides artifact) and the video (50 s with music;
+65 s with an offline Kokoro-82M voice, Apache-2.0) live outside the repo.
+
+**Evidence.**
+
+| Check | Result |
+|---|---|
+| core | 918 passed, 2 skipped |
+| service | 183 |
+| database (Postgres 16, two users) | 101 |
+| demo | 25 |
+| ml/eval | 5 |
+| web lint, boundary, typecheck | clean |
+| web unit | 345 |
+| web e2e | 152, 7 screenshot-only skipped |
+| contract check | clean |
+| ruff | clean |
+| third-party scan | 0 hits |
+| noise floor | 11.67, unchanged (gate OK) |
+| real-document bench | PASS, 13.69, unchanged |
+
+**Lessons.**
+- A host error after an insertion means "unknown", never "nothing
+  changed". Only a fresh re-read can say the text is untouched.
+- Two agents building one shared helper for the same line will diverge;
+  give a shared line one owner.
+- A reporting checklist can only say what it found. A cue cannot prove
+  absence, so the item says "needs your check".
+
+**Open.**
+- Owner steps: run the S4c migration and deploy.
+- Real-Word checks: Apply outcomes, the Checklist tab, the map.
+- Label 50 paragraphs; this is the S4 exit check.
+- Listen to the video's voice before sharing.
+- The label page links to the guide on the private GitHub repo, which only
+  the owner can open.

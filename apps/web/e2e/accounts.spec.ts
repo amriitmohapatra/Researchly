@@ -171,7 +171,7 @@ test.describe("signed in", () => {
     expect(calls[0]!.json).toEqual({
       content: PASTE_TEXT,
       format: "plain",
-      options: { show_preferences: false, document_type: "auto", review: true, narrative: true },
+      options: { show_preferences: false, document_type: "auto", review: true, narrative: true, mode: "revise" },
     });
 
     await menu.focus();
@@ -323,6 +323,7 @@ test.describe("uploads", () => {
       document_type: "auto",
       review: true,
       narrative: true,
+      mode: "revise",
     });
     expect(tokenLabel(c.authorization)).toBe("initial");
     expect(c.bytes).toBe(Buffer.byteLength(MD_TEXT));

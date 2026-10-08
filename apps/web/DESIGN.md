@@ -124,6 +124,38 @@ own "Whole document" group so they are never lost. The chooser starts at
 - A missing link's sentences sit behind "Show the sentence" (closed),
   quoted in the serif like a move's; on paper they are open.
 
+- **The lessons pages** (`/learn`, `/learn/[id]`, server-rendered, no
+  client script) are a reading-measure document: group headings with
+  hairline rows of title link and summary. On a lesson page, Before is
+  quoted in the serif with a dashed rule and After with a solid accent
+  rule (told apart by label and line style, never colour), then "Check
+  your own draft", the source set like a card's, "All lessons" and
+  previous/next. "Lessons" is a quiet text link in the header.
+
+## Progress (S4, opt-in)
+
+- Off by default: "Keep my progress" in Settings, with "Delete my
+  progress" behind a confirmation; "Delete my data" removes progress too.
+  Only rule ids and counts are kept, never text.
+- `/progress`: one row per rule, a 132×36 sparkline in the accent with a
+  hairline zero baseline and a ringed end dot, each line on its own scale
+  from zero. The first and latest values are written out with a bold
+  direction word (fewer, about the same, more), a link to the rule's
+  lesson, native tooltips, and a closed "Every value, as a table". The
+  number of recorded checks is shown as context. Never a score, a grade
+  or a flag total. Off and empty states link to Settings. In the account
+  menu.
+
+## Labelling flags (S4, `/label`)
+
+- A closed "How to label" disclosure, the section select, a serif
+  textarea, Check (primary) and Next paragraph, then compact cards with
+  Useful / Wrong / Unsure toggle buttons (`aria-pressed`; the chosen one is
+  the accent for every verdict, never coloured by verdict), the running
+  count, Export (`researchly-labels.json`: rule ids and verdicts, no text)
+  and "Start over…" behind a confirmation. Labels stay in this browser. In
+  the account menu.
+
 ## Reporting checklists (S4)
 
 - **"Reporting checklist"** sits beside "Check as": None (the default),
@@ -280,6 +312,20 @@ column, the site's tokens, cards and notices; nothing new to learn.
   the engine proposed a revision; account actions last. Applying is one span at a time, as a
   tracked change where Word supports it; the card then says how it was
   applied. A refusal (the document changed) is said on the card, in words.
+- **Apply outcomes (S4c, review R3)**: a refusal says nothing changed.
+  "Applied, but Track Changes was not restored" and "Word reported an
+  error after the edit" are said plainly on the card and remove its Apply,
+  so an edit is never repeated blindly. Any edit marks the paragraph's
+  other cards out of date: no Apply, and the note "check the document
+  again". If Word cannot load a range's fields, nothing is inserted and
+  the card offers a manual edit.
+- **Reporting checklist (S4c)**: a full-width select under "Check as"
+  (None, Auto, STROBE, CONSORT, PRISMA, EPIFORGE), sent in Revise only,
+  with its help line. A fourth tab, "Checklist", appears only when one
+  was asked for: each item its topic, the question, a status word
+  ("Reported", or "Needs your check" in italic) and the writer's own
+  sentence in the serif or the plain reason. No colour by status, no
+  meters. In Draft the tab offers "Switch to Revise", like the brief.
 - **Sign-in** replaces the main column: email, then the emailed code. No
   dialog (Office's dialog API is not used).
 - **States**: connecting to Word, outside Word, office.js missing, idle,
@@ -288,7 +334,9 @@ column, the site's tokens, cards and notices; nothing new to learn.
   not running, degraded tier (before and after a check), card selected,
   approximate match, applied (tracked or direct), apply refused, mode not
   saved to the account, section view (with and without suggestions in the
-  section), cursor not readable.
+  section), cursor not readable. S4c adds: checklist needs Revise, nothing
+  in the text points to a checklist, the engine has none, card out of
+  date, applied without restoring Track Changes, unknown outcome.
 
 ## States (all reachable, all covered by e2e)
 

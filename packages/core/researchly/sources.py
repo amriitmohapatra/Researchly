@@ -99,10 +99,31 @@ def _one(code: str) -> str:
 
 
 def cite(code: str) -> str:
-    """Full citation for a rule's source code. Raises KeyError if unknown."""
+    """Full citation for a rule's source code. Raises KeyError if unknown.
+
+    Several sections of the guide are cited once, by the guide's name and
+    then each section's title in quotes, where the first of them stood:
+    repeating the guide's long name read as clutter on a source line.
+    """
     seen: list[str] = []
+    titles: list[str] = []
     for part in code.split("+"):
+        part = part.strip()
+        if part.startswith("§"):
+            title = GUIDE_SECTIONS[part[1:]]
+            if title not in titles:
+                titles.append(title)
+            if GUIDE not in seen:
+                seen.append(GUIDE)
+            continue
         c = _one(part)
         if c not in seen:
             seen.append(c)
+    if titles:
+        if len(titles) == 1:
+            guide = f"{GUIDE}: {titles[0]}"
+        else:
+            quoted = [f"\u201c{t}\u201d" for t in titles]
+            guide = f"{GUIDE}: {', '.join(quoted[:-1])} and {quoted[-1]}"
+        seen[seen.index(GUIDE)] = guide
     return "; ".join(seen)

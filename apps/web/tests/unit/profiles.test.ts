@@ -92,9 +92,12 @@ describe("the profile line's evidence (Codex review R2)", () => {
       "Checked as Thesis chapter (from the headings: Chapter 3; Methods).",
     );
   });
-  it("keeps the old rules: the note alone, nothing for a guessed General, no evidence for a choice", () => {
+  it("nothing for a guessed General, evidence after a guessed type's note, none for a choice", () => {
     expect(profileLine(info({ id: "general", guessed: true, evidence: "Recommendations" }))).toBeNull();
     expect(profileLine(info({ id: "policy-brief", label: "Policy brief", guessed: true, evidence: "Recommendations", note: "Checked as a policy brief: no abstract." }))).toBe(
+      "Checked as a policy brief: no abstract. The guess came from the headings: Recommendations.",
+    );
+    expect(profileLine(info({ id: "policy-brief", label: "Policy brief", guessed: false, evidence: "Recommendations", note: "Checked as a policy brief: no abstract." }))).toBe(
       "Checked as a policy brief: no abstract.",
     );
     expect(profileLine(info({ id: "grant", label: "Grant proposal", guessed: false, evidence: "Aims" }))).toBe("Checked as Grant proposal.");
