@@ -58,10 +58,11 @@ never pushes. Publishing is always a deliberate push.
 
 ## The launch video
 
-`media/` holds the 50-second launch video (the music-only cut) and its
-poster, shown at the top of the public README. The gate admits video only
-from `media/`. The voiced cut stays out until someone has listened to it;
-to swap it in, replace `media/researchly-in-50-seconds.mp4` and publish.
+`media/` holds the launch video and its poster, shown at the top of the
+public README: the voiced cut (about 65 s; narration by Kokoro-82M,
+Apache-2.0, generated offline), chosen by the owner on 2026-10-08. The gate
+admits video only from `media/`. To change it, replace
+`media/researchly-video.mp4` and publish.
 
 ## Changing what is published
 

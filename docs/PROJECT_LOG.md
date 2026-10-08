@@ -2221,3 +2221,10 @@ top of the public README; the link opens the raw file, because GitHub plays
 an mp4 in the browser but does not embed a repository file inline. The gate
 admits video only from `media/`. The voiced cut stays out because nobody has
 listened to it yet.
+
+**Addendum 2: the voiced cut.** The owner sent the voiced cut back (the
+same file, checked by hash) to use instead. `media/researchly-video.mp4`
+is now the 65-second cut, narrated by Kokoro-82M (Apache-2.0, offline). The
+README caption says the narration is a synthetic voice, as ad and social
+platforms increasingly ask. The music-only cut remains in the public
+repository's history from its second commit.

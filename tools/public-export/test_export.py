@@ -155,7 +155,7 @@ def test_the_real_policy_keeps_private_material_out():
     for rel in ("LICENSE", "packages/core/researchly/api.py", "apps/web/app/page.tsx",
                 "services/engine/Dockerfile", "supabase/migrations/x.sql", "demo/dist/researchly-demo.docx",
                 "ml/realdocs/run.py", ".github/workflows/realdocs.yml", "apps/web/.env.example",
-                "media/researchly-in-50-seconds.mp4"):
+                "media/researchly-video.mp4"):
         assert policy.admits(rel), rel
     assert policy.terms, "private-terms.txt must not be empty"
 
