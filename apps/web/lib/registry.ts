@@ -1,12 +1,13 @@
 /**
  * The engine's registry (`GET /v1/rules`: rule names, scopes and, since S4,
- * the article-type choices), fetched once per engine URL and shared by every
+ * the article-type choices and the reporting checklists), fetched once per engine URL and shared by every
  * hook that wants it. No text is sent. An engine without one (the local
  * server, an older build) is not asked again this session; the callers'
  * built-in lists stand in.
  */
 import { useEffect, useSyncExternalStore } from "react";
-import type { ProfileChoice } from "@researchly/contract";
+import type { ChecklistChoiceInfo, ProfileChoice } from "@researchly/contract";
+import { FALLBACK_CHECKLISTS } from "./checklists";
 import { listRegistry, type Registry } from "./engine";
 import { FALLBACK_PROFILES } from "./profiles";
 
@@ -65,6 +66,17 @@ export function useRegistry(engineUrl: string | null, wanted: boolean): Registry
 export function useProfileChoices(engineUrl: string | null): readonly ProfileChoice[] {
   const registry = useRegistry(engineUrl, true);
   return registry && registry.profiles.length > 0 ? registry.profiles : FALLBACK_PROFILES;
+}
+
+/** The reporting checklists a caller can check against, with the engine's labels when it has them, else the built-in list. */
+export function useChecklistChoices(engineUrl: string | null): readonly ChecklistChoiceInfo[] {
+  const registry = useRegistry(engineUrl, true);
+  return registryChecklists(registry);
+}
+
+/** The checklists from a registry, or the built-in list when it has none (pure; unit-tested). */
+export function registryChecklists(registry: Registry | null): readonly ChecklistChoiceInfo[] {
+  return registry && registry.checklists.length > 0 ? registry.checklists : FALLBACK_CHECKLISTS;
 }
 
 /** Tests only: forget every engine. */

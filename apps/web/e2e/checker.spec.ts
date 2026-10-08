@@ -1,7 +1,9 @@
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { DOCUMENT_TYPES, MAX_CONTENT_CHARS, READING_KEY } from "@researchly/contract";
+import { DOCUMENT_TYPES, LEARN_CARDS, MAX_CONTENT_CHARS, READING_KEY } from "@researchly/contract";
 import {
+  CHECKLIST,
+  CHECKLISTS,
   COMMENTARY_NOTE,
   compoundSuggestion,
   degradedGrammarResponse,
@@ -10,10 +12,12 @@ import {
   error422,
   error429,
   error500,
+  GUESS_EVIDENCE,
   happyResponse,
   NARRATIVE,
   PROFILES,
   REVIEW,
+  REVIEW_DISCLAIMER,
   SAMPLE_TEXT,
   withDocumentWideResponse,
   withPreferencesResponse,
@@ -39,7 +43,7 @@ test.describe("happy path", () => {
     expect(sent[0]).toEqual({
       content: SAMPLE_TEXT,
       format: "plain",
-      options: { show_preferences: false, document_type: "auto", review: true, narrative: true },
+      options: { show_preferences: false, document_type: "auto", review: true, narrative: true, mode: "revise" },
     });
     // ...and nothing went to the Next.js server except page/asset GETs.
     expect(own.filter((r) => r.method() !== "GET")).toEqual([]);
@@ -314,7 +318,8 @@ test.describe("article type and the reviewer's brief (S4)", () => {
     await check(page);
     await expect(page.getByTestId("results")).toBeVisible();
     expect(sent[0]!.options?.document_type).toBe("auto");
-    await expect(page.getByTestId("profile-line")).toHaveText("Checked as Research article (from the headings).");
+    // A guess names the headings it rested on (review R2), so a wrong guess is easy to see and override.
+    await expect(page.getByTestId("profile-line")).toHaveText(`Checked as Research article (from the headings: ${GUESS_EVIDENCE}).`);
 
     await select.selectOption("commentary");
     await expect.poll(() => sent.length).toBe(2);
@@ -401,7 +406,7 @@ test.describe("article type and the reviewer's brief (S4)", () => {
 
   test("no brief from the engine, or a check run in Draft, is said in one line", async ({ page }) => {
     let draft = false;
-    await mockEngine(page, (_r, route) => json(route, 200, draft ? { ...happyResponse, mode: "draft", review: null } : { ...happyResponse, review: null }));
+    const sent = await mockEngine(page, (_r, route) => json(route, 200, draft ? { ...happyResponse, mode: "draft", review: null } : { ...happyResponse, review: null }));
     await page.goto("/");
     await paste(page, SAMPLE_TEXT);
     await check(page);
@@ -411,8 +416,11 @@ test.describe("article type and the reviewer's brief (S4)", () => {
     await check(page);
     const line = page.getByTestId("brief-needs-revise");
     await expect(line).toContainText("needs Revise mode");
-    // The website has no stage control, so no switch is offered here.
-    await expect(line.getByRole("button")).toHaveCount(0);
+    // The website always asks for Revise (review R6); an engine that still ran Draft gets a switch that checks again.
+    draft = false;
+    await line.getByRole("button", { name: "Switch to Revise" }).click();
+    await expect(page.getByTestId("brief-missing")).toBeVisible();
+    expect(sent.map((r) => r.options?.mode)).toEqual(["revise", "revise", "revise"]);
   });
 
   for (const scheme of ["light", "dark"] as const) {
@@ -538,7 +546,7 @@ test.describe("the narrative map (S4b)", () => {
     await check(page);
     const line = page.getByTestId("narrative-needs-revise");
     await expect(line).toContainText("needs Revise mode");
-    await expect(line.getByRole("button")).toHaveCount(0);
+    await expect(line.getByRole("button", { name: "Switch to Revise" })).toBeVisible();
   });
 
   for (const scheme of ["light", "dark"] as const) {
@@ -768,6 +776,8 @@ test.describe("accessibility", () => {
     await page.keyboard.press("Tab");
     await expect(page.getByLabel("Check as")).toBeFocused();
     await page.keyboard.press("Tab");
+    await expect(page.getByLabel("Reporting checklist")).toBeFocused();
+    await page.keyboard.press("Tab");
     await expect(page.getByLabel("Show preferences")).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(page.getByTestId("check")).toBeFocused();
@@ -956,4 +966,353 @@ test.describe("print or save as PDF (S4)", () => {
     await page.evaluate(() => window.dispatchEvent(new Event("afterprint")));
     await expect(page.getByTestId("print-report")).toHaveCount(0);
   });
+});
+
+/* ---------- S4c: the Codex review's web fixes, lessons, checklists, dismissal ---------- */
+
+const learn = (id: string) => LEARN_CARDS.find((c) => c.id === id)!;
+const axeBad = async (page: import("@playwright/test").Page) => {
+  const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "best-practice"]).analyze();
+  return results.violations
+    .filter((v) => v.impact === "serious" || v.impact === "critical")
+    .map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).slice(0, 3).join(", ")}`);
+};
+
+test.describe("Revise on the website (review R6)", () => {
+  test("every check asks for Revise; an engine that still ran Draft says what it held back and checks again in Revise", async ({ page }) => {
+    let draft = true;
+    const sent = await mockEngine(page, (_req, route) =>
+      json(route, 200, draft ? { ...happyResponse, mode: "draft", hidden_by_mode: 3, review: null, narrative: null } : happyResponse),
+    );
+    await page.goto("/");
+    await paste(page, SAMPLE_TEXT);
+    await check(page);
+    const line = page.getByTestId("held-back");
+    await expect(line).toContainText("Draft mode held back 3 whole-document suggestions.");
+    draft = false;
+    await line.getByRole("button", { name: "Check again in Revise" }).click();
+    await expect(page.getByTestId("held-back")).toHaveCount(0);
+    expect(sent.map((r) => r.options?.mode)).toEqual(["revise", "revise"]);
+  });
+});
+
+test.describe("the brief's statuses (review R4)", () => {
+  test("a small word after each question says what the answer rests on, never a colour; the disclaimer closes the brief before the source", async ({ page }) => {
+    await mockEngine(page);
+    await page.goto("/");
+    await paste(page, SAMPLE_TEXT);
+    await check(page);
+    await page.getByTestId("view-brief").click();
+    const questions = page.getByTestId("brief-question");
+    await expect(questions).toHaveCount(5);
+    // Question A is the writer's: no status word.
+    await expect(questions.nth(0).getByTestId("brief-status")).toHaveCount(0);
+    await expect(questions.nth(1).getByTestId("brief-status")).toHaveText("not detected");
+    await expect(questions.nth(2).getByTestId("brief-status")).toHaveText("detected");
+    await expect(questions.nth(2).locator("h3")).toContainText(`${REVIEW.questions[2]!.question} (detected)`);
+    // The same ink for every status: the word carries it, never a colour.
+    const colours = await page.getByTestId("brief-status").evaluateAll((els) => els.map((e) => getComputedStyle(e).color));
+    expect(new Set(colours).size).toBe(1);
+    const disclaimer = page.getByTestId("brief-disclaimer");
+    await expect(disclaimer).toHaveText(REVIEW_DISCLAIMER);
+    const order = await page.getByTestId("brief").evaluate((el) => {
+      const all = Array.from(el.querySelectorAll("*"));
+      return [all.indexOf(el.querySelector("[data-testid=brief-rules]")!), all.indexOf(el.querySelector("[data-testid=brief-disclaimer]")!), all.indexOf(el.querySelector(".brief-source")!)];
+    });
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+  });
+});
+
+test.describe("the lesson on every card (S4)", () => {
+  test("a closed disclosure opens the Learn card in place: title, lesson, before and after, the habit, the source, and All lessons in a new tab", async ({ page }) => {
+    const sent = await mockEngine(page);
+    await page.goto("/");
+    await paste(page, SAMPLE_TEXT);
+    await check(page);
+    const card = page.locator(`#card-${byRule("C120").id}`);
+    const lesson = card.getByTestId("lesson");
+    const want = learn("concise-words");
+    await expect(lesson).toHaveAttribute("data-lesson", want.id);
+    await expect(lesson).not.toHaveAttribute("open");
+    await expect(lesson.locator(".lesson-title")).toBeHidden();
+    await lesson.getByText("The lesson").click();
+    await expect(lesson.locator(".lesson-title")).toHaveText(want.title);
+    await expect(lesson.locator(".lesson-text")).toHaveText(want.lesson);
+    await expect(lesson.locator(".lesson-example-label")).toHaveText(["Before", "After"]);
+    await expect(lesson.locator(".lesson-quote q")).toHaveText([want.before, want.after]);
+    expect(await lesson.locator(".lesson-quote").first().evaluate((el) => getComputedStyle(el).fontFamily)).toMatch(/Charter|Georgia/);
+    await expect(lesson.locator(".lesson-habit")).toContainText(want.habit);
+    await expect(lesson.locator(".lesson-source cite")).toHaveText(want.source);
+    const all = lesson.getByRole("link", { name: /All lessons/ });
+    await expect(all).toHaveAttribute("href", "/learn");
+    await expect(all).toHaveAttribute("target", "_blank");
+    await expect(all).toHaveAttribute("rel", "noopener");
+    // Reading the lesson neither jumps to the text nor sends anything.
+    await lesson.locator(".lesson-text").click();
+    await expect(card).not.toHaveClass(/is-active/);
+    expect(sent).toHaveLength(1);
+    // A suggestion without a known lesson has no disclosure.
+    await expect(page.locator(`#card-${byRule("V305").id}`).getByTestId("lesson")).toHaveCount(0);
+  });
+
+  test("the narrative map's missing moves and missing links carry their lessons; a link's sentences open on request", async ({ page }) => {
+    await mockEngine(page);
+    await page.goto("/");
+    await paste(page, SAMPLE_TEXT);
+    await check(page);
+    await page.getByTestId("view-narrative").click();
+    const gap = page.getByTestId("narrative-section").nth(0).getByTestId("narrative-detail").first();
+    await expect(gap.getByTestId("lesson")).toHaveAttribute("data-lesson", "introduction");
+    await gap.getByTestId("lesson").getByText("The lesson").click();
+    await expect(gap.locator(".lesson-title")).toHaveText(learn("introduction").title);
+    const links = page.getByTestId("narrative-link");
+    await expect(links.nth(0).getByTestId("lesson")).toHaveAttribute("data-lesson", "warranting");
+    await expect(links.nth(1).getByTestId("lesson")).toHaveCount(0);
+    const sentences = links.nth(0).getByTestId("narrative-link-evidence");
+    await expect(sentences.locator("q")).toBeHidden();
+    await sentences.locator("summary").click();
+    await expect(sentences.locator("q")).toHaveText(NARRATIVE.missing_links![0]!.evidence!);
+    await expect(links.nth(1).getByTestId("narrative-link-evidence")).toHaveCount(0);
+  });
+});
+
+test.describe("reporting checklists (S4)", () => {
+  test("None by default and not sent; a chosen checklist is sent, remembered, and read in a fourth tab with statuses in words", async ({ page }) => {
+    const sent = await mockEngine(page);
+    await page.goto("/");
+    const select = page.getByLabel("Reporting checklist");
+    await expect(select).toHaveValue("none");
+    await expect(select.locator("option")).toHaveText(["None", "Auto", ...CHECKLISTS.map((c) => c.label)]);
+    await expect(page.getByTestId("checklist-help")).toHaveCount(0);
+    await paste(page, SAMPLE_TEXT);
+    await check(page);
+    expect(sent[0]!.options).not.toHaveProperty("checklist");
+    await expect(page.getByRole("tablist", { name: "Results view" }).getByRole("tab")).toHaveText(["Suggestions", "Reviewer’s brief", "Narrative map"]);
+
+    // A change checks again, like "Check as"; the design reads under the control.
+    await select.selectOption("epiforge");
+    await expect(page.getByTestId("checklist-help")).toHaveText("For epidemic forecasts, projections and predictions.");
+    await expect.poll(() => sent.length).toBe(2);
+    expect(sent[1]!.options?.checklist).toBe("epiforge");
+    const tabs = page.getByRole("tablist", { name: "Results view" }).getByRole("tab");
+    await expect(tabs).toHaveText(["Suggestions", "Reviewer’s brief", "Narrative map", "Checklist"]);
+    await page.getByTestId("view-checklist").click();
+    const view = page.getByTestId("checklist");
+    await expect(view.getByTestId("checklist-note")).toHaveText(CHECKLIST.note);
+    const items = view.getByTestId("checklist-item");
+    await expect(items).toHaveCount(CHECKLIST.items.length);
+    for (const [i, it] of CHECKLIST.items.entries()) {
+      await expect(items.nth(i)).toHaveAttribute("data-item", it.id);
+      await expect(items.nth(i).locator("h3")).toHaveText(it.topic);
+      await expect(items.nth(i).locator(".checklist-question")).toHaveText(it.question);
+    }
+    await expect(items.nth(0).getByTestId("checklist-status")).toContainText("reported");
+    await expect(items.nth(0).locator(".checklist-evidence q")).toHaveText(CHECKLIST.items[0]!.evidence!);
+    await expect(items.nth(1).getByTestId("checklist-status")).toContainText("needs your check");
+    await expect(items.nth(1).locator(".checklist-plain")).toHaveText(CHECKLIST.items[1]!.plain);
+    // Statuses are words: the same ink whatever the status.
+    const inks = await view.locator(".checklist-status-word").evaluateAll((els) => els.map((e) => getComputedStyle(e).color));
+    expect(new Set(inks).size).toBe(1);
+    await expect(view.locator(".checklist-source cite")).toHaveText(CHECKLIST.source);
+    await expect(view.getByTestId("checklist-scope")).toHaveText("This checks reporting only, never the science.");
+
+    // "Not applicable": the writer's call, this session only.
+    const na = items.nth(1).getByTestId("checklist-na");
+    await expect(na).toHaveAttribute("aria-pressed", "false");
+    await na.click();
+    await expect(na).toHaveAttribute("aria-pressed", "true");
+    await expect(items.nth(1).getByTestId("checklist-status")).toHaveText("not applicable (your call)");
+    expect(sent).toHaveLength(2);
+
+    // Remembered in this browser: the checklist's id, nothing else of the check.
+    const stored = await page.evaluate(() => ({ keys: Object.keys(localStorage).sort(), values: Object.values(localStorage).join("") }));
+    expect(stored.keys).toEqual(["researchly.checklist"]);
+    expect(stored.values).toBe("epiforge");
+    await page.reload();
+    await expect(page.getByLabel("Reporting checklist")).toHaveValue("epiforge");
+  });
+
+  test("with none chosen, the checklist the text's words point to is offered in one quiet line, and taking it checks again", async ({ page }) => {
+    const sent = await mockEngine(page, (req, route) =>
+      json(route, 200, req.options?.checklist ? { ...happyResponse, checklist: CHECKLIST } : { ...happyResponse, suggested_checklist: "epiforge" }),
+    );
+    await page.goto("/");
+    await paste(page, SAMPLE_TEXT);
+    await check(page);
+    const offer = page.getByTestId("checklist-offer");
+    await expect(offer).toContainText("This reads like an epidemic forecast. Check it against EPIFORGE?");
+    await offer.getByRole("button", { name: "Check against EPIFORGE" }).click();
+    await expect.poll(() => sent.length).toBe(2);
+    expect(sent[1]!.options?.checklist).toBe("epiforge");
+    await expect(page.getByLabel("Reporting checklist")).toHaveValue("epiforge");
+    await expect(page.getByTestId("view-checklist")).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByTestId("checklist-item")).toHaveCount(CHECKLIST.items.length);
+    await expect(page.getByTestId("checklist-offer")).toHaveCount(0);
+  });
+
+  for (const scheme of ["light", "dark"] as const) {
+    test(`the checklist on a phone, ${scheme}: four tabs wrap, no horizontal scroll, no serious axe violations`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.setViewportSize({ width: 375, height: 812 });
+      await mockEngine(page);
+      await page.goto("/");
+      await page.getByLabel("Reporting checklist").selectOption("auto");
+      await paste(page, SAMPLE_TEXT);
+      await check(page);
+      await page.getByTestId("view-checklist").click();
+      await expect(page.getByTestId("checklist-item")).toHaveCount(CHECKLIST.items.length);
+      await page.getByTestId("checklist-item").nth(2).getByTestId("checklist-na").click();
+      const tops = await page.getByRole("tab").evaluateAll((els) => els.map((e) => e.getBoundingClientRect().top));
+      expect(new Set(tops).size).toBeGreaterThan(1);
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(overflow).toBeLessThanOrEqual(0);
+      expect(await axeBad(page)).toEqual([]);
+    });
+  }
+});
+
+test.describe("dismiss once, undo (review proposal 2)", () => {
+  test("Not an issue here hides one suggestion for this check only, says so politely with Undo, and Show brings them back", async ({ page }) => {
+    const sent = await mockEngine(page);
+    await page.goto("/");
+    await paste(page, SAMPLE_TEXT);
+    await check(page);
+    const target = page.locator(`#card-${byRule("C120").id}`);
+    await target.getByRole("button", { name: "Not an issue here" }).click();
+    await expect(target).toHaveCount(0);
+    await expect(mark(page, byRule("C120").id)).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "7 suggestions" })).toBeVisible();
+    await expect(page.getByTestId("dismissed-line")).toHaveText("1 dismissed · Show");
+    const live = page.getByTestId("dismiss-live");
+    await expect(live).toHaveAttribute("aria-live", "polite");
+    await expect(live).toHaveText("Dismissed. Undo");
+    // Focus lands on Undo, one key away; Undo brings the card back and focuses it.
+    await expect(page.getByTestId("undo-dismiss")).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page.locator(`#card-${byRule("C120").id}`)).toBeFocused();
+    await expect(page.getByRole("heading", { name: "8 suggestions" })).toBeVisible();
+    await expect(page.getByTestId("dismissed-line")).toHaveCount(0);
+
+    // Two dismissed, then "Show" restores both.
+    await page.locator(`#card-${byRule("C201").id}`).getByTestId("dismiss").click();
+    await page.locator(`#card-${byRule("S010").id}`).getByTestId("dismiss").click();
+    await expect(page.getByTestId("suggestion-card")).toHaveCount(6);
+    await expect(page.getByTestId("filter-all")).toContainText("6");
+    await page.getByTestId("show-dismissed").click();
+    await expect(page.getByTestId("suggestion-card")).toHaveCount(8);
+    await expect(live).toContainText("2 suggestions shown again.");
+
+    // Nothing was sent or stored for any of it; a new check starts clean.
+    expect(sent).toHaveLength(1);
+    expect(await page.evaluate(() => Object.keys(localStorage))).toEqual([]);
+    await page.locator(`#card-${byRule("C201").id}`).getByTestId("dismiss").click();
+    await check(page);
+    await expect(page.getByTestId("suggestion-card")).toHaveCount(8);
+    await expect(page.getByTestId("dismissed-line")).toHaveCount(0);
+  });
+
+  for (const scheme of ["light", "dark"] as const) {
+    test(`a dismissed card and an open lesson stay clean under axe (${scheme}), with no horizontal scroll on a phone`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.setViewportSize({ width: 375, height: 812 });
+      await mockEngine(page);
+      await page.goto("/");
+      await paste(page, SAMPLE_TEXT);
+      await check(page);
+      await page.locator(`#card-${byRule("C201").id}`).getByTestId("dismiss").click();
+      await expect(page.getByTestId("undo-dismiss")).toBeVisible();
+      const card = page.locator(`#card-${byRule("C120").id}`);
+      await card.getByTestId("lesson").getByText("The lesson").click();
+      await expect(card.locator(".lesson-title")).toBeVisible();
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(overflow).toBeLessThanOrEqual(0);
+      expect(await axeBad(page)).toEqual([]);
+    });
+  }
+});
+
+test.describe("the printed report's context (review R8)", () => {
+  test("the header says when it was checked and printed, the mode, the guess and its headings, what was unavailable or skipped, what was dismissed, and that the editor has changed", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.print = () => {};
+    });
+    await mockEngine(page, (req, route) =>
+      json(route, 200, {
+        ...happyResponse,
+        health: degradedGrammarResponse.health,
+        warnings: ["A table could not be read and was skipped."],
+        profile: { ...happyResponse.profile, evidence: GUESS_EVIDENCE },
+        checklist: req.options?.checklist ? CHECKLIST : null,
+      }),
+    );
+    await page.goto("/");
+    await page.getByLabel("Reporting checklist").selectOption("epiforge");
+    await paste(page, SAMPLE_TEXT);
+    await check(page);
+    await page.locator(`#card-${byRule("C120").id}`).getByTestId("dismiss").click();
+    await page.getByLabel("Text to check").fill(SAMPLE_TEXT + "\nOne more sentence.");
+    await expect(page.getByTestId("stale-note")).toBeVisible();
+    await page.getByTestId("view-checklist").click();
+    await page.getByTestId("checklist-item").nth(1).getByTestId("checklist-na").click();
+    await page.getByTestId("print-report-button").click();
+    await page.emulateMedia({ media: "print" });
+    const report = page.getByTestId("print-report");
+    await expect(report).toBeVisible();
+    await expect(report.getByTestId("print-times")).toHaveText(/^Checked \d{1,2} \w+ \d{4}(,| at) \d{2}:\d{2} · Printed \d{1,2} \w+ \d{4}(,| at) \d{2}:\d{2}$/);
+    const head = report.locator("header");
+    await expect(head).toContainText("Revise mode");
+    await expect(head).toContainText(`Checked as Research article (from the headings: ${GUESS_EVIDENCE}).`);
+    await expect(report.getByTestId("print-unavailable")).toHaveText("Not available for this check: Grammar, Learned corrections.");
+    await expect(report.getByTestId("print-warnings")).toContainText("A table could not be read and was skipped.");
+    await expect(report.getByTestId("print-dismissed")).toHaveText("1 suggestion dismissed on screen is left out of this report.");
+    await expect(report.getByTestId("print-stale")).toHaveText("This report describes the version that was checked, not the text now in the editor.");
+    await expect(report.getByTestId("print-card")).toHaveCount(happyResponse.suggestions.length - 1);
+    // The checklist after the narrative map, on its own page, statuses in words, no controls.
+    const list = report.getByTestId("print-checklist");
+    await expect(list).toBeVisible();
+    expect(await list.evaluate((el) => getComputedStyle(el).breakBefore)).toBe("page");
+    await expect(list.getByTestId("checklist-item")).toHaveCount(CHECKLIST.items.length);
+    await expect(list.getByTestId("checklist-status").nth(0)).toContainText("reported");
+    await expect(list.getByTestId("checklist-status").nth(1)).toHaveText("not applicable (your call)");
+    await expect(list.getByRole("button")).toHaveCount(0);
+    await expect(list).toContainText("This checks reporting only, never the science.");
+    await page.emulateMedia({ media: "screen" });
+    await page.evaluate(() => window.dispatchEvent(new Event("afterprint")));
+  });
+});
+
+test.describe("the demo manuscript", () => {
+  test("loads the synthetic paper from this site into an empty editor as Markdown, sends nothing, and offers the Word and Overleaf versions", async ({ page, request }) => {
+    const sent = await mockEngine(page);
+    await page.goto("/");
+    const row = page.getByTestId("demo-row");
+    await expect(row).toBeVisible();
+    await expect(row.getByTestId("demo-docx")).toHaveAttribute("href", "/demo/researchly-demo.docx");
+    await expect(row.getByTestId("demo-zip")).toHaveAttribute("href", "/demo/researchly-demo-overleaf.zip");
+    for (const path of ["/demo/researchly-demo.docx", "/demo/researchly-demo-overleaf.zip", "/demo/researchly-demo.md"]) {
+      expect((await request.get(path)).status(), path).toBe(200);
+    }
+    await page.getByRole("button", { name: "Try the demo manuscript" }).click();
+    await expect(page.getByLabel("Text to check")).toHaveValue(/^# A compartmental model/);
+    await expect(page.getByLabel("Text to check")).toBeFocused();
+    await expect(page.getByLabel("Format")).toHaveValue("markdown");
+    // Offered only while the editor is empty; nothing was checked, and the format choice was not stored.
+    await expect(page.getByTestId("demo-row")).toHaveCount(0);
+    expect(sent).toHaveLength(0);
+    expect(await page.evaluate(() => Object.keys(localStorage))).toEqual([]);
+    await check(page);
+    await expect.poll(() => sent.length).toBe(1);
+    expect(sent[0]!.format).toBe("markdown");
+    expect(sent[0]!.content.startsWith("# A compartmental model")).toBe(true);
+  });
+});
+
+test("a demo that cannot be loaded is said under the button, and the editor stays empty", async ({ page }) => {
+  const sent = await mockEngine(page);
+  await page.route("**/demo/researchly-demo.md", (route) => route.fulfill({ status: 404, body: "" }));
+  await page.goto("/");
+  await page.getByTestId("load-demo").click();
+  await expect(page.getByTestId("demo-problem")).toHaveText("The demo manuscript could not be loaded. Check your connection and try again.");
+  await expect(page.getByLabel("Text to check")).toHaveValue("");
+  expect(sent).toHaveLength(0);
 });

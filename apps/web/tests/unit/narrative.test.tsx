@@ -226,3 +226,39 @@ describe("the narrative map", () => {
     expect(h).not.toContain("narrative-section");
   });
 });
+
+describe("the narrative map's lessons and link sentences (S4)", () => {
+  const withLessons: Map = {
+    ...map,
+    sections: map.sections.map((s) => ({ ...s, moves: s.moves.map((m) => ({ ...m, learn_ref: "introduction" })) })),
+    missing_links: [
+      { ...map.missing_links![0]!, learn_ref: "warranting", evidence: ["A claim <with> no warrant.", "  "] },
+      { section: "results", label: "Results", code: "claim_without_grounds", message: "A claim with nothing under it.", source: "S. Toulmin (1958)", learn_ref: null, evidence: [] },
+    ],
+  };
+  const html = render(<NarrativeMap state={{ kind: "ready", narrative: withLessons }} />);
+
+  it("opens a missing or out-of-order move's lesson from a closed disclosure; a present move has none", () => {
+    expect(html.match(/data-testid="lesson" data-lesson="introduction"/g)).toHaveLength(2);
+    const intro = section(html, "introduction");
+    expect(intro.indexOf('data-lesson="introduction"')).toBeGreaterThan(intro.indexOf('data-move="in.gap"'));
+    expect(section(html, "methods")).not.toContain('data-testid="lesson"');
+  });
+
+  it("gives a link its lesson and its sentences behind 'Show the sentence', and nothing when it has neither", () => {
+    const links = html.slice(html.indexOf('data-testid="narrative-links"'));
+    expect(links).toContain('data-lesson="warranting"');
+    expect(links).toContain('<span class="nmap-sentence-link">Show the sentence</span>');
+    expect(links).toContain("<q>A claim &lt;with&gt; no warrant.</q>");
+    const second = links.slice(links.indexOf('data-code="claim_without_grounds"'));
+    expect(second).not.toContain('data-testid="lesson"');
+    expect(second).not.toContain("narrative-link-evidence");
+  });
+
+  it("on paper leaves the lessons out and the sentences open", () => {
+    const paper = render(<NarrativeMap state={{ kind: "ready", narrative: withLessons }} variant="print" />);
+    expect(paper).not.toContain('data-testid="lesson"');
+    expect(paper).not.toContain("<details");
+    expect(paper).toContain("<q>A claim &lt;with&gt; no warrant.</q>");
+  });
+});

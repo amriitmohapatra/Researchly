@@ -34,9 +34,10 @@ last; they describe the text and are never a score.
 A card reads top to bottom as: category and section, what was noticed
 (bold), the flagged words (serif), the suggested revision (your call), the
 explanation in everyday words (always open), "The full reasoning" (a
-disclosure holding the technical account), then "Source: …" set as a
-reference. A student scanning the list reads only the first two lines of
-each card.
+disclosure holding the technical account), "The lesson" (a second
+disclosure, below), then "Source: …" set as a reference, and last the
+quiet actions as links: "Not an issue here", then the signed-in ones. A
+student scanning the list reads only the first two lines of each card.
 
 **Sections.** The whole text is always checked and never truncated:
 document-wide checks need all of it. Choosing a section only narrows what is
@@ -48,24 +49,38 @@ own "Whole document" group so they are never lost. The chooser starts at
 ## Article type and the reviewer's brief (S4)
 
 - **"Check as"** is one more control in the composer's row (Format, Check
-  as, Show preferences), a select whose labels come from the engine's
-  registry, default Auto. The chosen type's one-line summary reads under
-  it. A change checks again whatever is on screen, like a stage change in
-  Word. The choice is remembered (this browser, or the account when signed
-  in); it is the only thing remembered.
+  as, Reporting checklist, Show preferences), a select whose labels come
+  from the engine's registry, default Auto. The chosen type's one-line
+  summary reads under it. A change checks again whatever is on screen,
+  like a stage change in Word. The choice is remembered (this browser, or
+  the account when signed in). The format, the type and the checklist are
+  the only things remembered.
 - **One line under the results heading** says what the check ran as:
-  "Checked as Research article (from the headings)." for a guess, "Checked
-  as Grant proposal." for a choice, or the engine's own note when it
-  switched checks off. A guessed General says nothing.
+  "Checked as Research article (from the headings: Methods, Results)."
+  for a guess, naming the headings it rested on so a wrong guess is easy
+  to see and override; "Checked as Grant proposal." for a choice; or the
+  engine's own note alone when it switched checks off. A guessed General
+  says nothing.
+- **The website always checks in Revise** (it is the revision studio), so
+  a Draft choice saved from Word never hides document-wide checks here. If
+  an engine still answers in Draft, one quiet line under the heading says
+  what it held back ("Draft mode held back 3 whole-document
+  suggestions.") with "Check again in Revise"; the brief and the map
+  offer the same switch.
 - **The brief is a second view of the same check**, chosen from a quiet
   tab strip (Suggestions | Reviewer's brief) above the results; it reads
   as a document at the reading measure, with hairline dividers and no
   boxes: for each of the five questions, the letter and question as a
   heading, the verdict in bold, the points as a list, and the writer's own
-  sentences quoted in the serif as evidence. Then "Most frequent checks"
-  in words ("3 times", "once") and the source set like a card's. Nothing
-  in it is a score: no meters, no numbers but a rule's tally, no colour by
-  verdict. Question A is the writer's and is shown as the engine gives it.
+  sentences quoted in the serif as evidence. After each question a small
+  italic word says what its answer rests on: detected, not detected, not
+  assessed (the check was off) or not applicable (that part is not
+  there); nothing for question A. The same ink for every status. Then
+  "Most frequent checks" in words ("3 times", "once"), the engine's
+  disclaimer (the brief does not establish whether the science is sound)
+  as the closing line, and the source set like a card's. Nothing in it is
+  a score: no meters, no numbers but a rule's tally, no colour by verdict
+  or status. Question A is the writer's and is shown as the engine gives it.
   In Draft the tab says the brief needs Revise, with a switch where the
   surface has one (Word). Nothing of the brief is stored.
 
@@ -95,17 +110,86 @@ own "Whole document" group so they are never lost. The chooser starts at
   without a map is said in one line. On paper the map follows the brief on
   its own page, the strip as text rows and every sentence open.
 
+## Lessons (S4)
+
+- **"The lesson"** is a native disclosure on every card whose suggestion
+  names a Learn card, closed, under "The full reasoning" and set like it:
+  the card's title (bold), the lesson in everyday words, an invented
+  before-and-after pair quoted in the serif and labelled "Before" and
+  "After", "A habit to keep:" and the card's source. "All lessons" opens
+  the Learn page in a new tab; nothing navigates away from the results.
+  The cards ship with the page, so opening one sends nothing. The narrative
+  map's missing and out-of-order moves and its missing links carry the same
+  disclosure when they name a lesson; on paper lessons are left out.
+- A missing link's sentences sit behind "Show the sentence" (closed),
+  quoted in the serif like a move's; on paper they are open.
+
+## Reporting checklists (S4)
+
+- **"Reporting checklist"** sits beside "Check as": None (the default),
+  Auto, then each guideline by its registry label (STROBE, CONSORT,
+  PRISMA, EPIFORGE), its design read under the control. A change checks
+  again whatever is on screen. Remembered in this browser only.
+- With None chosen and the text's words pointing to a guideline, one quiet
+  line under the heading offers it ("This reads like an epidemic forecast.
+  Check it against EPIFORGE?") with a link-style button that chooses it,
+  checks again and opens the Checklist tab.
+- **The Checklist tab** (a fourth tab, only when a checklist ran) reads as
+  a document at the reading measure with the brief's dividers: the label
+  and design, the engine's note, then every item in the guideline's order:
+  its topic (a heading), its question, and the status in italic words:
+  "reported" with the writer's sentence quoted in the serif, or "needs
+  your check" with the reason in everyday words and where readers look.
+  "Needs your check" is a prompt, never a verdict. Each item has a
+  "Not applicable" toggle (a pressed link-style button) that says "not
+  applicable (your call)" in place of the status; it lasts for this check
+  in this tab and is never stored or sent. Then the source and "This checks
+  reporting only, never the science." No colour by status, no meters.
+  Four tabs wrap to two lines on a phone, never a scrollbar.
+
+## Dismissal (review proposal 2)
+
+- **"Not an issue here"** on each card hides that one suggestion and its
+  highlight for this check only. It is held in the results' memory: never
+  stored, never sent, gone with the next check. A polite live region
+  pinned to the bottom of the window says "Dismissed. Undo" and takes
+  keyboard focus to Undo, which brings the card back and focuses it.
+- The results header then says "N dismissed · Show"; Show brings every
+  dismissed suggestion back. Counts and chips leave dismissed ones out.
+- Muting a rule (signed in) removes its cards at once, then re-checks as
+  before; dismissal is the light action, muting the deliberate one.
+
+## Demo manuscript
+
+- While the editor is empty, a quiet row under it offers "Try the demo
+  manuscript": a short invented paper with planted slips, served by this
+  site, loaded into the editor as Markdown (the remembered format is left
+  alone). Nothing is checked until Check. The same row links the Word and
+  Overleaf versions for download. The example-draft button in the key stays.
+
 ## The printable report (S4)
 
 - **"Print or save as PDF"** sits beside the results heading as a link-style
   button. It opens the browser's own print dialog; Save as PDF there is the
   PDF. Nothing is generated anywhere else and no text leaves the page.
-- On paper the page is the report and nothing else: a header (title, date,
-  counts, sections, the profile line, a one-line key), then the text with
+- On paper the page is the report and nothing else: a header (title, when
+  the text was checked and when it was printed, counts, sections, the mode,
+  the profile line with its headings, a one-line key), then the text with
   every highlight numbered on the left and the suggestions under the same
-  numbers on the right, whole-document checks after them, then the
-  reviewer's brief on a new page, the narrative map on the page after it,
-  and a footer saying nothing was stored.
+  numbers on the right (for a multi-file upload each with its file and
+  line), whole-document checks after them, then the reviewer's brief on a
+  new page, the narrative map on the page after it, the reporting checklist
+  on its own page when one ran (statuses as words, the writer's "not
+  applicable" kept, no controls), and a footer saying nothing was stored.
+- **The context block** under the header lines, one plain line each and
+  only when it applies: "This report describes the version that was
+  checked, not the text now in the editor." (bold) when the editor changed
+  after the check; every tier that did not contribute, by label ("Not
+  available for this check: Grammar."), the expected ones included, since
+  a PDF outlives the screen's banner; what Draft held back; how many
+  suggestions were dismissed on screen and left out; and what was skipped
+  or approximated while reading. A reader of the PDF can tell what version
+  and which parts were assessed without the app.
 - Light ink only: a grey tint on highlights, an underline whose style says
   the category (solid, double, dotted, dashed), bold numbers, no colour by
   verdict, no meters. A4 and Letter both fit; the two columns are a grid,
@@ -221,6 +305,12 @@ file refused by the engine (unsupported, unreadable, too large), file
 warnings, card action saved or failed; settings signed out, loading, load
 failed, nothing muted, empty dictionary, saved, save failed, delete
 confirm.
+
+S4c adds: a lesson open on a card or a move, a checklist with reported,
+needs-your-check and not-applicable items, the checklist offer, a card
+dismissed (with Undo) and every card dismissed, what Draft held back (an
+older engine), a muted rule's cards gone before the re-check, the demo
+loaded or not loadable.
 
 ## Responsive
 

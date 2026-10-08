@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal, flushSync } from "react-dom";
-import type { AnalyzeResponse, SourceInfo, Suggestion } from "@researchly/contract";
+import type { AnalyzeResponse, ChecklistChoice, SourceInfo, Suggestion } from "@researchly/contract";
 import { CATEGORIES, CATEGORY_ORDER, countByCategory, sectionLabel } from "@/lib/categories";
+import type { ChecklistOffer } from "@/lib/checklists";
 import { briefState, narrativeState, profileLine } from "@/lib/profiles";
 import type { ScopeMap } from "@/lib/scope";
 import { resolveSpans, segment } from "@/lib/segments";
@@ -12,12 +13,16 @@ import {
   applyFilter,
   applySectionFilter,
   countBySection,
+  dismissedCount,
+  heldBackSentence,
   hiddenPreferenceCount,
   shownSuggestions,
+  withoutSetAside,
   type Filter,
   type SectionFilter,
 } from "@/lib/view";
 import { CategoryIcon } from "./CategoryIcon";
+import { ChecklistView } from "./ChecklistView";
 import { DocumentView } from "./DocumentView";
 import { HealthBanner } from "./HealthBanner";
 import { MetricsPanel } from "./MetricsPanel";
@@ -25,7 +30,7 @@ import { NarrativeMap } from "./NarrativeMap";
 import { PrintReport } from "./PrintReport";
 import { ReviewBrief } from "./ReviewBrief";
 import { SuggestionCard, type CardActions } from "./SuggestionCard";
-import { ViewTabs, viewIds, type ResultsView } from "./ViewTabs";
+import { BASE_VIEWS, ViewTabs, viewIds, type ResultsView } from "./ViewTabs";
 
 interface Props {
   data: AnalyzeResponse;
@@ -41,14 +46,25 @@ interface Props {
   actions?: CardActions | null;
   /** Rule scopes from the engine's registry, when loaded; null means the built-in list applies. */
   scopes?: ScopeMap | null;
-  /** Suggestions, the reviewer's brief (S4) or the narrative map (S4b). Held by the parent so a re-check keeps the view. */
+  /** Suggestions, the reviewer's brief (S4), the narrative map (S4b) or the checklist. Held by the parent so a re-check keeps the view. */
   view: ResultsView;
   onView: (v: ResultsView) => void;
+  /** When this check's answer arrived: printed in the report's header. */
+  checkedAt?: Date | null;
+  /** Rules muted since this check: their cards leave at once, before the re-check confirms it. */
+  mutedRules?: ReadonlySet<string>;
+  /** Check again in Revise (an engine that ran Draft, or a brief that needs it). */
+  onRunRevise?: (() => void) | null;
+  /** The quiet offer of the checklist the text's words point to (none chosen). */
+  checklistOffer?: ChecklistOffer | null;
+  onUseChecklist?: ((id: ChecklistChoice) => void) | null;
 }
 
-type FocusRequest = { id: string; target: "mark" | "card"; seq: number };
+type FocusRequest = { id: string; target: "mark" | "card" | "undo"; seq: number };
+type DismissNote = { kind: "dismissed"; id: string } | { kind: "restored"; n: number } | null;
 
 const secondsFmt = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 1 });
+const NO_RULES: ReadonlySet<string> = new Set();
 
 function prefersReducedMotion(): boolean {
   return typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -68,17 +84,29 @@ export function Results({
   scopes = null,
   view,
   onView,
+  checkedAt = null,
+  mutedRules = NO_RULES,
+  onRunRevise = null,
+  checklistOffer = null,
+  onUseChecklist = null,
 }: Props) {
   const [filter, setFilter] = useState<Filter>("all");
   // The section the writer is working on. Starts at "all" for every check
   // (the component remounts per check) and is never stored anywhere.
   const [section, setSection] = useState<SectionFilter>("all");
+  // "Not an issue here" (review proposal 2): this check only, in memory, never stored or sent.
+  const [dismissed, setDismissed] = useState<ReadonlySet<string>>(() => new Set());
+  const [dismissNote, setDismissNote] = useState<DismissNote>(null);
+  // "Not applicable" on checklist items (review proposal 6): this check only, never stored.
+  const [notApplicable, setNotApplicable] = useState<ReadonlySet<string>>(() => new Set());
   const sectionId = useId();
   const tabsId = useId();
   const profileText = profileLine(data.profile);
+  const heldBack = heldBackSentence(data.hidden_by_mode ?? 0);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [focusReq, setFocusReq] = useState<FocusRequest | null>(null);
   const docColRef = useRef<HTMLDivElement>(null);
+  const undoRef = useRef<HTMLButtonElement>(null);
   // The printable report (S4) is mounted only while printing: from the
   // button, or from the browser's own print command (Ctrl/Cmd+P), whose
   // beforeprint event has to see it in the DOM synchronously.
@@ -101,7 +129,9 @@ export function Results({
     };
   }, []);
 
-  const shown = useMemo(() => shownSuggestions(data, showPreferences), [data, showPreferences]);
+  const allShown = useMemo(() => shownSuggestions(data, showPreferences), [data, showPreferences]);
+  const shown = useMemo(() => withoutSetAside(allShown, dismissed, mutedRules), [allShown, dismissed, mutedRules]);
+  const nDismissed = dismissedCount(allShown, dismissed, mutedRules);
   const counts = useMemo(() => countByCategory(shown), [shown]);
   const effectiveFilter: Filter = filter !== "all" && !showPreferences && filter === "preference" ? "all" : filter;
   const byCategory = useMemo(() => applyFilter(shown, effectiveFilter), [shown, effectiveFilter]);
@@ -127,8 +157,16 @@ export function Results({
     return out;
   }, [source, data.suggestions]);
 
+  // The checklist tab exists only when a checklist ran.
+  const views: readonly ResultsView[] = data.checklist ? [...BASE_VIEWS, "checklist"] : BASE_VIEWS;
+  const effectiveView: ResultsView = views.includes(view) ? view : "suggestions";
+
   useEffect(() => {
     if (!focusReq) return;
+    if (focusReq.target === "undo") {
+      undoRef.current?.focus();
+      return;
+    }
     const el =
       focusReq.target === "mark"
         ? docColRef.current?.querySelector<HTMLElement>(`[data-sids~="${CSS.escape(focusReq.id)}"]`)
@@ -155,6 +193,55 @@ export function Results({
     setFocusReq((r) => ({ id, target: "mark", seq: (r?.seq ?? 0) + 1 }));
   }, []);
 
+  const onDismiss = useCallback((s: Suggestion) => {
+    setDismissed((prev) => new Set(prev).add(s.id));
+    setDismissNote({ kind: "dismissed", id: s.id });
+    setActiveId((a) => (a === s.id ? null : a));
+    // The card is gone: keyboard focus goes to Undo, so the action is one key away.
+    setFocusReq((r) => ({ id: s.id, target: "undo", seq: (r?.seq ?? 0) + 1 }));
+  }, []);
+
+  // The notice steps aside after a while, but never from under the keyboard: not while focus is on Undo.
+  const liveRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!dismissNote) return;
+    const id = window.setTimeout(
+      () => {
+        if (liveRef.current?.contains(document.activeElement)) return;
+        setDismissNote(null);
+      },
+      dismissNote.kind === "dismissed" ? 12_000 : 5_000,
+    );
+    return () => window.clearTimeout(id);
+  }, [dismissNote]);
+
+  const onUndo = () => {
+    if (dismissNote?.kind !== "dismissed") return;
+    const id = dismissNote.id;
+    setDismissed((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    setDismissNote({ kind: "restored", n: 1 });
+    setFocusReq((r) => ({ id, target: "card", seq: (r?.seq ?? 0) + 1 }));
+  };
+
+  const onShowDismissed = () => {
+    const n = nDismissed;
+    setDismissed(new Set());
+    setDismissNote({ kind: "restored", n });
+  };
+
+  const onToggleNotApplicable = useCallback((id: string) => {
+    setNotApplicable((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
   const sections = detected.map(sectionLabel).filter((s): s is string => s !== null);
   const card = (s: Suggestion) => (
     <SuggestionCard
@@ -164,6 +251,7 @@ export function Results({
       onShowInText={onShowInText}
       location={locations?.get(s.id) ?? null}
       actions={actions}
+      onDismiss={onDismiss}
     />
   );
   const seconds = secondsFmt.format(data.elapsed_ms < 10_000 ? data.elapsed_ms / 1000 : Math.round(data.elapsed_ms / 1000));
@@ -183,6 +271,8 @@ export function Results({
       </p>
     ) : null;
 
+  const panelIds = (v: ResultsView) => ({ id: viewIds(tabsId, v).panel, "aria-labelledby": viewIds(tabsId, v).tab });
+
   return (
     <section className="results" aria-labelledby="results-heading" aria-busy={busy} data-testid="results">
       <div className="results-head">
@@ -193,13 +283,29 @@ export function Results({
           {sections.length > 0 ? <>Sections detected: {sections.join(", ")}</> : <>No section headings detected</>}
           {" · "}checked in {seconds}&nbsp;s
         </p>
+        {nDismissed > 0 ? (
+          <p className="results-dismissed muted" data-testid="dismissed-line">
+            <span>{nDismissed} dismissed</span>
+            <span aria-hidden="true"> · </span>
+            <button
+              type="button"
+              className="btn-link"
+              onClick={onShowDismissed}
+              aria-label={`Show ${nDismissed} dismissed ${nDismissed === 1 ? "suggestion" : "suggestions"}`}
+              data-testid="show-dismissed"
+            >
+              Show
+            </button>
+          </p>
+        ) : null}
         <p className="results-print">
           <button type="button" className="btn-link" onClick={onPrint} aria-describedby={printHelpId} data-testid="print-report-button">
             Print or save as PDF
           </button>
           <span id={printHelpId} className="sr-only">
             Opens your browser&rsquo;s print dialog with the text, its highlights and the suggestions side by side, then the
-            reviewer&rsquo;s brief and the narrative map. Choose Save as PDF there to keep a file. Nothing leaves this page.
+            reviewer&rsquo;s brief, the narrative map and any reporting checklist. Choose Save as PDF there to keep a file.
+            Nothing leaves this page.
           </span>
         </p>
       </div>
@@ -208,8 +314,32 @@ export function Results({
           {profileText}
         </p>
       ) : null}
+      {heldBack ? (
+        <p className="results-line" data-testid="held-back">
+          <span>{heldBack}</span>
+          {onRunRevise ? (
+            <button type="button" className="btn-link" onClick={onRunRevise} disabled={busy} data-testid="run-revise">
+              Check again in Revise
+            </button>
+          ) : null}
+        </p>
+      ) : null}
+      {!data.checklist && checklistOffer && onUseChecklist ? (
+        <p className="results-line" data-testid="checklist-offer">
+          <span>{checklistOffer.sentence}</span>
+          <button
+            type="button"
+            className="btn-link"
+            onClick={() => onUseChecklist(checklistOffer.id)}
+            disabled={busy}
+            data-testid="use-checklist"
+          >
+            Check against {checklistOffer.label}
+          </button>
+        </p>
+      ) : null}
 
-      <ViewTabs view={view} onChange={onView} idBase={tabsId} />
+      <ViewTabs view={effectiveView} onChange={onView} idBase={tabsId} views={views} />
 
       {stale ? (
         <p className="notice notice-quiet" data-testid="stale-note">
@@ -230,36 +360,37 @@ export function Results({
         </div>
       ) : null}
 
-      {view === "brief" ? (
-        <div
-          role="tabpanel"
-          id={viewIds(tabsId, "brief").panel}
-          aria-labelledby={viewIds(tabsId, "brief").tab}
-          className="view-panel"
-          data-testid="brief-panel"
-        >
-          <ReviewBrief state={briefState(data)} />
+      {effectiveView === "brief" ? (
+        <div role="tabpanel" {...panelIds("brief")} className="view-panel" data-testid="brief-panel">
+          <ReviewBrief state={briefState(data)} onSwitchToRevise={onRunRevise ?? undefined} />
         </div>
-      ) : view === "narrative" ? (
-        <div
-          role="tabpanel"
-          id={viewIds(tabsId, "narrative").panel}
-          aria-labelledby={viewIds(tabsId, "narrative").tab}
-          className="view-panel"
-          data-testid="narrative-panel"
-        >
-          <NarrativeMap state={narrativeState(data)} />
+      ) : effectiveView === "narrative" ? (
+        <div role="tabpanel" {...panelIds("narrative")} className="view-panel" data-testid="narrative-panel">
+          <NarrativeMap state={narrativeState(data)} onSwitchToRevise={onRunRevise ?? undefined} />
+        </div>
+      ) : effectiveView === "checklist" && data.checklist ? (
+        <div role="tabpanel" {...panelIds("checklist")} className="view-panel" data-testid="checklist-panel">
+          <ChecklistView report={data.checklist} notApplicable={notApplicable} onToggle={onToggleNotApplicable} />
         </div>
       ) : shown.length === 0 ? (
-        <div role="tabpanel" id={viewIds(tabsId, "suggestions").panel} aria-labelledby={viewIds(tabsId, "suggestions").tab}>
+        <div role="tabpanel" {...panelIds("suggestions")}>
           {hiddenNote}
           <div className="empty" data-testid="empty-state">
-            <p className="empty-title">No suggestions. That&rsquo;s not a score.</p>
-            <p className="muted">It means none of our checks fired on this text. The read-outs below still describe it.</p>
+            {nDismissed > 0 ? (
+              <>
+                <p className="empty-title">Every suggestion in this check is dismissed.</p>
+                <p className="muted">Use &ldquo;Show&rdquo; beside the heading to bring them back. Nothing was stored.</p>
+              </>
+            ) : (
+              <>
+                <p className="empty-title">No suggestions. That&rsquo;s not a score.</p>
+                <p className="muted">It means none of our checks fired on this text. The read-outs below still describe it.</p>
+              </>
+            )}
           </div>
         </div>
       ) : (
-        <div role="tabpanel" id={viewIds(tabsId, "suggestions").panel} aria-labelledby={viewIds(tabsId, "suggestions").tab}>
+        <div role="tabpanel" {...panelIds("suggestions")}>
           <div className="toolbar">
             <div className="filters" role="group" aria-label="Filter suggestions by category">
               {chips.map((c) => {
@@ -369,6 +500,22 @@ export function Results({
         </div>
       )}
 
+      {/* The dismissal notice: a polite live region that is always in the page, so the change is announced. */}
+      <div ref={liveRef} className="dismiss-live" role="status" aria-live="polite" data-testid="dismiss-live">
+        {dismissNote?.kind === "dismissed" ? (
+          <p className="dismiss-note">
+            <span>Dismissed.</span>{" "}
+            <button type="button" ref={undoRef} className="btn-link" onClick={onUndo} data-testid="undo-dismiss">
+              Undo
+            </button>
+          </p>
+        ) : dismissNote?.kind === "restored" ? (
+          <p className="dismiss-note">
+            {dismissNote.n === 1 ? "Restored." : `${dismissNote.n} suggestions shown again.`}
+          </p>
+        ) : null}
+      </div>
+
       {data.metrics ? <MetricsPanel metrics={data.metrics} /> : null}
 
       <p className="engine-meta muted">
@@ -377,7 +524,20 @@ export function Results({
       </p>
       {printing && typeof document !== "undefined"
         ? createPortal(
-            <PrintReport data={data} submittedText={submittedText} showPreferences={showPreferences} source={source} scopes={scopes} at={printing} />,
+            <PrintReport
+              data={data}
+              submittedText={submittedText}
+              showPreferences={showPreferences}
+              source={source}
+              scopes={scopes}
+              at={printing}
+              checkedAt={checkedAt}
+              stale={stale}
+              dismissed={dismissed}
+              mutedRules={mutedRules}
+              locations={locations}
+              notApplicable={notApplicable}
+            />,
             document.body,
           )
         : null}

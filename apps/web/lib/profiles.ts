@@ -10,6 +10,7 @@ import {
   type NarrativeMap,
   type ProfileChoice,
   type ProfileInfo,
+  type ReviewQuestion,
   type ReviewReport,
 } from "@researchly/contract";
 
@@ -37,8 +38,32 @@ export function profileSummary(choices: readonly ProfileChoice[], id: DocumentTy
 export function profileLine(profile: ProfileInfo | null | undefined): string | null {
   if (!profile) return null;
   if (profile.note.trim()) return profile.note.trim();
-  if (profile.guessed) return profile.id === "general" ? null : `Checked as ${profile.label} (from the headings).`;
+  if (profile.guessed) {
+    if (profile.id === "general") return null;
+    // The headings the guess rested on (Codex review R2), so a wrong guess is easy to see and override.
+    const evidence = (profile.evidence ?? "").replace(/\s+/g, " ").trim();
+    return evidence ? `Checked as ${profile.label} (from the headings: ${evidence}).` : `Checked as ${profile.label} (from the headings).`;
+  }
   return `Checked as ${profile.label}.`;
+}
+
+/**
+ * The small word after a brief question saying what its answer rests on
+ * (Codex review R4). Nothing for "yours" (question A is the writer's), and
+ * nothing for a status this page does not know (an older engine).
+ */
+export const BRIEF_STATUS_WORD: Record<ReviewQuestion["status"], string> = {
+  yours: "",
+  detected: "detected",
+  not_detected: "not detected",
+  not_assessed: "not assessed",
+  not_applicable: "not applicable",
+};
+
+export function briefStatusWord(status: unknown): string {
+  return typeof status === "string" && Object.prototype.hasOwnProperty.call(BRIEF_STATUS_WORD, status)
+    ? BRIEF_STATUS_WORD[status as ReviewQuestion["status"]]
+    : "";
 }
 
 /** What the brief tab shows for a check: the brief, or why there is none. */

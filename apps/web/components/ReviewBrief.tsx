@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReviewQuestion } from "@researchly/contract";
-import { timesPhrase, type BriefState } from "@/lib/profiles";
+import { briefStatusWord, timesPhrase, type BriefState } from "@/lib/profiles";
 
 interface Props {
   state: BriefState;
@@ -12,11 +12,14 @@ interface Props {
 /**
  * The critical reader's brief (S4): five questions a sceptical reader asks
  * of any document, each answered from the text alone. Read top to bottom
- * as a document: the question, the one-line verdict, the points behind it,
- * and the sentences it rests on, quoted. Then the checks that fired most,
- * and the source as a reference, set like a card's. Never a score: no
- * numbers but a rule's tally, no meters, no colour by verdict. Question A
- * is the writer's to answer and is rendered as the engine gives it.
+ * as a document: the question with a small word saying what its answer
+ * rests on (detected, not detected, not assessed, not applicable; Codex
+ * review R4), the one-line verdict, the points behind it, and the
+ * sentences it rests on, quoted. Then the checks that fired most, the
+ * engine's disclaimer (the brief does not establish whether the science is
+ * sound), and the source as a reference, set like a card's. Never a score:
+ * no numbers but a rule's tally, no meters, no colour by verdict or status.
+ * Question A is the writer's to answer and is rendered as the engine gives it.
  */
 export function ReviewBrief({ state, onSwitchToRevise }: Props) {
   if (state.kind === "needs_revise") {
@@ -65,6 +68,11 @@ export function ReviewBrief({ state, onSwitchToRevise }: Props) {
           </ul>
         </section>
       ) : null}
+      {r.disclaimer?.trim() ? (
+        <p className="brief-disclaimer" data-testid="brief-disclaimer">
+          {r.disclaimer.trim()}
+        </p>
+      ) : null}
       <p className="card-source brief-source">
         <span className="card-source-label">Source:</span> <cite>{r.source}</cite>
       </p>
@@ -75,6 +83,7 @@ export function ReviewBrief({ state, onSwitchToRevise }: Props) {
 function Question({ q }: { q: ReviewQuestion }) {
   const points = (q.points ?? []).filter((p) => p.trim());
   const evidence = (q.evidence ?? []).filter((e) => e.trim());
+  const status = briefStatusWord(q.status);
   return (
     <>
       <h3 className="brief-q-title">
@@ -84,6 +93,16 @@ function Question({ q }: { q: ReviewQuestion }) {
         <span>
           <span className="sr-only">Question {q.id}: </span>
           {q.question}
+          {status ? (
+            <>
+              {" "}
+              <span className="sr-only">(</span>
+              <span className="brief-q-status" data-testid="brief-status" data-status={q.status}>
+                {status}
+              </span>
+              <span className="sr-only">)</span>
+            </>
+          ) : null}
         </span>
       </h3>
       <p className="brief-verdict">{q.verdict}</p>

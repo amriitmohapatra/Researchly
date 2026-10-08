@@ -1,6 +1,17 @@
 import { describe, expect, it } from "vitest";
 import type { AnalyzeResponse, Suggestion } from "@researchly/contract";
-import { applyFilter, applySectionFilter, countBySection, hiddenPreferenceCount, revealNeedsRecheck, shownSuggestions, summarySentence } from "@/lib/view";
+import {
+  applyFilter,
+  applySectionFilter,
+  countBySection,
+  dismissedCount,
+  heldBackSentence,
+  hiddenPreferenceCount,
+  revealNeedsRecheck,
+  shownSuggestions,
+  summarySentence,
+  withoutSetAside,
+} from "@/lib/view";
 import { sugg } from "./helpers";
 
 function response(suggestions: Suggestion[], hidden_preferences = 0): AnalyzeResponse {
@@ -83,5 +94,31 @@ describe("section view", () => {
     expect(r.inSection.map((s) => s.id)).toEqual(["m1"]);
     expect(r.wholeDocument.map((s) => s.id)).toEqual(["m2", "d2"]);
     expect(r.elsewhere).toBe(2);
+  });
+});
+
+describe("set aside in this check: dismissed once, muted just now (review proposal 2)", () => {
+  const list = [sugg("a", 0, 2), sugg("b", 3, 5, "improvement", { rule_id: "G101" }), sugg("c", 6, 8, "correction", { rule_id: "G101" }), sugg("d", 9, 10)];
+
+  it("leaves out dismissed suggestions and every suggestion of a muted rule, in order", () => {
+    expect(withoutSetAside(list, new Set()).map((s) => s.id)).toEqual(["a", "b", "c", "d"]);
+    expect(withoutSetAside(list, new Set(["a"])).map((s) => s.id)).toEqual(["b", "c", "d"]);
+    expect(withoutSetAside(list, new Set(["d"]), new Set(["G101"])).map((s) => s.id)).toEqual(["a"]);
+  });
+
+  it("counts only the dismissed ones still on show (a muted rule's are gone anyway)", () => {
+    expect(dismissedCount(list, new Set())).toBe(0);
+    expect(dismissedCount(list, new Set(["a", "b", "zz"]))).toBe(2);
+    expect(dismissedCount(list, new Set(["a", "b"]), new Set(["G101"]))).toBe(1);
+  });
+});
+
+describe("what Draft held back (review R6)", () => {
+  it("is said in one line, and not at all in Revise", () => {
+    expect(heldBackSentence(0)).toBeNull();
+    expect(heldBackSentence(-1)).toBeNull();
+    expect(heldBackSentence(Number.NaN)).toBeNull();
+    expect(heldBackSentence(1)).toBe("Draft mode held back 1 whole-document suggestion.");
+    expect(heldBackSentence(1200)).toBe("Draft mode held back 1,200 whole-document suggestions.");
   });
 });

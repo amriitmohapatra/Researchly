@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { analyze, buildRequest, listRegistry, listRules } from "@/lib/engine";
+import { analyze, buildRequest, DEMO_MARKDOWN_PATH, fetchDemoManuscript, listRegistry, listRules } from "@/lib/engine";
 
 function respond(body: unknown, status = 200) {
   vi.stubGlobal(
@@ -84,5 +84,55 @@ describe("bearer header on the wire", () => {
     expect((init!.headers as Record<string, string>).authorization).toBe("Bearer tok-123");
     expect(String(init!.body)).not.toContain("tok-123");
     expect(init!.credentials).toBe("omit");
+  });
+});
+
+describe("S4c: Revise, checklists and the demo", () => {
+  it("sends Revise and a chosen checklist when asked, and no checklist key otherwise", () => {
+    expect(buildRequest({ content: "x", format: "plain", showPreferences: false, mode: "revise", checklist: "epiforge" }).options).toEqual({
+      show_preferences: false,
+      document_type: "auto",
+      review: false,
+      narrative: false,
+      checklist: "epiforge",
+      mode: "revise",
+    });
+    expect(buildRequest({ content: "x", format: "plain", showPreferences: false, checklist: null }).options).not.toHaveProperty("checklist");
+  });
+
+  it("/v1/rules carries the checklists; an older engine's answer (none, odd entries) still works", async () => {
+    respond({
+      rules: [{ id: "G101", name: "n", short: "s" }],
+      checklists: [{ id: "strobe", label: "STROBE", design: "observational studies", pack: "Epidemiology" }, { id: "x" }, 4],
+    });
+    const r = await listRegistry("http://engine.test");
+    expect(r.ok && r.data.checklists).toEqual([{ id: "strobe", label: "STROBE", design: "observational studies", pack: "Epidemiology" }]);
+    respond({ rules: [] });
+    const old = await listRegistry("http://engine.test");
+    expect(old.ok && old.data.checklists).toEqual([]);
+  });
+
+  it("fetches the demo manuscript from this site's own origin, with no credentials, and fails quietly", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("# A demo\n\nText.", { status: 200, headers: { "content-type": "text/markdown" } })),
+    );
+    expect(await fetchDemoManuscript()).toEqual({ ok: true, text: "# A demo\n\nText." });
+    const [url, init] = vi.mocked(fetch).mock.calls[0]!;
+    expect(url).toBe(DEMO_MARKDOWN_PATH);
+    expect(DEMO_MARKDOWN_PATH).toBe("/demo/researchly-demo.md");
+    expect(init).toMatchObject({ method: "GET", credentials: "omit" });
+    expect(init).not.toHaveProperty("body");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("missing", { status: 404 })));
+    expect(await fetchDemoManuscript()).toEqual({ ok: false });
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("   ", { status: 200 })));
+    expect(await fetchDemoManuscript()).toEqual({ ok: false });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new TypeError("offline");
+      }),
+    );
+    expect(await fetchDemoManuscript()).toEqual({ ok: false });
   });
 });

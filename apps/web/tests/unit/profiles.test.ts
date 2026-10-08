@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { DOCUMENT_TYPES, type NarrativeMap, type ProfileInfo, type ReviewReport } from "@researchly/contract";
-import { briefState, FALLBACK_PROFILES, isDocumentType, narrativeState, profileLine, profileSummary, timesPhrase } from "@/lib/profiles";
+import { BRIEF_STATUS_WORD, briefState, briefStatusWord, FALLBACK_PROFILES, isDocumentType, narrativeState, profileLine, profileSummary, timesPhrase } from "@/lib/profiles";
 
 const info = (extra: Partial<ProfileInfo>): ProfileInfo => ({
   id: "general",
   label: "General",
   guessed: true,
   note: "",
+  evidence: "",
   rules_off: [],
   ...extra,
 });
@@ -48,7 +49,7 @@ describe("the profile line", () => {
 });
 
 describe("the brief's state", () => {
-  const review: ReviewReport = { source: "s", sections: [], words: 1, questions: [], top_rules: [] };
+  const review: ReviewReport = { source: "s", disclaimer: "", sections: [], words: 1, questions: [], top_rules: [] };
   it("needs Revise in Draft, whatever the engine sent", () => {
     expect(briefState({ mode: "draft", review })).toEqual({ kind: "needs_revise" });
     expect(briefState({ mode: "draft", review: null })).toEqual({ kind: "needs_revise" });
@@ -79,5 +80,41 @@ describe("the narrative map's state (S4b)", () => {
   it("is independent of the brief: a map without a brief is still ready", () => {
     expect(narrativeState({ mode: "revise", narrative }).kind).toBe("ready");
     expect(briefState({ mode: "revise", review: null }).kind).toBe("missing");
+  });
+});
+
+describe("the profile line's evidence (Codex review R2)", () => {
+  it("names the headings a guess rested on, tidied", () => {
+    expect(profileLine(info({ id: "manuscript", label: "Research article", guessed: true, evidence: "Methods, Results" }))).toBe(
+      "Checked as Research article (from the headings: Methods, Results).",
+    );
+    expect(profileLine(info({ id: "thesis-chapter", label: "Thesis chapter", guessed: true, evidence: " Chapter 3;\n Methods " }))).toBe(
+      "Checked as Thesis chapter (from the headings: Chapter 3; Methods).",
+    );
+  });
+  it("keeps the old rules: the note alone, nothing for a guessed General, no evidence for a choice", () => {
+    expect(profileLine(info({ id: "general", guessed: true, evidence: "Recommendations" }))).toBeNull();
+    expect(profileLine(info({ id: "policy-brief", label: "Policy brief", guessed: true, evidence: "Recommendations", note: "Checked as a policy brief: no abstract." }))).toBe(
+      "Checked as a policy brief: no abstract.",
+    );
+    expect(profileLine(info({ id: "grant", label: "Grant proposal", guessed: false, evidence: "Aims" }))).toBe("Checked as Grant proposal.");
+  });
+  it("an older engine without evidence keeps the short line", () => {
+    const old = { id: "manuscript", label: "Research article", guessed: true, note: "", rules_off: [] } as unknown as ProfileInfo;
+    expect(profileLine(old)).toBe("Checked as Research article (from the headings).");
+  });
+});
+
+describe("the brief's status words (Codex review R4)", () => {
+  it("words every status, and nothing for the writer's own or an unknown one", () => {
+    expect(BRIEF_STATUS_WORD).toEqual({
+      yours: "",
+      detected: "detected",
+      not_detected: "not detected",
+      not_assessed: "not assessed",
+      not_applicable: "not applicable",
+    });
+    expect(briefStatusWord("not_assessed")).toBe("not assessed");
+    for (const v of ["yours", "guessed", "toString", undefined, null, 3]) expect(briefStatusWord(v)).toBe("");
   });
 });

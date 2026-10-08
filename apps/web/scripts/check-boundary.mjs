@@ -21,6 +21,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SOURCE_EXT = /\.(c|m)?(t|j)sx?$/;
+/** The only files that may touch localStorage: per-viewer choices, never text. */
+const PREF_FILES = new Set(["lib/prefs.ts", "lib/results-prefs.ts"]);
 const SKIP_DIRS = new Set(["node_modules", ".next", "out", "test-results", "playwright-report", "tests", "e2e", "scripts"]);
 
 function walk(dir, root, out = []) {
@@ -79,8 +81,11 @@ export function checkBoundary(root) {
     if (/\b(sessionStorage|indexedDB|document\.cookie|cookies\s*\()/.test(src)) {
       flag(f, "no sessionStorage, IndexedDB or cookies in S1: the document is never persisted");
     }
-    if (/\blocalStorage\b/.test(src) && f !== "lib/prefs.ts") {
-      flag(f, "localStorage is only for per-viewer preferences (format; the Word add-in's engine and Draft/Revise), in lib/prefs.ts");
+    if (/\blocalStorage\b/.test(src) && !PREF_FILES.has(f)) {
+      flag(
+        f,
+        "localStorage is only for per-viewer preferences (format; the Word add-in's engine and Draft/Revise; the reporting checklist), in lib/prefs.ts or lib/results-prefs.ts",
+      );
     }
     if (/dangerouslySetInnerHTML|\binnerHTML\b|insertAdjacentHTML/.test(src)) {
       flag(f, "never render HTML from data; document text is rendered as text");

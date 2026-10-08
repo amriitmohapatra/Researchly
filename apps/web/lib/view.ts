@@ -33,6 +33,37 @@ export function revealNeedsRecheck(data: AnalyzeResponse): boolean {
   return data.hidden_preferences > 0;
 }
 
+/**
+ * Leave out what the writer set aside in this check: suggestions dismissed
+ * once ("Not an issue here", session only) and rules just muted (filtered
+ * at once, before the re-check confirms it).
+ */
+export function withoutSetAside(
+  list: readonly Suggestion[],
+  dismissed: ReadonlySet<string>,
+  mutedRules: ReadonlySet<string> = new Set(),
+): Suggestion[] {
+  if (dismissed.size === 0 && mutedRules.size === 0) return [...list];
+  return list.filter((s) => !dismissed.has(s.id) && !mutedRules.has(s.rule_id));
+}
+
+/** How many of `dismissed` are still among the suggestions shown (a toggle or a mute can hide some anyway). */
+export function dismissedCount(list: readonly Suggestion[], dismissed: ReadonlySet<string>, mutedRules: ReadonlySet<string> = new Set()): number {
+  if (dismissed.size === 0) return 0;
+  return list.filter((s) => dismissed.has(s.id) && !mutedRules.has(s.rule_id)).length;
+}
+
+/**
+ * What Draft mode held back, in one line (Codex review R6). The website
+ * asks for Revise, so this appears only with an engine that ignored it.
+ */
+export function heldBackSentence(n: number): string | null {
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return n === 1
+    ? "Draft mode held back 1 whole-document suggestion."
+    : `Draft mode held back ${n.toLocaleString("en-GB")} whole-document suggestions.`;
+}
+
 export function applyFilter(list: readonly Suggestion[], filter: Filter): Suggestion[] {
   return filter === "all" ? [...list] : list.filter((s) => s.category === filter);
 }

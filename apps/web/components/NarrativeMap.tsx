@@ -3,6 +3,7 @@
 import { useId } from "react";
 import type { HedgingPoint, NarrativeMove, NarrativeSection } from "@researchly/contract";
 import type { NarrativeState } from "@/lib/profiles";
+import { LessonDisclosure } from "./LessonDisclosure";
 
 interface Props {
   state: NarrativeState;
@@ -32,7 +33,9 @@ const per100 = new Intl.NumberFormat("en-GB", { minimumFractionDigits: 1, maximu
  * by shape and word; under the strip, each missing or out-of-order move
  * opens to its question, the lesson in everyday words and a frame to fill
  * in, and each present move keeps the writer's own sentence behind "Show
- * the sentence". Then the argument's missing links, the hedging trajectory
+ * the sentence". A missing move and a missing link that name a Learn card
+ * open it under "The lesson" (S4; screen only), and a link's sentences sit
+ * behind "Show the sentence". Then the argument's missing links, the hedging trajectory
  * as a table of labelled values, and the source set like a card's. Never a
  * score: no counts beyond "2 of 5 moves", no meters, no colour by verdict.
  */
@@ -99,6 +102,8 @@ export function NarrativeMap({ state, onSwitchToRevise, variant = "screen" }: Pr
                   <span className="nmap-link-section">{l.label}</span>
                 </p>
                 <p className="nmap-link-msg">{l.message}</p>
+                <LinkEvidence sentences={l.evidence ?? []} print={print} />
+                {print ? null : <LessonDisclosure learnRef={l.learn_ref} />}
                 <p className="card-source">
                   <span className="card-source-label">Source:</span> <cite>{l.source}</cite>
                 </p>
@@ -177,6 +182,7 @@ function Strip({ section: s, print }: { section: NarrativeSection; print: boolea
                 </figure>
               ) : null}
               {m.status === "out_of_order" && (m.evidence ?? "").trim() ? <Evidence move={m} print={print} /> : null}
+              {print ? null : <LessonDisclosure learnRef={m.learn_ref} />}
               <p className="card-source">
                 <span className="card-source-label">Source:</span> <cite>{m.source}</cite>
               </p>
@@ -225,6 +231,33 @@ function Evidence({ move: m, print, label = false }: { move: NarrativeMove; prin
         )}
       </summary>
       {quote}
+    </details>
+  );
+}
+
+/**
+ * The sentences a missing link concerns, quoted in the serif: behind "Show
+ * the sentences" on screen (closed), open on paper. Nothing when there are none.
+ */
+function LinkEvidence({ sentences, print }: { sentences: readonly string[]; print: boolean }) {
+  const list = sentences.map((s) => s.trim()).filter(Boolean);
+  if (list.length === 0) return null;
+  const quotes = (
+    <ul className="nmap-link-evidence" aria-label="The sentences concerned, quoted from your text">
+      {list.map((s, i) => (
+        <li key={i} className="nmap-evidence">
+          <q>{s}</q>
+        </li>
+      ))}
+    </ul>
+  );
+  if (print) return quotes;
+  return (
+    <details className="nmap-sentence" data-testid="narrative-link-evidence">
+      <summary className="nmap-sentence-summary">
+        <span className="nmap-sentence-link">{list.length === 1 ? "Show the sentence" : "Show the sentences"}</span>
+      </summary>
+      {quotes}
     </details>
   );
 }

@@ -13,6 +13,7 @@ import "client-only";
 import type {
   AnalyzeOptions,
   ChecklistChoice,
+  ChecklistChoiceInfo,
   AnalyzeFileResponse,
   AnalyzeRequest,
   AnalyzeResponse,
@@ -333,14 +334,16 @@ export async function analyzeFile(
   );
 }
 
-/** What GET /v1/rules answers: the rules, and (S4) the article types a caller can check as. */
+/** What GET /v1/rules answers: the rules, and (S4) the article types and reporting checklists a caller can choose. */
 export interface Registry {
   rules: RuleInfo[];
   /** Empty from an engine older than S4; the surface then falls back to the contract's list. */
   profiles: ProfileChoice[];
+  /** Empty from an engine without discipline packs; the surface then falls back to its own list (lib/checklists.ts). */
+  checklists: ChecklistChoiceInfo[];
 }
 
-function looksLikeRules(body: unknown): body is { rules: RuleInfo[]; profiles?: unknown } {
+function looksLikeRules(body: unknown): body is { rules: RuleInfo[]; profiles?: unknown; checklists?: unknown } {
   const rules = (body as { rules?: unknown } | null)?.rules;
   return (
     Array.isArray(rules) &&
@@ -354,7 +357,13 @@ function looksLikeProfile(p: unknown): p is ProfileChoice {
   return typeof c.id === "string" && typeof c.label === "string" && typeof c.summary === "string";
 }
 
-/** The engine's registry: rule names and descriptions, and the article-type choices. GET /v1/rules; no text is sent. */
+function looksLikeChecklist(c: unknown): c is ChecklistChoiceInfo {
+  if (typeof c !== "object" || c === null) return false;
+  const x = c as Record<string, unknown>;
+  return typeof x.id === "string" && typeof x.label === "string" && typeof x.design === "string" && typeof x.pack === "string";
+}
+
+/** The engine's registry: rule names and descriptions, the article types and the checklists. GET /v1/rules; no text is sent. */
 export async function listRegistry(engineUrl: string = ENGINE_URL, signal?: AbortSignal): Promise<CheckResult<Registry>> {
   const r = await call(`${engineUrl}/v1/rules`, { method: "GET", headers: { accept: "application/json" } }, signal, looksLikeRules, {
     engineUrl,
@@ -362,13 +371,42 @@ export async function listRegistry(engineUrl: string = ENGINE_URL, signal?: Abor
   });
   if (!r.ok) return r;
   const profiles = Array.isArray(r.data.profiles) ? r.data.profiles.filter(looksLikeProfile) : [];
-  return { ok: true, data: { rules: r.data.rules, profiles } };
+  const checklists = Array.isArray(r.data.checklists) ? r.data.checklists.filter(looksLikeChecklist) : [];
+  return { ok: true, data: { rules: r.data.rules, profiles, checklists } };
 }
 
 /** The rule registry (names and one-line descriptions) for the settings page. */
 export async function listRules(engineUrl: string = ENGINE_URL, signal?: AbortSignal): Promise<CheckResult<RuleInfo[]>> {
   const r = await listRegistry(engineUrl, signal);
   return r.ok ? { ok: true, data: r.data.rules } : r;
+}
+
+/* ---------- the demo manuscript: a public file of this site, not the writer's text ---------- */
+
+/** Where the synthetic demo manuscript is served from (apps/web/public/demo/). */
+export const DEMO_MARKDOWN_PATH = "/demo/researchly-demo.md";
+
+/**
+ * Fetch the demo manuscript's Markdown from this site's own origin, to load
+ * into the editor. A GET of a public static file: nothing is sent, and the
+ * text is checked only when the writer presses Check. Here because every
+ * network call of the page lives in this file (scripts/check-boundary.mjs).
+ */
+export async function fetchDemoManuscript(signal?: AbortSignal): Promise<{ ok: true; text: string } | { ok: false }> {
+  try {
+    const res = await fetch(DEMO_MARKDOWN_PATH, {
+      method: "GET",
+      headers: { accept: "text/markdown, text/plain" },
+      credentials: "omit",
+      referrerPolicy: "no-referrer",
+      signal,
+    });
+    if (!res.ok) return { ok: false };
+    const text = await res.text();
+    return text.trim() ? { ok: true, text } : { ok: false };
+  } catch {
+    return { ok: false };
+  }
 }
 
 /* ---------- the Word add-in (S3): /v1/analyze-word and /v1/health ---------- */

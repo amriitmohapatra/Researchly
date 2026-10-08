@@ -294,14 +294,15 @@ main:focus {
 }
 
 /* ---------- why Researchly: quiet, typographic, below the checker ---------- */
+/* Its own class: a bare .why also matched every card's "The full reasoning" disclosure. */
 
-.why {
+.why-researchly {
   max-width: var(--measure);
   margin-top: 48px;
   padding-top: 32px;
   border-top: 1px solid var(--line);
 }
-.why h2 {
+.why-researchly h2 {
   font-size: 1.25rem;
   letter-spacing: -0.01em;
   margin-bottom: 12px;
@@ -328,7 +329,7 @@ main:focus {
   color: var(--ink);
 }
 @media (min-width: 720px) {
-  .why {
+  .why-researchly {
     margin-top: 56px;
   }
 }
@@ -2793,3 +2794,344 @@ main:focus {
   }
 }
 
+
+/* ---------- S4c: lessons, reporting checklists, dismissal, the report's context ----------
+ * The review's web fixes (Codex review, 8 October 2026). Same tokens,
+ * radius and type roles as above: sans for the coach, serif for the
+ * writer's sentences and the lesson's examples. Statuses are words, never
+ * colours; nothing here is a score. Taskpane (.tp-*) rules are untouched.
+ */
+
+/* "The lesson": a closed disclosure under the full reasoning, set off like it. */
+.lesson {
+  margin-top: 4px;
+}
+.lesson > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  cursor: pointer;
+  font-weight: 650;
+  font-size: 0.9375rem;
+  color: var(--link);
+  list-style: none;
+}
+.lesson > summary:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.lesson > summary::-webkit-details-marker {
+  display: none;
+}
+.lesson > summary::before {
+  content: "";
+  width: 0;
+  height: 0;
+  border-left: 5px solid currentColor;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform 0.15s ease;
+}
+.lesson[open] > summary::before {
+  transform: rotate(90deg);
+}
+.lesson-source {
+  margin-top: 8px;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.lesson-source cite {
+  font-family: var(--serif);
+  font-size: 0.875rem;
+  font-style: italic;
+}
+.lesson-body {
+  margin: 2px 0 8px;
+  padding-left: 12px;
+  border-left: 2px solid var(--line);
+  max-width: var(--measure);
+  cursor: auto;
+}
+.card .lesson-body {
+  border-left-color: color-mix(in srgb, var(--c-line) 50%, transparent);
+}
+.lesson-title {
+  font-weight: 650;
+  line-height: 1.45;
+}
+.lesson-text {
+  margin-top: 4px;
+  font-size: 1rem;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+.lesson-pair {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+.lesson-example {
+  margin: 0;
+}
+.lesson-example-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.lesson-quote {
+  margin: 2px 0 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--line-strong);
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.lesson-quote q {
+  quotes: "\201C" "\201D";
+}
+.lesson-habit {
+  margin-top: 10px;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+.lesson-habit-label {
+  font-weight: 600;
+}
+.lesson-more {
+  font-size: 0.9375rem;
+  padding-bottom: 4px;
+}
+.nmap .lesson {
+  margin-top: 6px;
+}
+
+/* The sentences a missing link concerns: quoted like a move's sentence. */
+.nmap-link-evidence {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.nmap-link .nmap-sentence {
+  margin-top: 4px;
+}
+
+/* The brief's statuses: a small word after the question, never a colour. */
+.brief-q-status {
+  margin-left: 2px;
+  font-size: 0.8125rem;
+  font-style: italic;
+  font-weight: 400;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.brief-disclaimer {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+/* "Reporting checklist": one more select in the composer's row, beside "Check as". */
+.control-checklist .select {
+  min-width: 10rem;
+  max-width: 100%;
+}
+
+/* Quiet one-line notes under the heading: what Draft held back, the checklist on offer. */
+.results-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 10px;
+  margin-top: 6px;
+  max-width: var(--measure);
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+.results-line .btn-link[disabled] {
+  cursor: progress;
+  opacity: 0.7;
+}
+.results-dismissed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 0.9375rem;
+}
+
+/* "Dismissed. Undo": a polite live region pinned to the bottom of the window, so focusing Undo never scrolls. */
+.dismiss-live {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 20;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.dismiss-note {
+  pointer-events: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+  max-width: 100%;
+  padding: 6px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.9375rem;
+}
+
+/* The checklist view: a document at the reading measure, hairline dividers, no boxes. */
+.checklist {
+  margin-top: 16px;
+  max-width: var(--measure);
+}
+.checklist-title {
+  font-size: 1.0625rem;
+}
+.checklist-label {
+  font-weight: 650;
+}
+.checklist-note {
+  margin-top: 4px;
+  text-wrap: pretty;
+}
+.checklist-items {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+.checklist-item {
+  padding: 12px 0 10px;
+}
+.checklist-item + .checklist-item {
+  border-top: 1px solid var(--line);
+}
+.checklist-topic {
+  font-size: 1rem;
+  font-weight: 650;
+}
+.checklist-question {
+  margin-top: 2px;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+.checklist-status {
+  margin-top: 4px;
+  font-size: 0.9375rem;
+}
+.checklist-status-word {
+  font-style: italic;
+  font-weight: 600;
+}
+.checklist-evidence {
+  margin: 6px 0 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--line-strong);
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.checklist-evidence q {
+  quotes: "\201C" "\201D";
+}
+.checklist-plain {
+  margin-top: 4px;
+  font-size: 1rem;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+.checklist-na {
+  margin-top: 2px;
+}
+.checklist-na[aria-pressed="true"] {
+  text-decoration-style: dotted;
+}
+.checklist-source {
+  margin-top: 12px;
+}
+.checklist-scope {
+  margin-top: 4px;
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+}
+
+/* The demo manuscript: a quiet row under the editor while it is empty. */
+.demo-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-top: 12px;
+}
+.demo-help {
+  flex: 1 1 16rem;
+}
+.demo-row .field-problem {
+  flex-basis: 100%;
+}
+
+@media print {
+  .dismiss-live {
+    display: none;
+  }
+  /* The report's context block: light ink, one line each. */
+  .print-context {
+    margin: 2pt 0 4pt;
+  }
+  .print-stale {
+    font-weight: 700;
+    color: #000;
+  }
+  .print-warnings {
+    margin: 0 0 3pt;
+    padding-left: 12pt;
+  }
+  .print-loc {
+    font-family: var(--mono);
+    font-size: 8pt;
+    color: #444;
+  }
+  /* The checklist after the narrative map, on its own page: statuses as words. */
+  .print-checklist {
+    break-before: page;
+  }
+  .print-checklist .checklist {
+    margin: 0;
+    max-width: none;
+  }
+  .print-checklist .checklist-item {
+    break-inside: avoid;
+    border-color: #bbb;
+  }
+  .print-checklist .checklist-note,
+  .print-checklist .checklist-evidence,
+  .print-checklist .checklist-scope,
+  .print-checklist .card-source {
+    color: #333;
+  }
+  .print-checklist .checklist-evidence {
+    border-color: #999;
+    font-size: 10pt;
+  }
+  .print-checklist .checklist-plain,
+  .print-checklist .checklist-question {
+    font-size: 9.5pt;
+  }
+}
