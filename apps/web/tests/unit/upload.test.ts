@@ -15,13 +15,22 @@ describe("upload request builder", () => {
       "content-type": "application/octet-stream",
       accept: "application/json",
       "x-researchly-filename": "chapter-4.docx",
-      "x-researchly-options": '{"show_preferences":true,"document_type":"auto","review":false}',
+      "x-researchly-options": '{"show_preferences":true,"document_type":"auto","review":false,"narrative":false}',
     });
   });
 
-  it("carries the article type and the brief request in the options header (S4)", () => {
-    const r = buildFileRequest(file("chapter-4.docx"), { showPreferences: false, documentType: "thesis-chapter", review: true }, null);
-    expect(JSON.parse(r.headers["x-researchly-options"]!)).toEqual({ show_preferences: false, document_type: "thesis-chapter", review: true });
+  it("carries the article type, the brief and the narrative-map requests in the options header (S4)", () => {
+    const r = buildFileRequest(
+      file("chapter-4.docx"),
+      { showPreferences: false, documentType: "thesis-chapter", review: true, narrative: true },
+      null,
+    );
+    expect(JSON.parse(r.headers["x-researchly-options"]!)).toEqual({
+      show_preferences: false,
+      document_type: "thesis-chapter",
+      review: true,
+      narrative: true,
+    });
   });
 
   it("adds the bearer token only when signed in", () => {

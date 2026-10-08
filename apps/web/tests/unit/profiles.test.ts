@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { DOCUMENT_TYPES, type ProfileInfo, type ReviewReport } from "@researchly/contract";
-import { briefState, FALLBACK_PROFILES, isDocumentType, profileLine, profileSummary, timesPhrase } from "@/lib/profiles";
+import { DOCUMENT_TYPES, type NarrativeMap, type ProfileInfo, type ReviewReport } from "@researchly/contract";
+import { briefState, FALLBACK_PROFILES, isDocumentType, narrativeState, profileLine, profileSummary, timesPhrase } from "@/lib/profiles";
 
 const info = (extra: Partial<ProfileInfo>): ProfileInfo => ({
   id: "general",
@@ -62,5 +62,22 @@ describe("the brief's state", () => {
     expect(timesPhrase(1)).toBe("once");
     expect(timesPhrase(2)).toBe("2 times");
     expect(timesPhrase(1200)).toBe("1,200 times");
+  });
+});
+
+describe("the narrative map's state (S4b)", () => {
+  const narrative: NarrativeMap = { note: "n", source: "s", sections: [], unmapped: [], missing_links: [], hedging: [], profile: null };
+  it("needs Revise in Draft, whatever the engine sent", () => {
+    expect(narrativeState({ mode: "draft", narrative })).toEqual({ kind: "needs_revise" });
+    expect(narrativeState({ mode: "draft", narrative: null })).toEqual({ kind: "needs_revise" });
+  });
+  it("is ready in Revise with a map, and missing without one (an older engine)", () => {
+    expect(narrativeState({ mode: "revise", narrative })).toEqual({ kind: "ready", narrative });
+    expect(narrativeState({ mode: "revise", narrative: null })).toEqual({ kind: "missing" });
+    expect(narrativeState({ mode: "revise" })).toEqual({ kind: "missing" });
+  });
+  it("is independent of the brief: a map without a brief is still ready", () => {
+    expect(narrativeState({ mode: "revise", narrative }).kind).toBe("ready");
+    expect(briefState({ mode: "revise", review: null }).kind).toBe("missing");
   });
 });

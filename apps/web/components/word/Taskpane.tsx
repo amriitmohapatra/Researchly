@@ -15,7 +15,7 @@ import { ENGINE_URL, LOCAL_ENGINE_URL, reportProblemHref } from "@/lib/config";
 import { analyzeWord, engineHealth } from "@/lib/engine";
 import { clientError, type CheckError } from "@/lib/errors";
 import { healthBanners } from "@/lib/health";
-import { briefState, profileLine } from "@/lib/profiles";
+import { briefState, narrativeState, profileLine } from "@/lib/profiles";
 import { useProfileChoices } from "@/lib/registry";
 import { useRuleScopes } from "@/lib/scope";
 import {
@@ -53,6 +53,7 @@ import {
   type SectionFocus,
 } from "@/lib/word/view";
 import { HealthBanner } from "../HealthBanner";
+import { NarrativeMap } from "../NarrativeMap";
 import { ProfileSelect } from "../ProfileSelect";
 import { ReviewBrief } from "../ReviewBrief";
 import { ViewTabs, viewIds, type ResultsView } from "../ViewTabs";
@@ -119,7 +120,7 @@ export function Taskpane() {
   const [chosenType, setChosenType] = useState<DocumentType | null>(null);
   const documentType: DocumentType = chosenType ?? (signedIn ? accountType : null) ?? storedType ?? "auto";
   const [typeNote, setTypeNote] = useState<string | null>(null);
-  /** Suggestions or the reviewer's brief: survives a re-check, never stored. */
+  /** Suggestions, the reviewer's brief or the narrative map: survives a re-check, never stored. */
   const [resultsView, setResultsView] = useState<ResultsView>("suggestions");
   const [showPreferences, setShowPreferences] = useState(false);
 
@@ -283,7 +284,7 @@ export function Taskpane() {
         abortRef.current = ctrl;
         setPhase("checking");
         setAnnouncement("Checking your document…");
-        // The brief is a whole-document read, so it is asked for in Revise only.
+        // The brief and the narrative map are whole-document reads, so they are asked for in Revise only.
         const r = await analyzeWord(
           {
             paragraphs,
@@ -292,6 +293,7 @@ export function Taskpane() {
             disabledRules,
             documentType: useType,
             review: useMode === "revise",
+            narrative: useMode === "revise",
             signal: ctrl.signal,
           },
           engineUrlFor(useEngine),
@@ -724,6 +726,16 @@ export function Taskpane() {
                     data-testid="brief-panel"
                   >
                     <ReviewBrief state={briefState(checked.data)} onSwitchToRevise={() => onModeChange("revise")} />
+                  </div>
+                ) : resultsView === "narrative" ? (
+                  <div
+                    role="tabpanel"
+                    id={viewIds(ids.tabs, "narrative").panel}
+                    aria-labelledby={viewIds(ids.tabs, "narrative").tab}
+                    className="view-panel"
+                    data-testid="narrative-panel"
+                  >
+                    <NarrativeMap state={narrativeState(checked.data)} onSwitchToRevise={() => onModeChange("revise")} />
                   </div>
                 ) : (
                   <div

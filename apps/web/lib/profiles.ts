@@ -1,9 +1,17 @@
 /**
- * Article-type profiles (S4) and the critical reader's brief, as the
- * surfaces present them. Pure and unit-tested; the engine decides what a
- * profile switches off, and this file only words it.
+ * Article-type profiles (S4), the critical reader's brief and the narrative
+ * map (S4b), as the surfaces present them. Pure and unit-tested; the engine
+ * decides what a profile switches off, and this file only words it.
  */
-import { DOCUMENT_TYPES, type DocumentType, type Mode, type ProfileChoice, type ProfileInfo, type ReviewReport } from "@researchly/contract";
+import {
+  DOCUMENT_TYPES,
+  type DocumentType,
+  type Mode,
+  type NarrativeMap,
+  type ProfileChoice,
+  type ProfileInfo,
+  type ReviewReport,
+} from "@researchly/contract";
 
 export function isDocumentType(v: unknown): v is DocumentType {
   return typeof v === "string" && (DOCUMENT_TYPES as readonly string[]).includes(v);
@@ -39,6 +47,14 @@ export type BriefState = { kind: "ready"; review: ReviewReport } | { kind: "need
 export function briefState(data: { mode: Mode; review?: ReviewReport | null }): BriefState {
   if (data.mode === "draft") return { kind: "needs_revise" };
   return data.review ? { kind: "ready", review: data.review } : { kind: "missing" };
+}
+
+/** What the narrative-map tab shows for a check (S4b): the map, or why there is none. The brief's pattern. */
+export type NarrativeState = { kind: "ready"; narrative: NarrativeMap } | { kind: "needs_revise" } | { kind: "missing" };
+
+export function narrativeState(data: { mode: Mode; narrative?: NarrativeMap | null }): NarrativeState {
+  if (data.mode === "draft") return { kind: "needs_revise" };
+  return data.narrative ? { kind: "ready", narrative: data.narrative } : { kind: "missing" };
 }
 
 /** "once", "3 times": a rule's tally in "Most frequent checks". Plain words, not a score. */

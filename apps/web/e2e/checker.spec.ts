@@ -11,6 +11,7 @@ import {
   error429,
   error500,
   happyResponse,
+  NARRATIVE,
   PROFILES,
   REVIEW,
   SAMPLE_TEXT,
@@ -38,7 +39,7 @@ test.describe("happy path", () => {
     expect(sent[0]).toEqual({
       content: SAMPLE_TEXT,
       format: "plain",
-      options: { show_preferences: false, document_type: "auto", review: true },
+      options: { show_preferences: false, document_type: "auto", review: true, narrative: true },
     });
     // ...and nothing went to the Next.js server except page/asset GETs.
     expect(own.filter((r) => r.method() !== "GET")).toEqual([]);
@@ -353,7 +354,7 @@ test.describe("article type and the reviewer's brief (S4)", () => {
     expect(sent[0]!.options?.review).toBe(true);
 
     const tabs = page.getByRole("tablist", { name: "Results view" });
-    await expect(tabs.getByRole("tab")).toHaveText(["Suggestions", "Reviewer’s brief"]);
+    await expect(tabs.getByRole("tab")).toHaveText(["Suggestions", "Reviewer’s brief", "Narrative map"]);
     await expect(page.getByTestId("view-suggestions")).toHaveAttribute("aria-selected", "true");
     await expect(page.getByTestId("brief")).toHaveCount(0);
 
@@ -428,6 +429,133 @@ test.describe("article type and the reviewer's brief (S4)", () => {
       await expect(page.getByTestId("brief-question")).toHaveCount(5);
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       expect(overflow).toBeLessThanOrEqual(0);
+      const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "best-practice"]).analyze();
+      const bad = results.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
+      expect(bad.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).slice(0, 3).join(", ")}`)).toEqual([]);
+    });
+  }
+});
+
+test.describe("the narrative map (S4b)", () => {
+  test("the third tab: the note, one strip per section with each move's status in words, a missing move's question, lesson and frame, the links, the hedging table", async ({
+    page,
+  }) => {
+    const sent = await mockEngine(page);
+    await page.goto("/");
+    await paste(page, SAMPLE_TEXT);
+    await check(page);
+    // The map is asked for on every check, with the brief.
+    expect(sent[0]!.options?.narrative).toBe(true);
+    await expect(page.getByTestId("narrative-map")).toHaveCount(0);
+
+    await page.getByTestId("view-narrative").click();
+    await expect(page.getByTestId("view-narrative")).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByTestId("suggestion-card")).toHaveCount(0);
+    await expect(page.getByTestId("brief")).toHaveCount(0);
+    const map = page.getByTestId("narrative-map");
+    await expect(map.getByTestId("narrative-note")).toHaveText(NARRATIVE.note);
+
+    // One strip per section, in the document's order, each move in the section's expected order.
+    const strips = map.getByTestId("narrative-section");
+    await expect(strips).toHaveCount(3);
+    for (const [i, s] of NARRATIVE.sections.entries()) {
+      await expect(strips.nth(i)).toHaveAttribute("data-section", s.section);
+      await expect(strips.nth(i).locator("h3")).toContainText(s.label);
+      const cells = strips.nth(i).getByTestId("narrative-move");
+      await expect(cells).toHaveCount(s.moves.length);
+      for (const [j, m] of s.moves.entries()) {
+        await expect(cells.nth(j)).toHaveAttribute("data-status", m.status);
+        await expect(cells.nth(j)).toContainText(m.label);
+      }
+    }
+    // The status is said in words, not colour alone: a missing cell says "missing", an out-of-order one says so.
+    const intro = strips.nth(0);
+    await expect(intro.getByTestId("narrative-move").nth(1)).toContainText("missing");
+    await expect(intro.getByTestId("narrative-move").nth(0)).not.toContainText("missing");
+    const discussion = strips.nth(2);
+    await expect(discussion.getByTestId("narrative-move").nth(1)).toContainText("out of order");
+    // A hollow dot for a missing move, a filled one for a present move: shape, not colour.
+    const dotBg = (cell: import("@playwright/test").Locator) => cell.locator(".nmap-dot").evaluate((el) => getComputedStyle(el).backgroundColor);
+    expect(await dotBg(intro.getByTestId("narrative-move").nth(1))).toMatch(/rgba\(0, 0, 0, 0\)|transparent/);
+    expect(await dotBg(intro.getByTestId("narrative-move").nth(0))).not.toMatch(/rgba\(0, 0, 0, 0\)|transparent/);
+
+    // Under the strip, the missing move opens to its question, the lesson and the frame to fill in.
+    const gap = NARRATIVE.sections[0]!.moves[1]!;
+    const detail = intro.getByTestId("narrative-detail").first();
+    await expect(detail).toHaveAttribute("data-move", gap.id);
+    await expect(detail.locator(".nmap-question")).toHaveText(gap.question);
+    await expect(detail.locator(".nmap-plain")).toHaveText(gap.plain);
+    await expect(detail.locator(".nmap-frame-text")).toHaveText(gap.frame);
+    await expect(detail.locator(".nmap-frame-caption")).toHaveText("A frame to fill in; the words are yours.");
+    expect(await detail.locator(".nmap-frame-text").evaluate((el) => getComputedStyle(el).fontFamily)).toMatch(/Charter|Georgia/);
+    await expect(detail.locator(".card-source cite")).toHaveText(gap.source);
+    // The out-of-order move carries its note.
+    await expect(discussion.getByTestId("narrative-detail").nth(1)).toContainText("Appears after what should change.");
+
+    // A present move keeps the writer's own sentence behind a disclosure, in the serif.
+    const present = intro.getByTestId("narrative-present").first();
+    await expect(present.locator("q")).toBeHidden();
+    await present.locator("summary").click();
+    await expect(present.locator("q")).toHaveText("Dengue 🦟 remains a major burden across South-East Asia.");
+    expect(await present.locator("q").evaluate((el) => getComputedStyle(el).fontFamily)).toMatch(/Charter|Georgia/);
+
+    // Then the argument's missing links, the hedging table (every value in text) and the source.
+    const links = map.getByTestId("narrative-link");
+    await expect(links).toHaveCount(2);
+    await expect(links.first()).toContainText("Discussion");
+    await expect(links.first()).toContainText(NARRATIVE.missing_links![0]!.message);
+    const rows = map.getByTestId("narrative-hedging-row");
+    await expect(rows).toHaveCount(3);
+    await expect(rows.nth(2).locator("th")).toHaveText("Discussion");
+    await expect(rows.nth(2).locator("td")).toHaveText(["10.5", "0.0", "heavily hedged"]);
+    await expect(map.locator(".nmap-source cite")).toHaveText(NARRATIVE.source);
+    await expect(page.locator("meter, progress")).toHaveCount(0);
+    await expect(page.locator("body")).not.toContainText(/overall score|grade|\d+ ?\/ ?10/i);
+
+    // The map view survives a re-check, and nothing of it is stored.
+    await check(page);
+    await expect(page.getByTestId("narrative-section")).toHaveCount(3);
+    expect(sent).toHaveLength(2);
+    expect(await page.evaluate(() => Object.keys(localStorage))).toEqual([]);
+    // Arrow keys reach it from the brief and the suggestions come back untouched.
+    await page.getByTestId("view-narrative").focus();
+    await page.keyboard.press("Home");
+    await expect(page.getByTestId("view-suggestions")).toBeFocused();
+    await expect(page.getByTestId("suggestion-card")).toHaveCount(8);
+  });
+
+  test("no map from the engine, or a check run in Draft, is said in one line", async ({ page }) => {
+    let draft = false;
+    await mockEngine(page, (_r, route) =>
+      json(route, 200, draft ? { ...happyResponse, mode: "draft", review: null, narrative: null } : { ...happyResponse, narrative: null }),
+    );
+    await page.goto("/");
+    await paste(page, SAMPLE_TEXT);
+    await check(page);
+    await page.getByTestId("view-narrative").click();
+    await expect(page.getByTestId("narrative-missing")).toContainText("did not return a narrative map");
+    draft = true;
+    await check(page);
+    const line = page.getByTestId("narrative-needs-revise");
+    await expect(line).toContainText("needs Revise mode");
+    await expect(line.getByRole("button")).toHaveCount(0);
+  });
+
+  for (const scheme of ["light", "dark"] as const) {
+    test(`the map on a phone, ${scheme}: the strip wraps, no horizontal scroll, no serious axe violations`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.setViewportSize({ width: 375, height: 812 });
+      await mockEngine(page);
+      await page.goto("/");
+      await paste(page, SAMPLE_TEXT);
+      await check(page);
+      await page.getByTestId("view-narrative").click();
+      await expect(page.getByTestId("narrative-section")).toHaveCount(3);
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(overflow).toBeLessThanOrEqual(0);
+      // The Discussion strip has five cells: on a phone they sit on more than one line.
+      const tops = await page.getByTestId("narrative-section").nth(2).getByTestId("narrative-move").evaluateAll((els) => els.map((e) => e.getBoundingClientRect().top));
+      expect(new Set(tops).size).toBeGreaterThan(1);
       const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "best-practice"]).analyze();
       const bad = results.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
       expect(bad.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).slice(0, 3).join(", ")}`)).toEqual([]);
@@ -794,6 +922,16 @@ test.describe("print or save as PDF (S4)", () => {
     expect(refs.length).toBeGreaterThan(0);
     for (const n of refs) expect(listed).toContain(n);
     await expect(report.locator(".print-brief [data-question]")).toHaveCount(5);
+    // Then the narrative map on its own page: the strips as text rows with every status word, a missing move's frame, the links, the hedging table.
+    const narrative = report.getByTestId("print-narrative");
+    await expect(narrative).toBeVisible();
+    await expect(narrative.getByTestId("narrative-section")).toHaveCount(3);
+    await expect(narrative.locator(".nmap-cell-status")).toHaveCount(NARRATIVE.sections.reduce((n, s) => n + s.moves.length, 0));
+    await expect(narrative.locator("details")).toHaveCount(0);
+    await expect(narrative).toContainText(NARRATIVE.sections[0]!.moves[1]!.frame);
+    await expect(narrative.getByTestId("narrative-link")).toHaveCount(2);
+    await expect(narrative.getByTestId("narrative-hedging-row")).toHaveCount(3);
+    expect(await narrative.evaluate((el) => getComputedStyle(el).breakBefore)).toBe("page");
     await expect(report).toContainText("Nothing was sent anywhere");
 
     // After printing the report is gone again; the screen is as before.

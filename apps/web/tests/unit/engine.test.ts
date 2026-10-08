@@ -33,25 +33,31 @@ describe("contract version", () => {
 });
 
 describe("S4 options on every request", () => {
-  it("names the article type (Auto unless chosen) and whether the brief is wanted", () => {
+  it("names the article type (Auto unless chosen) and whether the brief and the narrative map are wanted", () => {
     expect(buildRequest({ content: "x", format: "plain", showPreferences: false })).toEqual({
       content: "x",
       format: "plain",
-      options: { show_preferences: false, document_type: "auto", review: false },
+      options: { show_preferences: false, document_type: "auto", review: false, narrative: false },
     });
-    expect(buildRequest({ content: "x", format: "latex", showPreferences: true, documentType: "commentary", review: true }).options).toEqual({
+    expect(
+      buildRequest({ content: "x", format: "latex", showPreferences: true, documentType: "commentary", review: true, narrative: true }).options,
+    ).toEqual({
       show_preferences: true,
       document_type: "commentary",
       review: true,
+      narrative: true,
     });
     expect(buildRequest({ content: "x", format: "plain", showPreferences: false, documentType: null }).options?.document_type).toBe("auto");
+    // The two whole-document reads are independent flags: the brief without the map, and the map alone.
+    expect(buildRequest({ content: "x", format: "plain", showPreferences: false, review: true }).options?.narrative).toBe(false);
+    expect(buildRequest({ content: "x", format: "plain", showPreferences: false, narrative: true }).options?.review).toBe(false);
   });
 
   it("sends them on the wire", async () => {
     respond({ ...minimal, schema_version: "1" });
-    await analyze({ ...params, documentType: "grant", review: true }, "http://engine.test");
+    await analyze({ ...params, documentType: "grant", review: true, narrative: true }, "http://engine.test");
     const [, init] = vi.mocked(fetch).mock.calls[0]!;
-    expect(JSON.parse(String(init!.body)).options).toEqual({ show_preferences: false, document_type: "grant", review: true });
+    expect(JSON.parse(String(init!.body)).options).toEqual({ show_preferences: false, document_type: "grant", review: true, narrative: true });
   });
 
   it("/v1/rules carries the article types; an older engine's answer (no profiles, odd entries) still works", async () => {

@@ -210,11 +210,20 @@ export function Checker() {
         setAnnouncement("");
       };
       try {
-        // The brief is always asked for here: the website has no Draft stage
-        // of its own, and the engine applies the account's choice.
+        // The brief and the narrative map are always asked for here: the
+        // website has no Draft stage of its own, and the engine applies the
+        // account's choice.
         if (target.kind === "paste") {
           const r = await analyze(
-            { content: submitted, format, showPreferences: prefs, documentType: type, review: true, signal: ctrl.signal },
+            {
+              content: submitted,
+              format,
+              showPreferences: prefs,
+              documentType: type,
+              review: true,
+              narrative: true,
+              signal: ctrl.signal,
+            },
             undefined,
             auth,
           );
@@ -225,7 +234,7 @@ export function Checker() {
           } else fail(r.error);
         } else {
           const r = await analyzeFile(
-            { file: target.file, showPreferences: prefs, documentType: type, review: true, signal: ctrl.signal },
+            { file: target.file, showPreferences: prefs, documentType: type, review: true, narrative: true, signal: ctrl.signal },
             undefined,
             auth,
           );

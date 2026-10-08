@@ -69,6 +69,32 @@ own "Whole document" group so they are never lost. The chooser starts at
   In Draft the tab says the brief needs Revise, with a switch where the
   surface has one (Word). Nothing of the brief is stored.
 
+## Narrative map (S4)
+
+- **The map is the third view of the same check** (Suggestions |
+  Reviewer's brief | Narrative map), asked for with the brief and shown at
+  the reading measure with the brief's dividers. It opens with the engine's
+  one-line note, then one strip per section: the section's name, how many
+  of its expected moves are present ("2 of 5 moves present"), and the moves
+  in order as small hairline cells. A move's status is shown by shape and
+  word, never by colour: a filled dot for present, a hollow dot in a dashed
+  cell with the word "missing", a half dot with the words "out of order".
+  The row wraps on a phone and is a vertical list in the Word pane.
+- **Under each strip** the missing and out-of-order moves open to their
+  question (bold), the lesson in everyday words, a frame to fill in (serif,
+  in a dashed box, captioned "A frame to fill in; the words are yours": a
+  template, never a sentence written for the author) and the source set
+  like a card's. A present move keeps the writer's own sentence, quoted in
+  the serif, behind "Show the sentence" (a native disclosure, closed).
+- **Then** "Argument: missing links" (section, message, source) and
+  "Hedging across the document": a table with one row per section, hedges
+  and boosters per 100 words and the reading word, every value in text; a
+  trajectory to notice, not a score. No meters, no bars, no colour by
+  verdict. Headings with no expected moves are named in one line. In Draft
+  the tab says the map needs Revise, with a switch in Word; an engine
+  without a map is said in one line. On paper the map follows the brief on
+  its own page, the strip as text rows and every sentence open.
+
 ## The printable report (S4)
 
 - **"Print or save as PDF"** sits beside the results heading as a link-style
@@ -78,7 +104,8 @@ own "Whole document" group so they are never lost. The chooser starts at
   counts, sections, the profile line, a one-line key), then the text with
   every highlight numbered on the left and the suggestions under the same
   numbers on the right, whole-document checks after them, then the
-  reviewer's brief on a new page, and a footer saying nothing was stored.
+  reviewer's brief on a new page, the narrative map on the page after it,
+  and a footer saying nothing was stored.
 - Light ink only: a grey tint on highlights, an underline whose style says
   the category (solid, double, dotted, dashed), bold numbers, no colour by
   verdict, no meters. A4 and Letter both fit; the two columns are a grid,

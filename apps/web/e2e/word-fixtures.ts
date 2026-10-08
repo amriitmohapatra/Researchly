@@ -8,13 +8,14 @@ import type {
   AnalyzeWordRequest,
   AnalyzeWordResponse,
   HealthResponse,
+  NarrativeMap,
   ReviewReport,
   RuleInfo,
   TierHealth,
   WordSuggestion,
 } from "@researchly/contract";
 import { fakeOfficeScript, type FakeWordConfig, type FakeWordState } from "./fake-office";
-import { profileFor, PROFILES, REVIEW_SOURCE } from "./fixtures";
+import { NARRATIVE_SOURCE, profileFor, PROFILES, REVIEW_SOURCE } from "./fixtures";
 
 export const OFFICE_JS = "https://appsforoffice.microsoft.com/lib/1/hosted/office.js";
 export const LOCAL_ENGINE = "http://localhost:3517";
@@ -227,6 +228,118 @@ export const WORD_REVIEW: ReviewReport = {
   ],
 };
 
+const WORD_MOVE_SOURCE = "J. M. Swales (1990), Genre Analysis, Cambridge University Press";
+
+/** The narrative map for DOC (S4b). Synthetic; the evidence sentences are the document's own. */
+export const WORD_NARRATIVE: NarrativeMap = {
+  note: "4 expected moves are missing; each one below has a question and a frame to fill in.",
+  profile: "manuscript",
+  source: NARRATIVE_SOURCE,
+  unmapped: [],
+  sections: [
+    {
+      section: "methods",
+      label: "Methods",
+      sentences: 2,
+      words: 21,
+      present: 1,
+      expected: 2,
+      moves: [
+        {
+          id: "methods.data",
+          label: "The data",
+          status: "missing",
+          question: "Does the Methods section say what data were used, and where they came from?",
+          plain: "A reader judges the result by the data behind it. Say what was collected, from whom, and when.",
+          frame: "“[Data] were collected from [source] between [start] and [end].”",
+          source: WORD_MOVE_SOURCE,
+          evidence: null,
+          note: "",
+        },
+        {
+          id: "methods.analysis",
+          label: "The analysis",
+          status: "present",
+          question: "Does the Methods section say how the data were analysed?",
+          plain: "The analysis is what turns data into a finding. Name the model and what it was asked to do.",
+          frame: "“[Outcome] was modelled with [method], with [key choice] because [reason].”",
+          source: WORD_MOVE_SOURCE,
+          evidence: "In order to estimate the effective reproduction number, a renewal model was fitted.",
+          note: "",
+        },
+      ],
+    },
+    {
+      section: "discussion",
+      label: "Discussion",
+      sentences: 1,
+      words: 17,
+      present: 1,
+      expected: 4,
+      moves: [
+        {
+          id: "discussion.finding",
+          label: "The main finding, restated",
+          status: "present",
+          question: "Does the Discussion open by restating the main finding?",
+          plain: "The reader has just come through the Results. Open by saying, in one sentence, what they showed.",
+          frame: "“In this study we found that [main finding].”",
+          source: WORD_MOVE_SOURCE,
+          evidence: "It is clearly proven that the the effect of vector control was large, and the the data agree.",
+          note: "",
+        },
+        {
+          id: "discussion.prior",
+          label: "Against earlier work",
+          status: "missing",
+          question: "Does the Discussion compare the findings with earlier work?",
+          plain: "A finding means more next to what was known before. Say whether it agrees, and if not, why.",
+          frame: "“Our estimate is [consistent with / higher than] [earlier work], which [reason].”",
+          source: WORD_MOVE_SOURCE,
+          evidence: null,
+          note: "",
+        },
+        {
+          id: "discussion.limits",
+          label: "What this cannot show",
+          status: "missing",
+          question: "Does the Discussion state the limitations?",
+          plain: "A limitation stated by the author is a boundary; one found by the reviewer is a rebuttal. State them first.",
+          frame: "“This study has limitations. First, [constraint], which means [bounded consequence].”",
+          source: WORD_MOVE_SOURCE,
+          evidence: null,
+          note: "",
+        },
+        {
+          id: "discussion.implication",
+          label: "What should change",
+          status: "missing",
+          question: "Does the ending say what a reader could do with this?",
+          plain: "The ending widens back out: say what should change in the field or in practice, and for whom.",
+          frame: "“[Decision-makers] could use this to [action], provided [condition].”",
+          source: WORD_MOVE_SOURCE,
+          evidence: null,
+          note: "",
+        },
+      ],
+    },
+  ],
+  missing_links: [
+    {
+      section: "discussion",
+      label: "Discussion",
+      code: "claim_without_warrant",
+      message:
+        "1 claim-type sentence in the Discussion but no warrant signal (because, this suggests that, consistent with). The reader is given the claim but not why the evidence supports it.",
+      source: "M. Wallace & A. Wray (2016), Critical Reading and Writing for Postgraduates, 3rd ed., SAGE; S. Toulmin (1958), The Uses of Argument",
+    },
+  ],
+  hedging: [
+    { section: "methods", label: "Methods", words: 21, hedges_per_100w: 0, boosters_per_100w: 0, reading: "flat" },
+    { section: "discussion", label: "Discussion", words: 17, hedges_per_100w: 0, boosters_per_100w: 5.88, reading: "assertive" },
+  ],
+};
+
 export const reviseResponse = {
   schema_version: "1",
   signed_in: false,
@@ -235,6 +348,7 @@ export const reviseResponse = {
   hidden_by_mode: 0,
   profile: profileFor("auto"),
   review: WORD_REVIEW,
+  narrative: WORD_NARRATIVE,
   suggestions: ALL,
   counts: { correction: 4, improvement: 2, convention: 2 },
   hidden_preferences: 1,
@@ -258,12 +372,18 @@ export const draftResponse = {
   suggestions: SENTENCE_LEVEL,
   counts: { correction: 4, improvement: 2, convention: 1 },
   review: null,
+  narrative: null,
 } satisfies AnalyzeWordResponse;
 
-/** The answer for a request, as the engine would give it: the stage, the profile asked for, the brief only when asked. */
+/** The answer for a request, as the engine would give it: the stage, the profile asked for, the brief and the map only when asked. */
 export function wordResponseFor(req: AnalyzeWordRequest): AnalyzeWordResponse {
   const base = req.options?.mode === "draft" ? draftResponse : reviseResponse;
-  return { ...base, profile: profileFor(req.options?.document_type), review: req.options?.review ? WORD_REVIEW : null };
+  return {
+    ...base,
+    profile: profileFor(req.options?.document_type),
+    review: req.options?.review ? WORD_REVIEW : null,
+    narrative: req.options?.narrative ? WORD_NARRATIVE : null,
+  };
 }
 
 export const healthResponse = (tiers: TierHealth[] = HEALTHY) =>

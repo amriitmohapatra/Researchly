@@ -4,10 +4,11 @@ import { useMemo } from "react";
 import type { AnalyzeResponse, SourceInfo, Suggestion } from "@researchly/contract";
 import { categoryMeta, countByCategory, CATEGORIES, CATEGORY_ORDER, sectionLabel } from "@/lib/categories";
 import { markNumbers, numberSuggestions, printedAt, reportTitle } from "@/lib/print";
-import { briefState, profileLine } from "@/lib/profiles";
+import { briefState, narrativeState, profileLine } from "@/lib/profiles";
 import { isDocumentWide, type ScopeMap } from "@/lib/scope";
 import { resolveSpans, segment } from "@/lib/segments";
 import { shownSuggestions } from "@/lib/view";
+import { NarrativeMap } from "./NarrativeMap";
 import { ReviewBrief } from "./ReviewBrief";
 
 interface Props {
@@ -23,7 +24,8 @@ interface Props {
 /**
  * One check on paper (S4): the text with its highlights numbered on the
  * left, the suggestions under the same numbers on the right, then the
- * reviewer's brief on its own page. Rendered only for printing (the
+ * reviewer's brief on its own page and the narrative map (S4b) on the page
+ * after it. Rendered only for printing (the
  * stylesheet hides it on screen and hides everything else on paper) and
  * mounted only while the print dialog is open, so a long document is not
  * laid out twice for nothing. Everything here is the same data the screen
@@ -42,6 +44,7 @@ export function PrintReport({ data, submittedText, showPreferences, source, scop
   const sections = data.sections_detected.map(sectionLabel).filter((s): s is string => s !== null);
   const profile = profileLine(data.profile);
   const brief = briefState(data);
+  const narrative = narrativeState(data);
 
   const item = (s: Suggestion) => {
     const plain = s.plain.trim() || s.why.trim();
@@ -128,6 +131,17 @@ export function PrintReport({ data, submittedText, showPreferences, source, scop
           <p className="print-muted">This check ran in Draft mode, which has no brief. Check again in Revise mode to include it.</p>
         ) : (
           <p className="print-muted">This engine did not return a brief for this check.</p>
+        )}
+      </section>
+
+      <section className="print-narrative" aria-label="Narrative map" data-testid="print-narrative">
+        <h2>Narrative map</h2>
+        {narrative.kind === "ready" ? (
+          <NarrativeMap state={narrative} variant="print" />
+        ) : narrative.kind === "needs_revise" ? (
+          <p className="print-muted">This check ran in Draft mode, which has no narrative map. Check again in Revise mode to include it.</p>
+        ) : (
+          <p className="print-muted">This engine did not return a narrative map for this check.</p>
         )}
       </section>
 

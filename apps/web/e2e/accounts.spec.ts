@@ -171,7 +171,7 @@ test.describe("signed in", () => {
     expect(calls[0]!.json).toEqual({
       content: PASTE_TEXT,
       format: "plain",
-      options: { show_preferences: false, document_type: "auto", review: true },
+      options: { show_preferences: false, document_type: "auto", review: true, narrative: true },
     });
 
     await menu.focus();
@@ -318,7 +318,12 @@ test.describe("uploads", () => {
     expect(c.path).toBe("/v1/analyze-file");
     expect(c.headers["content-type"]).toBe("application/octet-stream");
     expect(c.headers["x-researchly-filename"]).toBe("Kapitel-%C3%BC%205.md");
-    expect(JSON.parse(c.headers["x-researchly-options"]!)).toEqual({ show_preferences: false, document_type: "auto", review: true });
+    expect(JSON.parse(c.headers["x-researchly-options"]!)).toEqual({
+      show_preferences: false,
+      document_type: "auto",
+      review: true,
+      narrative: true,
+    });
     expect(tokenLabel(c.authorization)).toBe("initial");
     expect(c.bytes).toBe(Buffer.byteLength(MD_TEXT));
 

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { createPortal, flushSync } from "react-dom";
 import type { AnalyzeResponse, SourceInfo, Suggestion } from "@researchly/contract";
 import { CATEGORIES, CATEGORY_ORDER, countByCategory, sectionLabel } from "@/lib/categories";
-import { briefState, profileLine } from "@/lib/profiles";
+import { briefState, narrativeState, profileLine } from "@/lib/profiles";
 import type { ScopeMap } from "@/lib/scope";
 import { resolveSpans, segment } from "@/lib/segments";
 import { buildLocator, isMultiFile } from "@/lib/source";
@@ -21,6 +21,7 @@ import { CategoryIcon } from "./CategoryIcon";
 import { DocumentView } from "./DocumentView";
 import { HealthBanner } from "./HealthBanner";
 import { MetricsPanel } from "./MetricsPanel";
+import { NarrativeMap } from "./NarrativeMap";
 import { PrintReport } from "./PrintReport";
 import { ReviewBrief } from "./ReviewBrief";
 import { SuggestionCard, type CardActions } from "./SuggestionCard";
@@ -40,7 +41,7 @@ interface Props {
   actions?: CardActions | null;
   /** Rule scopes from the engine's registry, when loaded; null means the built-in list applies. */
   scopes?: ScopeMap | null;
-  /** Suggestions, or the reviewer's brief (S4). Held by the parent so a re-check keeps the view. */
+  /** Suggestions, the reviewer's brief (S4) or the narrative map (S4b). Held by the parent so a re-check keeps the view. */
   view: ResultsView;
   onView: (v: ResultsView) => void;
 }
@@ -198,7 +199,7 @@ export function Results({
           </button>
           <span id={printHelpId} className="sr-only">
             Opens your browser&rsquo;s print dialog with the text, its highlights and the suggestions side by side, then the
-            reviewer&rsquo;s brief. Choose Save as PDF there to keep a file. Nothing leaves this page.
+            reviewer&rsquo;s brief and the narrative map. Choose Save as PDF there to keep a file. Nothing leaves this page.
           </span>
         </p>
       </div>
@@ -238,6 +239,16 @@ export function Results({
           data-testid="brief-panel"
         >
           <ReviewBrief state={briefState(data)} />
+        </div>
+      ) : view === "narrative" ? (
+        <div
+          role="tabpanel"
+          id={viewIds(tabsId, "narrative").panel}
+          aria-labelledby={viewIds(tabsId, "narrative").tab}
+          className="view-panel"
+          data-testid="narrative-panel"
+        >
+          <NarrativeMap state={narrativeState(data)} />
         </div>
       ) : shown.length === 0 ? (
         <div role="tabpanel" id={viewIds(tabsId, "suggestions").panel} aria-labelledby={viewIds(tabsId, "suggestions").tab}>

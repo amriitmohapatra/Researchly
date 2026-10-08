@@ -2,12 +2,13 @@
 
 import type { KeyboardEvent } from "react";
 
-/** The two views of one check: the suggestions, or the critical reader's brief (S4). */
-export type ResultsView = "suggestions" | "brief";
+/** The three views of one check: the suggestions, the critical reader's brief (S4), or the narrative map (S4b). */
+export type ResultsView = "suggestions" | "brief" | "narrative";
 
 export const VIEWS: readonly { id: ResultsView; label: string }[] = [
   { id: "suggestions", label: "Suggestions" },
   { id: "brief", label: "Reviewer’s brief" },
+  { id: "narrative", label: "Narrative map" },
 ];
 
 /** The ids a tab and its panel point at, from one base (useId). */

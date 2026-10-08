@@ -54,15 +54,23 @@ export interface CheckParams {
   documentType?: DocumentType | null;
   /** Also ask for the critical reader's brief (a whole-document read; Revise only). */
   review?: boolean;
+  /** Also ask for the narrative map (S4b): a whole-document read, sent exactly like the brief. */
+  narrative?: boolean;
   signal?: AbortSignal;
 }
 
 /** The S4 options every analysis call carries, always explicit, so a request reads the same from every surface. */
-export function analysisOptions(p: { showPreferences: boolean; documentType?: DocumentType | null; review?: boolean }) {
+export function analysisOptions(p: {
+  showPreferences: boolean;
+  documentType?: DocumentType | null;
+  review?: boolean;
+  narrative?: boolean;
+}) {
   return {
     show_preferences: p.showPreferences,
     document_type: p.documentType ?? "auto",
     review: p.review ?? false,
+    narrative: p.narrative ?? false,
   } as const;
 }
 
@@ -110,7 +118,7 @@ export async function withBearer<T>(
 }
 
 export function buildRequest(
-  p: Pick<CheckParams, "content" | "format" | "showPreferences" | "documentType" | "review">,
+  p: Pick<CheckParams, "content" | "format" | "showPreferences" | "documentType" | "review" | "narrative">,
 ): AnalyzeRequest {
   return {
     content: p.content,
@@ -240,6 +248,7 @@ export interface FileCheckParams {
   showPreferences: boolean;
   documentType?: DocumentType | null;
   review?: boolean;
+  narrative?: boolean;
   signal?: AbortSignal;
 }
 
@@ -262,7 +271,7 @@ export function encodeFilename(name: string): string {
 /** Everything /v1/analyze-file needs except the transport: unit-tested. */
 export function buildFileRequest(
   file: Blob & { name: string },
-  opts: { showPreferences: boolean; documentType?: DocumentType | null; review?: boolean },
+  opts: { showPreferences: boolean; documentType?: DocumentType | null; review?: boolean; narrative?: boolean },
   token: string | null,
 ): { method: "POST"; headers: Record<string, string>; body: Blob } {
   return {
@@ -289,7 +298,11 @@ export async function analyzeFile(
   return withBearer(auth, (token) =>
     call(
       `${engineUrl}/v1/analyze-file`,
-      buildFileRequest(p.file, { showPreferences: p.showPreferences, documentType: p.documentType, review: p.review }, token),
+      buildFileRequest(
+        p.file,
+        { showPreferences: p.showPreferences, documentType: p.documentType, review: p.review, narrative: p.narrative },
+        token,
+      ),
       p.signal,
       looksLikeAnalyzeFileResponse,
       { engineUrl, upload: true },
@@ -348,11 +361,13 @@ export interface WordCheckParams {
   documentType?: DocumentType | null;
   /** The critical reader's brief: asked for in Revise, never in Draft (a whole-document read). */
   review?: boolean;
+  /** The narrative map (S4b): asked for in Revise only, like the brief. */
+  narrative?: boolean;
   signal?: AbortSignal;
 }
 
 export function buildWordRequest(
-  p: Pick<WordCheckParams, "paragraphs" | "showPreferences" | "mode" | "disabledRules" | "documentType" | "review">,
+  p: Pick<WordCheckParams, "paragraphs" | "showPreferences" | "mode" | "disabledRules" | "documentType" | "review" | "narrative">,
 ): AnalyzeWordRequest {
   return {
     paragraphs: p.paragraphs,

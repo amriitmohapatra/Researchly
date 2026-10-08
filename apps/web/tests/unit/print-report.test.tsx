@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { PrintReport } from "@/components/PrintReport";
-import { happyResponse, REVIEW, SAMPLE_TEXT, withPreferencesResponse } from "../../e2e/fixtures";
+import { happyResponse, NARRATIVE, REVIEW, SAMPLE_TEXT, withPreferencesResponse } from "../../e2e/fixtures";
 
 const at = new Date(Date.UTC(2026, 9, 8, 12, 5));
 const texts = (html: string, re: RegExp) => [...html.matchAll(re)].map((m) => m[1]);
@@ -50,6 +50,38 @@ describe("the printable report", () => {
     expect(draft).toContain("Draft mode, which has no brief");
     const none = renderToStaticMarkup(<PrintReport data={{ ...happyResponse, review: null }} submittedText={SAMPLE_TEXT} showPreferences={false} at={at} />);
     expect(none).toContain("did not return a brief");
+  });
+
+  it("follows the brief with the narrative map on its own page: strips as text rows, the missing moves with question, lesson and frame, the links, the hedging table", () => {
+    const page = html.slice(html.indexOf('class="print-narrative"'), html.indexOf('class="print-foot"'));
+    expect(page.indexOf('class="print-narrative"')).toBeGreaterThanOrEqual(0);
+    expect(html.indexOf('class="print-brief"')).toBeLessThan(html.indexOf('class="print-narrative"'));
+    expect(page).toContain("Narrative map");
+    expect(page).toContain('class="nmap nmap-print"');
+    expect(texts(page, /data-testid="narrative-section" data-section="([a-z]+)"/g)).toEqual(["introduction", "methods", "discussion"]);
+    // Every move in text with its status word; nothing behind a disclosure on paper.
+    expect(page.match(/class="nmap-cell-status"/g)).toHaveLength(NARRATIVE.sections.reduce((n, s) => n + s.moves.length, 0));
+    expect(page).not.toContain("<details");
+    const gap = NARRATIVE.sections[0]!.moves[1]!;
+    expect(page).toContain(gap.question);
+    expect(page).toContain(gap.plain);
+    expect(page).toContain(gap.frame);
+    expect(page).toContain("A frame to fill in; the words are yours.");
+    expect(page).toContain("Appears after what should change.");
+    expect(page).toContain("Argument: missing links");
+    expect(page).toContain('data-code="claim_without_warrant"');
+    expect(texts(page, /data-testid="narrative-hedging-row" data-section="([a-z]+)"/g)).toEqual(["introduction", "methods", "discussion"]);
+    expect(page).toContain("heavily hedged");
+  });
+
+  it("says when there is no narrative map instead of leaving a gap", () => {
+    const draft = renderToStaticMarkup(
+      <PrintReport data={{ ...happyResponse, mode: "draft", review: null, narrative: null }} submittedText={SAMPLE_TEXT} showPreferences={false} at={at} />,
+    );
+    expect(draft).toContain("Draft mode, which has no narrative map");
+    const none = renderToStaticMarkup(<PrintReport data={{ ...happyResponse, narrative: null }} submittedText={SAMPLE_TEXT} showPreferences={false} at={at} />);
+    expect(none).toContain("did not return a narrative map");
+    expect(none).not.toContain('data-testid="narrative-section"');
   });
 
   it("prints preferences only when they are shown on screen", () => {

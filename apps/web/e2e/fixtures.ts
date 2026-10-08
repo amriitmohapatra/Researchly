@@ -8,6 +8,7 @@ import type {
   AnalyzeResponse,
   DocumentType,
   ErrorResponse,
+  NarrativeMap,
   ProfileChoice,
   ProfileInfo,
   ReviewReport,
@@ -148,6 +149,191 @@ export const REVIEW: ReviewReport = {
   ],
 };
 
+/* ---------- S4b: the narrative map ---------- */
+
+export const NARRATIVE_SOURCE =
+  "J. M. Swales (1990), Genre Analysis, Cambridge University Press (the three moves of an introduction); M. Wallace & A. Wray (2016), Critical Reading and Writing for Postgraduates, 3rd ed., SAGE; The Craft of Scientific Writing (Researchly's founding guide)";
+
+const MOVE_SOURCE = "J. M. Swales (1990), Genre Analysis, Cambridge University Press";
+const LINK_SOURCE = "M. Wallace & A. Wray (2016), Critical Reading and Writing for Postgraduates, 3rd ed., SAGE; S. Toulmin (1958), The Uses of Argument";
+
+/**
+ * The narrative map for SAMPLE_TEXT. Synthetic: the questions, lessons and
+ * frames are Researchly's own wording; the evidence sentences are the
+ * sample's own. One move is out of order (the Discussion reads its meaning
+ * after what should change), six are missing.
+ */
+export const NARRATIVE: NarrativeMap = {
+  note: "6 expected moves are missing; each one below has a question and a frame to fill in.",
+  profile: "manuscript",
+  source: NARRATIVE_SOURCE,
+  unmapped: [],
+  sections: [
+    {
+      section: "introduction",
+      label: "Introduction",
+      sentences: 2,
+      words: 19,
+      present: 1,
+      expected: 3,
+      moves: [
+        {
+          id: "intro.territory",
+          label: "Why it matters",
+          status: "present",
+          question: "Does the opening say why this area matters?",
+          plain: "A reader decides in the first lines whether the problem is worth their time. Say what is at stake before saying what you did.",
+          frame: "“[Topic] is a major [burden / challenge / question] in [setting], because [consequence].”",
+          source: MOVE_SOURCE,
+          evidence: "Dengue 🦟 remains a major burden across South-East Asia.",
+          note: "",
+        },
+        {
+          id: "intro.gap",
+          label: "What is missing",
+          status: "missing",
+          question: "Does the Introduction say what is still unknown?",
+          plain: "The gap is the reason the work exists. Without it, the reader cannot tell whether the question was worth asking.",
+          frame: "“Although [what is known], little is known about [the specific unknown], so [the consequence of not knowing].”",
+          source: MOVE_SOURCE,
+          evidence: null,
+          note: "",
+        },
+        {
+          id: "intro.aim",
+          label: "What you set out to do",
+          status: "missing",
+          question: "Is there a sentence that says what this work set out to answer?",
+          plain: "One sentence near the end of the Introduction tells the reader what to expect from the rest. Without it, every section has to be read to find out.",
+          frame: "“We therefore set out to [determine / estimate / test] [the research question].”",
+          source: MOVE_SOURCE,
+          evidence: null,
+          note: "",
+        },
+      ],
+    },
+    {
+      section: "methods",
+      label: "Methods",
+      sentences: 4,
+      words: 36,
+      present: 2,
+      expected: 2,
+      moves: [
+        {
+          id: "methods.data",
+          label: "The data",
+          status: "present",
+          question: "Does the Methods section say what data were used, and where they came from?",
+          plain: "A reader judges the result by the data behind it. Say what was collected, from whom, and when.",
+          frame: "“[Data] were collected from [source] between [start] and [end].”",
+          source: MOVE_SOURCE,
+          evidence: "Data was collected from 2019 to 2023 However the reporting delay varied.",
+          note: "",
+        },
+        {
+          id: "methods.analysis",
+          label: "The analysis",
+          status: "present",
+          question: "Does the Methods section say how the data were analysed?",
+          plain: "The analysis is what turns data into a finding. Name the model and what it was asked to do.",
+          frame: "“[Outcome] was modelled with [method], with [key choice] because [reason].”",
+          source: MOVE_SOURCE,
+          evidence: "The samples were analysed using a renewal model.",
+          note: "",
+        },
+      ],
+    },
+    {
+      section: "discussion",
+      label: "Discussion",
+      sentences: 2,
+      words: 19,
+      present: 2,
+      expected: 5,
+      moves: [
+        {
+          id: "discussion.finding",
+          label: "The main finding, restated",
+          status: "missing",
+          question: "Does the Discussion open by restating the main finding?",
+          plain: "The reader has just come through the Results. Open by saying, in one sentence, what they showed.",
+          frame: "“In this study we found that [main finding].”",
+          source: MOVE_SOURCE,
+          evidence: null,
+          note: "",
+        },
+        {
+          id: "discussion.meaning",
+          label: "What it means",
+          status: "out_of_order",
+          question: "Does the Discussion say why the evidence supports the claims?",
+          plain: "A claim needs a bridge to its evidence. Say what the finding suggests, and why the evidence supports it.",
+          frame: "“This suggests that [claim], because [why the evidence supports it].”",
+          source: MOVE_SOURCE,
+          evidence: "This could potentially suggest seasonal forcing.",
+          note: "Appears after what should change.",
+        },
+        {
+          id: "discussion.prior",
+          label: "Against earlier work",
+          status: "missing",
+          question: "Does the Discussion compare the findings with earlier work?",
+          plain: "A finding means more next to what was known before. Say whether it agrees, and if not, why.",
+          frame: "“Our estimate is [consistent with / higher than] [earlier work], which [reason].”",
+          source: MOVE_SOURCE,
+          evidence: null,
+          note: "",
+        },
+        {
+          id: "discussion.limits",
+          label: "What this cannot show",
+          status: "missing",
+          question: "Does the Discussion state the limitations?",
+          plain: "A limitation stated by the author is a boundary; one found by the reviewer is a rebuttal. State them first.",
+          frame: "“This study has limitations. First, [constraint], which means [bounded consequence].”",
+          source: MOVE_SOURCE,
+          evidence: null,
+          note: "",
+        },
+        {
+          id: "discussion.implication",
+          label: "What should change",
+          status: "present",
+          question: "Does the ending say what a reader could do with this?",
+          plain: "The ending widens back out: say what should change in the field or in practice, and for whom.",
+          frame: "“[Decision-makers] could use this to [action], provided [condition].”",
+          source: MOVE_SOURCE,
+          evidence: "In order to understand the the dynamics of transmission, further studies are needed.",
+          note: "",
+        },
+      ],
+    },
+  ],
+  missing_links: [
+    {
+      section: "discussion",
+      label: "Discussion",
+      code: "claim_without_warrant",
+      message:
+        "1 claim-type sentence in the Discussion but no warrant signal (because, this suggests that, consistent with). The reader is given the claim but not why the evidence supports it.",
+      source: LINK_SOURCE,
+    },
+    {
+      section: "discussion",
+      label: "Discussion",
+      code: "claim_without_grounds",
+      message: "A claim in the Discussion with no evidence signal (numbers, citations, reported findings) in the same section: what is it standing on?",
+      source: LINK_SOURCE,
+    },
+  ],
+  hedging: [
+    { section: "introduction", label: "Introduction", words: 19, hedges_per_100w: 0, boosters_per_100w: 5.26, reading: "assertive" },
+    { section: "methods", label: "Methods", words: 36, hedges_per_100w: 0, boosters_per_100w: 0, reading: "flat" },
+    { section: "discussion", label: "Discussion", words: 19, hedges_per_100w: 10.53, boosters_per_100w: 0, reading: "heavily hedged" },
+  ],
+};
+
 /** show_preferences: false — the engine withholds preferences and reports how many. */
 export const happyResponse = {
   schema_version: "1",
@@ -165,6 +351,7 @@ export const happyResponse = {
   hidden_by_mode: 0,
   profile: profileFor("auto"),
   review: REVIEW,
+  narrative: NARRATIVE,
 } satisfies AnalyzeResponse;
 
 /** show_preferences: true */
@@ -261,8 +448,13 @@ export const RULES_REGISTRY: RuleInfo[] = ["C201", "P110", "V305", "V310", "G110
   scope: id === "W211" ? "document" : "sentence",
 }));
 
-/** Pick the right success fixture for a request, as the real engine would: preferences, the profile asked for, the brief only when asked. */
+/** Pick the right success fixture for a request, as the real engine would: preferences, the profile asked for, the brief and the map only when asked. */
 export function responseFor(req: AnalyzeRequest): AnalyzeResponse {
   const base = req.options?.show_preferences ? withPreferencesResponse : happyResponse;
-  return { ...base, profile: profileFor(req.options?.document_type), review: req.options?.review ? REVIEW : null };
+  return {
+    ...base,
+    profile: profileFor(req.options?.document_type),
+    review: req.options?.review ? REVIEW : null,
+    narrative: req.options?.narrative ? NARRATIVE : null,
+  };
 }

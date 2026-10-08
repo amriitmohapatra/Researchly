@@ -2135,6 +2135,7 @@ main:focus {
 
 .view-tabs {
   display: flex;
+  flex-wrap: wrap; /* three tabs since S4b: on a phone or in Word's pane the strip takes two lines, never a scrollbar */
   gap: 4px;
   margin-top: 16px;
   border-bottom: 1px solid var(--line);
@@ -2301,6 +2302,258 @@ main:focus {
   padding: 12px 0 10px;
 }
 
+/* ---------- S4b: the narrative map ----------
+ * The third view of a check. One strip per section: the expected moves in
+ * order as small cells, each saying present, missing or out of order by
+ * the dot's shape (filled, hollow, half) and by the word, never by colour.
+ * Under the strip the missing and out-of-order moves open to a question,
+ * the lesson and a frame to fill in (serif, in a dashed box: a template,
+ * not a sentence of the writer's); a present move keeps the writer's own
+ * sentence behind a disclosure. Then the argument's missing links and the
+ * hedging table, every value in text. Same tokens as the brief; no meters.
+ */
+.nmap {
+  margin-top: 16px;
+  max-width: var(--measure);
+}
+.nmap-note {
+  margin-bottom: 4px;
+  text-wrap: pretty;
+}
+.nmap-sections {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.nmap-section {
+  padding: 14px 0 12px;
+}
+.nmap-section + .nmap-section {
+  border-top: 1px solid var(--line);
+}
+.nmap-section-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 12px;
+  font-size: 1.0625rem;
+  font-weight: 650;
+}
+.nmap-section-meta {
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+.nmap-strip {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.nmap-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: 0.875rem;
+  line-height: 1.3;
+}
+.nmap-cell-missing {
+  border-style: dashed;
+  color: var(--ink-2);
+}
+.nmap-cell-status,
+.nmap-detail-status {
+  font-style: italic;
+  color: var(--ink-2);
+}
+.nmap-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ink);
+  background: var(--ink);
+}
+.nmap-cell-missing .nmap-dot {
+  background: transparent;
+  border-color: var(--line-strong);
+}
+.nmap-cell-out-of-order .nmap-dot {
+  background: linear-gradient(90deg, var(--ink) 50%, transparent 50%);
+}
+.nmap-details {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.nmap-detail {
+  padding-left: 12px;
+  border-left: 2px solid var(--line);
+}
+.nmap-detail-head {
+  font-size: 0.9375rem;
+}
+.nmap-detail-label {
+  font-weight: 600;
+}
+.nmap-detail-note {
+  color: var(--ink-2);
+}
+.nmap-question {
+  margin-top: 4px;
+  font-weight: 600;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+.nmap-plain {
+  margin-top: 6px;
+  font-size: 1rem;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+.nmap-frame {
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+.nmap-frame-text {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.nmap-frame-caption {
+  margin-top: 4px;
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+}
+.nmap-detail .card-source {
+  margin-top: 8px;
+}
+.nmap-sentence-summary {
+  cursor: pointer;
+  min-height: 32px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 10px;
+  font-size: 0.9375rem;
+  border-radius: var(--radius);
+}
+.nmap-sentence-link {
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.nmap-evidence {
+  margin: 6px 0 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--line-strong);
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.nmap-evidence q {
+  quotes: "\201C" "\201D";
+}
+.nmap-unmapped {
+  margin-top: 8px;
+  font-size: 0.9rem;
+  text-wrap: pretty;
+}
+.nmap-links,
+.nmap-hedging {
+  margin-top: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.nmap-links-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.nmap-link {
+  padding-left: 12px;
+  border-left: 2px solid var(--line);
+}
+.nmap-link-section {
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+.nmap-link-msg {
+  margin-top: 2px;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+.nmap-link .card-source {
+  margin-top: 6px;
+}
+.nmap-links-none {
+  margin-top: 6px;
+  font-size: 0.9375rem;
+}
+.nmap-hedging-help {
+  margin-top: 4px;
+  text-wrap: pretty;
+}
+.nmap-hedging-table {
+  width: 100%;
+  margin-top: 10px;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+}
+.nmap-hedging-table th,
+.nmap-hedging-table td {
+  padding: 6px 8px 6px 0;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+}
+.nmap-hedging-table thead th {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.nmap-hedging-table tbody th {
+  font-weight: 600;
+}
+.nmap-hedging-table .nmap-num {
+  text-align: right;
+  padding-right: 16px;
+}
+.nmap-source {
+  margin-top: 14px;
+}
+
+/* In the Word taskpane (about 320px): the strip is a vertical list. */
+.tp-results .nmap {
+  margin-top: 0;
+}
+.tp-results .nmap-strip {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+.tp-results .nmap-section {
+  padding: 12px 0 10px;
+}
+
 /* ---------- S4: the printable report (print or save as PDF) ---------- */
 
 /* On screen the report does not exist; the button beside the results heading. */
@@ -2451,6 +2704,87 @@ main:focus {
   }
   .print-brief .brief-evidence q {
     color: #000;
+  }
+  /* The narrative map (S4b) on the page after the brief: the strip as text rows, every sentence open, light ink only. */
+  .print-narrative {
+    break-before: page;
+  }
+  .print-narrative .nmap,
+  .print-narrative .brief-line {
+    margin: 0;
+    max-width: none;
+  }
+  .print-narrative .nmap-section,
+  .print-narrative .nmap-detail,
+  .print-narrative .nmap-link,
+  .print-narrative .nmap-hedging-table,
+  .print-narrative .nmap-frame {
+    break-inside: avoid;
+  }
+  .print-narrative .nmap-section,
+  .print-narrative .nmap-links,
+  .print-narrative .nmap-hedging,
+  .print-narrative .nmap-detail,
+  .print-narrative .nmap-link,
+  .print-narrative .nmap-evidence,
+  .print-narrative .nmap-hedging-table th,
+  .print-narrative .nmap-hedging-table td {
+    border-color: #bbb;
+  }
+  .print-narrative .nmap-section-title {
+    font-size: 10.5pt;
+  }
+  .print-narrative .nmap-strip {
+    display: block;
+    margin-top: 3pt;
+  }
+  .print-narrative .nmap-cell {
+    display: flex;
+    min-height: 0;
+    padding: 1pt 0;
+    border: 0;
+    background: none;
+    font-size: 9.5pt;
+    color: #000;
+  }
+  .print-narrative .nmap-dot {
+    width: 8pt;
+    height: 8pt;
+    border: 4pt solid #000;
+    background: none;
+  }
+  .print-narrative .nmap-cell-missing .nmap-dot {
+    border-width: 1pt;
+  }
+  .print-narrative .nmap-cell-out-of-order .nmap-dot {
+    border-width: 1pt;
+    background: linear-gradient(90deg, #000 50%, #fff 50%);
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .print-narrative .nmap-cell-status,
+  .print-narrative .nmap-detail-status,
+  .print-narrative .nmap-detail-note,
+  .print-narrative .nmap-frame-caption,
+  .print-narrative .nmap-evidence,
+  .print-narrative .nmap-hedging-table thead th {
+    color: #333;
+  }
+  .print-narrative .nmap-frame {
+    background: none;
+    border-color: #999;
+  }
+  .print-narrative .nmap-plain,
+  .print-narrative .nmap-link-msg {
+    font-size: 9.5pt;
+  }
+  .print-narrative .nmap-frame-text,
+  .print-narrative .nmap-evidence {
+    font-size: 10pt;
+  }
+  .print-narrative .card-source {
+    font-size: 8pt;
+    color: #444;
   }
   .print-foot {
     margin-top: 12pt;

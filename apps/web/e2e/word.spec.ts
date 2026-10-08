@@ -21,6 +21,7 @@ import {
   OFFICE_JS,
   REPEAT_2B,
   reviseResponse,
+  WORD_NARRATIVE,
   wordState,
   WORDY,
 } from "./word-fixtures";
@@ -65,7 +66,14 @@ test.describe("Word taskpane", () => {
       { text: DOC[3]!.text, style: "Normal", kind: "body" },
       { text: "Region", style: "Normal", kind: "table" },
     ]);
-    expect(body.options).toEqual({ show_preferences: false, disabled_rules: [], mode: "revise", document_type: "auto", review: true });
+    expect(body.options).toEqual({
+      show_preferences: false,
+      disabled_rules: [],
+      mode: "revise",
+      document_type: "auto",
+      review: true,
+      narrative: true,
+    });
     expect(calls[0]!.authorization).toBeUndefined();
 
     await expect(page.getByRole("heading", { name: "8 suggestions" })).toBeVisible();
@@ -195,15 +203,23 @@ test.describe("Word taskpane", () => {
     await expect(page.getByTestId("mode-draft")).toBeChecked();
   });
 
-  test("the reviewer's brief is a tab in the pane: Draft asks for Revise and switches; Check as is sent, re-checks and is said", async ({ page }) => {
+  test("the reviewer's brief and the narrative map are tabs in the pane: Draft asks for Revise and switches; Check as is sent, re-checks and is said", async ({
+    page,
+  }) => {
     await fakeOffice(page);
     const calls = await mockWordEngine(page, ENGINE);
+    // Word's sidebar: about 320px wide.
+    await page.setViewportSize({ width: 340, height: 900 });
     await page.goto("/word");
     await page.getByTestId("mode-draft").check();
     await page.getByTestId("check-document").click();
     await expect(page.getByTestId("tp-results")).toBeVisible();
-    // Draft never asks for the brief: it is a whole-document read.
+    // Draft never asks for the brief or the narrative map: both are whole-document reads.
     expect(calls[0]!.body.options?.review).toBe(false);
+    expect(calls[0]!.body.options?.narrative).toBe(false);
+    await page.getByTestId("view-narrative").click();
+    await expect(page.getByTestId("narrative-needs-revise")).toContainText("needs Revise mode");
+    await expect(page.getByTestId("narrative-switch-revise")).toBeVisible();
     await page.getByTestId("view-brief").click();
     await expect(page.getByTestId("brief-needs-revise")).toContainText("needs Revise mode");
     await expect(page.getByTestId("word-card")).toHaveCount(0);
@@ -212,6 +228,29 @@ test.describe("Word taskpane", () => {
     await expect(page.getByTestId("mode-revise")).toBeChecked();
     await expect.poll(() => calls.length).toBe(2);
     expect(calls[1]!.body.options?.review).toBe(true);
+    expect(calls[1]!.body.options?.narrative).toBe(true);
+    // The map in the pane: a vertical list per section at this width, the missing move's frame, the links and the hedging table.
+    await page.getByTestId("view-narrative").click();
+    const map = page.getByTestId("narrative-map");
+    await expect(map.getByTestId("narrative-note")).toHaveText(WORD_NARRATIVE.note);
+    const strips = map.getByTestId("narrative-section");
+    await expect(strips).toHaveCount(2);
+    const methodsCells = strips.nth(0).getByTestId("narrative-move");
+    await expect(methodsCells).toHaveCount(2);
+    await expect(methodsCells.nth(0)).toContainText("missing");
+    const [a, b] = await methodsCells.evaluateAll((els) => els.map((e) => e.getBoundingClientRect().top));
+    expect(b).toBeGreaterThan(a!);
+    const detail = strips.nth(0).getByTestId("narrative-detail").first();
+    await expect(detail.locator(".nmap-question")).toHaveText(WORD_NARRATIVE.sections[0]!.moves[0]!.question);
+    await expect(detail.locator(".nmap-frame-text")).toHaveText(WORD_NARRATIVE.sections[0]!.moves[0]!.frame);
+    await strips.nth(0).getByTestId("narrative-present").first().locator("summary").click();
+    await expect(strips.nth(0).locator("q")).toHaveText("In order to estimate the effective reproduction number, a renewal model was fitted.");
+    await expect(map.getByTestId("narrative-link")).toHaveCount(1);
+    await expect(map.getByTestId("narrative-hedging-row")).toHaveCount(2);
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
+
+    await page.getByTestId("view-brief").click();
     const questions = page.getByTestId("brief-question");
     await expect(questions).toHaveCount(5);
     await expect(questions.nth(0)).toContainText("Why am I reading this?");
