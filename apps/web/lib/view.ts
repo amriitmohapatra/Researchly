@@ -1,8 +1,11 @@
 /** Pure view-model helpers for the results screen (unit-tested). */
 import type { AnalyzeResponse, Category, Suggestion } from "@researchly/contract";
 import { CATEGORIES, CATEGORY_ORDER, countByCategory } from "./categories";
+import { splitForSection, type ScopeMap, type SectionSplit } from "./scope";
 
 export type Filter = Category | "all";
+/** The section chooser: everything, or one entry of `sections_detected`. */
+export type SectionFilter = "all" | string;
 
 /** Preferences are hidden unless the writer asked for them (CLAUDE.md #3). */
 export function shownSuggestions(data: AnalyzeResponse, showPreferences: boolean): Suggestion[] {
@@ -32,6 +35,23 @@ export function revealNeedsRecheck(data: AnalyzeResponse): boolean {
 
 export function applyFilter(list: readonly Suggestion[], filter: Filter): Suggestion[] {
   return filter === "all" ? [...list] : list.filter((s) => s.category === filter);
+}
+
+/** How many shown suggestions sit in each detected section (for the section chooser). */
+export function countBySection(list: readonly Suggestion[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const s of list) out[s.section] = (out[s.section] ?? 0) + 1;
+  return out;
+}
+
+/**
+ * The section view: sentence-level suggestions from that section, and the
+ * document-wide ones (figure references, abbreviations defined once) kept
+ * aside so they are never lost. With "all", everything is in `inSection`.
+ */
+export function applySectionFilter(list: readonly Suggestion[], section: SectionFilter, known: ScopeMap | null): SectionSplit<Suggestion> {
+  if (section === "all") return { inSection: [...list], wholeDocument: [], elsewhere: 0 };
+  return splitForSection(list, (s) => s.section === section, known);
 }
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;

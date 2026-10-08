@@ -63,6 +63,10 @@ the contract compiles as first-party source.
 - **Health**: a degraded grammar tier (or any tier in `error`/`unstarted`)
   gets a calm banner with the engine's detail and remedy. The learned `gec`
   tier being absent is normal and not shown.
+- **Rule scopes**: after the first results the page asks `GET /v1/rules`
+  once (no text) so the section view knows which rules read the whole
+  document (`lib/scope.ts`); without a registry the engine's known
+  document-wide ids stand in.
 - **CORS**: the engine must allow this site's origin, and should expose
   `Retry-After` and `X-Request-ID` (`Access-Control-Expose-Headers`).
 
@@ -77,8 +81,8 @@ Word loads `https://<site>/word` in its sidebar (manifests in
   `history.pushState/replaceState` alive, because office.js removes them in
   some hosts and Next.js's router needs them.
 - **All Office.js calls** are in `lib/word/office.ts` (read paragraphs with
-  style and table flag, find a suggestion by `snippet` + `occurrence`, select,
-  apply). Tests swap in `e2e/fake-office.ts`, which e2e serves at office.js's
+  style and table flag, find the paragraph the cursor is in for "Check this
+  section", find a suggestion by `snippet` + `occurrence`, select, apply). Tests swap in `e2e/fake-office.ts`, which e2e serves at office.js's
   own URL. Before selecting or replacing, the paragraph is re-read and must
   still hold the flagged words at the recorded offsets, Word's search must
   count the snippet as the engine did, and (to apply) the found range's text

@@ -4,7 +4,7 @@
  * `satisfies` so a contract change breaks the tests' build, not their meaning.
  */
 import type { Page, Route } from "@playwright/test";
-import type { AnalyzeWordRequest, AnalyzeWordResponse, HealthResponse, TierHealth, WordSuggestion } from "@researchly/contract";
+import type { AnalyzeWordRequest, AnalyzeWordResponse, HealthResponse, RuleInfo, TierHealth, WordSuggestion } from "@researchly/contract";
 import { fakeOfficeScript, type FakeWordConfig, type FakeWordState } from "./fake-office";
 
 export const OFFICE_JS = "https://appsforoffice.microsoft.com/lib/1/hosted/office.js";
@@ -121,6 +121,13 @@ export const REPEAT_2A = wsugg("w-repeat-2a", 3, "the the", 0, {
   message: "‘the’ is repeated.",
   replacement: "the",
 });
+/** Document-wide (rule scope "document"): shown under "Whole document" in a section view. */
+export const COMPOUND = wsugg("w-compound", 3, "vector control", 0, {
+  rule_id: "W211",
+  rule_name: "Compound spelled two ways",
+  category: "convention",
+  message: "‘vector control’ is also written ‘vector-control’ elsewhere in this document.",
+});
 export const REPEAT_2B = wsugg("w-repeat-2b", 3, "the the", 1, {
   rule_id: "S010",
   rule_name: "Repeated word",
@@ -143,7 +150,22 @@ export const DEGRADED: TierHealth[] = HEALTHY.map((t) =>
     : t,
 );
 
-const ALL = [WORDY, REPEAT_1, NOWCASTING, LONG, BOOSTER, REPEAT_2A, REPEAT_2B];
+const ALL = [WORDY, REPEAT_1, NOWCASTING, LONG, BOOSTER, REPEAT_2A, COMPOUND, REPEAT_2B];
+const SENTENCE_LEVEL = ALL.filter((s) => s.rule_id !== "W211");
+
+/** GET /v1/rules from the cloud engine: the scopes of the rules above. */
+export const WORD_RULES: RuleInfo[] = [...new Set(ALL.map((s) => s.rule_id))].map((id) => ({
+  id,
+  name: id,
+  short: "A synthetic rule for the e2e suite.",
+  why: "w",
+  plain: "p",
+  source: "s",
+  category: "improvement",
+  tier: "craft",
+  fix_safety: "review",
+  scope: id === "W211" ? "document" : "sentence",
+}));
 
 export const reviseResponse = {
   schema_version: "1",
@@ -152,7 +174,7 @@ export const reviseResponse = {
   mode: "revise",
   hidden_by_mode: 0,
   suggestions: ALL,
-  counts: { correction: 4, improvement: 2, convention: 1 },
+  counts: { correction: 4, improvement: 2, convention: 2 },
   hidden_preferences: 1,
   metrics: null,
   sections_detected: ["methods", "discussion"],
@@ -171,6 +193,8 @@ export const draftResponse = {
   ...reviseResponse,
   mode: "draft",
   hidden_by_mode: 2,
+  suggestions: SENTENCE_LEVEL,
+  counts: { correction: 4, improvement: 2, convention: 1 },
 } satisfies AnalyzeWordResponse;
 
 export const healthResponse = (tiers: TierHealth[] = HEALTHY) =>
@@ -210,13 +234,14 @@ export interface WordCall {
   authorization: string | undefined;
 }
 
-/** Mock one engine's /v1/analyze-word and /v1/health. */
+/** Mock one engine's /v1/analyze-word, /v1/health and /v1/rules (`rules`: the registry; [] for one that lists nothing). */
 export async function mockWordEngine(
   page: Page,
   base: string,
   opts: {
     respond?: (req: AnalyzeWordRequest, route: Route) => Promise<void> | void;
     health?: TierHealth[];
+    rules?: RuleInfo[];
   } = {},
 ): Promise<WordCall[]> {
   const calls: WordCall[] = [];
@@ -226,6 +251,9 @@ export async function mockWordEngine(
     const path = new URL(req.url()).pathname;
     if (path === "/v1/health") {
       return route.fulfill({ status: 200, headers: CORS, contentType: "application/json", body: JSON.stringify(healthResponse(opts.health)) });
+    }
+    if (path === "/v1/rules") {
+      return route.fulfill({ status: 200, headers: CORS, contentType: "application/json", body: JSON.stringify({ rules: opts.rules ?? WORD_RULES }) });
     }
     if (path !== "/v1/analyze-word") return route.fulfill({ status: 404, headers: CORS, body: "" });
     const body = req.postDataJSON() as AnalyzeWordRequest;

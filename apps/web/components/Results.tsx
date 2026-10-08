@@ -1,11 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { AnalyzeResponse, SourceInfo } from "@researchly/contract";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import type { AnalyzeResponse, SourceInfo, Suggestion } from "@researchly/contract";
 import { CATEGORIES, CATEGORY_ORDER, countByCategory, sectionLabel } from "@/lib/categories";
+import type { ScopeMap } from "@/lib/scope";
 import { resolveSpans, segment } from "@/lib/segments";
 import { buildLocator, isMultiFile } from "@/lib/source";
-import { applyFilter, hiddenPreferenceCount, shownSuggestions, type Filter } from "@/lib/view";
+import {
+  applyFilter,
+  applySectionFilter,
+  countBySection,
+  hiddenPreferenceCount,
+  shownSuggestions,
+  type Filter,
+  type SectionFilter,
+} from "@/lib/view";
 import { CategoryIcon } from "./CategoryIcon";
 import { DocumentView } from "./DocumentView";
 import { HealthBanner } from "./HealthBanner";
@@ -24,6 +33,8 @@ interface Props {
   source?: SourceInfo | null;
   /** Signed-in card actions (mute, add to dictionary). */
   actions?: CardActions | null;
+  /** Rule scopes from the engine's registry, when loaded; null means the built-in list applies. */
+  scopes?: ScopeMap | null;
 }
 
 type FocusRequest = { id: string; target: "mark" | "card"; seq: number };
@@ -36,8 +47,12 @@ function prefersReducedMotion(): boolean {
 
 const lineFmt = new Intl.NumberFormat("en-GB");
 
-export function Results({ data, submittedText, showPreferences, stale, busy, onRevealPreferences, source, actions }: Props) {
+export function Results({ data, submittedText, showPreferences, stale, busy, onRevealPreferences, source, actions, scopes = null }: Props) {
   const [filter, setFilter] = useState<Filter>("all");
+  // The section the writer is working on. Starts at "all" for every check
+  // (the component remounts per check) and is never stored anywhere.
+  const [section, setSection] = useState<SectionFilter>("all");
+  const sectionId = useId();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [focusReq, setFocusReq] = useState<FocusRequest | null>(null);
   const docColRef = useRef<HTMLDivElement>(null);
@@ -45,7 +60,13 @@ export function Results({ data, submittedText, showPreferences, stale, busy, onR
   const shown = useMemo(() => shownSuggestions(data, showPreferences), [data, showPreferences]);
   const counts = useMemo(() => countByCategory(shown), [shown]);
   const effectiveFilter: Filter = filter !== "all" && !showPreferences && filter === "preference" ? "all" : filter;
-  const visible = useMemo(() => applyFilter(shown, effectiveFilter), [shown, effectiveFilter]);
+  const byCategory = useMemo(() => applyFilter(shown, effectiveFilter), [shown, effectiveFilter]);
+  // The whole document was checked; a chosen section only narrows what is listed.
+  const detected = useMemo(() => data.sections_detected.filter((name) => sectionLabel(name) !== null), [data.sections_detected]);
+  const effectiveSection: SectionFilter = section !== "all" && !detected.includes(section) ? "all" : section;
+  const split = useMemo(() => applySectionFilter(byCategory, effectiveSection, scopes), [byCategory, effectiveSection, scopes]);
+  const visible = useMemo(() => [...split.inSection, ...split.wholeDocument], [split]);
+  const sectionCounts = useMemo(() => countBySection(shown), [shown]);
   const resolved = useMemo(() => resolveSpans(submittedText, visible), [submittedText, visible]);
   const segments = useMemo(() => segment(submittedText, resolved), [submittedText, resolved]);
   const placeable = useMemo(() => new Set(resolved.map((r) => r.id)), [resolved]);
@@ -90,7 +111,17 @@ export function Results({ data, submittedText, showPreferences, stale, busy, onR
     setFocusReq((r) => ({ id, target: "mark", seq: (r?.seq ?? 0) + 1 }));
   }, []);
 
-  const sections = data.sections_detected.map(sectionLabel).filter((s): s is string => s !== null);
+  const sections = detected.map(sectionLabel).filter((s): s is string => s !== null);
+  const card = (s: Suggestion) => (
+    <SuggestionCard
+      suggestion={s}
+      active={s.id === activeId}
+      placeable={placeable.has(s.id)}
+      onShowInText={onShowInText}
+      location={locations?.get(s.id) ?? null}
+      actions={actions}
+    />
+  );
   const seconds = secondsFmt.format(data.elapsed_ms < 10_000 ? data.elapsed_ms / 1000 : Math.round(data.elapsed_ms / 1000));
   const chips: Filter[] = ["all", ...CATEGORY_ORDER.filter((c) => c !== "preference" || showPreferences)];
 
@@ -170,12 +201,42 @@ export function Results({ data, submittedText, showPreferences, stale, busy, onR
                 );
               })}
             </div>
+            {detected.length > 0 ? (
+              <div className="control section-control">
+                <label htmlFor={sectionId} className="control-label">
+                  Section
+                </label>
+                <select
+                  id={sectionId}
+                  className="select select-compact"
+                  value={effectiveSection}
+                  onChange={(e) => setSection(e.target.value)}
+                  data-testid="section-filter"
+                >
+                  <option value="all">All sections ({shown.length})</option>
+                  {detected.map((name) => (
+                    <option key={name} value={name}>
+                      {sectionLabel(name)} ({sectionCounts[name] ?? 0})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
             {hiddenNote}
           </div>
           <p className="filter-blurb muted">
             {effectiveFilter === "all"
               ? "Conventions are research-writing norms you may choose to follow. They are not errors."
               : CATEGORIES[effectiveFilter].blurb}
+            {effectiveSection !== "all" ? (
+              <>
+                {" "}
+                <span data-testid="section-blurb">
+                  Showing the {sectionLabel(effectiveSection)} section. The whole text was checked; checks that read all of it
+                  are listed under &ldquo;Whole document&rdquo;.
+                </span>
+              </>
+            ) : null}
           </p>
 
           <div className="results-grid">
@@ -193,25 +254,36 @@ export function Results({ data, submittedText, showPreferences, stale, busy, onR
               />
             </div>
             <div className="list-col">
-              <h3 className="col-title">Suggestions</h3>
-              {visible.length === 0 ? (
-                <p className="muted">No {CATEGORIES[effectiveFilter as keyof typeof CATEGORIES]?.plural.toLowerCase()} in this check.</p>
+              <h3 className="col-title">{effectiveSection === "all" ? "Suggestions" : `Suggestions in ${sectionLabel(effectiveSection)}`}</h3>
+              {split.inSection.length === 0 ? (
+                <p className="muted" data-testid="no-cards">
+                  {effectiveSection === "all"
+                    ? `No ${CATEGORIES[effectiveFilter as keyof typeof CATEGORIES]?.plural.toLowerCase() ?? "suggestions"} in this check.`
+                    : `No ${effectiveFilter === "all" ? "suggestions" : CATEGORIES[effectiveFilter].plural.toLowerCase()} in the ${sectionLabel(effectiveSection)} section.`}
+                </p>
               ) : (
                 <ol className="cards" aria-label="Suggestions, in document order">
-                  {visible.map((s) => (
-                    <li key={s.id}>
-                      <SuggestionCard
-                        suggestion={s}
-                        active={s.id === activeId}
-                        placeable={placeable.has(s.id)}
-                        onShowInText={onShowInText}
-                        location={locations?.get(s.id) ?? null}
-                        actions={actions}
-                      />
-                    </li>
+                  {split.inSection.map((s) => (
+                    <li key={s.id}>{card(s)}</li>
                   ))}
                 </ol>
               )}
+              {split.wholeDocument.length > 0 ? (
+                <section className="card-group" aria-labelledby="whole-document-title" data-testid="whole-document">
+                  <h4 id="whole-document-title" className="col-title card-group-title">
+                    Whole document
+                  </h4>
+                  <p className="help card-group-help">
+                    Checks that read the whole text, such as figure references and abbreviations defined once. They apply
+                    wherever you are working.
+                  </p>
+                  <ol className="cards" aria-label="Whole-document suggestions, in document order">
+                    {split.wholeDocument.map((s) => (
+                      <li key={s.id}>{card(s)}</li>
+                    ))}
+                  </ol>
+                </section>
+              ) : null}
             </div>
           </div>
         </>
@@ -221,7 +293,7 @@ export function Results({ data, submittedText, showPreferences, stale, busy, onR
 
       <p className="engine-meta muted">
         Checked by engine {data.engine.service_version} (core {data.engine.core_version}) with{" "}
-        {data.engine.rules_loaded} rules. Each suggestion names its source; open &ldquo;Why?&rdquo; for the reasoning.
+        {data.engine.rules_loaded} rules. Each suggestion names its source; open &ldquo;The full reasoning&rdquo; for the detail.
       </p>
     </section>
   );

@@ -1,6 +1,7 @@
 /** Pure view-model helpers for the Word taskpane (unit-tested). */
-import type { AnalyzeWordResponse, Coverage, WordSuggestion } from "@researchly/contract";
+import type { AnalyzeWordResponse, Coverage, WordParagraph, WordSuggestion } from "@researchly/contract";
 import { CATEGORY_ORDER } from "../categories";
+import { splitForSection, type ScopeMap, type SectionSplit } from "../scope";
 
 /** Preferences hidden unless asked for (CLAUDE.md #3); the rest in document order. */
 export function shownWordSuggestions(data: AnalyzeWordResponse, showPreferences: boolean): WordSuggestion[] {
@@ -41,4 +42,67 @@ export function heldBackSentence(n: number): string | null {
 /** The sentence announced to screen readers when a check completes. */
 export function wordSummary(shown: number): string {
   return shown === 0 ? "Check complete. No suggestions." : `Check complete. ${plural(shown, "suggestion", "suggestions")}.`;
+}
+
+/* ---------- "Check this section" ---------- */
+
+/** The stretch of paragraphs the cursor is in: from its heading to the next. */
+export interface SectionFocus {
+  /** First paragraph of the section (the heading itself, when there is one). */
+  start: number;
+  /** One past the last paragraph. */
+  end: number;
+  /** The heading's text, or null when the cursor is above the first heading. */
+  heading: string | null;
+}
+
+/** A body paragraph in a heading style ("Heading 1", "Heading1", "Title"). Table cells never count. */
+export function isHeadingParagraph(p: WordParagraph): boolean {
+  return p.kind !== "table" && /^(heading\s*\d+|title)$/i.test(p.style.trim());
+}
+
+/**
+ * The section containing paragraph `index`: from the nearest heading-styled
+ * paragraph at or before it to the next heading. The whole document is
+ * still checked; this only says which paragraphs to show.
+ */
+export function sectionAround(paragraphs: readonly WordParagraph[], index: number): SectionFocus {
+  const n = paragraphs.length;
+  const at = Math.min(Math.max(index, 0), Math.max(n - 1, 0));
+  let start = 0;
+  let heading: string | null = null;
+  for (let i = at; i >= 0; i--) {
+    const p = paragraphs[i];
+    if (p && isHeadingParagraph(p)) {
+      start = i;
+      heading = p.text.trim() || null;
+      break;
+    }
+  }
+  let end = n;
+  for (let i = at + 1; i < n; i++) {
+    const p = paragraphs[i];
+    if (p && isHeadingParagraph(p)) {
+      end = i;
+      break;
+    }
+  }
+  return { start, end, heading };
+}
+
+/** The suggestions to list for a section: those in its paragraphs, plus the document-wide ones kept aside. */
+export function sectionView(list: readonly WordSuggestion[], focus: SectionFocus, known: ScopeMap | null): SectionSplit<WordSuggestion> {
+  return splitForSection(list, (s) => s.location.paragraph >= focus.start && s.location.paragraph < focus.end, known);
+}
+
+/** How the section is named in the pane. */
+export function sectionName(focus: SectionFocus): string {
+  return focus.heading ? `“${focus.heading}”` : "the part before the first heading";
+}
+
+/** The sentence announced to screen readers after "Check this section". */
+export function sectionSummary(split: SectionSplit<WordSuggestion>, focus: SectionFocus): string {
+  const listed = split.inSection.length + split.wholeDocument.length;
+  const head = listed === 0 ? `Check complete. No suggestions in ${sectionName(focus)}.` : `Check complete. ${plural(listed, "suggestion", "suggestions")} in ${sectionName(focus)}.`;
+  return split.elsewhere > 0 ? `${head} ${plural(split.elsewhere, "more", "more")} elsewhere in the document.` : head;
 }

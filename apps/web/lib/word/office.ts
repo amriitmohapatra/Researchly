@@ -33,6 +33,12 @@ export interface OfficeRange {
   insertText(text: string, insertLocation: string): unknown;
   /** WordApi 1.4+ only. */
   fields?: OfficeFieldCollection;
+  /** A sub-range: "Start", "End", "Whole". */
+  getRange(rangeLocation?: string): OfficeRange;
+  /** The range from the earlier start to the later end of the two. */
+  expandTo(range: OfficeRange): OfficeRange;
+  /** The paragraphs this range touches. */
+  paragraphs: OfficeParagraphCollection;
 }
 
 export interface OfficeRangeCollection {
@@ -55,9 +61,11 @@ export interface OfficeParagraphCollection {
 
 export interface WordRequestContext {
   document: {
-    body: { paragraphs: OfficeParagraphCollection };
+    body: { paragraphs: OfficeParagraphCollection; getRange(rangeLocation?: string): OfficeRange };
     changeTrackingMode: string;
     load(props: string): void;
+    /** The current selection, or the insertion point. */
+    getSelection(): OfficeRange;
   };
   sync(): Promise<unknown>;
 }
@@ -207,6 +215,23 @@ export function readParagraphs(api: OfficeApi): Promise<WordParagraph[]> {
     paras.load("items/text,items/style,items/styleBuiltIn,items/tableNestingLevel");
     await ctx.sync();
     return paras.items.map(toWordParagraph);
+  });
+}
+
+/**
+ * The index (into `readParagraphs`'s list) of the paragraph the cursor is
+ * in. Word has no paragraph numbers, so the range from the start of the
+ * body to the selection's start is expanded and its paragraphs counted:
+ * one batch, no text read beyond what the check reads anyway.
+ */
+export function readSelectionParagraph(api: OfficeApi): Promise<number> {
+  return api.Word.run(async (ctx) => {
+    const cursor = ctx.document.getSelection().getRange("Start");
+    const upTo = ctx.document.body.getRange("Start").expandTo(cursor);
+    const paras = upTo.paragraphs;
+    paras.load("items/style");
+    await ctx.sync();
+    return Math.max(0, paras.items.length - 1);
   });
 }
 

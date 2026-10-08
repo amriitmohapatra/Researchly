@@ -15,22 +15,35 @@ system type stacks, no UI kit. Dials: variance 3, motion 2, density 5.
 2. **How to read the feedback**: four kinds of suggestion, and that a
    Convention is never an error. Taught before the first check by a key
    with live specimens, then by the filter chips.
-3. **Why each suggestion exists**: the message, the flagged words, and a
-   visible source on every card. The full explanation is one click away.
+3. **Why each suggestion exists**: the message, the flagged words, an
+   explanation in everyday words and a visible source on every card. The
+   technical reasoning is one click away; the rule's code and the tier that
+   produced it are never shown (they are data attributes for actions and
+   tests).
 4. **That nothing is rewritten and nothing is kept**: revisions are labelled
    "your call"; the privacy line sits next to the Check button.
 
 ## Hierarchy (results)
 
-`N suggestions` heading, then one row of filter chips (with the hidden
-preference note at its end), then two columns: your text on the left (the
-thing being revised), suggestions on the right in document order. Read-outs
-come last; they describe the text and are never a score.
+`N suggestions` heading, then one row of filter chips, a Section chooser
+(a select: "All sections" plus each section detected, with counts) and the
+hidden preference note, then two columns: your text on the left (the thing
+being revised), suggestions on the right in document order. Read-outs come
+last; they describe the text and are never a score.
 
 A card reads top to bottom as: category and section, what was noticed
 (bold), the flagged words (serif), the suggested revision (your call), the
-source, then "Why?". A student scanning the list reads only the first two
-lines of each card.
+explanation in everyday words (always open), "The full reasoning" (a
+disclosure holding the technical account), then "Source: …" set as a
+reference. A student scanning the list reads only the first two lines of
+each card.
+
+**Sections.** The whole text is always checked and never truncated:
+document-wide checks need all of it. Choosing a section only narrows what is
+listed to that section's suggestions, with the document-wide ones (figure
+references, abbreviations defined once; rule scope "document") kept in their
+own "Whole document" group so they are never lost. The chooser starts at
+"All sections" on every check and is not stored.
 
 ## Type: who is speaking
 
@@ -79,8 +92,8 @@ sign-in, no upload, no settings route.
   in Word or Overleaf). "Back to the text editor" restores the pasted text.
   The results below are the same results view; for a multi-file project each
   card adds a mono "file, line N" line under its head.
-- **Card actions (signed in)** sit after "Why?", as quiet links: "Mute this
-  rule", and on spelling cards "Add “word” to dictionary". Each confirms in
+- **Card actions (signed in)** sit after the source, as quiet links: "Mute
+  this rule", and on spelling cards "Add “word” to dictionary". Each confirms in
   a quiet notice with a link to Settings, then re-checks.
 - **Settings** is one column of panels: Muted rules (name, code, one-line
   why, Unmute), How suggestions are shown (switch, spelling locale),
@@ -96,9 +109,14 @@ The same coach inside Word's sidebar, which is 320 to 400px wide. One
 column, the site's tokens, cards and notices; nothing new to learn.
 
 - **Order**: header (brand, Sign in or the email), then one panel with the
-  Draft / Revise choice (a two-part segmented control, 8px radius, its
-  one-line meaning under it), **Check document** (the only primary button)
-  and the privacy line for the chosen engine. Then health, errors, results,
+  Draft / Revise choice (a two-part segmented control, 8px radius, under it
+  exactly "Draft: check what you've written so far. Revise: check the
+  finished manuscript."), **Check document** (the only primary button) beside
+  the secondary **Check this section**, its one-line help, and the privacy
+  line for the chosen engine. "Check this section" sends the whole document
+  and then lists only the section the cursor is in (from its heading to the
+  next), with document-wide suggestions under "Whole document" and a note
+  saying how many are elsewhere, with "Show the whole document". Then health, errors, results,
   and a closed **Settings** disclosure (engine, show preferences, account).
   The footer holds "Report a problem" (mailto, never with document text).
 - **Results**: "N suggestions", then quiet grey notes: what Draft held back
@@ -106,7 +124,7 @@ column, the site's tokens, cards and notices; nothing new to learn.
   was not checked (footnotes, headers and the rest). Cards in document order.
 - **Cards** read as on the site; clicking one selects its words in Word.
   Under the source: "Show in document", and "Apply in document" only when
-  the engine proposed a revision. Applying is one span at a time, as a
+  the engine proposed a revision; account actions last. Applying is one span at a time, as a
   tracked change where Word supports it; the card then says how it was
   applied. A refusal (the document changed) is said on the card, in words.
 - **Sign-in** replaces the main column: email, then the emailed code. No
@@ -116,7 +134,8 @@ column, the site's tokens, cards and notices; nothing new to learn.
   empty document, engine errors with retry, sign-in required, local engine
   not running, degraded tier (before and after a check), card selected,
   approximate match, applied (tracked or direct), apply refused, mode not
-  saved to the account.
+  saved to the account, section view (with and without suggestions in the
+  section), cursor not readable.
 
 ## States (all reachable, all covered by e2e)
 

@@ -2,9 +2,10 @@
 
 import { memo, type MouseEvent } from "react";
 import type { WordSuggestion } from "@researchly/contract";
-import { categoryMeta, sectionLabel, tierLabel } from "@/lib/categories";
+import { categoryMeta, sectionLabel } from "@/lib/categories";
 import { dictionaryCandidate, isRuleId } from "@/lib/settings";
 import { CategoryBadge } from "../CategoryIcon";
+import { REASONING_LABEL } from "../SuggestionCard";
 
 export interface CardNote {
   tone: "ok" | "info" | "problem";
@@ -40,9 +41,10 @@ function quote(text: string): string {
 /**
  * One suggestion in the taskpane. Reads like the web checker's card
  * (DESIGN.md): category and section, what was noticed, the flagged words,
- * the revision (your call), the source, then "Why?". Clicking the card
- * selects the words in the document; "Apply" appears only when the engine
- * proposed a concrete revision.
+ * the revision (your call), the explanation in everyday words, the full
+ * reasoning behind a disclosure, then the source. Clicking the card selects
+ * the words in the document; "Apply" appears only when the engine proposed
+ * a concrete revision.
  */
 export const WordCard = memo(function WordCard({ suggestion: s, active, applied, note, busy, onSelect, onApply, actions }: Props) {
   const meta = categoryMeta(s.category);
@@ -51,6 +53,8 @@ export const WordCard = memo(function WordCard({ suggestion: s, active, applied,
   const word = actions && s.tier === "spelling" ? dictionaryCandidate(s.text) : null;
   const mutable = Boolean(actions) && isRuleId(s.rule_id);
   const hasFix = s.replacement !== null && s.replacement !== undefined;
+  const plain = s.plain.trim() || s.why.trim();
+  const reasoning = s.plain.trim() && s.why.trim() && s.why.trim() !== plain ? s.why.trim() : null;
 
   const onClick = (e: MouseEvent<HTMLElement>) => {
     if ((e.target as HTMLElement).closest("button, summary, a, .why-body")) return;
@@ -64,7 +68,9 @@ export const WordCard = memo(function WordCard({ suggestion: s, active, applied,
       onClick={onClick}
       data-testid="word-card"
       data-rule={s.rule_id}
+      data-tier={s.tier}
       data-category={meta.id}
+      data-paragraph={s.location.paragraph}
     >
       <div className="card-head">
         <CategoryBadge category={meta.id} />
@@ -90,8 +96,21 @@ export const WordCard = memo(function WordCard({ suggestion: s, active, applied,
           {s.replacement === "" ? <em>remove this</em> : <q>{s.replacement}</q>}
         </p>
       ) : null}
+      {plain ? (
+        <p className="card-plain" data-testid="card-plain">
+          {plain}
+        </p>
+      ) : null}
+      {reasoning ? (
+        <details className="why" data-testid="card-reasoning">
+          <summary>{REASONING_LABEL}</summary>
+          <div className="why-body">
+            <p>{reasoning}</p>
+          </div>
+        </details>
+      ) : null}
       <p className="card-source">
-        <span className="card-source-label">Source</span> <cite>{s.source}</cite>
+        <span className="card-source-label">Source:</span> <cite>{s.source}</cite>
       </p>
 
       {note ? (
@@ -129,59 +148,39 @@ export const WordCard = memo(function WordCard({ suggestion: s, active, applied,
         ) : null}
       </div>
 
-      <div className={`card-foot${mutable || word ? " card-foot-actions" : ""}`}>
-        <details className="why">
-          <summary>Why?</summary>
-          <div className="why-body">
-            <p>{s.why}</p>
-            <dl className="why-meta">
-              <div>
-                <dt>Rule</dt>
-                <dd>
-                  <span translate="no">{s.rule_id}</span> · {s.rule_name}
-                </dd>
-              </div>
-              <div>
-                <dt>Checked by</dt>
-                <dd>{tierLabel(s.tier)}</dd>
-              </div>
-            </dl>
-          </div>
-        </details>
-        {actions && (mutable || word) ? (
-          <div className="card-actions">
-            {mutable ? (
-              <button
-                type="button"
-                className="btn-link btn-link-quiet"
-                aria-describedby={msgId}
-                aria-disabled={busy || undefined}
-                onClick={() => {
-                  if (!busy) actions.onMute(s);
-                }}
-                data-testid="mute-rule"
-              >
-                Mute this rule
-              </button>
-            ) : null}
-            {word ? (
-              <button
-                type="button"
-                className="btn-link btn-link-quiet"
-                aria-disabled={busy || undefined}
-                onClick={() => {
-                  if (!busy) actions.onAddWord(s, word);
-                }}
-                data-testid="add-word"
-              >
-                <span>
-                  Add <q translate="no">{word}</q> to dictionary
-                </span>
-              </button>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+      {actions && (mutable || word) ? (
+        <div className="card-foot card-actions">
+          {mutable ? (
+            <button
+              type="button"
+              className="btn-link btn-link-quiet"
+              aria-describedby={msgId}
+              aria-disabled={busy || undefined}
+              onClick={() => {
+                if (!busy) actions.onMute(s);
+              }}
+              data-testid="mute-rule"
+            >
+              Mute this rule
+            </button>
+          ) : null}
+          {word ? (
+            <button
+              type="button"
+              className="btn-link btn-link-quiet"
+              aria-disabled={busy || undefined}
+              onClick={() => {
+                if (!busy) actions.onAddWord(s, word);
+              }}
+              data-testid="add-word"
+            >
+              <span>
+                Add <q translate="no">{word}</q> to dictionary
+              </span>
+            </button>
+          ) : null}
+        </div>
+      ) : null}
     </article>
   );
 });

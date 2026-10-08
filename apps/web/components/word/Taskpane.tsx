@@ -9,6 +9,7 @@ import { ENGINE_URL, LOCAL_ENGINE_URL, reportProblemHref } from "@/lib/config";
 import { analyzeWord, engineHealth } from "@/lib/engine";
 import { clientError, type CheckError } from "@/lib/errors";
 import { healthBanners } from "@/lib/health";
+import { useRuleScopes } from "@/lib/scope";
 import {
   loadEngineChoice,
   loadModeChoice,
@@ -22,13 +23,24 @@ import {
   applyReplacement,
   officeApi,
   readParagraphs,
+  readSelectionParagraph,
   restoreHistory,
   selectSpan,
   officeGlobal,
   waitForOffice,
   type HostStatus,
 } from "@/lib/word/office";
-import { coverageSentences, heldBackSentence, shownWordSuggestions, wordSummary } from "@/lib/word/view";
+import {
+  coverageSentences,
+  heldBackSentence,
+  sectionAround,
+  sectionName,
+  sectionSummary,
+  sectionView,
+  shownWordSuggestions,
+  wordSummary,
+  type SectionFocus,
+} from "@/lib/word/view";
 import { HealthBanner } from "../HealthBanner";
 import { CodeSignIn } from "./CodeSignIn";
 import { WordCard, type CardNote, type WordCardActions } from "./WordCard";
@@ -39,6 +51,8 @@ interface Checked {
   seq: number;
   data: AnalyzeWordResponse;
   engine: EngineChoice;
+  /** "Check this section": the paragraphs around the cursor at check time. The whole document was still checked. */
+  focus: SectionFocus | null;
 }
 
 type Problem = { title: string; message: string };
@@ -61,10 +75,8 @@ function localDownError(e: CheckError): CheckError {
   };
 }
 
-const MODE_HELP: Record<ModeChoice, string> = {
-  draft: "Draft: sentence-level checks only, for while you are still writing.",
-  revise: "Revise: everything, including checks across the whole document.",
-};
+/** Document-wide checks only make sense on a complete draft, so the stage says what each one checks. */
+const MODE_HELP = "Draft: check what you've written so far. Revise: check the finished manuscript.";
 
 /**
  * The Word add-in's taskpane (S3). Reads the document through Office.js
@@ -100,11 +112,13 @@ export function Taskpane() {
   const [accountNote, setAccountNote] = useState<AccountNote | null>(null);
   const [modeNote, setModeNote] = useState<string | null>(null);
   const [view, setView] = useState<"main" | "sign-in">("main");
+  /** The writer chose to see the whole document after a section check (no re-check needed). */
+  const [showWhole, setShowWhole] = useState(false);
   const [announcement, setAnnouncement] = useState("");
   const runningRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
   const errorRef = useRef<HTMLDivElement>(null);
-  const ids = { mode: useId(), modeHelp: useId(), privacy: useId(), engine: useId(), prefs: useId() };
+  const ids = { mode: useId(), modeHelp: useId(), sectionHelp: useId(), privacy: useId(), engine: useId(), prefs: useId() };
 
   /* ---------- start-up: where are we running? ---------- */
 
@@ -153,21 +167,40 @@ export function Taskpane() {
     if (error) errorRef.current?.focus();
   }, [error]);
 
+  // Which rules read the whole document (the "Whole document" group of a
+  // section view). From the cloud engine's registry, once; the local server
+  // has none, so the built-in list applies there.
+  const scopes = useRuleScopes(engine === "cloud" ? ENGINE_URL : null, checked !== null);
+
   /* ---------- checking ---------- */
 
   const runCheck = useCallback(
-    async (opts?: { mode?: ModeChoice; showPreferences?: boolean }) => {
+    async (opts?: { mode?: ModeChoice; showPreferences?: boolean; section?: boolean }) => {
       const api = officeApi();
       if (runningRef.current || !api || host?.status !== "word") return;
       runningRef.current = true;
       const useMode = opts?.mode ?? mode;
       const prefs = opts?.showPreferences ?? showPreferences;
+      // A re-check (mute, stage change) keeps the current view: section or whole document.
+      const wantSection = opts?.section ?? (checked?.focus !== null && checked?.focus !== undefined && !showWhole);
       const useEngine = engine;
       setError(null);
       setProblem(null);
       setPhase("reading");
       setAnnouncement("Reading the document…");
       try {
+        // The whole document is always sent: document-wide checks need all of
+        // it. "Check this section" only records where the cursor is.
+        let cursor: number | null = null;
+        if (wantSection) {
+          try {
+            cursor = await readSelectionParagraph(api);
+          } catch {
+            setProblem({ title: "Word did not say where the cursor is", message: "Nothing was sent. Click in the section you are working on, then check again." });
+            setPhase(checked ? "done" : "idle");
+            return;
+          }
+        }
         let paragraphs;
         try {
           paragraphs = await readParagraphs(api);
@@ -209,12 +242,15 @@ export function Taskpane() {
           useEngine === "local" ? null : getEngineAuth(),
         );
         if (r.ok) {
-          setChecked((prev) => ({ seq: (prev?.seq ?? 0) + 1, data: r.data, engine: useEngine }));
+          const focus = cursor !== null ? sectionAround(paragraphs, cursor) : null;
+          setChecked((prev) => ({ seq: (prev?.seq ?? 0) + 1, data: r.data, engine: useEngine, focus }));
+          setShowWhole(false);
           setNotes({});
           setApplied(new Set());
           setActiveId(null);
           setPhase("done");
-          setAnnouncement(wordSummary(shownWordSuggestions(r.data, prefs).length));
+          const listed = shownWordSuggestions(r.data, prefs);
+          setAnnouncement(focus ? sectionSummary(sectionView(listed, focus, scopes), focus) : wordSummary(listed.length));
         } else {
           setError(useEngine === "local" ? localDownError(r.error) : r.error);
           setPhase("error");
@@ -233,7 +269,7 @@ export function Taskpane() {
         abortRef.current = null;
       }
     },
-    [host, mode, showPreferences, engine, signedIn, checked],
+    [host, mode, showPreferences, engine, signedIn, checked, showWhole, scopes],
   );
 
   const onModeChange = (next: ModeChoice) => {
@@ -344,6 +380,9 @@ export function Taskpane() {
   const busy = phase === "reading" || phase === "checking";
   const inWord = host?.status === "word";
   const shown = checked ? shownWordSuggestions(checked.data, showPreferences) : [];
+  const focus = checked && !showWhole ? checked.focus : null;
+  const split = focus ? sectionView(shown, focus, scopes) : { inSection: shown, wholeDocument: [], elsewhere: 0 };
+  const listed = split.inSection.length + split.wholeDocument.length;
   const hiddenPrefs = checked
     ? checked.data.hidden_preferences + (showPreferences ? 0 : checked.data.suggestions.filter((s) => s.category === "preference").length)
     : 0;
@@ -352,6 +391,20 @@ export function Taskpane() {
   // After a check, its own report of the tiers; before, the engine's health.
   const tiers = checked && checked.engine === engine ? checked.data.health : health?.engine === engine ? health.tiers : null;
   const localDown = engine === "local" && health?.engine === "local" && !health.reachable;
+
+  const wordCard = (s: WordSuggestion) => (
+    <WordCard
+      key={`${checked?.seq ?? 0}-${s.id}`}
+      suggestion={s}
+      active={activeId === s.id}
+      applied={applied.has(s.id)}
+      note={notes[s.id] ?? null}
+      busy={wordBusy || busy}
+      onSelect={onSelect}
+      onApply={onApply}
+      actions={cardActions}
+    />
+  );
 
   const header = (
     <header className="tp-header">
@@ -455,8 +508,8 @@ export function Taskpane() {
                     </label>
                   ))}
                 </div>
-                <p id={ids.modeHelp} className="help">
-                  {MODE_HELP[mode]}
+                <p id={ids.modeHelp} className="help" data-testid="mode-help">
+                  {MODE_HELP}
                 </p>
                 {modeNote ? (
                   <p className="field-problem" role="alert" data-testid="mode-note">
@@ -469,7 +522,7 @@ export function Taskpane() {
                 <button
                   type="button"
                   className="btn btn-primary tp-check-btn"
-                  onClick={() => void runCheck()}
+                  onClick={() => void runCheck({ section: false })}
                   aria-disabled={busy || undefined}
                   aria-describedby={ids.privacy}
                   data-testid="check-document"
@@ -489,8 +542,22 @@ export function Taskpane() {
                   <button type="button" className="btn btn-quiet" onClick={() => abortRef.current?.abort()}>
                     Cancel
                   </button>
-                ) : null}
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-secondary tp-check-btn"
+                    onClick={() => void runCheck({ section: true })}
+                    aria-disabled={busy || undefined}
+                    aria-describedby={ids.sectionHelp}
+                    data-testid="check-section"
+                  >
+                    Check this section
+                  </button>
+                )}
               </div>
+              <p id={ids.sectionHelp} className="help tp-section-help">
+                &ldquo;Check this section&rdquo; still checks the whole document, then shows the section your cursor is in.
+              </p>
               <p id={ids.privacy} className="privacy-line" data-testid="privacy-line">
                 <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
                   <rect x="3" y="7" width="10" height="7" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.4" />
@@ -563,13 +630,25 @@ export function Taskpane() {
             {checked ? (
               <section className="tp-results" aria-labelledby="tp-results-title" aria-busy={busy || undefined} data-testid="tp-results">
                 <h2 id="tp-results-title" className="results-title">
-                  {shown.length === 1 ? "1 suggestion" : `${shown.length.toLocaleString("en-GB")} suggestions`}
+                  {listed === 1 ? "1 suggestion" : `${listed.toLocaleString("en-GB")} suggestions`}
+                  {focus ? ` in ${sectionName(focus)}` : ""}
                 </h2>
                 <p className="muted tp-results-meta">
                   {checked.data.mode === "draft" ? "Draft" : "Revise"}
                   {checked.engine === "local" ? ", checked on this computer" : ""}. Click a suggestion to find it in the document.
                 </p>
                 <div className="tp-notes">
+                  {focus ? (
+                    <p className="tp-note" data-testid="section-focus">
+                      Showing the section at the cursor, {sectionName(focus)}. The whole document was checked
+                      {split.elsewhere > 0
+                        ? `; ${split.elsewhere === 1 ? "1 more suggestion is" : `${split.elsewhere.toLocaleString("en-GB")} more suggestions are`} elsewhere in it.`
+                        : "."}{" "}
+                      <button type="button" className="btn-link" onClick={() => setShowWhole(true)} data-testid="show-whole-document">
+                        Show the whole document
+                      </button>
+                    </p>
+                  ) : null}
                   {heldBack ? (
                     <p className="tp-note" data-testid="held-back">
                       {heldBack}{" "}
@@ -592,28 +671,27 @@ export function Taskpane() {
                     </p>
                   ) : null}
                 </div>
-                {shown.length === 0 ? (
+                {split.inSection.length === 0 ? (
                   <div className="empty" data-testid="tp-empty">
-                    <p className="empty-title">Nothing to flag</p>
-                    <p className="muted">No suggestions for the parts that were checked. This is not a score.</p>
+                    <p className="empty-title">{focus ? "Nothing to flag in this section" : "Nothing to flag"}</p>
+                    <p className="muted">
+                      {focus ? `No suggestions in ${sectionName(focus)}. ` : "No suggestions for the parts that were checked. "}This is not a score.
+                    </p>
                   </div>
                 ) : (
-                  <div className="cards tp-cards">
-                    {shown.map((s) => (
-                      <WordCard
-                        key={`${checked.seq}-${s.id}`}
-                        suggestion={s}
-                        active={activeId === s.id}
-                        applied={applied.has(s.id)}
-                        note={notes[s.id] ?? null}
-                        busy={wordBusy || busy}
-                        onSelect={onSelect}
-                        onApply={onApply}
-                        actions={cardActions}
-                      />
-                    ))}
-                  </div>
+                  <div className="cards tp-cards">{split.inSection.map(wordCard)}</div>
                 )}
+                {split.wholeDocument.length > 0 ? (
+                  <section className="card-group" aria-labelledby="tp-whole-document-title" data-testid="whole-document">
+                    <h3 id="tp-whole-document-title" className="col-title card-group-title">
+                      Whole document
+                    </h3>
+                    <p className="help card-group-help">
+                      Checks that read the whole text, such as figure references and abbreviations defined once.
+                    </p>
+                    <div className="cards tp-cards">{split.wholeDocument.map(wordCard)}</div>
+                  </section>
+                ) : null}
               </section>
             ) : null}
 

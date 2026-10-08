@@ -23,7 +23,7 @@ for (const scheme of ["light", "dark"] as const) {
     await page.getByTestId("check").click();
     await expect(page.getByTestId("suggestion-card").first()).toBeVisible();
     const card = page.getByTestId("suggestion-card").nth(1);
-    await card.getByText("Why?").click();
+    await card.getByText("The full reasoning").click();
     await card.getByRole("button", { name: "Show in text" }).click();
     await page.screenshot({ path: `${DIR}/desktop-${scheme}.png`, fullPage: true });
     const axe = await new AxeBuilder({ page }).analyze();
@@ -46,7 +46,7 @@ test("mobile 375 results", async ({ page }) => {
   await page.getByLabel("Show preferences").check();
   await page.getByTestId("check").click();
   await expect(page.getByTestId("suggestion-card").first()).toBeVisible();
-  await page.getByTestId("suggestion-card").first().getByText("Why?").click();
+  await page.getByTestId("suggestion-card").first().getByText("The full reasoning").click();
   await page.screenshot({ path: `${DIR}/mobile-375.png`, fullPage: true });
   await page.screenshot({ path: `${DIR}/mobile-375-viewport.png` });
 });

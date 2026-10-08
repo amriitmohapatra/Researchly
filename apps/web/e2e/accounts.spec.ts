@@ -551,7 +551,7 @@ for (const width of [375, 1280]) {
       await expect(page.getByTestId("account-button")).toBeVisible();
       await pasteAndCheck(page);
       await expect(page.getByTestId("suggestion-card").first()).toBeVisible();
-      await page.getByTestId("suggestion-card").first().getByText("Why?").click();
+      await page.getByTestId("suggestion-card").first().getByText("The full reasoning").click();
       expect(await noOverflow(page)).toBeLessThanOrEqual(0);
       await page.screenshot({ path: `${shots}/accounts-checker-${width}.png`, fullPage: true });
 
