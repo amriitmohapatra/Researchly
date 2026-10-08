@@ -176,6 +176,32 @@ Built 2026-10-04 (P32): `researchly/structure.py`, `rules_structure.py`, `rules_
 - [ ] Labelling guide + small annotation tool **(Claude)**; owner labels 50 paragraphs **(Amriit)**
 - [ ] **Exit check:** flag precision on the 50 labelled paragraphs reported here
 
+### Codex review, 2026-10-08 (`Codex_Review_8Oct2026.md`; the owner: "implement as you deem fit")
+
+Findings R1–R8 were fixed in S4c. Feature proposals 2, 6 and 9 were built. The rest are recorded here with the review's acceptance evidence, so a later slice can pick them up.
+
+- [x] **R1** The local engine accepts every option the hosted taskpane sends — 03d98d4: `apps/word-addin/server.py` shares `researchly/shapes.py` with the service; `services/engine/tests/test_local_word_contract.py` posts every `AnalyzeOptions` field to the real local handler and validates the reply against the contract
+- [x] **R2** "Auto" no longer drops research checks from a manuscript with a policy-style heading — 03d98d4: research structure (Methods, Results, a chapter) wins over policy headings; the guessed type carries the headings it rests on (`profile.evidence`), shown under the results
+- [~] **R3** Word edits fail closed: a protected field or a partial change is reported as such, never as "no change" (W2)
+- [x] **R4** The reviewer's brief says what it checked: each question is yours / detected / not detected / not assessed / not applicable, abstains when it saw no claims, honours muted rules, and carries a one-line disclaimer — 03d98d4
+- [x] **R5** Argument links are local: a warrant counts within one sentence of the claim and grounds within two, per section instance, from the shared parse; missing links quote the sentence they concern — 03d98d4
+- [~] **R6** The website sends the mode explicitly and shows what Draft held back (W1)
+- [x] **R7** LSP ranges are UTF-16 columns; stale results are dropped and closing a document cancels its check — 03d98d4, `tests/test_lsp.py`
+- [~] **R8** The printable report states the mode, the document type, the checklist and what was not checked (W1)
+- [~] **Product claims** bounded on the landing page: "no cloud or generative AI reads your draft", flags per 1,000 words named as a proxy, "same draft, same settings, same advice" (W1)
+- [~] **#2** Dismiss once ("Not an issue here") with Undo, session-only; muting stays deliberate (W1)
+- [x] **#6** Reporting checklists with "reported / needs your check", session-only "not applicable" — see the S4 item above
+- [x] **#9** Learn cards linked from every suggestion — see the S4 item above
+- [ ] **#1 Revision queue**: "Correctness first", "Clarity next", "Whole-document review"; recurring issues grouped with Next/Previous; no score. *Done when* a chapter-scale usability test shows writers finish a chosen pass without losing findings or context
+- [ ] **#3 Evidence-linked brief, the rest**: "Show in text" from each prompt; the claim beside its proposed evidence. *Done when* every supported assertion jumps to the right text (emoji and multi-file inputs included) and unsupported ones abstain
+- [ ] **#4 Genre-native profiles, the rest**: separate article type from whole manuscript / excerpt / chapter; map Context/Evidence/Options/Recommendations and reviewer-comment units. *Done when* profile tests cover topical headings and legitimately missing sections (the policy brief no longer expects an abstract: done in 03d98d4)
+- [ ] **#5 Coverage summary**: say what was read, masked and skipped (notes, text boxes, headers); the chosen main `.tex` file with a choice when ambiguous; an English-only notice. *Done when* synthetic documents with footnotes and text boxes show the omissions and an ambiguous project lets the writer pick the root
+- [ ] **#7 Table evidence**: X401 matches a row and column, not "anywhere in the table"; shows the compared cells and rounding. *Done when* swapped rows, wrong groups, repeated values, units and rounding are tested and unsupported inputs abstain
+- [ ] **#8 Long documents**: elapsed time, "still checking", previous results kept, predictable cancel and retry; later, chapter-aware analysis. *Done when* a large synthetic document survives cancel and retry without showing an old response as current. Respects the owner's deferral of Q2
+- [ ] **#10 Spelling repetition**: replace "skip any word used three times" with one grouped prompt that asks before adding a term. *Done when* repeated known typos stay visible and repeated domain terms stay quiet, measured on labelled examples
+- [ ] **#11 Local-mode parity**: one capability summary per surface (what a local check still contacts), an installation health check. *Done when* each local route demonstrates its promised checks and where the text goes
+- [ ] **#12 Account controls**: "Reset preferences" separate from "Delete account" (self-service, verified lifecycle); per-user rate limits with an IP fallback. Before the public beta (S6) **(Claude, owner configures Supabase)**
+
 ## S5 — Critic bake-off (Laya vs ModernBERT)
 
 ### Real-document test bench (P29, owner request 2026-10-03; seeds S5a)

@@ -191,6 +191,21 @@ Named in `researchly/sources.py`; cited by name only, never quoted.
 
 Order is judged in the abstract and the introduction only. The argument's missing links (`discourse/argument.py`: claim without warrant, claim without grounds, evidence without interpretation, limitation not reflected in claim strength, contribution unclear) cite Wallace & Wray, Toulmin and guide §4, and appear on the map for the argued sections (abstract, introduction, discussion, limitations, conclusion). The hedging trajectory reuses the hedge and booster lexicons of the metrics read-out (Hyland) per section.
 
+## 12. Learn cards and the epidemiology pack (S4c, 2026-10-08)
+
+**Learn cards** (`researchly/learn.py`, exported to `packages/contract/learn.json`). 26 short lessons in six groups (sentences; words; claims and evidence; figures, tables and numbers; structure and argument; mechanics). Each card has a summary, a lesson in everyday words, a before-and-after pair written for Researchly (synthetic, never quoted from a source), a habit to keep, and the source line expanded by `sources.cite()`. Every rule, every narrative move and every argument link carries a `learn_ref` that resolves to a card; a test fails if one does not, and another fails if `learn.json` is out of date. The lessons paraphrase the guide (sentence mechanics after Gopen & Swan, words, calibration, structure, field conventions), Wallace & Wray and Toulmin for claims and warrants, Swales and Shehzad for introductions, and the course material, shown as the owner's learnings. No card names a section number, the course or the lecturer.
+
+**Epidemiology pack** (`researchly/packs/epidemiology.py`). Four reporting checklists, chosen by the writer or suggested from the text (PRISMA, then CONSORT, then EPIFORGE, then STROBE):
+
+| Checklist | Design | Items checked | Source |
+|---|---|---|---|
+| STROBE | observational studies | 16 | von Elm et al. (2007), the STROBE statement |
+| CONSORT | randomised trials | 18 | Schulz et al. (2010), CONSORT 2010 |
+| PRISMA | systematic reviews | 15 | Page et al. (2021), PRISMA 2020 |
+| EPIFORGE | epidemic forecasts and projections | 15 | Pollett et al. (2021), EPIFORGE 2020 |
+
+Each item is paraphrased in Researchly's words, with the section it belongs in and a cue the engine looks for. An item is reported as "reported" (with the sentence that matched) or "needs your check". It is never reported as missing, because a cue cannot prove absence. The pack checks reporting, never the science (P3). The guideline texts are not reproduced; each item cites its statement by name.
+
 ## Shipped this phase (v0.4)
 
 **New rules (10):** E701 empty-phrase · E702 adversative-run · E703
