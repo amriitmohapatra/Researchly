@@ -43,6 +43,12 @@ export type ProfileChoice = S["ProfileChoice"];
 export type ReviewReport = S["ReviewReport"];
 export type ReviewQuestion = S["ReviewQuestion"];
 export type ReviewRuleCount = S["ReviewRuleCount"];
+export type NarrativeMap = S["NarrativeMap"];
+export type NarrativeSection = S["NarrativeSection"];
+export type NarrativeMove = S["NarrativeMove"];
+export type MoveStatus = S["MoveStatus"];
+export type MissingLink = S["MissingLink"];
+export type HedgingPoint = S["HedgingPoint"];
 
 /** Mirrors schemas.MAX_CONTENT_CHARS; checked client-side for usability only. */
 export const MAX_CONTENT_CHARS = 1_000_000;

@@ -85,6 +85,8 @@ class Analysis:
     profile_guessed: bool = True
     # The critical reader's brief (review.py), when asked for.
     review: Optional[dict] = None
+    # The narrative map (discourse/narrative.py), when asked for.
+    narrative: Optional[dict] = None
     metrics: Optional[metrics_mod.Metrics] = None
     sections_detected: list = field(default_factory=list)
     health: list = field(default_factory=list)
@@ -106,6 +108,7 @@ class Analysis:
                         "note": self.profile.note,
                         "rules_off": sorted(self.profile.rules_off)},
             "review": self.review,
+            "narrative": self.narrative,
             "metrics": self.metrics.to_dict() if self.metrics else None,
             "sections_detected": list(self.sections_detected),
             "health": [t.to_dict() for t in self.health],
@@ -153,6 +156,7 @@ def analyze(source: Union[str, Path, Sequence[dict], Document],
             near: Optional[Path] = None,
             with_metrics: bool = True,
             with_review: bool = False,
+            with_narrative: bool = False,
             **overrides: Any) -> Analysis:
     """Check one document and return everything the surfaces render.
 
@@ -209,6 +213,11 @@ def analyze(source: Union[str, Path, Sequence[dict], Document],
         review = build_review(document, nlp, suggestions=everything,
                               spacy_doc=spacy_doc, metrics=mets,
                               profile=profile)
+    narrative = None
+    if with_narrative:
+        from .discourse.narrative import build_narrative
+        narrative = build_narrative(document, spacy_doc=spacy_doc,
+                                    profile=profile)
 
     return Analysis(
         suggestions=found,
@@ -218,6 +227,7 @@ def analyze(source: Union[str, Path, Sequence[dict], Document],
         profile=profile,
         profile_guessed=guessed,
         review=review,
+        narrative=narrative,
         metrics=mets if with_metrics else None,
         sections_detected=sorted({h.section for h in document.headings}),
         health=engine_status(cfg, nlp=nlp),

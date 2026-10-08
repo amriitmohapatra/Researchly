@@ -21,6 +21,8 @@ GUIDE = "The Craft of Scientific Writing (Researchly's founding guide)"
 # Section numbers and titles of the guide, as headed in
 # The-Craft-of-Scientific-Writing.md (the owner's own text).
 GUIDE_SECTIONS = {
+    "2": "Structure from the top down: the paper is a story",
+    "3": "The Introduction, move by move",
     "4": "Warranting your arguments",
     "5.1": "The paragraph",
     "5.2": "The sentence: Gopen & Swan's reader-expectation principles",
@@ -34,7 +36,9 @@ GUIDE_SECTIONS = {
     "9.3": "Uncertainty is not a caveat, it is the finding",
     "9.2": "Equations are sentences — make them grammatical",
     "9.4": "A model is an argument, not an oracle",
+    "7.3": "Tag the three funnel moves and the argument spine",
     "9.7": "Figures are arguments too",
+    "9.8": "Translate for the decision-maker",
 }
 
 # What a user sees for advice the owner learned in training (a lecture and
@@ -49,6 +53,11 @@ WORKS = {
     "NG5001-U1": LEARNINGS,
     "NG5001-U2": LEARNINGS,
     "Shehzad": 'W. Shehzad (2008), "Move two: establishing a niche"',
+    "Swales": ("J. M. Swales (1990), Genre Analysis: English in Academic "
+               "and Research Settings, Cambridge University Press (the "
+               "three moves of an introduction)"),
+    "Toulmin": ("S. E. Toulmin (1958), The Uses of Argument, Cambridge "
+                "University Press (claim, grounds, warrant)"),
     "WW": ("M. Wallace & A. Wray (2016), Critical Reading and Writing for "
            "Postgraduates, 3rd ed., SAGE"),
     "LanguageTool": "LanguageTool, open-source grammar checker",

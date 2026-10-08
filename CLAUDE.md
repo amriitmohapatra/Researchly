@@ -94,8 +94,9 @@ Researchly/
 │   │   ├── engine.py             ← Rule/Suggestion types, registry, check(), aggregation
 │   │   ├── rules_*.py            ← rule modules (lexical, syntax, spelling, grammar, gec)
 │   │   ├── gec.py                ← learned-edit tier scaffold (no model yet; abstains)
-│   │   ├── argument.py           ← Toulmin ArgumentObject (feeds review.py)
-│   │   ├── abstract_lens.py      ← Belcher six-part abstract check (AB802)
+│   │   ├── discourse/            ← S4: moves.py (authored questions per section),
+│   │   │                            narrative.py (the map), argument.py (Toulmin),
+│   │   │                            abstract_lens.py (AB802); old paths re-export
 │   │   ├── review.py             ← Wallace & Wray critical-reader report
 │   │   ├── transform.py          ← deterministic Polish rewriter
 │   │   ├── spelling.py           ← SymSpell wrapper + guards + user dictionary

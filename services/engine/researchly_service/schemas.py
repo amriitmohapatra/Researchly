@@ -101,6 +101,9 @@ class AnalyzeOptions(_Strict):
     review: bool = Field(
         False, description="Also build the critical reader's brief "
                            "(`review` in the response) from the same analysis.")
+    narrative: bool = Field(
+        False, description="Also build the narrative map (`narrative` in "
+                           "the response) from the same analysis.")
 
 
 class AnalyzeRequest(_Strict):
@@ -230,6 +233,74 @@ class ReviewQuestion(_Strict):
                                 "verdict rests on (never logged).")
 
 
+class MoveStatus(str, Enum):
+    present = "present"
+    missing = "missing"
+    out_of_order = "out_of_order"
+
+
+class NarrativeMove(_Strict):
+    """One expected move of a section, as an authored question."""
+    id: str
+    label: str
+    status: MoveStatus
+    question: str
+    plain: str = Field(..., description="The lesson, in everyday words.")
+    frame: str = Field(..., description="A fill-in frame in Researchly's own "
+                       "wording: curated text, never generated.")
+    source: str
+    evidence: Optional[str] = Field(None, description="The sentence the move "
+                                    "rests on, when present (never logged).")
+    note: str = Field("", description="For an out-of-order move: what it "
+                      "appears before or after.")
+
+
+class NarrativeSection(_Strict):
+    section: str
+    label: str
+    sentences: int = Field(..., ge=0)
+    words: int = Field(..., ge=0)
+    moves: List[NarrativeMove]
+    present: int = Field(..., ge=0)
+    expected: int = Field(..., ge=0)
+
+
+class MissingLink(_Strict):
+    """A gap in the argument's chain (claim, grounds, warrant) in one section."""
+    section: str
+    label: str
+    code: str
+    message: str
+    source: str
+
+
+class HedgingPoint(_Strict):
+    """Hedges and boosters per 100 words in one section: a trajectory, not a score."""
+    section: str
+    label: str
+    words: int = Field(..., ge=0)
+    hedges_per_100w: float = Field(..., ge=0)
+    boosters_per_100w: float = Field(..., ge=0)
+    reading: str = Field(..., description="flat | hedged | assertive | "
+                         "balanced | heavily hedged")
+
+
+class NarrativeMap(_Strict):
+    """Per section, which moves are present, missing or out of order; the
+    argument's missing links; the hedging trajectory. Same analysis as the
+    suggestions."""
+    sections: List[NarrativeSection]
+    unmapped: List[str] = Field(default_factory=list, description="Sections "
+                                "found that have no expected moves (topical "
+                                "headings).")
+    missing_links: List[MissingLink] = Field(default_factory=list)
+    hedging: List[HedgingPoint] = Field(default_factory=list)
+    note: str = Field(..., description="One line summing up the map, or why "
+                      "there is none.")
+    profile: Optional[DocumentType] = None
+    source: str
+
+
 class ReviewRuleCount(_Strict):
     id: str
     short: str
@@ -255,6 +326,8 @@ class AnalyzeResponse(_Strict):
         description="The article-type profile this check ran under.")
     review: Optional[ReviewReport] = Field(
         None, description="Present when `options.review` was true.")
+    narrative: Optional[NarrativeMap] = Field(
+        None, description="Present when `options.narrative` was true.")
     hidden_by_mode: int = Field(0, ge=0, description="Document-level "
                                 "suggestions Draft mode held back (0 in Revise).")
     signed_in: bool = Field(False, description="True when a valid account token "

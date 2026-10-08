@@ -307,9 +307,31 @@ def cmd_review(args) -> int:
     return 0
 
 
+def cmd_narrative(args) -> int:
+    """The narrative map: moves per section, missing links, hedging."""
+    from .discourse.narrative import render_narrative
+    from .api import analyze, get_nlp
+    if args.file:
+        p = Path(args.file)
+        text = p.read_text(encoding="utf-8")
+        kind = ("markdown" if p.suffix.lower() in {".md", ".qmd", ".rmd"}
+                else "latex" if p.suffix.lower() in {".tex", ".ltx"}
+                else "plain")
+    else:
+        text = args.text or sys.stdin.read()
+        kind = "plain"
+    if len(text.strip()) < 200:
+        print("\nGive me a document (FILE argument, --file, or stdin).\n")
+        return 2
+    a = analyze(text, kind=kind, nlp=get_nlp(), with_narrative=True,
+                with_metrics=False)
+    print("\n" + render_narrative(a.narrative) + "\n")
+    return 0
+
+
 def cmd_abstract(args) -> int:
     """Six-part abstract completeness lens (Belcher/Pallas)."""
-    from .abstract_lens import FRAMES, MOVES, analyze
+    from .discourse.abstract_lens import FRAMES, MOVES, analyze
     if args.file:
         text = Path(args.file).read_text(encoding="utf-8")
     else:
@@ -451,6 +473,13 @@ def main(argv=None) -> int:
     p_rev.add_argument("text", nargs="?", default=None)
     p_rev.add_argument("--file", default=None)
     p_rev.set_defaults(func=cmd_review)
+
+    p_nar = sub.add_parser(
+        "narrative",
+        help="narrative map: moves per section, missing links, hedging")
+    p_nar.add_argument("text", nargs="?", default=None)
+    p_nar.add_argument("--file", default=None)
+    p_nar.set_defaults(func=cmd_narrative)
 
     p_abs = sub.add_parser(
         "abstract",

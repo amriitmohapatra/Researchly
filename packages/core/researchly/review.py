@@ -27,8 +27,8 @@ from __future__ import annotations
 from collections import Counter
 from typing import Optional
 
-from . import abstract_lens
-from . import argument as argument_mod
+from .discourse import abstract_lens
+from .discourse import argument as argument_mod
 from . import metrics as metrics_mod
 from . import profiles as profiles_mod
 from . import sources

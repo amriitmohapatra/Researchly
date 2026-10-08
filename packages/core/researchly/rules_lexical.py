@@ -592,7 +592,7 @@ def d902_missing_niche(doc, document: Document):
 
 
 # ensure the abstract lens registers wherever the rule pack loads
-from . import abstract_lens  # noqa: E402,F401
+from .discourse import abstract_lens  # noqa: E402,F401
 
 
 @rule("W210", "variant-consistency", Category.CONVENTION,

@@ -26,7 +26,9 @@ from . import _core  # noqa: F401  (import path + isolation first)
 from . import __version__ as SERVICE_VERSION
 from .schemas import (AnalyzeOptions, AnalyzeResponse, AnalyzeWordResponse,
                       Category, Coverage, DocumentType, EngineInfo,
-                      FixSafety, Metrics, Mode, ProfileChoice, ProfileInfo,
+                      FixSafety, HedgingPoint, Metrics, MissingLink, Mode,
+                      NarrativeMap, NarrativeMove, NarrativeSection,
+                      ProfileChoice, ProfileInfo,
                       ReviewQuestion, ReviewReport, ReviewRuleCount,
                       RuleInfo, Scope, Span, Suggestion, TierHealth,
                       WordLocation, WordSuggestion)
@@ -108,6 +110,23 @@ def to_review(r: Optional[dict]) -> Optional[ReviewReport]:
         words=int(r["metrics"]["words"]),
         questions=[ReviewQuestion(**q) for q in r["questions"]],
         top_rules=[ReviewRuleCount(**t) for t in r["top_rules"]])
+
+
+def to_narrative(n: Optional[dict]) -> Optional[NarrativeMap]:
+    if n is None:
+        return None
+    return NarrativeMap(
+        sections=[NarrativeSection(
+            section=s["section"], label=s["label"], sentences=s["sentences"],
+            words=s["words"], present=s["present"], expected=s["expected"],
+            moves=[NarrativeMove(**m) for m in s["moves"]])
+            for s in n["sections"]],
+        unmapped=list(n["unmapped"]),
+        missing_links=[MissingLink(**link) for link in n["missing_links"]],
+        hedging=[HedgingPoint(**h) for h in n["hedging"]],
+        note=n["note"],
+        profile=DocumentType(n["profile"]) if n.get("profile") else None,
+        source=n["source"])
 
 
 def profile_choices() -> list:
@@ -193,7 +212,8 @@ def run_analysis(source: Union[str, Document], fmt: str,
     cfg = build_config(options, grammar_enabled, account)
     with ENGINE_LOCK:
         a = api.analyze(source, kind=fmt, cfg=cfg,
-                        with_review=bool(options and options.review))
+                        with_review=bool(options and options.review),
+                        with_narrative=bool(options and options.narrative))
     health = [to_tier(t) for t in a.health]
     if signed_in:
         health.append(account_tier(account_error))
@@ -213,6 +233,7 @@ def run_analysis(source: Union[str, Document], fmt: str,
         mode=Mode(a.config.mode),
         profile=to_profile(a),
         review=to_review(a.review),
+        narrative=to_narrative(a.narrative),
         hidden_by_mode=a.hidden_by_mode,
         suggestions=suggestions,
         counts=dict(a.counts),

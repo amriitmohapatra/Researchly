@@ -58,6 +58,17 @@
             "default": "revise",
             "description": "The mode this check ran in."
           },
+          "narrative": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NarrativeMap"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Present when `options.narrative` was true."
+          },
           "profile": {
             "$ref": "#/components/schemas/ProfileInfo",
             "description": "The article-type profile this check ran under."
@@ -155,6 +166,12 @@
             ],
             "description": "Draft or Revise for this request. Omitted: the caller's saved setting, else revise."
           },
+          "narrative": {
+            "default": false,
+            "description": "Also build the narrative map (`narrative` in the response) from the same analysis.",
+            "title": "Narrative",
+            "type": "boolean"
+          },
           "review": {
             "default": false,
             "description": "Also build the critical reader's brief (`review` in the response) from the same analysis.",
@@ -249,6 +266,17 @@
             "$ref": "#/components/schemas/Mode",
             "default": "revise",
             "description": "The mode this check ran in."
+          },
+          "narrative": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NarrativeMap"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Present when `options.narrative` was true."
           },
           "profile": {
             "$ref": "#/components/schemas/ProfileInfo",
@@ -391,6 +419,17 @@
             "$ref": "#/components/schemas/Mode",
             "default": "revise",
             "description": "The mode this check ran in."
+          },
+          "narrative": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NarrativeMap"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Present when `options.narrative` was true."
           },
           "profile": {
             "$ref": "#/components/schemas/ProfileInfo",
@@ -626,6 +665,50 @@
         "title": "HealthResponse",
         "type": "object"
       },
+      "HedgingPoint": {
+        "additionalProperties": false,
+        "description": "Hedges and boosters per 100 words in one section: a trajectory, not a score.",
+        "properties": {
+          "boosters_per_100w": {
+            "minimum": 0.0,
+            "title": "Boosters Per 100W",
+            "type": "number"
+          },
+          "hedges_per_100w": {
+            "minimum": 0.0,
+            "title": "Hedges Per 100W",
+            "type": "number"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "reading": {
+            "description": "flat | hedged | assertive | balanced | heavily hedged",
+            "title": "Reading",
+            "type": "string"
+          },
+          "section": {
+            "title": "Section",
+            "type": "string"
+          },
+          "words": {
+            "minimum": 0.0,
+            "title": "Words",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "section",
+          "label",
+          "words",
+          "hedges_per_100w",
+          "boosters_per_100w",
+          "reading"
+        ],
+        "title": "HedgingPoint",
+        "type": "object"
+      },
       "Metrics": {
         "additionalProperties": false,
         "description": "Read-outs, never a score (metrics.py).",
@@ -695,6 +778,41 @@
         "title": "Metrics",
         "type": "object"
       },
+      "MissingLink": {
+        "additionalProperties": false,
+        "description": "A gap in the argument's chain (claim, grounds, warrant) in one section.",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "section": {
+            "title": "Section",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "section",
+          "label",
+          "code",
+          "message",
+          "source"
+        ],
+        "title": "MissingLink",
+        "type": "object"
+      },
       "Mode": {
         "description": "Draft / Revise (P1). Draft shows sentence-level checks only; Revise\nshows everything. A writing stage, not a quality dial.",
         "enum": [
@@ -703,6 +821,191 @@
         ],
         "title": "Mode",
         "type": "string"
+      },
+      "MoveStatus": {
+        "enum": [
+          "present",
+          "missing",
+          "out_of_order"
+        ],
+        "title": "MoveStatus",
+        "type": "string"
+      },
+      "NarrativeMap": {
+        "additionalProperties": false,
+        "description": "Per section, which moves are present, missing or out of order; the\nargument's missing links; the hedging trajectory. Same analysis as the\nsuggestions.",
+        "properties": {
+          "hedging": {
+            "items": {
+              "$ref": "#/components/schemas/HedgingPoint"
+            },
+            "title": "Hedging",
+            "type": "array"
+          },
+          "missing_links": {
+            "items": {
+              "$ref": "#/components/schemas/MissingLink"
+            },
+            "title": "Missing Links",
+            "type": "array"
+          },
+          "note": {
+            "description": "One line summing up the map, or why there is none.",
+            "title": "Note",
+            "type": "string"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DocumentType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/NarrativeSection"
+            },
+            "title": "Sections",
+            "type": "array"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "unmapped": {
+            "description": "Sections found that have no expected moves (topical headings).",
+            "items": {
+              "type": "string"
+            },
+            "title": "Unmapped",
+            "type": "array"
+          }
+        },
+        "required": [
+          "sections",
+          "note",
+          "source"
+        ],
+        "title": "NarrativeMap",
+        "type": "object"
+      },
+      "NarrativeMove": {
+        "additionalProperties": false,
+        "description": "One expected move of a section, as an authored question.",
+        "properties": {
+          "evidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The sentence the move rests on, when present (never logged).",
+            "title": "Evidence"
+          },
+          "frame": {
+            "description": "A fill-in frame in Researchly's own wording: curated text, never generated.",
+            "title": "Frame",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "description": "For an out-of-order move: what it appears before or after.",
+            "title": "Note",
+            "type": "string"
+          },
+          "plain": {
+            "description": "The lesson, in everyday words.",
+            "title": "Plain",
+            "type": "string"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/MoveStatus"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "status",
+          "question",
+          "plain",
+          "frame",
+          "source"
+        ],
+        "title": "NarrativeMove",
+        "type": "object"
+      },
+      "NarrativeSection": {
+        "additionalProperties": false,
+        "properties": {
+          "expected": {
+            "minimum": 0.0,
+            "title": "Expected",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "moves": {
+            "items": {
+              "$ref": "#/components/schemas/NarrativeMove"
+            },
+            "title": "Moves",
+            "type": "array"
+          },
+          "present": {
+            "minimum": 0.0,
+            "title": "Present",
+            "type": "integer"
+          },
+          "section": {
+            "title": "Section",
+            "type": "string"
+          },
+          "sentences": {
+            "minimum": 0.0,
+            "title": "Sentences",
+            "type": "integer"
+          },
+          "words": {
+            "minimum": 0.0,
+            "title": "Words",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "section",
+          "label",
+          "sentences",
+          "words",
+          "moves",
+          "present",
+          "expected"
+        ],
+        "title": "NarrativeSection",
+        "type": "object"
       },
       "ProfileChoice": {
         "additionalProperties": false,

@@ -143,6 +143,8 @@ export interface components {
              * @default revise
              */
             mode: components["schemas"]["Mode"];
+            /** @description Present when `options.narrative` was true. */
+            narrative?: components["schemas"]["NarrativeMap"] | null;
             /** @description The article-type profile this check ran under. */
             profile?: components["schemas"]["ProfileInfo"];
             /** @description Present when `options.review` was true. */
@@ -180,6 +182,12 @@ export interface components {
             document_type?: components["schemas"]["DocumentType"] | null;
             /** @description Draft or Revise for this request. Omitted: the caller's saved setting, else revise. */
             mode?: components["schemas"]["Mode"] | null;
+            /**
+             * Narrative
+             * @description Also build the narrative map (`narrative` in the response) from the same analysis.
+             * @default false
+             */
+            narrative: boolean;
             /**
              * Review
              * @description Also build the critical reader's brief (`review` in the response) from the same analysis.
@@ -238,6 +246,8 @@ export interface components {
              * @default revise
              */
             mode: components["schemas"]["Mode"];
+            /** @description Present when `options.narrative` was true. */
+            narrative?: components["schemas"]["NarrativeMap"] | null;
             /** @description The article-type profile this check ran under. */
             profile?: components["schemas"]["ProfileInfo"];
             /** @description Present when `options.review` was true. */
@@ -305,6 +315,8 @@ export interface components {
              * @default revise
              */
             mode: components["schemas"]["Mode"];
+            /** @description Present when `options.narrative` was true. */
+            narrative?: components["schemas"]["NarrativeMap"] | null;
             /** @description The article-type profile this check ran under. */
             profile?: components["schemas"]["ProfileInfo"];
             /** @description Present when `options.review` was true. */
@@ -420,6 +432,27 @@ export interface components {
             tiers: components["schemas"]["TierHealth"][];
         };
         /**
+         * HedgingPoint
+         * @description Hedges and boosters per 100 words in one section: a trajectory, not a score.
+         */
+        HedgingPoint: {
+            /** Boosters Per 100W */
+            boosters_per_100w: number;
+            /** Hedges Per 100W */
+            hedges_per_100w: number;
+            /** Label */
+            label: string;
+            /**
+             * Reading
+             * @description flat | hedged | assertive | balanced | heavily hedged
+             */
+            reading: string;
+            /** Section */
+            section: string;
+            /** Words */
+            words: number;
+        };
+        /**
          * Metrics
          * @description Read-outs, never a score (metrics.py).
          */
@@ -451,12 +484,113 @@ export interface components {
             words: number;
         };
         /**
+         * MissingLink
+         * @description A gap in the argument's chain (claim, grounds, warrant) in one section.
+         */
+        MissingLink: {
+            /** Code */
+            code: string;
+            /** Label */
+            label: string;
+            /** Message */
+            message: string;
+            /** Section */
+            section: string;
+            /** Source */
+            source: string;
+        };
+        /**
          * Mode
          * @description Draft / Revise (P1). Draft shows sentence-level checks only; Revise
          *     shows everything. A writing stage, not a quality dial.
          * @enum {string}
          */
         Mode: "draft" | "revise";
+        /**
+         * MoveStatus
+         * @enum {string}
+         */
+        MoveStatus: "present" | "missing" | "out_of_order";
+        /**
+         * NarrativeMap
+         * @description Per section, which moves are present, missing or out of order; the
+         *     argument's missing links; the hedging trajectory. Same analysis as the
+         *     suggestions.
+         */
+        NarrativeMap: {
+            /** Hedging */
+            hedging?: components["schemas"]["HedgingPoint"][];
+            /** Missing Links */
+            missing_links?: components["schemas"]["MissingLink"][];
+            /**
+             * Note
+             * @description One line summing up the map, or why there is none.
+             */
+            note: string;
+            profile?: components["schemas"]["DocumentType"] | null;
+            /** Sections */
+            sections: components["schemas"]["NarrativeSection"][];
+            /** Source */
+            source: string;
+            /**
+             * Unmapped
+             * @description Sections found that have no expected moves (topical headings).
+             */
+            unmapped?: string[];
+        };
+        /**
+         * NarrativeMove
+         * @description One expected move of a section, as an authored question.
+         */
+        NarrativeMove: {
+            /**
+             * Evidence
+             * @description The sentence the move rests on, when present (never logged).
+             */
+            evidence?: string | null;
+            /**
+             * Frame
+             * @description A fill-in frame in Researchly's own wording: curated text, never generated.
+             */
+            frame: string;
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /**
+             * Note
+             * @description For an out-of-order move: what it appears before or after.
+             * @default
+             */
+            note: string;
+            /**
+             * Plain
+             * @description The lesson, in everyday words.
+             */
+            plain: string;
+            /** Question */
+            question: string;
+            /** Source */
+            source: string;
+            status: components["schemas"]["MoveStatus"];
+        };
+        /** NarrativeSection */
+        NarrativeSection: {
+            /** Expected */
+            expected: number;
+            /** Label */
+            label: string;
+            /** Moves */
+            moves: components["schemas"]["NarrativeMove"][];
+            /** Present */
+            present: number;
+            /** Section */
+            section: string;
+            /** Sentences */
+            sentences: number;
+            /** Words */
+            words: number;
+        };
         /** ProfileChoice */
         ProfileChoice: {
             id: components["schemas"]["DocumentType"];
