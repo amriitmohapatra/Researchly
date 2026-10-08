@@ -293,6 +293,46 @@ main:focus {
   font-size: 0.85rem;
 }
 
+/* ---------- why Researchly: quiet, typographic, below the checker ---------- */
+
+.why {
+  max-width: var(--measure);
+  margin-top: 48px;
+  padding-top: 32px;
+  border-top: 1px solid var(--line);
+}
+.why h2 {
+  font-size: 1.25rem;
+  letter-spacing: -0.01em;
+  margin-bottom: 12px;
+}
+.why-problem,
+.why-for {
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+.why-list {
+  list-style: none;
+  margin: 24px 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.why-list li {
+  padding-left: 16px;
+  border-left: 2px solid var(--line-strong);
+  text-wrap: pretty;
+}
+.why-list strong {
+  font-weight: 650;
+  color: var(--ink);
+}
+@media (min-width: 720px) {
+  .why {
+    margin-top: 56px;
+  }
+}
+
 /* ---------- panels & composer ---------- */
 
 .panel {
