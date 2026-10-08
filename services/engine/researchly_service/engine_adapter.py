@@ -121,6 +121,7 @@ def to_suggestion(s) -> Suggestion:
         section=s.section or "unknown",
         message=s.message,
         why=s.why,
+        plain=s.plain,
         source=s.source,
         learn_ref=None,
         replacement=s.replacement,
@@ -233,7 +234,8 @@ def rule_infos() -> List[RuleInfo]:
     for r in sorted(REGISTRY.values(), key=lambda r: r.id):
         out.append(RuleInfo(
             id=r.id, name=r.name, category=_category(r.category.value),
-            short=r.short, why=r.why, source=r.source, tier=r.tier,
+            short=r.short, why=r.why, plain=r.plain, source=r.source,
+            tier=r.tier,
             fix_safety=_fix_safety(r.fix_safety),
             scope=Scope(r.scope),
             sections_only=sorted(r.sections_only) if r.sections_only else None,

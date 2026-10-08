@@ -62,6 +62,11 @@ prototype trees into the monorepo layout below.
 6. **Every suggestion is explainable** — one-line message + a "why"
    traceable to a named source (the writing guide, Endo's lecture, the
    NG5001 course, a paper). Provenance map: `docs/knowledge-base.md`.
+   Since P35 every rule also carries a `plain=` explanation in everyday
+   words, shown first; no user-visible text may name the guide's section
+   numbers, the course, the lecturer or a CLI command (the lecture and the
+   course appear to users as "Amriit's learnings"; `test_explanations.py`
+   enforces this).
 
 ## Repository map
 
@@ -143,8 +148,9 @@ Researchly/
   ships a `java` stub that satisfies `shutil.which` and runs nothing, which
   is how the grammar tier stayed dead for a whole release.
 - **Add a rule**: `@rule(...)` decorator in the right `rules_*.py`
-  (word lists → `lexicons.py`), fire + don't-fire tests, entry in
-  `docs/rule-inventory.md` with its source. The rule's `source=` is a short
+  (word lists → `lexicons.py`), a `plain=` explanation in everyday words,
+  fire + don't-fire tests, entry in `docs/rule-inventory.md` with its
+  source. The rule's `source=` is a short
   code (`"§4"`, `"Endo"`) that `researchly/sources.py` expands into a full
   citation at registration; an unknown code fails at import, so add the
   citation there in the same change. Users never see a bare code. Declare `tier=` and

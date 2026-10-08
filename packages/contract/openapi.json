@@ -643,6 +643,11 @@
             "title": "Name",
             "type": "string"
           },
+          "plain": {
+            "default": "",
+            "title": "Plain",
+            "type": "string"
+          },
           "scope": {
             "$ref": "#/components/schemas/Scope",
             "default": "sentence",
@@ -946,6 +951,12 @@
             "title": "Message",
             "type": "string"
           },
+          "plain": {
+            "default": "",
+            "description": "The explanation in everyday words, shown first; `why` is the fuller account.",
+            "title": "Plain",
+            "type": "string"
+          },
           "replacement": {
             "anyOf": [
               {
@@ -1173,6 +1184,12 @@
           "message": {
             "description": "One-line rationale, always shown.",
             "title": "Message",
+            "type": "string"
+          },
+          "plain": {
+            "default": "",
+            "description": "The explanation in everyday words, shown first; `why` is the fuller account.",
+            "title": "Plain",
             "type": "string"
           },
           "replacement": {

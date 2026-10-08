@@ -1710,3 +1710,48 @@ manifests and fails on the old file. The local manifest is now named
 "Researchly (local)" so the two cannot be confused. Lesson: Mac Word gives
 no error for a bad manifest; validate against the documented limits in CI,
 since Microsoft's validator is unreachable here.
+
+## P35 — 2026-10-08 — The owner's first real use: plain explanations, sources, three fixes
+
+**What.** The owner ran an assignment's `.tex` through the website and
+sent `Researchly_Improvements_8Oct2026.docx` (read in memory, three
+screenshots). Findings, in their order:
+- "Rule" and "Checked by" on the cards are for us, not users (surfaces,
+  next commit).
+- "Why?" is too technical and full of internal references: "Guide §4.2",
+  "Run `researchly abstract`", "via NG5001 Unit 2". Every rule now carries
+  a `plain=` explanation in everyday words (shown first; the technical why
+  sits behind it), written for a writer who knows their science but not
+  the grammar vocabulary. All 52 why texts were rewritten without section
+  numbers, course codes, lecturer names, book citations or CLI commands;
+  `test_explanations.py` forbids them in any user-visible text. The edit
+  was done with an `ast`-driven script over the decorators (ast columns
+  are byte offsets; the em dashes bit once).
+- Sources: the lecture and the NUS course are shown as **"Amriit's
+  learnings from scientific-writing training (Researchly notes)"**; the
+  published works and the owner's guide stay named (owner decision; the
+  codes are unchanged, so `knowledge-base.md` §9b still traces provenance).
+- "ad valorem" → "galore": the spelling tier read "valorem" alone.
+  `lexicons.LATIN_PHRASES`; a word is skipped when it and a neighbour form
+  a known phrase.
+- "suggests transition support could" flagged as a hedge stack: "that"
+  left out. C301 now walks the dependency parse: a hedge inside a clause
+  subordinate to the reporting verb (ccomp, xcomp, advcl, relcl, acl) is
+  the same hedge. (spaCy Token identity: compare `.i`, never `is`.)
+- The owner's professor's correction, "equations are part of sentences":
+  **X302** (LaTeX, Convention, guide §9.2): a displayed equation after a
+  full stop (abbreviations excepted). On the 17 real LaTeX projects: 5 of
+  102 equations, all genuine.
+- Contract: `Suggestion.plain`, `RuleInfo.plain`; types regenerated; web
+  fixtures carry the field.
+
+**Discussed, recorded in PLAN.** Section-by-section checking: analyse the
+whole document, show the chosen section (truncating breaks the
+document-wide checks); the owner's point that those checks need a complete
+draft becomes the mode's own wording. Article-type profiles (commentary and
+policy brief first) and the selling point go to S4. Jev (TypeSafe AI) is an
+S5 candidate only if it runs inside our container.
+
+**Evidence.** Core 787 passed; service 158; web typecheck, lint and 193
+unit tests; contract drift check; ruff; third-party scan 0 hits. Noise
+gate and bench: addendum below.

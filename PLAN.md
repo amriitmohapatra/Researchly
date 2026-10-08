@@ -141,10 +141,19 @@ Built 2026-10-04 (P32): `researchly/structure.py`, `rules_structure.py`, `rules_
 - [x] Owner steps before trying it (all done 2026-10-04): run the S3 migration; set up custom SMTP (Gmail app password; Supabase now allows template edits only with custom SMTP, and its built-in sender reaches only the Supabase team, so this was needed before any beta user could sign in anyway); add `{{ .Token }}` to the Magic Link and Confirm signup email templates (guide in `apps/word-addin/README.md`, "Hosted add-in (S3)"); merge, deploy the engine and the web app; sideload `manifest.hosted.xml` and fully quit Word (Cmd-Q) **(Amriit)**
 - [x] S3 merged and deployed — amriitmohapatra/Researchly#6 and the start-up fix #7 (office.js defines `Word` late; the taskpane looked for it too early), 2026-10-04; `/word` in a browser shows "Open Researchly from Word" as intended
 - [x] First run in real Word (Mac) — 2026-10-04: after the manifest fix (resource ids over Microsoft's 32-character limit made Word drop it silently), the add-in appears, opens, and signs in with the emailed code **(Amriit)**
-- [ ] **Exit check:** owner uses it on Mac Word for a week; issues logged below
+- [~] **Exit check:** owner uses it on Mac Word for a week; issues logged below. First report 2026-10-08 (an assignment's `.tex` on the website; `Researchly_Improvements_8Oct2026.docx`):
+  - [x] "ad valorem" read as the lone word "valorem" and corrected to "galore" — Latin phrases of academic English are now known to the spelling tier (P35)
+  - [x] "suggests transition support could" flagged as a hedge stack — a hedge inside the clause a reporting verb introduces (the "that" left out) is one hedge, judged from the parse (P35)
+  - [x] "Why?" texts too technical and full of internal references ("Guide §4.2", "Run `researchly abstract`", "via NG5001 Unit 2") — every rule now has a plain explanation shown first; internal references stripped and forbidden by test (P35)
+  - [x] Sources: the lecture and the NUS course are shown to users as "Amriit's learnings from scientific-writing training"; the published works and the owner's guide are cited by name (owner decision 2026-10-08; knowledge-base §9b)
+  - [x] New rule from the owner's professor: an equation must be part of a sentence — **X302** (LaTeX; 5 genuine flags on the 17 real projects) (P35)
+  - [ ] Cards: drop "Rule" and "Checked by"; plain explanation first, technical why behind "More"; source as a reference line (web + add-in)
+  - [ ] Section filter: analyse the whole document, show only the chosen section; document-wide checks grouped; Word "Check this section" from the cursor. Draft/Revise wording: "Draft: check what you've written so far. Revise: check the finished manuscript." (the owner's point: document-wide checks only make sense on a complete draft, so the mode must say so)
 
 ## S4 — Narrative map v1
 
+- [ ] **Article-type profiles** (owner request 2026-10-08): `document_type` is stored but unused. Each type gets a profile: expected sections, rules that do not apply, what "section" means without IMRaD headings; "auto" guesses from headings. Start with **commentary** and **policy brief** (the owner's field, public health); keep the format open so other disciplines' types can be added. A commentary has no abstract moves and no Methods exemption, and may be assertive where a research paper must hedge
+- [ ] **Selling point on the landing page, README and demo** (owner request 2026-10-08): the problem (feedback on scientific writing arrives late and inconsistently; existing tools check grammar or write for you), what an LLM cannot do (same answer every time; a named source per suggestion; never sees the text in local mode; never writes for you; a measured false-flag rate; exact whole-document cross-checks), and the value for early-career and non-native writers (teaches the conventions while you write). The app encourages writing; it never delegates it
 - [ ] Port `argument.py`, `guide.py`, `abstract_lens` into `tiers/discourse/`
 - [ ] Each discourse check = authored question + named source in `knowledge/`
 - [ ] `/v1/narrative` endpoint; narrative map UI (moves present/missing/out of order)
@@ -188,7 +197,7 @@ patterns of good research writing across disciplines, not just epidemiology.
 
 - [ ] `Critic` interface in `packages/core/critics/`
 - [ ] Laya zero-shot spike with `laya-evals` on ~50 labelled paragraphs (expect near-chance; learn the harness)
-- [ ] Task A — flag re-ranker (accept/dismiss data): Laya vs ModernBERT-large
+- [ ] Task A — flag re-ranker (accept/dismiss data): Laya vs ModernBERT-large. Owner also named **Jev** (TypeSafe AI; a non-generative choice/score/yes-no model, 2026-10-08): a candidate only if its weights run inside our own engine container — as a hosted API it is a cloud model (CLAUDE.md #1) and would see document text (#2). Check licence and local availability when S5 starts
 - [ ] Task B — sentence rhetorical role (baseline 82.6%): Laya vs ModernBERT-large
 - [ ] Verify licences of PubMed-RCT / CSAbstruct / CaRS-50 before training anything shippable
 - [ ] ONNX INT8 export, SHA-pinned; model cards; `health.py` entries

@@ -33,7 +33,10 @@ def test_guide_sections_are_named_not_just_numbered():
 
 def test_composite_codes_cite_every_part():
     cited = sources.cite("§6+Endo")
-    assert "The Craft of Scientific Writing" in cited and "Endo" in cited
+    # The lecture is shown to users as the owner's learnings (P35), never
+    # by the lecturer's name.
+    assert "The Craft of Scientific Writing" in cited
+    assert sources.LEARNINGS in cited and "Endo" not in cited
 
 
 def test_unknown_code_fails_loudly():

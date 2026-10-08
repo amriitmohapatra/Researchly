@@ -104,10 +104,13 @@ _REDEFINE_AFTER = 20_000
 
 @rule("F612", "abbreviation-defined-twice", Category.CONVENTION,
       "An abbreviation defined again after it was already defined.",
-      "Define a term once, the first time you use it, then use it "
-      "consistently. A second definition makes the reader wonder whether "
-      "it means something new. A new chapter or paper (after its own "
-      "abstract or introduction) may define it again. (Guide §9.1.)",
+      'Define a term once, the first time you use it, then use it '
+      'consistently. A second definition makes the reader wonder whether '
+      'it means something new. A new chapter or paper (after its own '
+      'abstract or introduction) may define it again.',
+      plain=('This abbreviation was already explained earlier in the document. '
+             'Explaining it again makes the reader wonder whether it now means '
+             'something different. Define it once, at first use.'),
       source="§9.1",
       scope="document")
 def f612_defined_twice(doc, document: Document):
@@ -126,9 +129,12 @@ def f612_defined_twice(doc, document: Document):
 
 @rule("F613", "abbreviation-rarely-used", Category.PREFERENCE,
       "An abbreviation defined but then used once or not at all.",
-      "An abbreviation costs the reader a definition to hold in mind; it "
-      "pays back only when used often. Defined and then used once or not "
-      "at all, the full term is easier to read. (Guide §9.1.)",
+      'An abbreviation costs the reader a definition to hold in mind; it '
+      'pays back only when used often. Defined and then used once or not '
+      'at all, the full term is easier to read.',
+      plain=('You defined this abbreviation but then hardly used it. An '
+             'abbreviation only helps when it appears often. If it appears once '
+             'or twice, the full words are easier to read.'),
       source="§9.1",
       scope="document")
 def f613_rarely_used(doc, document: Document):
@@ -158,9 +164,11 @@ _UNIT_RX = re.compile(
 @rule("N101", "number-unit-spacing-mixed", Category.CONVENTION,
       "A unit written with and without a space after the number.",
       "Journals differ on '5%' versus '5 %' and '37°C' versus '37 °C' "
-      "(the SI Brochure puts a space before every unit, % included), but "
-      "within one document the choice should not change. (BIPM, The "
-      "International System of Units, number-unit spacing.)",
+      '(the SI Brochure puts a space before every unit, % included), but '
+      'within one document the choice should not change.',
+      plain=("You write units with a space in some places ('5 %') and without in "
+             "others ('5%'). Both are accepted, but pick one and keep it the "
+             'same throughout.'),
       source="SI",
       scope="document")
 def n101_unit_spacing(doc, document: Document):
@@ -196,10 +204,12 @@ _YEAR = re.compile(r"(1[89]|20)\d\d\b")
 
 @rule("N102", "sentence-starts-with-numeral", Category.CONVENTION,
       "A sentence that begins with a numeral.",
-      "A sentence should not begin with a numeral: spell the number out "
-      "('Twelve patients…') or rephrase so it comes later ('Of the 312 "
-      "patients…'). Years are tolerated by most styles. (AMA Manual of "
-      "Style, numbers at the start of a sentence.)",
+      'A sentence should not begin with a numeral: spell the number out '
+      "('Twelve patients') or rephrase so it comes later ('Of the 312 "
+      "patients'). Years are tolerated by most styles.",
+      plain=('This sentence starts with a number written in digits. Most styles '
+             "ask you to spell it out ('Twelve patients') or rephrase so it "
+             "comes later ('Of the 312 patients'). Years at the start are fine."),
       source="AMA")
 def n102_sentence_numeral(doc, document: Document):
     for sent in doc.sents:
@@ -260,9 +270,12 @@ _WORD = re.compile(r"[A-Za-z]+(?:-[A-Za-z]+)?")
 @rule("W211", "compound-spelled-two-ways", Category.CONVENTION,
       "The same compound written closed and open (or hyphenated).",
       "'dataset' and 'data set', 'healthcare' and 'health care', "
-      "'timepoint' and 'time point': each is fine, but one document should "
-      "pick one, or the reader wonders whether two things are meant. "
-      "(Guide §9.1: use a term consistently.)",
+      "'timepoint' and 'time point': each is fine, but one document "
+      'should pick one, or the reader wonders whether two things are '
+      'meant.',
+      plain=("This word appears both as one word and as two, like 'dataset' and "
+             "'data set'. Both are fine, but use one form throughout so readers "
+             'do not think you mean two different things.'),
       source="§9.1",
       scope="document")
 def w211_compound_two_ways(doc, document: Document):

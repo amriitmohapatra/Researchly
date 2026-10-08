@@ -60,6 +60,7 @@ function wsugg(
     tier: "craft",
     section: paragraph < 2 ? "methods" : "discussion",
     why: "A synthetic explanation for the e2e suite.",
+    plain: "In everyday words: the same advice, written for a reader who knows their science but not the grammar terms.",
     source: "The Craft of Scientific Writing, §4",
     fix_safety: "review",
     confidence: 1,

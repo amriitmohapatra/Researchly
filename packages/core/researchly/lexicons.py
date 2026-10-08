@@ -26,6 +26,24 @@ GRAND_WORDS = {
 GRAND_ONLY_AS_VERB = frozenset({
     "leverage", "leverages", "leveraged", "endeavor", "endeavour"})
 
+# --- S001: Latin phrases of academic and legal English -----------------------
+# "ad valorem" was read as the lone word "valorem" and corrected to "galore"
+# (owner's assignment, 2026-10-08). A word is skipped when it and a
+# neighbour form one of these.
+LATIN_PHRASES = frozenset({
+    "ad valorem", "ad hoc", "ad libitum", "ad infinitum", "a priori",
+    "a posteriori", "a fortiori", "per capita", "per se", "per annum",
+    "per diem", "pro rata", "pro forma", "pro bono", "de facto", "de jure",
+    "de novo", "ex ante", "ex post", "ex vivo", "ex officio", "in situ",
+    "in vitro", "in vivo", "in silico", "in utero", "in toto", "in extremis",
+    "inter alia", "intra vitam", "prima facie", "bona fide", "mutatis mutandis",
+    "ceteris paribus", "status quo", "vice versa", "sine qua non", "sui generis",
+    "post hoc", "post mortem", "ante mortem", "ipso facto", "modus operandi",
+    "non sequitur", "quid pro quo", "et cetera", "et al", "sensu lato",
+    "sensu stricto", "viva voce", "nota bene", "sic passim", "circa",
+})
+_LATIN_WORDS = frozenset(w for ph in LATIN_PHRASES for w in ph.split())
+
 # --- W202: wordy phrases → tighter alternatives ----------------------------
 WORDY_PHRASES = {
     "due to the fact that": "because",

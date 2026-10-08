@@ -37,11 +37,17 @@ GUIDE_SECTIONS = {
     "9.7": "Figures are arguments too",
 }
 
+# What a user sees for advice the owner learned in training (a lecture and
+# a university course). The course and lecturer are credited only in the
+# internal provenance map (docs/knowledge-base.md): naming them to the
+# public could read as their endorsement, which is theirs to give (owner
+# decision, 2026-10-08). The codes stay so provenance is traceable.
+LEARNINGS = "Amriit's learnings from scientific-writing training (Researchly notes)"
+
 WORKS = {
-    "Endo": ('A. Endo, lecture "Scientific writing for infectious disease '
-             'modelling"'),
-    "NG5001-U1": 'NG5001 (NUS) Unit 1, "Reading Critically"',
-    "NG5001-U2": 'NG5001 (NUS) Unit 2, "Writing Academically"',
+    "Endo": LEARNINGS,
+    "NG5001-U1": LEARNINGS,
+    "NG5001-U2": LEARNINGS,
     "Shehzad": 'W. Shehzad (2008), "Move two: establishing a niche"',
     "LanguageTool": "LanguageTool, open-source grammar checker",
     "symspellpy": ("SymSpell spelling engine with Researchly's scientific "
@@ -70,4 +76,9 @@ def _one(code: str) -> str:
 
 def cite(code: str) -> str:
     """Full citation for a rule's source code. Raises KeyError if unknown."""
-    return "; ".join(_one(part) for part in code.split("+"))
+    seen: list[str] = []
+    for part in code.split("+"):
+        c = _one(part)
+        if c not in seen:
+            seen.append(c)
+    return "; ".join(seen)
