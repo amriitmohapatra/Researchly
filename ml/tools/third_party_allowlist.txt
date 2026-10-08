@@ -7,3 +7,6 @@
 # that happens to run to 8+ words (e.g. a stock statistical formula), never
 # for a real passage from a thesis, paper or course document. If the checker
 # flags a passage, rewrite the passage instead of listing it here.
+
+open access article distributed under the terms of the Creative Commons Attribution License  # the standard CC BY licence statement, quoted as licence evidence in ml/realdocs/manifest.yaml
+Short-term and long-term epidemiological impacts of sustained vector control in various dengue endemic settings: A modelling study  # a published article's title (PLoS Comput Biol 2022, CC BY), named in the bench manifest; a thesis cites the same paper

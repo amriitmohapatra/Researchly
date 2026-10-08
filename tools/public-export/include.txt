@@ -1,0 +1,38 @@
+# What the public repository may contain: committed paths matching a line
+# here (and no line of exclude.txt). Anything not listed stays private, so a
+# new top-level folder is private until someone adds it here on purpose.
+#
+# Syntax: a path relative to the repository root. A trailing "/" means the
+# folder and everything in it; "*" matches within one path segment, "**"
+# across segments.
+
+LICENSE
+ruff.toml
+.gitignore
+.dockerignore
+
+# The engine, its contract, the hosted service and every surface.
+packages/
+services/
+apps/
+supabase/
+
+# The launch video and its poster (made from the demo paper).
+media/
+
+# The synthetic demo manuscript (made up for Researchly; no third-party text).
+demo/
+
+# Evaluation tools that hold no private text: the labelled-precision report
+# and the real-document bench (openly licensed articles, fetched at run time).
+ml/eval/
+ml/realdocs/
+
+# The weekly real-document bench (public articles only). The public CI is
+# overlay/.github/workflows/ci.yml; deploy and noise-floor workflows stay private.
+.github/workflows/realdocs.yml
+
+# Documentation written for people who run or contribute to the project.
+docs/labelling-guide.md
+docs/s2-design.md
+docs/windows-smoke-checklist.md

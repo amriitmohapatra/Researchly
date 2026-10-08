@@ -262,7 +262,7 @@ export const WORD_FAILED_MESSAGE = "Word could not do that just now. Nothing was
 export async function findRange(
   ctx: WordRequestContext,
   loc: WordLocation,
-): Promise<{ ok: true; range: OfficeRange } | { ok: false; message: string }> {
+): Promise<{ ok: true; range: OfficeRange; paragraphText: string } | { ok: false; message: string }> {
   if (!loc.snippet) return { ok: false, message: NOT_FOUND_MESSAGE };
   const paras = ctx.document.body.paragraphs;
   paras.load("items/text");
@@ -280,7 +280,7 @@ export async function findRange(
   // could point at a different copy of a repeated phrase.
   if (results.items.length !== countOccurrences(para.text, loc.snippet)) return { ok: false, message: NOT_FOUND_MESSAGE };
   const range = results.items[loc.occurrence];
-  return range ? { ok: true, range } : { ok: false, message: NOT_FOUND_MESSAGE };
+  return range ? { ok: true, range, paragraphText: para.text } : { ok: false, message: NOT_FOUND_MESSAGE };
 }
 
 /** Select the flagged words in the document. `approximate`: only the start of a long passage could be matched. */
@@ -298,14 +298,64 @@ export async function selectSpan(api: OfficeApi, loc: WordLocation): Promise<Act
   }
 }
 
-async function overlapsField(ctx: WordRequestContext, range: OfficeRange, api: OfficeApi): Promise<boolean> {
-  if (!canTrackChanges(api) || !range.fields) return false; // fields arrived with WordApi 1.4
+/** Whether a range overlaps a Word field: "unknown" when Word could not say. */
+type FieldCheck = "none" | "field" | "unknown";
+
+async function fieldCheck(ctx: WordRequestContext, range: OfficeRange, api: OfficeApi): Promise<FieldCheck> {
+  // Fields arrived with WordApi 1.4. An older Word has no fields API at all:
+  // there is nothing to ask, and the edit is a direct one the writer can undo.
+  if (!canTrackChanges(api) || !range.fields) return "none";
   try {
     range.fields.load("items");
     await ctx.sync();
-    return range.fields.items.length > 0;
+    return range.fields.items.length > 0 ? "field" : "none";
   } catch {
-    return false; // a build without the fields API: nothing to protect
+    // Codex review R3: "could not establish field safety" must never mean "safe to edit".
+    return "unknown";
+  }
+}
+
+/**
+ * How an Apply ended. Four outcomes, because "nothing changed" must never be
+ * said about an edit that may have happened (Codex review R3):
+ * - `applied`: the words were replaced (tracked where Word can);
+ * - `restore_failed`: replaced, but the writer's Track Changes setting could
+ *   not be put back;
+ * - `not_applied`: nothing in the document changed;
+ * - `unknown`: Word reported an error after the edit was sent, and the text
+ *   no longer reads as it did, so it may or may not have been changed.
+ * After `applied`, `restore_failed` or `unknown`, the paragraph's other
+ * suggestions are out of date and the surface must say so, not offer a retry.
+ */
+export type ApplyResult =
+  | { ok: true; outcome: "applied"; tracked: boolean }
+  | { ok: true; outcome: "restore_failed"; tracked: true; message: string }
+  | { ok: false; outcome: "not_applied"; message: string }
+  | { ok: false; outcome: "unknown"; message: string };
+
+export const FIELD_UNKNOWN_MESSAGE =
+  "Word could not say whether this text is part of a citation or another field, so nothing was changed. Make this change by hand.";
+export const RESTORE_FAILED_MESSAGE =
+  "The change was made, but Track Changes could not be switched back; check Word's Review tab.";
+export const UNKNOWN_MESSAGE = "Word reported an error after the edit; check the text before trying again.";
+
+const notApplied = (message: string): ApplyResult => ({ ok: false, outcome: "not_applied", message });
+
+/**
+ * After a failed edit: is the paragraph exactly as it was? Read in a fresh
+ * batch, because the failed one may be unusable. Only an identical paragraph
+ * proves nothing changed; anything else (including a failed read) is unknown.
+ */
+async function unchangedSince(api: OfficeApi, paragraph: number, before: string): Promise<boolean> {
+  try {
+    return await api.Word.run(async (ctx) => {
+      const paras = ctx.document.body.paragraphs;
+      paras.load("items/text");
+      await ctx.sync();
+      return paras.items[paragraph]?.text === before;
+    });
+  } catch {
+    return false;
   }
 }
 
@@ -313,45 +363,88 @@ async function overlapsField(ctx: WordRequestContext, range: OfficeRange, api: O
  * Replace the flagged words with the suggested revision, as a tracked change
  * where Word supports it. The writer's own Track Changes setting is restored
  * afterwards.
+ *
+ * Fails closed: a range Word cannot vouch for (a field probe that failed)
+ * is never edited. The steps run as separate batches, so a failure says
+ * which side of the edit it happened on: tracking switched on, then the
+ * insertion, then tracking restored, then the selection (a failed selection
+ * after a good edit is harmless and not reported as a failure).
  */
-export async function applyReplacement(
-  api: OfficeApi,
-  loc: WordLocation,
-  replacement: string,
-): Promise<ActionResult<{ tracked: boolean }>> {
-  if (!loc.exact) return { ok: false, message: APPROXIMATE_APPLY_MESSAGE };
+export async function applyReplacement(api: OfficeApi, loc: WordLocation, replacement: string): Promise<ApplyResult> {
+  if (!loc.exact) return notApplied(APPROXIMATE_APPLY_MESSAGE);
   const track = canTrackChanges(api);
+  // The paragraph as it was before the edit (a holder: it is set inside the batch).
+  const seen: { before: string | null } = { before: null };
   try {
-    return await api.Word.run(async (ctx) => {
-      const found = await findRange(ctx, loc);
-      if (!found.ok) return found;
-      const range = found.range;
-      // Re-read the very range about to be replaced.
-      range.load("text");
-      await ctx.sync();
-      if (range.text !== loc.snippet) return { ok: false as const, message: RANGE_CHANGED_MESSAGE };
-      if (await overlapsField(ctx, range, api)) return { ok: false as const, message: FIELD_MESSAGE };
-
+    return await api.Word.run(async (ctx): Promise<ApplyResult> => {
+      let range: OfficeRange;
       let prior: string | null = null;
-      if (track) {
-        ctx.document.load("changeTrackingMode");
+      // Everything up to the insertion: a failure here changed nothing.
+      try {
+        const found = await findRange(ctx, loc);
+        if (!found.ok) return notApplied(found.message);
+        range = found.range;
+        seen.before = found.paragraphText;
+        // Re-read the very range about to be replaced.
+        range.load("text");
         await ctx.sync();
-        prior = ctx.document.changeTrackingMode;
-        if (prior !== "TrackAll") ctx.document.changeTrackingMode = "TrackAll";
+        if (range.text !== loc.snippet) return notApplied(RANGE_CHANGED_MESSAGE);
+        const fields = await fieldCheck(ctx, range, api);
+        if (fields === "field") return notApplied(FIELD_MESSAGE);
+        if (fields === "unknown") return notApplied(FIELD_UNKNOWN_MESSAGE);
+        if (track) {
+          ctx.document.load("changeTrackingMode");
+          await ctx.sync();
+          prior = ctx.document.changeTrackingMode;
+          if (prior !== "TrackAll") {
+            ctx.document.changeTrackingMode = "TrackAll";
+            await ctx.sync();
+          }
+        }
+      } catch {
+        await restoreTracking(ctx, track, prior);
+        return notApplied(WORD_FAILED_MESSAGE);
       }
+
+      // The edit itself. If Word reports an error here, the insertion may
+      // still have run (a batch can partly succeed): only an unchanged
+      // paragraph proves it did not.
       try {
         range.insertText(replacement, "Replace");
+        await ctx.sync();
+      } catch {
+        await restoreTracking(ctx, track, prior);
+        const same = seen.before !== null && (await unchangedSince(api, loc.paragraph, seen.before));
+        return same ? notApplied(WORD_FAILED_MESSAGE) : { ok: false, outcome: "unknown", message: UNKNOWN_MESSAGE };
+      }
+
+      const restored = await restoreTracking(ctx, track, prior);
+      try {
         range.select();
         await ctx.sync();
-      } finally {
-        if (track && prior !== null && prior !== "TrackAll") {
-          ctx.document.changeTrackingMode = prior;
-          await ctx.sync();
-        }
+      } catch {
+        /* the edit stands; only the selection did not follow it */
       }
-      return { ok: true as const, tracked: track };
+      if (!restored) return { ok: true, outcome: "restore_failed", tracked: true, message: RESTORE_FAILED_MESSAGE };
+      return { ok: true, outcome: "applied", tracked: track };
     });
   } catch {
-    return { ok: false, message: WORD_FAILED_MESSAGE };
+    // Word.run itself failed (the host refused the batch). Whether anything
+    // ran is unknowable from here, so look before saying "nothing changed".
+    if (seen.before === null) return notApplied(WORD_FAILED_MESSAGE);
+    const same = await unchangedSince(api, loc.paragraph, seen.before);
+    return same ? notApplied(WORD_FAILED_MESSAGE) : { ok: false, outcome: "unknown", message: UNKNOWN_MESSAGE };
+  }
+}
+
+/** Put the writer's Track Changes setting back. False when Word refused; never throws. */
+async function restoreTracking(ctx: WordRequestContext, track: boolean, prior: string | null): Promise<boolean> {
+  if (!track || prior === null || prior === "TrackAll") return true;
+  try {
+    ctx.document.changeTrackingMode = prior;
+    await ctx.sync();
+    return true;
+  } catch {
+    return false;
   }
 }

@@ -93,8 +93,17 @@ export interface SentRequest {
 }
 
 export interface SupabaseState {
-  settings: { disabled_rules: string[]; show_preferences: boolean; locale: string; mode?: string; document_type?: string } | null;
+  settings: {
+    disabled_rules: string[];
+    show_preferences: boolean;
+    locale: string;
+    mode?: string;
+    document_type?: string;
+    keep_progress?: boolean;
+  } | null;
   words: string[];
+  /** progress_events rows (S4c): counts only. Inserts are refused unless settings.keep_progress, as the migration's policy does. */
+  progress: { created_at: string; words: number; document_type: string; counts: Record<string, number> }[];
   /** Response for POST /auth/v1/otp (default: 200 {}). */
   otp: { status: number; body: unknown } | null;
   /** Response for POST /auth/v1/verify (the emailed code, S3). Default: a session when the token is "12345678". */
@@ -107,7 +116,16 @@ export interface SupabaseState {
 
 /** Mock Supabase Auth and the two settings tables. */
 export async function mockSupabase(page: Page, init: Partial<SupabaseState> = {}): Promise<SupabaseState> {
-  const state: SupabaseState = { settings: null, words: [], otp: null, verify: null, refreshFails: false, sent: [], ...init };
+  const state: SupabaseState = {
+    settings: null,
+    words: [],
+    progress: [],
+    otp: null,
+    verify: null,
+    refreshFails: false,
+    sent: [],
+    ...init,
+  };
   await page.route(`${SUPABASE_URL}/**`, async (route) => {
     const req = route.request();
     if (req.method() === "OPTIONS") return reply(route, 204);
@@ -165,6 +183,25 @@ export async function mockSupabase(page: Page, init: Partial<SupabaseState> = {}
       else if (!state.settings) return reply(route, 200, null);
       state.settings = { ...base, disabled_rules: rules };
       return reply(route, 200, rules);
+    }
+    if (p === "/rest/v1/progress_events") {
+      if (req.method() === "GET") {
+        // Newest first, as loadProgress asks (order=created_at.desc).
+        const rows = [...state.progress].sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+        return reply(route, 200, rows);
+      }
+      if (req.method() === "POST") {
+        if (state.settings?.keep_progress !== true) {
+          return reply(route, 403, { code: "42501", message: "new row violates row-level security policy" });
+        }
+        const row = JSON.parse(req.postData() || "{}") as SupabaseState["progress"][number];
+        state.progress.push({ ...row, created_at: new Date(Date.now() + state.progress.length).toISOString() });
+        return reply(route, 201);
+      }
+      if (req.method() === "DELETE") {
+        if (url.searchParams.get("user_id")) state.progress = [];
+        return reply(route, 204);
+      }
     }
     if (p === "/rest/v1/dictionary_words") {
       if (req.method() === "GET") return reply(route, 200, [...state.words].sort().map((word) => ({ word })));

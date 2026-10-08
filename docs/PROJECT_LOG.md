@@ -1931,3 +1931,300 @@ options to an older local adapter. Heuristic coaching must distinguish
 “not assessed” from “not present,” and editing recovery must not promise
 that a document is untouched after a partially successful host operation.
 
+## P37 — 2026-10-08 — S4b: the discourse tier and the narrative map; the demo manuscript
+
+**Why.** S4a merged (amriitmohapatra/Researchly#10) and deployed; the
+owner: "Go ahead with the narrative map and the demo manuscript." The map
+is S4's core (ARCHITECTURE ADR-05): a per-section strip of the moves a
+reader expects, present, missing or out of order, plus the argument's
+missing links, each with a lesson and a fill-in frame.
+
+**The discourse package** (`packages/core/researchly/discourse/`).
+`argument.py` and `abstract_lens.py` moved in (the old import paths
+re-export, so nothing outside broke). `moves.py` is the new piece: sixteen
+moves over six section kinds (abstract, introduction, methods, results,
+discussion, conclusion), each an *authored question* ("Does the
+Introduction say what is still unknown?"), a source code the registry
+expands (Swales for the three introduction moves, Shehzad for the niche,
+Wallace & Wray and Toulmin for the argument, the guide's §2 for the
+hourglass and §4 for warranting, the course unit for the abstract's six
+moves, shown as the owner's learnings), a lesson in everyday words and a
+fill-in frame in Researchly's own wording. The signals are shared with the
+abstract lens and the argument model so the three never disagree about
+what an aim or a limitation looks like; the aim signals gained the forms
+real introductions use ("We therefore set out to", "The present study
+quantifies"). The prototype's `guide.py` was not ported as code: its
+expected-moves table became `SCHEMAS`; its classifier and thesis-exemplar
+index stay out (S5; D6).
+
+**The map** (`narrative.py`). Built from the same parse as the
+suggestions (`api.analyze(with_narrative=True)`), so a document is
+analysed once. Per section in document order: the expected moves with
+their status, the sentence a present move rests on, and for a missing one
+its question, lesson and frame. Order is judged in the abstract and the
+introduction only, and one misplaced sentence is reported once: the
+moves off the longest in-order run are the ones out of place, not every
+move around them (a gap sentence moved to the end of an abstract used to
+mark aim, methods and findings all "out of order"). The argument's
+missing links appear for the argued sections only (a Results section
+shows data without reading them by design). The hedging trajectory
+(PLAN's own item) is hedges and boosters per 100 words per section with a
+reading word, never a score. Topical headings are listed as unmapped; no
+headings at all gives one plain line saying so. The CLI gained
+`researchly narrative`.
+
+**Service and contract.** `options.narrative` on every analysis route,
+`narrative` in the response (`NarrativeMap`), as the brief is: not the
+separate `/v1/narrative` endpoint ARCHITECTURE sketched, which would run
+the analysis twice for a caller who already has the suggestions. The
+canary test proves a quoted sentence reaches only the response body.
+
+**Surfaces and the demo manuscript.** Two sub-agents, reviewed and re-run
+by the lead; details in the addendum.
+
+**Evidence (engine and service, 9c7deb7 + the payload-test fix).** Core
+844 passed (24 new in `test_narrative.py`); service 170 (4 new); contract
+drift check clean; ruff clean; noise gate and bench in the addendum.
+
+**Addendum (same day): the demo manuscript, and what it taught the map.**
+The demo sub-agent wrote a made-up paper (an SEIR model fitted to one
+dengue season in three fictional districts; every name, number and
+reference invented) as one source of truth rendered three ways: a Word
+file with real heading and caption styles, a table, two figures and Office
+Math equations; an Overleaf project with `\input` sections, a `.bib` and
+labelled floats; and Markdown for the text box. Seventeen planted errors
+each fire exactly once in every format where the rule applies, and
+nothing else fires: 0 unplanted flags in all three renderings (the demo
+shows precision as much as recall). `demo/tests/test_demo.py` (25 tests)
+runs in CI with `demo/requirements.txt`. Two deviations from the brief,
+both documented in `demo/README.md`: the uncited float is Table 2 (two
+figures cited out of order leaves no figure uncited), and the abbreviation
+defined twice is EIP, not R0 (one capital letter is not an acronym to the
+engine). Three engine observations recorded for later, no engine changes:
+a definition within 150 characters of an author-year citation is dropped
+by the reference-entry guard in Word and Markdown; the abstract lens's
+percentage signal does not see LaTeX's escaped `\%`; a first name at a
+sentence start can be a spelling flag.
+
+Running the map over the demo found four recall gaps in the discourse
+signals, since the paper is good writing: a Word Title-styled paragraph
+("A compartmental model of...") was classified as a Methods heading by
+its keyword (now "front"); an abstract or introduction that sets the scene
+without the lexicon's phrases had no "what is known" move (the section's
+first sentence now counts as the opening move when it makes none of the
+later ones, as the abstract lens already reasoned); "We fitted a model
+and found that..." was not a restated finding; "The estimates have one
+practical use" and "could be run at the end of each season to rank
+districts" were not implications, and "The approach needs only routine
+weekly counts" not a contribution. With those, the demo maps as it should:
+every move present except the planted missing significance in the
+abstract. The Swales citation was shortened: its full subtitle and
+publisher matched a course PDF's reference list in the third-party scan.
+
+**Evidence.** Core 844 + 6 recall tests; service 170; demo 25; noise
+floor 11.67 unchanged (gate OK); bench PASS 13.69 unchanged; third-party
+scan 0 hits; ruff clean.
+
+**Addendum 2 (same day): the map on the surfaces.** The surfaces
+sub-agent (its first run was cut off by a usage limit; resumed from its
+own worktree) delivered cf03573, re-run by the lead: lint, typecheck, 258
+unit and 109 e2e tests. A third tab, "Narrative map", on the website and
+in the Word pane: the engine's note first, then one strip per section
+with the expected moves in order, each marked present, missing or out of
+order by a dot's shape and the word itself; under the strip the missing
+and out-of-order moves open to their question, the lesson and the frame
+(set as a quoted template captioned "A frame to fill in; the words are
+yours"), and each present move keeps the writer's own sentence behind
+"Show the sentence". Then the argument's missing links, the hedging
+trajectory as a small table of labelled values (the agent chose a table
+over bars because the design contract bans anything that reads as a
+meter), the unmapped headings, and the source line. The Word pane shows
+the strip as a vertical list at its width; the printable report gains a
+map page with every sentence open. One style change outside the map: the
+tab strip now wraps, since three tabs overflowed a phone and the pane.
+Draft mode gets the same one-line "needs Revise" as the brief.
+
+
+## P38 — 2026-10-08 — S4c: lessons, reporting checklists, progress, labelling; the Codex review
+
+**Why.** The owner asked to finish the S4 series end to end and open a PR,
+and to implement the Codex review (`Codex_Review_8Oct2026.md`) "as you deem
+fit". The same request asked for a two-minute deck and a "brag" video
+(the video later with a voiceover).
+
+**What.**
+- **Learn cards** (`researchly/learn.py`): 26 short lessons in six groups.
+  Each has a plain lesson, an invented before-and-after pair, a habit and
+  a source. Every rule, narrative move and argument link carries a
+  `learn_ref` that resolves to a card. The cards ship as
+  `packages/contract/learn.json` (a test fails when it is stale), behind
+  `GET /v1/learn`. The website shows "The lesson" on each card and on the
+  map, plus `/learn` pages.
+- **Epidemiology pack** (`researchly/packs/`): STROBE, CONSORT, PRISMA and
+  EPIFORGE as paraphrased items, chosen by the writer or suggested from the
+  text. Each item reads "reported" with the writer's sentence or "needs
+  your check", never "missing", and "Not applicable" is the writer's
+  session-only call. Both surfaces get a Checklist tab, Revise only in Word.
+- **Progress, opt-in**: the `progress_events` table stores rule-id counts
+  only. The database refuses a row unless the user opted in, and keeps the
+  newest 1,000. `/progress` draws one sparkline per rule with words, never
+  a score. Local checks never record.
+- **Labelling**: `docs/labelling-guide.md`; `/label` exports rule ids and
+  verdicts only. `ml/eval/label_precision.py` reports precision with
+  Wilson intervals and refuses a file that carries text.
+- **Codex review**:
+  - R1: local-server contract parity, proved by a test that posts every
+    option to the real handler.
+  - R2: Auto lets research structure win over policy headings, and shows
+    the headings a guess rests on.
+  - R3: Word Apply fails closed, with four honest outcomes and stale cards.
+  - R4: brief statuses, abstention and a disclaimer.
+  - R5: local claim/warrant/grounds links from the shared parse.
+  - R6: the web sends the mode explicitly.
+  - R7: LSP UTF-16 ranges; stale results are dropped.
+  - R8: the printed report carries its context.
+  - Proposals 2, 6 and 9 were built (dismissal with Undo, checklists,
+    lessons), and the landing-page claims were bounded.
+  - The rest are in PLAN with the review's acceptance evidence.
+- **Citations**: user-visible source lines no longer carry the guide's
+  section numbers (CLAUDE.md #6). Several sections of the guide name the
+  guide once.
+- **Demo on the site**: "Try the demo paper" loads `public/demo/`, a
+  byte-identical copy of `demo/dist/`.
+
+**How.** The lead built the engine, service, contract and database
+(03d98d4, 082794d, ad0c9c4, d0fe13e). Two sub-agents worked in their own
+worktrees: one on the web results (f8bb433), one on Word and the new pages
+(f891213). Their commits were cherry-picked and conflicts resolved:
+`globals.css` was append-only on one side, and `lib/learn.ts` was a union.
+Three seams between them were fixed by the lead:
+- the account tests' exact-options checks now expect `mode: "revise"`;
+- the Word profile line now delegates to the web's, so a guessed type's
+  evidence shows after the engine's note on both surfaces;
+- DESIGN.md gained the Word, Lessons, Progress and Label notes.
+
+The deck (seven slides, Slides artifact) and the video (50 s with music;
+65 s with an offline Kokoro-82M voice, Apache-2.0) live outside the repo.
+
+**Evidence.**
+
+| Check | Result |
+|---|---|
+| core | 918 passed, 2 skipped |
+| service | 183 |
+| database (Postgres 16, two users) | 101 |
+| demo | 25 |
+| ml/eval | 5 |
+| web lint, boundary, typecheck | clean |
+| web unit | 345 |
+| web e2e | 152, 7 screenshot-only skipped |
+| contract check | clean |
+| ruff | clean |
+| third-party scan | 0 hits |
+| noise floor | 11.67, unchanged (gate OK) |
+| real-document bench | PASS, 13.69, unchanged |
+
+**Lessons.**
+- A host error after an insertion means "unknown", never "nothing
+  changed". Only a fresh re-read can say the text is untouched.
+- Two agents building one shared helper for the same line will diverge;
+  give a shared line one owner.
+- A reporting checklist can only say what it found. A cue cannot prove
+  absence, so the item says "needs your check".
+
+**Open.**
+- Owner steps: run the S4c migration and deploy.
+- Real-Word checks: Apply outcomes, the Checklist tab, the map.
+- Label 50 paragraphs; this is the S4 exit check.
+- Listen to the video's voice before sharing.
+- The label page links to the guide on the private GitHub repo, which only
+  the owner can open.
+
+## P39 — 2026-10-08 — A public repository, generated from the private one
+
+**Why.** The owner wants to share the code without the material that cannot
+be redistributed, and chose a separate public repository with a fresh
+history ("Go with the separate public repo"). This repository stays private.
+Its git history has held the theses and the course PDFs since the first
+commits, so making it public was never an option.
+
+**What.**
+- **The export.** `tools/public-export/export.py` reads committed files at a
+  ref, never the working folder. It keeps what `include.txt` admits and
+  `exclude.txt` does not, then lays `overlay/` on top: the public README,
+  CONTRIBUTING, SECURITY and the public CI. The public CI is the private CI
+  minus the third-party job, which needs private sources.
+- **The gate** refuses the export on any of:
+  - an 8-word run shared with a private source, in any exported file;
+  - a private name from `private-terms.txt` (the lecturer, the course,
+    thesis authors, student ids);
+  - a credential, by its own patterns and by gitleaks;
+  - an email that is neither a placeholder nor listed;
+  - a PDF, pickle, model file or stray archive, an oversized file, or a
+    symlink.
+- **CI.** A `public-export` job runs the tool's tests and the gate on every
+  change.
+- **The engine stopped naming its private sources in its own code.** The
+  source codes are now `lecture`, `course-U1` and `course-U2`; the knowledge
+  base maps them. The explanation test reads the private terms list when it
+  is present.
+- **Fixture and copy fixes.**
+  - The web config test assembles its fake keys at run time, so gitleaks
+    stays green.
+  - Two phrases joined the third-party allow-list: the CC BY licence
+    statement and a published article's title.
+  - The landing page no longer says the noise is tracked "in the open".
+
+**Evidence.**
+- The first gate run found 129 findings: 126 were licence wording and one
+  paper title, plus 2 placeholder emails and 1 fixture key. A gitleaks run
+  later found 1 more fixture key. The final run is clean: 375 files,
+  4.1 MB.
+- The export, on its own, passes:
+
+| Check | Result |
+|---|---|
+| core | 918 passed, 2 skipped |
+| service | 183 |
+| database (Postgres 16) | 101 |
+| demo, eval and bench | 56 |
+| contract check | clean |
+| ruff | clean |
+| web lint and boundary check | clean |
+| web typecheck | 0 errors |
+| web unit | 345 |
+
+- A single-commit repository is staged. gitleaks reports no leaks.
+- The tool has 8 tests.
+
+**Blocked.** This session's GitHub access cannot create a repository (403).
+The owner creates an empty private `researchly-public`; Claude then pushes
+it, and the owner reviews it and switches it to Public.
+
+**Lessons.**
+- An allow-list, not a deny-list: a new folder stays private until someone
+  publishes it on purpose.
+- Gate with the same scanner the public CI will run. Our own patterns
+  missed a fake key that gitleaks flags.
+- Prove the public tree stands alone by running its suites from the export
+  directory, not from the private checkout.
+
+**Addendum (same day): the repository is live, with the launch video.** The
+owner created `amriitmohapatra/researchly-public` and gave the Claude app
+access. Claude pushed the single gated commit (953a0a1). Its first CI run
+passed all eight jobs: lint, engine, service, contract, web (unit and e2e),
+engine image, two-user RLS and gitleaks.
+
+At the owner's request the launch video was added. The 50-second
+music-only cut is in `media/`, with a poster carrying a play button at the
+top of the public README; the link opens the raw file, because GitHub plays
+an mp4 in the browser but does not embed a repository file inline. The gate
+admits video only from `media/`. The voiced cut stays out because nobody has
+listened to it yet.
+
+**Addendum 2: the voiced cut.** The owner sent the voiced cut back (the
+same file, checked by hash) to use instead. `media/researchly-video.mp4`
+is now the 65-second cut, narrated by Kokoro-82M (Apache-2.0, offline). The
+README caption says the narration is a synthetic voice, as ad and social
+platforms increasingly ask. The music-only cut remains in the public
+repository's history from its second commit.

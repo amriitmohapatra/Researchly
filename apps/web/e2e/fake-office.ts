@@ -40,6 +40,17 @@ export interface FakeWordConfig {
   nullHistory?: boolean;
   /** Where the cursor is when the pane opens: a paragraph index (default 0). */
   cursor?: number;
+  /**
+   * Host failures to reproduce (Codex review R3), each at `context.sync()`
+   * like a real Word error:
+   * - `fields`: loading a range's fields fails;
+   * - `insert`: "before" fails the insertion with nothing changed, "after"
+   *   makes the change and then reports an error (a batch that partly ran);
+   * - `select`: selecting a range fails;
+   * - `restoreTracking`: switching Track Changes back off (any mode other
+   *   than TrackAll) fails.
+   */
+  failures?: { fields?: boolean; insert?: "before" | "after"; select?: boolean; restoreTracking?: boolean };
 }
 
 export interface FakeEdit {
@@ -64,6 +75,7 @@ export interface FakeWordState {
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export function installFakeOffice(target: any, config: FakeWordConfig): FakeWordState {
   const api14 = config.api14 !== false;
+  const failures = config.failures ?? {};
   const state: FakeWordState = {
     paragraphs: config.paragraphs.map((p) => ({ ...p })),
     selection: null,
@@ -119,25 +131,37 @@ export function installFakeOffice(target: any, config: FakeWordConfig): FakeWord
         },
         select() {
           ops.push(() => {
+            if (failures.select) throw new Error("GeneralException: the selection could not be made");
             state.selection = { paragraph: r.pi, start: r.start, end: r.end, text: state.paragraphs[r.pi]!.text.slice(r.start, r.end) };
           });
         },
         insertText(text: string, where: string) {
           if (where !== "Replace") throw new Error(`fake office: unsupported insert location ${where}`);
           ops.push(() => {
+            if (failures.insert === "before") throw new Error("GeneralException: the text could not be inserted");
             const p = state.paragraphs[r.pi]!;
             const before = p.text.slice(r.start, r.end);
             p.text = p.text.slice(0, r.start) + text + p.text.slice(r.end);
             state.edits.push({ paragraph: r.pi, start: r.start, end: r.end, before, text, tracked: state.trackingMode === "TrackAll" });
             r.end = r.start + text.length;
             r.text = text;
+            if (failures.insert === "after") throw new Error("GeneralException: an error after the insertion");
           });
           return r;
         },
       };
       if (api14) {
         const inField = (config.fieldParagraphs ?? []).includes(pi);
-        r.fields = { items: inField ? [{ code: "ADDIN ZOTERO_ITEM" }] : [], load() {} };
+        r.fields = {
+          items: inField ? [{ code: "ADDIN ZOTERO_ITEM" }] : [],
+          load() {
+            if (failures.fields) {
+              ops.push(() => {
+                throw new Error("GeneralException: the fields could not be read");
+              });
+            }
+          },
+        };
       }
       return r;
     }
@@ -193,6 +217,7 @@ export function installFakeOffice(target: any, config: FakeWordConfig): FakeWord
           return;
         }
         ops.push(() => {
+          if (failures.restoreTracking && mode !== "TrackAll") throw new Error("GeneralException: Track Changes could not be set");
           state.trackingMode = mode;
         });
       },

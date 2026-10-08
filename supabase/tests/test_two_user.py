@@ -228,13 +228,15 @@ def test_function_privileges_and_hardening(pg):
     by_name = {r[0]: r[1:] for r in rows}
     assert set(by_name) == {
         "my_config", "mute_rule", "unmute_rule", "researchly_dictionary_cap",
-        "researchly_rule_ids_valid", "researchly_set_updated_at"}
+        "researchly_rule_ids_valid", "researchly_set_updated_at",
+        "researchly_counts_valid", "researchly_progress_prune"}
     for name, (secdef, config, anon_x, auth_x, public_x) in by_name.items():
         assert secdef is False, name + " must be SECURITY INVOKER"
         assert config == ['search_path=""'], (name, config)
         assert anon_x is False and public_x is False, name
         assert auth_x is (name in ("my_config", "mute_rule", "unmute_rule",
-                                   "researchly_rule_ids_valid")), name
+                                   "researchly_rule_ids_valid",
+                                   "researchly_counts_valid")), name
 
 
 def test_no_trigger_on_auth_users_and_no_extra_tables(pg):
@@ -243,7 +245,8 @@ def test_no_trigger_on_auth_users_and_no_extra_tables(pg):
         " and not tgisinternal").fetchone()[0] == 0
     tables = pg.execute(
         "select tablename from pg_tables where schemaname = 'public' order by 1").fetchall()
-    assert tables == [("dictionary_words",), ("user_settings",)]
+    assert tables == [("dictionary_words",), ("progress_events",),
+                      ("user_settings",)]
 
 
 # ---------------------------------------------------------------------------
@@ -703,7 +706,7 @@ def test_rerunning_migration_keeps_data_and_policies(pg):
     _apply_migration(pg)
     assert (snapshot(pg, USER_A), snapshot(pg, USER_B)) == before
     assert pg.execute("select count(*) from pg_policies where schemaname = 'public'"
-                      ).fetchone()[0] == 8
+                      ).fetchone()[0] == 11
     with as_user(pg, USER_A) as cur:
         cur.execute("select count(*) from public.dictionary_words")
         assert cur.fetchone()[0] == 1
@@ -817,3 +820,80 @@ def test_document_type_is_saved_per_user_and_checked(pg):
     with pytest.raises(errors.CheckViolation):
         with as_user(pg, USER_A) as cur:
             cur.execute("update public.user_settings set document_type = 'poem'")
+
+
+# ---------------------------------------------------------------------------
+# progress_events (S4): opt-in, counts only, owner only
+# ---------------------------------------------------------------------------
+
+def _record(cur, counts='{"G101": 2, "C303": 1}', words=1200):
+    cur.execute("insert into public.progress_events (words, document_type, "
+                "counts) values (%s, 'manuscript', %s::jsonb)", (words, counts))
+
+
+def test_progress_is_refused_until_the_user_opts_in(pg):
+    with pytest.raises(errors.InsufficientPrivilege):
+        with as_user(pg, USER_A) as cur:
+            _record(cur)
+    with as_user(pg, USER_A) as cur:
+        cur.execute("insert into public.user_settings (keep_progress) "
+                    "values (false)")
+    with pytest.raises(errors.InsufficientPrivilege):
+        with as_user(pg, USER_A) as cur:
+            _record(cur)
+    with as_user(pg, USER_A) as cur:
+        cur.execute("update public.user_settings set keep_progress = true")
+        _record(cur)
+        cur.execute("select words, counts from public.progress_events")
+        assert cur.fetchall() == [(1200, {"G101": 2, "C303": 1})]
+
+
+def test_progress_rows_are_private_and_never_edited(pg):
+    with as_user(pg, USER_A) as cur:
+        cur.execute("insert into public.user_settings (keep_progress) "
+                    "values (true)")
+        _record(cur)
+    with as_user(pg, USER_B) as cur:
+        cur.execute("select count(*) from public.progress_events")
+        assert cur.fetchone()[0] == 0
+        cur.execute("delete from public.progress_events")
+        assert cur.rowcount == 0
+    with pytest.raises(errors.InsufficientPrivilege):
+        with as_user(pg, USER_A) as cur:
+            cur.execute("update public.progress_events set words = 1")
+    with as_user(pg, USER_A) as cur:
+        cur.execute("delete from public.progress_events")
+        assert cur.rowcount == 1
+    with pytest.raises(errors.InsufficientPrivilege):
+        with as_anon(pg) as cur:
+            cur.execute("select count(*) from public.progress_events")
+
+
+@pytest.mark.parametrize("counts", [
+    '{"G101": "the the"}',                 # text in a value
+    '{"We fitted a model": 1}',            # text in a key
+    '{"G101": -1}', '{"G101": 1.5}', '[1, 2]',
+])
+def test_progress_holds_rule_counts_and_nothing_else(pg, counts):
+    with as_user(pg, USER_A) as cur:
+        cur.execute("insert into public.user_settings (keep_progress) "
+                    "values (true)")
+    with pytest.raises(errors.CheckViolation):
+        with as_user(pg, USER_A) as cur:
+            _record(cur, counts=counts)
+
+
+def test_progress_keeps_the_newest_thousand(pg):
+    with as_user(pg, USER_A) as cur:
+        cur.execute("insert into public.user_settings (keep_progress) "
+                    "values (true)")
+        for i in range(1003):
+            _record(cur, words=i)
+        cur.execute("select count(*), min(words) from public.progress_events")
+        assert cur.fetchone() == (1000, 3)
+
+
+def test_my_config_does_not_expose_progress(pg):
+    with as_user(pg, USER_A) as cur:
+        assert "keep_progress" not in my_config(cur)
+

@@ -1,7 +1,7 @@
 import type { Page, Request, Route } from "@playwright/test";
 import type { AnalyzeRequest } from "@researchly/contract";
 import type { RuleInfo } from "@researchly/contract";
-import { ENGINE, PROFILES, responseFor, RULES_REGISTRY } from "./fixtures";
+import { CHECKLISTS, ENGINE, PROFILES, responseFor, RULES_REGISTRY } from "./fixtures";
 
 const CORS = {
   "access-control-allow-origin": "*",
@@ -27,7 +27,7 @@ export async function mockEngine(page: Page, handler?: Handler, rules: RuleInfo[
   await page.route(`${ENGINE}/v1/rules`, async (route) => {
     if (route.request().method() === "OPTIONS") return route.fulfill({ status: 204, headers: CORS });
     if (rules === null) return json(route, 500, { error: { code: "internal", message: "no registry", request_id: "req-rules" } });
-    return json(route, 200, { rules, profiles: PROFILES });
+    return json(route, 200, { rules, profiles: PROFILES, checklists: CHECKLISTS });
   });
   await page.route(`${ENGINE}/v1/analyze`, async (route) => {
     if (route.request().method() === "OPTIONS") {

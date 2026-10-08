@@ -67,6 +67,7 @@ class Suggestion:
     why: str = ""                     # teachable explanation
     plain: str = ""                   # the same, in everyday words (P35)
     source: str = ""                  # provenance (guide section, paper)
+    learn_ref: Optional[str] = None   # the Learn card (learn.py, S4)
     tier: str = TIER_CRAFT
     fix_safety: str = FIX_REVIEW
     # filled in by the engine:
@@ -85,6 +86,7 @@ class Suggestion:
             "why": self.why,
             "plain": self.plain,
             "source": self.source,
+            "learn_ref": self.learn_ref,
             "tier": self.tier,
             "fix_safety": self.fix_safety,
             "confidence": self.confidence,
@@ -192,6 +194,7 @@ def check(document: Document, nlp, *,
     `spacy_doc` lets a caller supply an already-parsed document so the parse
     can be shared with metrics instead of repeated — see api.analyze().
     """
+    from .learn import card_for_rule
     load_rules()
 
     disabled = disabled or set()
@@ -212,6 +215,7 @@ def check(document: Document, nlp, *,
             # Carry the explanation and provenance on the suggestion itself.
             # Every surface used to re-join these out of REGISTRY by hand.
             s.why, s.source, s.plain = r.why, r.source, r.plain
+            s.learn_ref = card_for_rule(r.id)
             s.tier, s.fix_safety = r.tier, r.fix_safety
             section = document.section_at(s.start)
             if not _section_allows(r, section):

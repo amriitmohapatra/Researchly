@@ -84,6 +84,16 @@ export function AccountMenu() {
               </Link>
             </li>
             <li>
+              <Link href="/progress" className="account-item" onClick={() => setOpen(false)} data-testid="nav-progress">
+                Progress
+              </Link>
+            </li>
+            <li>
+              <Link href="/label" className="account-item" onClick={() => setOpen(false)} data-testid="nav-label">
+                Label flags
+              </Link>
+            </li>
+            <li>
               <button
                 type="button"
                 className="account-item"

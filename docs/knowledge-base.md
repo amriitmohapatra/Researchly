@@ -157,8 +157,15 @@ lecture (§1) and from the NG5001 course (§§2–9) show the source
 to the public could read as their endorsement, which is theirs to give.
 Rules from the owner's own guide cite the guide and its section; published
 works (Shehzad 2008, ICMJE, the SI Brochure, the AMA Manual) are cited by
-name. The `source=` codes on the rules are unchanged, so this map still
-traces every rule to where it came from.
+name. The `source=` codes on the rules still trace every rule to where it
+came from, through this map.
+
+**Neutral codes (2026-10-08, for the public repository).** So that the
+engine's own code never names them either, the codes were renamed: `lecture`
+is Dr Endo's lecture (§1), `course-U1` and `course-U2` are units 1 and 2 of
+the NG5001 course (§2, §3). This document, and the private terms list in
+`tools/public-export/private-terms.txt`, are the only places that name
+them; neither is ever exported.
 
 ## 10. Published style references (S2b, 2026-10-04)
 
@@ -175,6 +182,36 @@ Named in `researchly/sources.py`; cited by name only, never quoted.
 | Guide §6 | Be concrete and credible; let the numbers carry the weight | **X401** |
 | Microsoft Word documentation (heading styles) | Heading styles build the navigation pane, the table of contents and the section structure, so body text must not carry one | **X501** (P33) |
 | Schwartz & Hearst (2003), *A simple algorithm for identifying abbreviation definitions in biomedical text* | How definitions are recognised (not a writing rule) | F612/F613 detection |
+
+## 11. The discourse tier: authored questions behind the narrative map (S4, 2026-10-08)
+
+`researchly/discourse/moves.py`. Each move a section is expected to make is an authored question with a named source, a lesson in everyday words and a fill-in frame in Researchly's own wording (curated text, never generated; the idea of one frame per move is Pallas's, her frames are not reproduced). Sources are cited by name on the map's source line; the questions, lessons and frames name none of them.
+
+| Section | Moves (in order) | Sources |
+|---|---|---|
+| Abstract | what is known, what is missing, what you set out to do, how it was done, what was found, why it matters now | the six-move abstract (the course's Unit 2, shown as the owner's learnings); guide §2 |
+| Introduction | why it matters, what is missing, what you set out to do | Swales (1990) CARS; Shehzad (2008) on the niche; guide §3 |
+| Methods | the data, the analysis | guide §2 |
+| Results | what was found, the evidence | guide §9.7 |
+| Discussion | the main finding restated, what it means, against earlier work, what this cannot show, what should change | guide §2 (OCAR, the hourglass), §4 (warranting), §7.3; Wallace & Wray; Toulmin (1958); guide §9.8 |
+| Conclusion | what this adds, what should change | Wallace & Wray; guide §2, §3, §9.8 |
+
+Order is judged in the abstract and the introduction only. The argument's missing links (`discourse/argument.py`: claim without warrant, claim without grounds, evidence without interpretation, limitation not reflected in claim strength, contribution unclear) cite Wallace & Wray, Toulmin and guide §4, and appear on the map for the argued sections (abstract, introduction, discussion, limitations, conclusion). The hedging trajectory reuses the hedge and booster lexicons of the metrics read-out (Hyland) per section.
+
+## 12. Learn cards and the epidemiology pack (S4c, 2026-10-08)
+
+**Learn cards** (`researchly/learn.py`, exported to `packages/contract/learn.json`). 26 short lessons in six groups (sentences; words; claims and evidence; figures, tables and numbers; structure and argument; mechanics). Each card has a summary, a lesson in everyday words, a before-and-after pair written for Researchly (synthetic, never quoted from a source), a habit to keep, and the source line expanded by `sources.cite()`. Every rule, every narrative move and every argument link carries a `learn_ref` that resolves to a card; a test fails if one does not, and another fails if `learn.json` is out of date. The lessons paraphrase the guide (sentence mechanics after Gopen & Swan, words, calibration, structure, field conventions), Wallace & Wray and Toulmin for claims and warrants, Swales and Shehzad for introductions, and the course material, shown as the owner's learnings. No card names a section number, the course or the lecturer.
+
+**Epidemiology pack** (`researchly/packs/epidemiology.py`). Four reporting checklists, chosen by the writer or suggested from the text (PRISMA, then CONSORT, then EPIFORGE, then STROBE):
+
+| Checklist | Design | Items checked | Source |
+|---|---|---|---|
+| STROBE | observational studies | 16 | von Elm et al. (2007), the STROBE statement |
+| CONSORT | randomised trials | 18 | Schulz et al. (2010), CONSORT 2010 |
+| PRISMA | systematic reviews | 15 | Page et al. (2021), PRISMA 2020 |
+| EPIFORGE | epidemic forecasts and projections | 15 | Pollett et al. (2021), EPIFORGE 2020 |
+
+Each item is paraphrased in Researchly's words, with the section it belongs in and a cue the engine looks for. An item is reported as "reported" (with the sentence that matched) or "needs your check". It is never reported as missing, because a cue cannot prove absence. The pack checks reporting, never the science (P3). The guideline texts are not reproduced; each item cites its statement by name.
 
 ## Shipped this phase (v0.4)
 

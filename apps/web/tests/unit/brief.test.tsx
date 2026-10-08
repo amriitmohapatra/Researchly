@@ -6,26 +6,29 @@ import { ReviewBrief } from "@/components/ReviewBrief";
 /** A brief with five questions, synthetic throughout. */
 const review: ReviewReport = {
   source: "A named source; Amriit's learnings from scientific-writing training (Researchly notes)",
+  disclaimer: "This brief points to what a critical reader would ask. It does not establish whether the science is sound.",
   sections: ["introduction", "discussion"],
   words: 120,
   questions: [
     {
       id: "A",
+      status: "yours",
       question: "Why am I reading this?",
       verdict: "Yours to answer: what do you need from this document?",
       points: ["The brief below reads it as a sceptical reader would."],
       evidence: [],
     },
-    { id: "B", question: "What are the authors trying to achieve?", verdict: "An aim is stated.", points: [], evidence: ["We set out to test the model."] },
-    { id: "C", question: "What are they claiming?", verdict: "No unhedged causal claims found.", points: [], evidence: [] },
+    { id: "B", status: "detected", question: "What are the authors trying to achieve?", verdict: "An aim is stated.", points: [], evidence: ["We set out to test the model."] },
+    { id: "C", status: "not_assessed", question: "What are they claiming?", verdict: "No unhedged causal claims found.", points: [], evidence: [] },
     {
       id: "D",
+      status: "not_detected",
       question: "How convincing are the claims?",
       verdict: "1 thing weakens the claims; see the points.",
       points: ["No limitations section: the reviewer will supply the rebuttal instead.", " "],
       evidence: ["  ", "The result held in every run <and> in the pilot."],
     },
-    { id: "E", question: "What use can be made of this?", verdict: "The significance is stated.", points: [], evidence: ["This changes how teams should plan."] },
+    { id: "E", status: "not_applicable", question: "What use can be made of this?", verdict: "The significance is stated.", points: [], evidence: ["This changes how teams should plan."] },
   ],
   top_rules: [
     { id: "W202", short: "Wordy phrase", count: 3 },
@@ -98,5 +101,37 @@ describe("the reviewer's brief", () => {
     const h = render(<ReviewBrief state={{ kind: "missing" }} />);
     expect(h).toContain("did not return a brief");
     expect(h).not.toContain("brief-question");
+  });
+});
+
+describe("the brief's statuses and disclaimer (Codex review R4)", () => {
+  const html = render(<ReviewBrief state={{ kind: "ready", review }} />);
+  const words = (h: string) => [...h.matchAll(/data-question="([A-E])"[\s\S]*?<\/h3>/g)].map((m) => /data-testid="brief-status" data-status="[a-z_]+">([^<]+)</.exec(m[0])?.[1] ?? "");
+
+  it("says each answer's status as a small word after the question, and nothing for the writer's own question A", () => {
+    expect(words(html)).toEqual(["", "detected", "not assessed", "not detected", "not applicable"]);
+    // Screen readers hear it in brackets after the question.
+    expect(html).toMatch(/What are the authors trying to achieve\?(<!-- -->)? <span class="sr-only">\(<\/span><span class="brief-q-status"/);
+  });
+
+  it("never colours by status: one class for every status word", () => {
+    expect([...html.matchAll(/<span class="([^"]+)" data-testid="brief-status"/g)].map((m) => m[1])).toEqual(Array(4).fill("brief-q-status"));
+  });
+
+  it("an unknown status (a newer engine) or none (an older one) shows no word", () => {
+    const odd = {
+      ...review,
+      questions: review.questions.map((q, i) => (i === 1 ? { ...q, status: "guessed" as never } : i === 2 ? ({ ...q, status: undefined } as never) : q)),
+    };
+    expect(words(render(<ReviewBrief state={{ kind: "ready", review: odd }} />)).slice(0, 3)).toEqual(["", "", ""]);
+  });
+
+  it("closes with the engine's disclaimer, after the frequent checks and before the source", () => {
+    const at = (m: string) => html.indexOf(m);
+    expect(html).toContain(`<p class="brief-disclaimer" data-testid="brief-disclaimer">${review.disclaimer}</p>`);
+    expect(at("brief-rules")).toBeLessThan(at("brief-disclaimer"));
+    expect(at("brief-disclaimer")).toBeLessThan(at("brief-source"));
+    const none = render(<ReviewBrief state={{ kind: "ready", review: { ...review, disclaimer: "  " } }} />);
+    expect(none).not.toContain("brief-disclaimer");
   });
 });

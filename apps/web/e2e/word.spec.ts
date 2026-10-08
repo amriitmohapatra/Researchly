@@ -20,7 +20,10 @@ import {
   mockWordEngine,
   OFFICE_JS,
   REPEAT_2B,
+  REPEAT_1,
   reviseResponse,
+  WORD_CHECKLIST,
+  WORD_NARRATIVE,
   wordState,
   WORDY,
 } from "./word-fixtures";
@@ -65,7 +68,14 @@ test.describe("Word taskpane", () => {
       { text: DOC[3]!.text, style: "Normal", kind: "body" },
       { text: "Region", style: "Normal", kind: "table" },
     ]);
-    expect(body.options).toEqual({ show_preferences: false, disabled_rules: [], mode: "revise", document_type: "auto", review: true });
+    expect(body.options).toEqual({
+      show_preferences: false,
+      disabled_rules: [],
+      mode: "revise",
+      document_type: "auto",
+      review: true,
+      narrative: true,
+    });
     expect(calls[0]!.authorization).toBeUndefined();
 
     await expect(page.getByRole("heading", { name: "8 suggestions" })).toBeVisible();
@@ -195,15 +205,23 @@ test.describe("Word taskpane", () => {
     await expect(page.getByTestId("mode-draft")).toBeChecked();
   });
 
-  test("the reviewer's brief is a tab in the pane: Draft asks for Revise and switches; Check as is sent, re-checks and is said", async ({ page }) => {
+  test("the reviewer's brief and the narrative map are tabs in the pane: Draft asks for Revise and switches; Check as is sent, re-checks and is said", async ({
+    page,
+  }) => {
     await fakeOffice(page);
     const calls = await mockWordEngine(page, ENGINE);
+    // Word's sidebar: about 320px wide.
+    await page.setViewportSize({ width: 340, height: 900 });
     await page.goto("/word");
     await page.getByTestId("mode-draft").check();
     await page.getByTestId("check-document").click();
     await expect(page.getByTestId("tp-results")).toBeVisible();
-    // Draft never asks for the brief: it is a whole-document read.
+    // Draft never asks for the brief or the narrative map: both are whole-document reads.
     expect(calls[0]!.body.options?.review).toBe(false);
+    expect(calls[0]!.body.options?.narrative).toBe(false);
+    await page.getByTestId("view-narrative").click();
+    await expect(page.getByTestId("narrative-needs-revise")).toContainText("needs Revise mode");
+    await expect(page.getByTestId("narrative-switch-revise")).toBeVisible();
     await page.getByTestId("view-brief").click();
     await expect(page.getByTestId("brief-needs-revise")).toContainText("needs Revise mode");
     await expect(page.getByTestId("word-card")).toHaveCount(0);
@@ -212,6 +230,29 @@ test.describe("Word taskpane", () => {
     await expect(page.getByTestId("mode-revise")).toBeChecked();
     await expect.poll(() => calls.length).toBe(2);
     expect(calls[1]!.body.options?.review).toBe(true);
+    expect(calls[1]!.body.options?.narrative).toBe(true);
+    // The map in the pane: a vertical list per section at this width, the missing move's frame, the links and the hedging table.
+    await page.getByTestId("view-narrative").click();
+    const map = page.getByTestId("narrative-map");
+    await expect(map.getByTestId("narrative-note")).toHaveText(WORD_NARRATIVE.note);
+    const strips = map.getByTestId("narrative-section");
+    await expect(strips).toHaveCount(2);
+    const methodsCells = strips.nth(0).getByTestId("narrative-move");
+    await expect(methodsCells).toHaveCount(2);
+    await expect(methodsCells.nth(0)).toContainText("missing");
+    const [a, b] = await methodsCells.evaluateAll((els) => els.map((e) => e.getBoundingClientRect().top));
+    expect(b).toBeGreaterThan(a!);
+    const detail = strips.nth(0).getByTestId("narrative-detail").first();
+    await expect(detail.locator(".nmap-question")).toHaveText(WORD_NARRATIVE.sections[0]!.moves[0]!.question);
+    await expect(detail.locator(".nmap-frame-text")).toHaveText(WORD_NARRATIVE.sections[0]!.moves[0]!.frame);
+    await strips.nth(0).getByTestId("narrative-present").first().locator("summary").click();
+    await expect(strips.nth(0).locator("q")).toHaveText("In order to estimate the effective reproduction number, a renewal model was fitted.");
+    await expect(map.getByTestId("narrative-link")).toHaveCount(1);
+    await expect(map.getByTestId("narrative-hedging-row")).toHaveCount(2);
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
+
+    await page.getByTestId("view-brief").click();
     const questions = page.getByTestId("brief-question");
     await expect(questions).toHaveCount(5);
     await expect(questions.nth(0)).toContainText("Why am I reading this?");
@@ -230,7 +271,7 @@ test.describe("Word taskpane", () => {
 
     // Check as: Auto by default, the guess said in the results; a choice is sent, checks again, is said, and is remembered here.
     await expect(page.getByTestId("document-type")).toHaveValue("auto");
-    await expect(page.getByTestId("profile-line")).toHaveText("Checked as Research article (from the headings).");
+    await expect(page.getByTestId("profile-line")).toHaveText("Checked as Research article (from the headings: Methods).");
     await page.getByTestId("document-type").selectOption("commentary");
     await expect.poll(() => calls.length).toBe(3);
     expect(calls[2]!.body.options?.document_type).toBe("commentary");
@@ -493,4 +534,169 @@ test.describe("security headers", () => {
       }
     }
   });
+});
+
+/* ---------- S4c: safe editing outcomes (Codex review R3) and the reporting checklist ---------- */
+
+test.describe("Word taskpane: when Word fails during Apply (fails closed, says what happened)", () => {
+  test("a field probe that fails: nothing is inserted, and a manual edit is offered", async ({ page }) => {
+    await fakeOffice(page, { failures: { fields: true } });
+    await mockWordEngine(page, ENGINE);
+    await openAndCheck(page);
+    const c = card(page, "In order to");
+    await c.getByTestId("apply-fix").click();
+    await expect(c.getByTestId("card-note")).toContainText("Word could not say whether this text is part of a citation");
+    await expect(c.getByTestId("card-note")).toContainText("Make this change by hand");
+    expect((await wordState(page)).edits).toEqual([]);
+    // Nothing changed, so the rest of the paragraph is still current.
+    await expect(card(page, "‘the’ is repeated.").first()).not.toHaveAttribute("data-stale", "true");
+  });
+
+  test("Track Changes cannot be switched back: the change is said to be made, the paragraph's other cards lose Apply", async ({ page }) => {
+    await fakeOffice(page, { failures: { restoreTracking: true }, trackingMode: "Off" });
+    await mockWordEngine(page, ENGINE);
+    await openAndCheck(page);
+    const c = card(page, "In order to");
+    await c.getByTestId("apply-fix").click();
+    await expect(c.getByTestId("card-note")).toHaveText(
+      "The change was made, but Track Changes could not be switched back; check Word's Review tab.",
+    );
+    await expect(c.getByTestId("apply-fix")).toHaveCount(0);
+    expect((await wordState(page)).edits).toHaveLength(1);
+    // "The the" sits in the same paragraph: its offsets may have moved.
+    const sibling = page.locator(`[data-testid=word-card][data-paragraph="1"][data-rule="${REPEAT_1.rule_id}"]`);
+    await expect(sibling).toHaveAttribute("data-stale", "true");
+    await expect(sibling.getByTestId("apply-fix")).toHaveCount(0);
+    await expect(sibling.getByTestId("card-note")).toContainText("Check the document again before acting on it");
+    // Another paragraph is untouched.
+    await expect(card(page, "second time").getByTestId("apply-fix")).toBeVisible();
+  });
+
+  test("an error after the insertion ran: unknown, never “nothing was changed”, and no blind retry", async ({ page }) => {
+    await fakeOffice(page, { failures: { insert: "after" } });
+    await mockWordEngine(page, ENGINE);
+    await openAndCheck(page);
+    const c = card(page, "In order to");
+    await c.getByTestId("apply-fix").click();
+    await expect(c.getByTestId("card-note")).toHaveText("Word reported an error after the edit; check the text before trying again.");
+    await expect(c.getByTestId("apply-fix")).toHaveCount(0);
+    await expect(c).toHaveAttribute("data-stale", "true");
+    expect((await wordState(page)).edits).toHaveLength(1);
+    // Checking again brings fresh, actionable cards.
+    await page.getByTestId("check-document").click();
+    await expect(card(page, "In order to").getByTestId("apply-fix")).toBeVisible();
+    await expect(page.locator("[data-stale=true]")).toHaveCount(0);
+  });
+
+  test("an insertion that fails with nothing changed: not applied, the card can still be applied later", async ({ page }) => {
+    await fakeOffice(page, { failures: { insert: "before" } });
+    await mockWordEngine(page, ENGINE);
+    await openAndCheck(page);
+    const c = card(page, "In order to");
+    await c.getByTestId("apply-fix").click();
+    await expect(c.getByTestId("card-note")).toHaveText("Word could not do that just now. Nothing was changed; try again.");
+    expect((await wordState(page)).edits).toEqual([]);
+    await expect(c.getByTestId("apply-fix")).toBeVisible();
+  });
+
+  test("a good Apply also marks the paragraph's other suggestions as out of date", async ({ page }) => {
+    await fakeOffice(page);
+    await mockWordEngine(page, ENGINE);
+    await openAndCheck(page);
+    await card(page, "In order to").getByTestId("apply-fix").click();
+    await expect(card(page, "In order to").getByTestId("card-note")).toContainText("Applied as a tracked change");
+    const stale = page.locator("[data-testid=word-card][data-stale=true]");
+    expect(await stale.evaluateAll((els) => els.map((e) => e.getAttribute("data-paragraph")))).toEqual(["1", "1"]);
+  });
+});
+
+test.describe("Word taskpane: the reporting checklist", () => {
+  test("None by default and not sent; a choice is sent in Revise only, shown in its own tab, and remembered", async ({ page }) => {
+    await fakeOffice(page);
+    const calls = await mockWordEngine(page, ENGINE);
+    await page.goto("/word");
+    await expect(page.getByTestId("checklist-select")).toHaveValue("none");
+    await expect(page.getByTestId("checklist-select").locator("option")).toHaveText(["None", "Auto", "STROBE", "CONSORT", "PRISMA", "EPIFORGE"]);
+    await page.getByTestId("check-document").click();
+    await expect(page.getByTestId("tp-results")).toBeVisible();
+    expect(calls[0]!.body.options).not.toHaveProperty("checklist");
+    await expect(page.getByTestId("view-checklist")).toHaveCount(0);
+    // The engine's suggestion is offered, never applied.
+    await expect(page.getByTestId("checklist-help")).toContainText("Your text's words point to STROBE.");
+
+    // A choice checks again (like a changed type) and opens nothing by itself.
+    await page.getByTestId("checklist-select").selectOption("strobe");
+    await expect.poll(() => calls.length).toBe(2);
+    expect(calls[1]!.body.options?.checklist).toBe("strobe");
+    await expect(page.getByTestId("checklist-help")).toHaveText(
+      "For observational studies (cohort, case-control, cross-sectional). Reporting only, never the science.",
+    );
+    await page.getByTestId("view-checklist").click();
+    const list = page.getByTestId("word-checklist");
+    await expect(list.getByTestId("checklist-note")).toHaveText(WORD_CHECKLIST.note);
+    const items = list.getByTestId("checklist-item");
+    await expect(items).toHaveCount(3);
+    await expect(items.nth(0)).toContainText("Statistical methods");
+    await expect(items.nth(0)).toContainText("Reported");
+    await expect(items.nth(0).locator("q")).toHaveText(WORD_CHECKLIST.items[0]!.evidence!);
+    await expect(items.nth(1)).toContainText("Needs your check");
+    await expect(items.nth(1)).toContainText(WORD_CHECKLIST.items[1]!.plain);
+    await expect(list).toContainText(`Source: ${WORD_CHECKLIST.source}`);
+    await expect(page.locator("meter, progress")).toHaveCount(0);
+
+    // Draft never asks for it: the tab says it needs Revise, with a switch.
+    await page.getByTestId("mode-draft").check();
+    await expect.poll(() => calls.length).toBe(3);
+    expect(calls[2]!.body.options).not.toHaveProperty("checklist");
+    await expect(page.getByTestId("checklist-needs-revise")).toContainText("needs Revise mode");
+    await page.getByTestId("checklist-switch-revise").click();
+    await expect.poll(() => calls.length).toBe(4);
+    expect(calls[3]!.body.options?.checklist).toBe("strobe");
+    await expect(page.getByTestId("word-checklist")).toBeVisible();
+
+    await page.reload();
+    await expect(page.getByTestId("checklist-select")).toHaveValue("strobe");
+    expect(await page.evaluate(() => localStorage.getItem("researchly.word.checklist"))).toBe("strobe");
+  });
+
+  test("Auto with nothing to point to says so; the local engine gets the option too, with no token", async ({ page }) => {
+    await fakeOffice(page);
+    await mockWordEngine(page, ENGINE);
+    const local = await mockWordEngine(page, LOCAL_ENGINE, {
+      respond: (_req, route) => fulfillJson(route, 200, { ...reviseResponse, checklist: null, suggested_checklist: null }),
+    });
+    await page.goto("/word");
+    await page.getByTestId("tp-settings").locator("summary").click();
+    await page.getByTestId("engine-local").check();
+    await page.getByTestId("checklist-select").selectOption("auto");
+    await page.getByTestId("check-document").click();
+    await expect(page.getByTestId("tp-results")).toBeVisible();
+    expect(local[0]!.body.options?.checklist).toBe("auto");
+    expect(local[0]!.authorization).toBeUndefined();
+    await page.getByTestId("view-checklist").click();
+    await expect(page.getByTestId("checklist-none")).toContainText("Nothing in the text points to a reporting checklist");
+  });
+
+  for (const scheme of ["light", "dark"] as const) {
+    test(`the checklist tab at 320px, ${scheme}: four tabs wrap, no horizontal scroll, no serious axe violations`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.setViewportSize({ width: 320, height: 800 });
+      await fakeOffice(page);
+      await mockWordEngine(page, ENGINE);
+      await page.goto("/word");
+      await page.getByTestId("checklist-select").selectOption("strobe");
+      await page.getByTestId("check-document").click();
+      await expect(page.getByTestId("tp-results")).toBeVisible();
+      await page.getByTestId("view-checklist").click();
+      await expect(page.getByTestId("word-checklist")).toBeVisible();
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(overflow).toBeLessThanOrEqual(0);
+      expect(await axeSerious(page)).toEqual([]);
+      // Keyboard: the tabs are one tab stop; End reaches the Checklist tab.
+      await page.getByTestId("view-suggestions").focus();
+      await page.keyboard.press("End");
+      await expect(page.getByTestId("view-checklist")).toBeFocused();
+      await expect(page.getByTestId("view-checklist")).toHaveAttribute("aria-selected", "true");
+    });
+  }
 });

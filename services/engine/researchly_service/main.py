@@ -37,6 +37,7 @@ from researchly import ingest, rules_grammar  # noqa: E402  (after _core)
 from .schemas import (AnalyzeFileResponse, AnalyzeOptions, AnalyzeRequest,
                       AnalyzeWordRequest, AnalyzeWordResponse,
                       AnalyzeResponse, ErrorResponse, HealthResponse,
+                      LearnCard, LearnResponse,
                       RulesResponse, Segment, SourceFormat, SourceInfo,
                       StructureItem)
 
@@ -276,7 +277,27 @@ def health(request: Request) -> HealthResponse:
 def rules() -> RulesResponse:
     """The rule registry with why/source — powers Explain and settings UIs."""
     return RulesResponse(rules=engine_adapter.rule_infos(),
-                         profiles=engine_adapter.profile_choices())
+                         profiles=engine_adapter.profile_choices(),
+                         checklists=engine_adapter.checklist_choices())
+
+
+@router.get("/v1/learn", response_model=LearnResponse, operation_id="listLearn",
+            tags=["meta"])
+def learn_index() -> LearnResponse:
+    """Every Learn card, grouped in reading order (S4). No document text."""
+    return LearnResponse(cards=engine_adapter.learn_cards())
+
+
+@router.get("/v1/learn/{card_id}", response_model=LearnCard,
+            responses={404: {"model": ErrorResponse,
+                             "description": "No such card"}},
+            operation_id="getLearnCard", tags=["meta"])
+def learn_card(card_id: str) -> LearnCard:
+    """One Learn card, by the `learn_ref` a suggestion carries."""
+    for card in engine_adapter.learn_cards():
+        if card.id == card_id:
+            return card
+    raise ApiError(404, "not_found", "No Learn card has that id.")
 
 
 @asynccontextmanager

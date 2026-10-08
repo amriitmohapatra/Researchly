@@ -61,6 +61,7 @@ class ResearchlyServer(LanguageServer):
         self._nlp = None
         self._nlp_lock = threading.Lock()
         self._timers: dict[str, threading.Timer] = {}
+        self.closed: set[str] = set()
         # last published suggestions per uri, for code actions
         self.last: dict[str, list] = {}
 
@@ -73,7 +74,13 @@ class ResearchlyServer(LanguageServer):
                 self._nlp = get_nlp()
         return self._nlp
 
+    def cancel(self, uri: str):
+        old = self._timers.pop(uri, None)
+        if old:
+            old.cancel()
+
     def schedule(self, uri: str):
+        self.closed.discard(uri)
         old = self._timers.pop(uri, None)
         if old:
             old.cancel()
@@ -85,6 +92,7 @@ class ResearchlyServer(LanguageServer):
     def run_check(self, uri: str):
         try:
             text_doc = self.workspace.get_text_document(uri)
+            version = getattr(text_doc, "version", None)
             path = Path(unquote(urlparse(uri).path))
             kind = KIND_BY_EXT.get(path.suffix.lower(), "plain")
             analysis = api.analyze(text_doc.source, kind=kind, nlp=self.nlp,
@@ -93,6 +101,12 @@ class ResearchlyServer(LanguageServer):
             doc.path = str(path)
 
             suggestions = analysis.suggestions
+            # An edit or a close while the check ran makes these results
+            # stale: never publish an older document's diagnostics.
+            if uri in self.closed or getattr(
+                    self.workspace.get_text_document(uri), "version",
+                    None) != version:
+                return
             self.last[uri] = suggestions
             self.publish_diagnostics(
                 uri, [to_diagnostic(s, doc) for s in suggestions])
@@ -102,8 +116,13 @@ class ResearchlyServer(LanguageServer):
 
 
 def to_position(doc: Document, offset: int) -> lsp.Position:
-    line, col = doc.line_col(offset)          # 1-based
-    return lsp.Position(line=line - 1, character=col - 1)
+    """LSP positions count UTF-16 code units (the protocol's default
+    encoding, which VS Code uses); Python offsets count code points. After
+    an emoji or a mathematical letter the two differ (Codex review R7)."""
+    line, col = doc.line_col(offset)          # 1-based, code points
+    prefix = doc.original[offset - (col - 1):offset]
+    return lsp.Position(line=line - 1,
+                        character=len(prefix.encode("utf-16-le")) // 2)
 
 
 def to_range(doc: Document, s) -> lsp.Range:
@@ -148,6 +167,8 @@ def did_save(ls: ResearchlyServer, params: lsp.DidSaveTextDocumentParams):
 
 @server.feature(lsp.TEXT_DOCUMENT_DID_CLOSE)
 def did_close(ls: ResearchlyServer, params: lsp.DidCloseTextDocumentParams):
+    ls.cancel(params.text_document.uri)
+    ls.closed.add(params.text_document.uri)
     ls.publish_diagnostics(params.text_document.uri, [])
     ls.last.pop(params.text_document.uri, None)
 

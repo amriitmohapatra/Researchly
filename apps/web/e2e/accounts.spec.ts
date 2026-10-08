@@ -171,7 +171,7 @@ test.describe("signed in", () => {
     expect(calls[0]!.json).toEqual({
       content: PASTE_TEXT,
       format: "plain",
-      options: { show_preferences: false, document_type: "auto", review: true },
+      options: { show_preferences: false, document_type: "auto", review: true, narrative: true, mode: "revise" },
     });
 
     await menu.focus();
@@ -318,7 +318,13 @@ test.describe("uploads", () => {
     expect(c.path).toBe("/v1/analyze-file");
     expect(c.headers["content-type"]).toBe("application/octet-stream");
     expect(c.headers["x-researchly-filename"]).toBe("Kapitel-%C3%BC%205.md");
-    expect(JSON.parse(c.headers["x-researchly-options"]!)).toEqual({ show_preferences: false, document_type: "auto", review: true });
+    expect(JSON.parse(c.headers["x-researchly-options"]!)).toEqual({
+      show_preferences: false,
+      document_type: "auto",
+      review: true,
+      narrative: true,
+      mode: "revise",
+    });
     expect(tokenLabel(c.authorization)).toBe("initial");
     expect(c.bytes).toBe(Buffer.byteLength(MD_TEXT));
 
@@ -500,7 +506,7 @@ test.describe("settings page", () => {
     await expect(dialog.getByRole("button", { name: "Keep them" })).toBeFocused();
     expect(await axeSerious(page)).toEqual([]);
     await dialog.getByTestId("delete-confirm").click();
-    await expect(page.getByTestId("settings-status")).toHaveText("Your settings and dictionary were deleted.");
+    await expect(page.getByTestId("settings-status")).toHaveText("Your settings, dictionary and progress were deleted.");
     await expect(dialog).toBeHidden();
     await expect(page.getByTestId("muted-empty")).toBeVisible();
     await expect(page.getByTestId("word-count")).toHaveText("Your dictionary is empty.");
@@ -508,6 +514,9 @@ test.describe("settings page", () => {
     expect(sb.words).toEqual([]);
 
     const deletes = sb.sent.filter((r) => r.method === "DELETE");
+    // "Delete my data": progress first (S4c), then the dictionary and the settings, each by the caller's own id.
+    const wholesale = deletes.filter((r) => r.search.includes(`user_id=eq.${USER.id}`)).map((r) => r.path);
+    expect(wholesale[0]).toBe("/rest/v1/progress_events");
     expect(deletes.some((r) => r.path === "/rest/v1/user_settings" && r.search.includes(`user_id=eq.${USER.id}`))).toBe(true);
     expect(deletes.some((r) => r.path === "/rest/v1/dictionary_words" && r.search.includes(`user_id=eq.${USER.id}`))).toBe(true);
     // Never another user's id; inserts and upserts carry no user id at all (the column defaults to auth.uid()).

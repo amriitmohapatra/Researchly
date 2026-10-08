@@ -23,6 +23,8 @@ Every actionable heuristic in the writing guide, converted into a typed rule ent
 
 **Article-type profiles (S4, 2026-10-08; owner request):** `researchly/profiles.py`. A profile says what kind of document the sections belong to: which checks do not apply (each with a plain reason the cards show), what section unheaded prose is in, and what a reader of that kind expects (the review lens). Types: auto, general, manuscript, thesis-chapter, abstract, commentary, policy-brief, grant, response-to-reviewers. Commentary and policy brief (the owner's field first) switch off the abstract moves (AB801, AB802), the gap statement (D902) and the hedging prompts (C302, C303), and read their body as argued like a Discussion; "abstract" judges a pasted abstract whole; response-to-reviewers drops the float checks (X101–X104). "auto" guesses only from strong signals (IMRaD headings, a chapter, a recommendations heading) and is otherwise "general", the engine as before. `GET /v1/rules` lists the profiles; `options.document_type` chooses one per request and the account saves it.
 
+**Learn cards and reporting checklists (S4c, 2026-10-08):** every rule's suggestion carries a `learn_ref` to one of 26 Learn cards (`researchly/learn.py`; provenance in `knowledge-base.md` §12). The epidemiology pack (`researchly/packs/`) adds STROBE, CONSORT, PRISMA and EPIFORGE checklists, requested with `options.checklist` or suggested from the text. They are not rules: each item says "reported" with its sentence or "needs your check", never "missing", and none enters the flag counts or the noise floor.
+
 **Section-conditioning:** rules may fire differently by IMRaD section (detected from headings in v0.1). This is the defining Researchly behavior — the same sentence gets different advice in Methods vs Discussion.
 
 ---
@@ -117,7 +119,7 @@ Every actionable heuristic in the writing guide, converted into a typed rule ent
 | D505 | O/R width match (overpromise/undersell audit) | Improvement | RES |
 | D506 | Drafting-order coach (figures→results→…) — workflow feature, not a rule | — | future |
 
-These become the on-demand **"review lens"** pass (research/04: coaching-style document feedback, distinct from inline checking) — not v0.1.
+These became the on-demand **narrative map** (S4, 2026-10-08; `researchly/discourse/moves.py`, `narrative.py`): D501/D502 are the Introduction strip (territory, gap, aim, with Swales and Shehzad as sources); D504 is the Discussion strip's "what should change" and the Conclusion strip (guide §2, the hourglass); D503 and D505 remain research-grade. The map is not a rule: it is per-section moves present, missing or out of order, each missing one with an authored question, a lesson and a fill-in frame, plus the argument's missing links and the hedging trajectory. Requested with `options.narrative` on every analysis route; `researchly narrative` on the CLI. Provenance: `docs/knowledge-base.md` §11.
 
 ## Layer 6 — Field-specific (guide §9)
 

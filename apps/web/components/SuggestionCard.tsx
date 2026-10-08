@@ -5,6 +5,7 @@ import type { Suggestion } from "@researchly/contract";
 import { categoryMeta, sectionLabel } from "@/lib/categories";
 import { dictionaryCandidate, isRuleId } from "@/lib/settings";
 import { CategoryBadge } from "./CategoryIcon";
+import { LessonDisclosure } from "./LessonDisclosure";
 
 interface Props {
   suggestion: Suggestion;
@@ -16,6 +17,8 @@ interface Props {
   location?: string | null;
   /** Signed in only: account actions. Absent signed out, so the card is exactly as in S1. */
   actions?: CardActions | null;
+  /** "Not an issue here": hides this one suggestion for this check only (never stored). */
+  onDismiss?: ((s: Suggestion) => void) | null;
 }
 
 export interface CardActions {
@@ -39,9 +42,11 @@ export const REASONING_LABEL = "The full reasoning";
 /**
  * One suggestion (DESIGN.md): category and section, what was noticed, the
  * flagged words, the revision (your call), the explanation in everyday
- * words, then the full reasoning behind a disclosure, and the source as a
- * reference. The rule id and tier are data attributes only: a writer never
- * needs them, an account action or a test does.
+ * words, then the full reasoning and the lesson (S4) behind disclosures,
+ * the source as a reference, and the quiet actions: "Not an issue here"
+ * (this check only), then the signed-in ones. The rule id and tier are
+ * data attributes only: a writer never needs them, an account action or a
+ * test does.
  */
 export const SuggestionCard = memo(function SuggestionCard({
   suggestion: s,
@@ -50,6 +55,7 @@ export const SuggestionCard = memo(function SuggestionCard({
   onShowInText,
   location,
   actions,
+  onDismiss,
 }: Props) {
   const meta = categoryMeta(s.category);
   const section = sectionLabel(s.section);
@@ -66,7 +72,7 @@ export const SuggestionCard = memo(function SuggestionCard({
   // users have the explicit "Show in text" button.
   const onClick = (e: MouseEvent<HTMLElement>) => {
     if (!placeable) return;
-    if ((e.target as HTMLElement).closest("button, summary, a, .why-body")) return;
+    if ((e.target as HTMLElement).closest("button, summary, a, .why-body, .lesson-body")) return;
     onShowInText(s.id);
   };
 
@@ -130,12 +136,24 @@ export const SuggestionCard = memo(function SuggestionCard({
           </div>
         </details>
       ) : null}
+      <LessonDisclosure learnRef={s.learn_ref} />
       <p className="card-source">
         <span className="card-source-label">Source:</span> <cite>{s.source}</cite>
       </p>
-      {actions && hasActions ? (
+      {onDismiss || (actions && hasActions) ? (
         <div className="card-foot card-actions">
-          {mutable ? (
+          {onDismiss ? (
+            <button
+              type="button"
+              className="btn-link btn-link-quiet"
+              aria-describedby={msgId}
+              onClick={() => onDismiss(s)}
+              data-testid="dismiss"
+            >
+              Not an issue here
+            </button>
+          ) : null}
+          {actions && mutable ? (
             <button
               type="button"
               className="btn-link btn-link-quiet"
@@ -149,7 +167,7 @@ export const SuggestionCard = memo(function SuggestionCard({
               Mute this rule
             </button>
           ) : null}
-          {word ? (
+          {actions && word ? (
             <button
               type="button"
               className="btn-link btn-link-quiet"

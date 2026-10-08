@@ -18,13 +18,18 @@ import {
   MAX_CONTENT_CHARS,
   type AnalyzeFileResponse,
   type AnalyzeResponse,
+  type ChecklistChoice,
   type DocumentType,
   type Format,
   type Suggestion,
 } from "@researchly/contract";
 import { addWord, loadDocumentType, loadSettings, muteRule, saveDocumentType } from "@/lib/account";
 import { getEngineAuth, openSignIn, useAuth } from "@/lib/auth";
-import { analyze, analyzeFile } from "@/lib/engine";
+import { checklistOffer, checklistOption, type ChecklistSetting } from "@/lib/checklists";
+import { analyze, analyzeFile, fetchDemoManuscript } from "@/lib/engine";
+import { loadKeepProgress } from "@/lib/progress";
+import { recordCheck } from "@/lib/record-progress";
+import { loadChecklistSetting, saveChecklistSetting, subscribeChecklistSetting } from "@/lib/results-prefs";
 import { clientError, UPLOAD_TYPES_SENTENCE, type CheckError } from "@/lib/errors";
 import { ENGINE_URL } from "@/lib/config";
 import {
@@ -35,12 +40,13 @@ import {
   subscribeDocumentType,
   subscribeFormat,
 } from "@/lib/prefs";
-import { useProfileChoices } from "@/lib/registry";
+import { useChecklistChoices, useProfileChoices } from "@/lib/registry";
 import { useRuleScopes } from "@/lib/scope";
 import { codePointLength } from "@/lib/segments";
 import { ACCEPT_ATTR, checkFile } from "@/lib/source";
 import { FORMATS, isFormat, validateContent, type InputProblem } from "@/lib/validate";
 import { revealNeedsRecheck, shownSuggestions, summarySentence } from "@/lib/view";
+import { ChecklistSelect } from "./ChecklistSelect";
 import { FilePanel, type DropHandlers } from "./FilePanel";
 import { ProfileSelect } from "./ProfileSelect";
 import { ReadingKey } from "./ReadingKey";
@@ -59,6 +65,8 @@ interface Checked {
   data: AnalyzeResponse;
   text: string;
   format: Format;
+  /** When the answer arrived (the printed report's "Checked" time). */
+  at: Date;
 }
 
 interface FileChecked {
@@ -66,9 +74,16 @@ interface FileChecked {
   data: AnalyzeFileResponse;
   /** Kept in memory only, so a re-check (after muting a rule) can send it again. */
   file: File;
+  at: Date;
 }
 
 type AccountNote = { ok: boolean; text: string; settingsLink?: boolean };
+
+/** What a re-check may change: the toggle, the article type, the checklist. */
+type CheckOptions = { showPreferences?: boolean; documentType?: DocumentType; checklist?: ChecklistSetting };
+
+/** Rules muted since the results on screen were checked, keyed to those results (they lapse with the next check). */
+type Muted = { key: string; rules: ReadonlySet<string> };
 
 const fmt = new Intl.NumberFormat("en-GB");
 
@@ -101,6 +116,16 @@ export function Checker() {
   const documentType: DocumentType = chosenType ?? (signedIn ? accountType : null) ?? storedType ?? "auto";
   const [typeNote, setTypeNote] = useState<string | null>(null);
   const profiles = useProfileChoices(ENGINE_URL);
+  // The reporting checklist (S4): this session's choice, else this browser's, else none.
+  const storedChecklist = useSyncExternalStore(subscribeChecklistSetting, loadChecklistSetting, () => null);
+  const [chosenChecklist, setChosenChecklist] = useState<ChecklistSetting | null>(null);
+  const checklist: ChecklistSetting = chosenChecklist ?? storedChecklist ?? "none";
+  const checklists = useChecklistChoices(ENGINE_URL);
+  const [muted, setMuted] = useState<Muted | null>(null);
+  const [demoProblem, setDemoProblem] = useState<string | null>(null);
+  const [demoLoading, setDemoLoading] = useState(false);
+  // "Keep my progress" (opt-in, counts only): loaded once per sign-in, read when a check succeeds.
+  const keepProgressRef = useRef(false);
   const [view, setView] = useState<ResultsView>("suggestions");
   const [showPreferences, setShowPreferences] = useState(false);
   const [problem, setProblem] = useState<InputProblem | null>(null);
@@ -120,6 +145,8 @@ export function Checker() {
   const prefsTouched = useRef(false);
   /** The file whose results are on screen, read synchronously (state may lag inside a running check). */
   const shownFileRef = useRef<File | null>(null);
+  /** Which results are on screen ("p3", "f1"), read by a mute that completes after a re-render. */
+  const resultsKeyRef = useRef<string | null>(null);
   const dragDepth = useRef(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -130,6 +157,8 @@ export function Checker() {
     problem: useId(),
     format: useId(),
     type: useId(),
+    checklist: useId(),
+    demo: useId(),
     prefs: useId(),
     privacy: useId(),
     upload: useId(),
@@ -164,6 +193,21 @@ export function Checker() {
     };
   }, [signedIn]);
 
+  // Signed in: whether the writer keeps their progress. Never blocks a check; a failed load means "no".
+  useEffect(() => {
+    keepProgressRef.current = false;
+    if (!signedIn) return;
+    let live = true;
+    void loadKeepProgress()
+      .then((r) => {
+        if (live) keepProgressRef.current = r.ok && r.data;
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [signedIn]);
+
   // Signed in: the article type comes from the account (shared with the Word add-in).
   useEffect(() => {
     if (!signedIn) return;
@@ -182,11 +226,29 @@ export function Checker() {
     textareaRef.current?.focus();
   };
 
+  // The demo manuscript: a synthetic paper served by this site, loaded into an empty editor. Nothing is sent until Check.
+  const onDemo = async () => {
+    if (demoLoading) return;
+    setDemoProblem(null);
+    setDemoLoading(true);
+    const r = await fetchDemoManuscript();
+    setDemoLoading(false);
+    if (!r.ok) {
+      setDemoProblem("The demo manuscript could not be loaded. Check your connection and try again.");
+      return;
+    }
+    setText(r.text);
+    setFormat("markdown"); // the demo is Markdown; the remembered format is left as it was
+    setProblem(null);
+    textareaRef.current?.focus();
+  };
+
   const runCheck = useCallback(
-    async (target: Target = { kind: "paste" }, opts?: { showPreferences?: boolean; documentType?: DocumentType }) => {
+    async (target: Target = { kind: "paste" }, opts?: CheckOptions) => {
       if (loadingRef.current) return;
       const prefs = opts?.showPreferences ?? showPreferences;
       const type = opts?.documentType ?? documentType;
+      const list = checklistOption(opts?.checklist ?? checklist);
       const submitted = text;
       if (target.kind === "paste") {
         const invalid = validateContent(text);
@@ -209,31 +271,59 @@ export function Checker() {
         setPhase("error");
         setAnnouncement("");
       };
+      // A signed-in writer who keeps their progress: counts only, fire and forget, never in the way.
+      // `signed_in` is the engine's word that the account's token came with this check.
+      const record = (data: AnalyzeResponse) => recordCheck(data, { signedIn: data.signed_in === true, keep: keepProgressRef.current });
       try {
-        // The brief is always asked for here: the website has no Draft stage
-        // of its own, and the engine applies the account's choice.
+        // The website is the revision studio: every check asks for Revise
+        // (Codex review R6), so a Draft choice saved from Word never hides
+        // the document-wide checks here, and the brief and the narrative map
+        // are always asked for.
         if (target.kind === "paste") {
           const r = await analyze(
-            { content: submitted, format, showPreferences: prefs, documentType: type, review: true, signal: ctrl.signal },
+            {
+              content: submitted,
+              format,
+              showPreferences: prefs,
+              documentType: type,
+              review: true,
+              narrative: true,
+              checklist: list,
+              mode: "revise",
+              signal: ctrl.signal,
+            },
             undefined,
             auth,
           );
           if (r.ok) {
-            setChecked((prev) => ({ seq: (prev?.seq ?? 0) + 1, data: r.data, text: submitted, format }));
+            setChecked((prev) => ({ seq: (prev?.seq ?? 0) + 1, data: r.data, text: submitted, format, at: new Date() }));
+            setMuted(null);
             setPhase("done");
             setAnnouncement(summarySentence(shownSuggestions(r.data, prefs)));
+            record(r.data);
           } else fail(r.error);
         } else {
           const r = await analyzeFile(
-            { file: target.file, showPreferences: prefs, documentType: type, review: true, signal: ctrl.signal },
+            {
+              file: target.file,
+              showPreferences: prefs,
+              documentType: type,
+              review: true,
+              narrative: true,
+              checklist: list,
+              mode: "revise",
+              signal: ctrl.signal,
+            },
             undefined,
             auth,
           );
           if (r.ok) {
             shownFileRef.current = target.file;
-            setFileChecked((prev) => ({ seq: (prev?.seq ?? 0) + 1, data: r.data, file: target.file }));
+            setFileChecked((prev) => ({ seq: (prev?.seq ?? 0) + 1, data: r.data, file: target.file, at: new Date() }));
+            setMuted(null);
             setPhase("done");
             setAnnouncement(summarySentence(shownSuggestions(r.data, prefs)));
+            record(r.data);
           } else fail(r.error);
         }
       } catch {
@@ -257,12 +347,12 @@ export function Checker() {
         abortRef.current = null;
       }
     },
-    [text, format, showPreferences, documentType, checked],
+    [text, format, showPreferences, documentType, checklist, checked],
   );
 
   /** Check again whatever is on screen: the file, or the editor's text. */
   const recheck = useCallback(
-    (opts?: { showPreferences?: boolean; documentType?: DocumentType }) => {
+    (opts?: CheckOptions) => {
       // In file mode, the file on screen, or the one whose first check failed.
       const file = fileChecked?.file ?? pendingFile;
       if (mode === "file") return file ? runCheck({ kind: "file", file }, opts) : undefined;
@@ -399,6 +489,9 @@ export function Checker() {
         text: `Muted “${s.rule_name}”. It stays muted wherever you sign in.`,
         settingsLink: true,
       });
+      // Its cards leave at once (review proposal 2); the re-check then confirms it from the engine.
+      const key = resultsKeyRef.current;
+      if (key) setMuted((prev) => ({ key, rules: new Set(prev?.key === key ? prev.rules : []).add(s.rule_id) }));
       void recheck();
     },
     [recheck],
@@ -449,8 +542,32 @@ export function Checker() {
   const typeControl = (
     <ProfileSelect id={ids.type} value={documentType} choices={profiles} onChange={onTypeChange} note={typeNote} />
   );
+
+  // A changed checklist checks again whatever is on screen, like a changed type. Remembered in this browser only.
+  const onChecklistChange = (next: ChecklistSetting) => {
+    if (next === checklist) return;
+    setChosenChecklist(next);
+    saveChecklistSetting(next);
+    if (current) void recheck({ checklist: next });
+  };
+  const checklistControl = <ChecklistSelect id={ids.checklist} value={checklist} choices={checklists} onChange={onChecklistChange} />;
+  // The offer under the results: only when no checklist was chosen and the text's words point to one.
+  const offer = checklist === "none" ? checklistOffer(current?.data.suggested_checklist, checklists) : null;
+  const onUseChecklist = (id: ChecklistChoice) => {
+    onChecklistChange(id);
+    setView("checklist");
+  };
+  // Check again in Revise: what an engine that ran Draft held back, or the brief and the map.
+  const onRunRevise = () => void recheck();
+
   // Which rules read the whole document (for the section chooser). Asked once, after the first results; no text is sent.
   const scopes = useRuleScopes(ENGINE_URL, current !== null);
+  // The results on screen, for a mute to filter only those (a new check starts clean).
+  const resultsKey = mode === "file" ? (fileChecked ? `f${fileChecked.seq}` : null) : checked ? `p${checked.seq}` : null;
+  useEffect(() => {
+    resultsKeyRef.current = resultsKey;
+  }, [resultsKey]);
+  const mutedRules = muted && muted.key === resultsKey ? muted.rules : undefined;
 
   return (
     <>
@@ -466,6 +583,7 @@ export function Checker() {
             showPreferences={showPreferences}
             onShowPreferences={onPrefsChange}
             typeControl={typeControl}
+            checklistControl={checklistControl}
             onChooseFile={chooseFile}
             onCancel={() => abortRef.current?.abort()}
             onBack={backToEditor}
@@ -548,6 +666,38 @@ export function Checker() {
               </div>
             ) : null}
 
+            {!hasText ? (
+              <div className="demo-row" data-testid="demo-row">
+                <button
+                  type="button"
+                  className="btn btn-quiet"
+                  onClick={() => void onDemo()}
+                  aria-describedby={ids.demo}
+                  aria-disabled={demoLoading || undefined}
+                  data-testid="load-demo"
+                >
+                  Try the demo manuscript
+                </button>
+                <p id={ids.demo} className="help demo-help">
+                  A short invented paper with planted slips, loaded into the editor; nothing is checked until you press Check.
+                  Also as a{" "}
+                  <a href="/demo/researchly-demo.docx" download className="inline-link" data-testid="demo-docx">
+                    Word file (.docx)
+                  </a>{" "}
+                  or an{" "}
+                  <a href="/demo/researchly-demo-overleaf.zip" download className="inline-link" data-testid="demo-zip">
+                    Overleaf project (.zip)
+                  </a>
+                  .
+                </p>
+                {demoProblem ? (
+                  <p className="field-problem" role="alert" data-testid="demo-problem">
+                    {demoProblem}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+
             <div className="controls">
               <div className="control">
                 <label htmlFor={ids.format} className="control-label">
@@ -575,6 +725,8 @@ export function Checker() {
               </div>
 
               {typeControl}
+
+              {checklistControl}
 
               {/* Label wraps the switch: one hit target, no dead zone between them. */}
               <label className="control control-toggle" htmlFor={ids.prefs}>
@@ -753,6 +905,11 @@ export function Checker() {
           scopes={scopes}
           view={view}
           onView={setView}
+          checkedAt={fileChecked.at}
+          mutedRules={mutedRules}
+          onRunRevise={onRunRevise}
+          checklistOffer={offer}
+          onUseChecklist={onUseChecklist}
         />
       ) : mode === "paste" && checked ? (
         <Results
@@ -767,6 +924,11 @@ export function Checker() {
           scopes={scopes}
           view={view}
           onView={setView}
+          checkedAt={checked.at}
+          mutedRules={mutedRules}
+          onRunRevise={onRunRevise}
+          checklistOffer={offer}
+          onUseChecklist={onUseChecklist}
         />
       ) : null}
     </>

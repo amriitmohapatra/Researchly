@@ -43,6 +43,18 @@ export type ProfileChoice = S["ProfileChoice"];
 export type ReviewReport = S["ReviewReport"];
 export type ReviewQuestion = S["ReviewQuestion"];
 export type ReviewRuleCount = S["ReviewRuleCount"];
+export type NarrativeMap = S["NarrativeMap"];
+export type NarrativeSection = S["NarrativeSection"];
+export type NarrativeMove = S["NarrativeMove"];
+export type MoveStatus = S["MoveStatus"];
+export type MissingLink = S["MissingLink"];
+export type HedgingPoint = S["HedgingPoint"];
+export type ChecklistChoice = S["ChecklistChoice"];
+export type ChecklistReport = S["ChecklistReport"];
+export type ChecklistItem = S["ChecklistItem"];
+export type ChecklistChoiceInfo = S["ChecklistChoiceInfo"];
+export type LearnCard = S["LearnCard"];
+export type LearnResponse = S["LearnResponse"];
 
 /** Mirrors schemas.MAX_CONTENT_CHARS; checked client-side for usability only. */
 export const MAX_CONTENT_CHARS = 1_000_000;
@@ -88,3 +100,8 @@ export const READING_KEY: Record<Category, Specimen> = {
   convention: readingKey.convention,
   preference: readingKey.preference,
 };
+
+import learnJson from "../learn.json";
+
+/** Every Learn card (S4), grouped in reading order; generated from packages/core/researchly/learn.py and checked by its tests. */
+export const LEARN_CARDS: readonly LearnCard[] = (learnJson as { cards: LearnCard[] }).cards;

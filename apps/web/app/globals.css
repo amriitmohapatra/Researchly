@@ -294,14 +294,15 @@ main:focus {
 }
 
 /* ---------- why Researchly: quiet, typographic, below the checker ---------- */
+/* Its own class: a bare .why also matched every card's "The full reasoning" disclosure. */
 
-.why {
+.why-researchly {
   max-width: var(--measure);
   margin-top: 48px;
   padding-top: 32px;
   border-top: 1px solid var(--line);
 }
-.why h2 {
+.why-researchly h2 {
   font-size: 1.25rem;
   letter-spacing: -0.01em;
   margin-bottom: 12px;
@@ -328,7 +329,7 @@ main:focus {
   color: var(--ink);
 }
 @media (min-width: 720px) {
-  .why {
+  .why-researchly {
     margin-top: 56px;
   }
 }
@@ -2135,6 +2136,7 @@ main:focus {
 
 .view-tabs {
   display: flex;
+  flex-wrap: wrap; /* three tabs since S4b: on a phone or in Word's pane the strip takes two lines, never a scrollbar */
   gap: 4px;
   margin-top: 16px;
   border-bottom: 1px solid var(--line);
@@ -2301,6 +2303,258 @@ main:focus {
   padding: 12px 0 10px;
 }
 
+/* ---------- S4b: the narrative map ----------
+ * The third view of a check. One strip per section: the expected moves in
+ * order as small cells, each saying present, missing or out of order by
+ * the dot's shape (filled, hollow, half) and by the word, never by colour.
+ * Under the strip the missing and out-of-order moves open to a question,
+ * the lesson and a frame to fill in (serif, in a dashed box: a template,
+ * not a sentence of the writer's); a present move keeps the writer's own
+ * sentence behind a disclosure. Then the argument's missing links and the
+ * hedging table, every value in text. Same tokens as the brief; no meters.
+ */
+.nmap {
+  margin-top: 16px;
+  max-width: var(--measure);
+}
+.nmap-note {
+  margin-bottom: 4px;
+  text-wrap: pretty;
+}
+.nmap-sections {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.nmap-section {
+  padding: 14px 0 12px;
+}
+.nmap-section + .nmap-section {
+  border-top: 1px solid var(--line);
+}
+.nmap-section-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 12px;
+  font-size: 1.0625rem;
+  font-weight: 650;
+}
+.nmap-section-meta {
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+.nmap-strip {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.nmap-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: 0.875rem;
+  line-height: 1.3;
+}
+.nmap-cell-missing {
+  border-style: dashed;
+  color: var(--ink-2);
+}
+.nmap-cell-status,
+.nmap-detail-status {
+  font-style: italic;
+  color: var(--ink-2);
+}
+.nmap-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ink);
+  background: var(--ink);
+}
+.nmap-cell-missing .nmap-dot {
+  background: transparent;
+  border-color: var(--line-strong);
+}
+.nmap-cell-out-of-order .nmap-dot {
+  background: linear-gradient(90deg, var(--ink) 50%, transparent 50%);
+}
+.nmap-details {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.nmap-detail {
+  padding-left: 12px;
+  border-left: 2px solid var(--line);
+}
+.nmap-detail-head {
+  font-size: 0.9375rem;
+}
+.nmap-detail-label {
+  font-weight: 600;
+}
+.nmap-detail-note {
+  color: var(--ink-2);
+}
+.nmap-question {
+  margin-top: 4px;
+  font-weight: 600;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+.nmap-plain {
+  margin-top: 6px;
+  font-size: 1rem;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+.nmap-frame {
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+.nmap-frame-text {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.nmap-frame-caption {
+  margin-top: 4px;
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+}
+.nmap-detail .card-source {
+  margin-top: 8px;
+}
+.nmap-sentence-summary {
+  cursor: pointer;
+  min-height: 32px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 10px;
+  font-size: 0.9375rem;
+  border-radius: var(--radius);
+}
+.nmap-sentence-link {
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.nmap-evidence {
+  margin: 6px 0 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--line-strong);
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.nmap-evidence q {
+  quotes: "\201C" "\201D";
+}
+.nmap-unmapped {
+  margin-top: 8px;
+  font-size: 0.9rem;
+  text-wrap: pretty;
+}
+.nmap-links,
+.nmap-hedging {
+  margin-top: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.nmap-links-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.nmap-link {
+  padding-left: 12px;
+  border-left: 2px solid var(--line);
+}
+.nmap-link-section {
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+.nmap-link-msg {
+  margin-top: 2px;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+.nmap-link .card-source {
+  margin-top: 6px;
+}
+.nmap-links-none {
+  margin-top: 6px;
+  font-size: 0.9375rem;
+}
+.nmap-hedging-help {
+  margin-top: 4px;
+  text-wrap: pretty;
+}
+.nmap-hedging-table {
+  width: 100%;
+  margin-top: 10px;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+}
+.nmap-hedging-table th,
+.nmap-hedging-table td {
+  padding: 6px 8px 6px 0;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+}
+.nmap-hedging-table thead th {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.nmap-hedging-table tbody th {
+  font-weight: 600;
+}
+.nmap-hedging-table .nmap-num {
+  text-align: right;
+  padding-right: 16px;
+}
+.nmap-source {
+  margin-top: 14px;
+}
+
+/* In the Word taskpane (about 320px): the strip is a vertical list. */
+.tp-results .nmap {
+  margin-top: 0;
+}
+.tp-results .nmap-strip {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+.tp-results .nmap-section {
+  padding: 12px 0 10px;
+}
+
 /* ---------- S4: the printable report (print or save as PDF) ---------- */
 
 /* On screen the report does not exist; the button beside the results heading. */
@@ -2452,6 +2706,87 @@ main:focus {
   .print-brief .brief-evidence q {
     color: #000;
   }
+  /* The narrative map (S4b) on the page after the brief: the strip as text rows, every sentence open, light ink only. */
+  .print-narrative {
+    break-before: page;
+  }
+  .print-narrative .nmap,
+  .print-narrative .brief-line {
+    margin: 0;
+    max-width: none;
+  }
+  .print-narrative .nmap-section,
+  .print-narrative .nmap-detail,
+  .print-narrative .nmap-link,
+  .print-narrative .nmap-hedging-table,
+  .print-narrative .nmap-frame {
+    break-inside: avoid;
+  }
+  .print-narrative .nmap-section,
+  .print-narrative .nmap-links,
+  .print-narrative .nmap-hedging,
+  .print-narrative .nmap-detail,
+  .print-narrative .nmap-link,
+  .print-narrative .nmap-evidence,
+  .print-narrative .nmap-hedging-table th,
+  .print-narrative .nmap-hedging-table td {
+    border-color: #bbb;
+  }
+  .print-narrative .nmap-section-title {
+    font-size: 10.5pt;
+  }
+  .print-narrative .nmap-strip {
+    display: block;
+    margin-top: 3pt;
+  }
+  .print-narrative .nmap-cell {
+    display: flex;
+    min-height: 0;
+    padding: 1pt 0;
+    border: 0;
+    background: none;
+    font-size: 9.5pt;
+    color: #000;
+  }
+  .print-narrative .nmap-dot {
+    width: 8pt;
+    height: 8pt;
+    border: 4pt solid #000;
+    background: none;
+  }
+  .print-narrative .nmap-cell-missing .nmap-dot {
+    border-width: 1pt;
+  }
+  .print-narrative .nmap-cell-out-of-order .nmap-dot {
+    border-width: 1pt;
+    background: linear-gradient(90deg, #000 50%, #fff 50%);
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .print-narrative .nmap-cell-status,
+  .print-narrative .nmap-detail-status,
+  .print-narrative .nmap-detail-note,
+  .print-narrative .nmap-frame-caption,
+  .print-narrative .nmap-evidence,
+  .print-narrative .nmap-hedging-table thead th {
+    color: #333;
+  }
+  .print-narrative .nmap-frame {
+    background: none;
+    border-color: #999;
+  }
+  .print-narrative .nmap-plain,
+  .print-narrative .nmap-link-msg {
+    font-size: 9.5pt;
+  }
+  .print-narrative .nmap-frame-text,
+  .print-narrative .nmap-evidence {
+    font-size: 10pt;
+  }
+  .print-narrative .card-source {
+    font-size: 8pt;
+    color: #444;
+  }
   .print-foot {
     margin-top: 12pt;
     border-top: 0.5pt solid #000;
@@ -2459,3 +2794,788 @@ main:focus {
   }
 }
 
+
+/* ---------- S4c: lessons, reporting checklists, dismissal, the report's context ----------
+ * The review's web fixes (Codex review, 8 October 2026). Same tokens,
+ * radius and type roles as above: sans for the coach, serif for the
+ * writer's sentences and the lesson's examples. Statuses are words, never
+ * colours; nothing here is a score. Taskpane (.tp-*) rules are untouched.
+ */
+
+/* "The lesson": a closed disclosure under the full reasoning, set off like it. */
+.lesson {
+  margin-top: 4px;
+}
+.lesson > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  cursor: pointer;
+  font-weight: 650;
+  font-size: 0.9375rem;
+  color: var(--link);
+  list-style: none;
+}
+.lesson > summary:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.lesson > summary::-webkit-details-marker {
+  display: none;
+}
+.lesson > summary::before {
+  content: "";
+  width: 0;
+  height: 0;
+  border-left: 5px solid currentColor;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform 0.15s ease;
+}
+.lesson[open] > summary::before {
+  transform: rotate(90deg);
+}
+.lesson-source {
+  margin-top: 8px;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.lesson-source cite {
+  font-family: var(--serif);
+  font-size: 0.875rem;
+  font-style: italic;
+}
+.lesson-body {
+  margin: 2px 0 8px;
+  padding-left: 12px;
+  border-left: 2px solid var(--line);
+  max-width: var(--measure);
+  cursor: auto;
+}
+.card .lesson-body {
+  border-left-color: color-mix(in srgb, var(--c-line) 50%, transparent);
+}
+.lesson-title {
+  font-weight: 650;
+  line-height: 1.45;
+}
+.lesson-text {
+  margin-top: 4px;
+  font-size: 1rem;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+.lesson-pair {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+.lesson-example {
+  margin: 0;
+}
+.lesson-example-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.lesson-quote {
+  margin: 2px 0 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--line-strong);
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.lesson-quote q {
+  quotes: "\201C" "\201D";
+}
+.lesson-habit {
+  margin-top: 10px;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+.lesson-habit-label {
+  font-weight: 600;
+}
+.lesson-more {
+  font-size: 0.9375rem;
+  padding-bottom: 4px;
+}
+.nmap .lesson {
+  margin-top: 6px;
+}
+
+/* The sentences a missing link concerns: quoted like a move's sentence. */
+.nmap-link-evidence {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.nmap-link .nmap-sentence {
+  margin-top: 4px;
+}
+
+/* The brief's statuses: a small word after the question, never a colour. */
+.brief-q-status {
+  margin-left: 2px;
+  font-size: 0.8125rem;
+  font-style: italic;
+  font-weight: 400;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.brief-disclaimer {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+/* "Reporting checklist": one more select in the composer's row, beside "Check as". */
+.control-checklist .select {
+  min-width: 10rem;
+  max-width: 100%;
+}
+
+/* Quiet one-line notes under the heading: what Draft held back, the checklist on offer. */
+.results-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 10px;
+  margin-top: 6px;
+  max-width: var(--measure);
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+.results-line .btn-link[disabled] {
+  cursor: progress;
+  opacity: 0.7;
+}
+.results-dismissed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 0.9375rem;
+}
+
+/* "Dismissed. Undo": a polite live region pinned to the bottom of the window, so focusing Undo never scrolls. */
+.dismiss-live {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 20;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.dismiss-note {
+  pointer-events: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+  max-width: 100%;
+  padding: 6px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.9375rem;
+}
+
+/* The checklist view: a document at the reading measure, hairline dividers, no boxes. */
+.checklist {
+  margin-top: 16px;
+  max-width: var(--measure);
+}
+.checklist-title {
+  font-size: 1.0625rem;
+}
+.checklist-label {
+  font-weight: 650;
+}
+.checklist-note {
+  margin-top: 4px;
+  text-wrap: pretty;
+}
+.checklist-items {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+.checklist-item {
+  padding: 12px 0 10px;
+}
+.checklist-item + .checklist-item {
+  border-top: 1px solid var(--line);
+}
+.checklist-topic {
+  font-size: 1rem;
+  font-weight: 650;
+}
+.checklist-question {
+  margin-top: 2px;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+.checklist-status {
+  margin-top: 4px;
+  font-size: 0.9375rem;
+}
+.checklist-status-word {
+  font-style: italic;
+  font-weight: 600;
+}
+.checklist-evidence {
+  margin: 6px 0 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--line-strong);
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.checklist-evidence q {
+  quotes: "\201C" "\201D";
+}
+.checklist-plain {
+  margin-top: 4px;
+  font-size: 1rem;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+.checklist-na {
+  margin-top: 2px;
+}
+.checklist-na[aria-pressed="true"] {
+  text-decoration-style: dotted;
+}
+.checklist-source {
+  margin-top: 12px;
+}
+.checklist-scope {
+  margin-top: 4px;
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+}
+
+/* The demo manuscript: a quiet row under the editor while it is empty. */
+.demo-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-top: 12px;
+}
+.demo-help {
+  flex: 1 1 16rem;
+}
+.demo-row .field-problem {
+  flex-basis: 100%;
+}
+
+@media print {
+  .dismiss-live {
+    display: none;
+  }
+  /* The report's context block: light ink, one line each. */
+  .print-context {
+    margin: 2pt 0 4pt;
+  }
+  .print-stale {
+    font-weight: 700;
+    color: #000;
+  }
+  .print-warnings {
+    margin: 0 0 3pt;
+    padding-left: 12pt;
+  }
+  .print-loc {
+    font-family: var(--mono);
+    font-size: 8pt;
+    color: #444;
+  }
+  /* The checklist after the narrative map, on its own page: statuses as words. */
+  .print-checklist {
+    break-before: page;
+  }
+  .print-checklist .checklist {
+    margin: 0;
+    max-width: none;
+  }
+  .print-checklist .checklist-item {
+    break-inside: avoid;
+    border-color: #bbb;
+  }
+  .print-checklist .checklist-note,
+  .print-checklist .checklist-evidence,
+  .print-checklist .checklist-scope,
+  .print-checklist .card-source {
+    color: #333;
+  }
+  .print-checklist .checklist-evidence {
+    border-color: #999;
+    font-size: 10pt;
+  }
+  .print-checklist .checklist-plain,
+  .print-checklist .checklist-question {
+    font-size: 9.5pt;
+  }
+}
+
+/* ---------- S4c pages and taskpane ----------
+ * Lessons (/learn), progress (/progress), labelling (/label), the header's
+ * quiet links, and in the Word pane the reporting checklist. Same tokens,
+ * radius and type roles: sans for the coach, serif for writing (the
+ * lessons' Before and After, the writer's own sentence quoted). Nothing here
+ * is a score: no meters, no colour by verdict or status, no totals.
+ */
+
+/* The header: Lessons always, the account control after it. Quiet: a text link, not a button. */
+.header-end {
+  display: flex;
+  align-items: center;
+  gap: 4px 16px;
+  min-width: 0;
+  margin-left: auto;
+}
+.header-has-account .header-end {
+  flex: 0 1 auto;
+}
+.site-nav {
+  flex: none;
+}
+.site-nav-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 4px;
+  color: var(--ink-2);
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: var(--radius);
+}
+.site-nav-link:hover {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ---- Lessons: the index ---- */
+.lessons {
+  display: grid;
+  gap: 32px;
+  max-width: 48rem;
+}
+.lesson-group-title {
+  font-size: 1.125rem;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.lesson-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.lesson-item {
+  padding: 12px 0;
+}
+.lesson-item + .lesson-item {
+  border-top: 1px solid var(--line);
+}
+.lesson-link {
+  color: var(--link);
+  font-weight: 650;
+  font-size: 1.0625rem;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.lesson-link:hover {
+  text-decoration-thickness: 2px;
+}
+.lesson-summary {
+  margin-top: 2px;
+  color: var(--ink-2);
+  max-width: var(--measure);
+  text-wrap: pretty;
+}
+
+/* ---- Lessons: one lesson, read as a short document at the reading measure ---- */
+.lesson {
+  max-width: var(--measure);
+}
+.lesson-kicker {
+  font-size: 0.9375rem;
+  margin-bottom: 4px;
+}
+.lesson-title {
+  font-size: clamp(1.6rem, 1.35rem + 1vw, 2rem);
+  letter-spacing: -0.015em;
+  margin-bottom: 12px;
+}
+.lesson-text {
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+.lesson-examples {
+  display: grid;
+  gap: 16px;
+  margin: 24px 0;
+}
+.lesson-example {
+  margin: 0;
+}
+.lesson-example-label {
+  font-weight: 650;
+  margin-bottom: 4px;
+}
+.lesson-quote {
+  margin: 0;
+  padding: 2px 0 2px 16px;
+  font-family: var(--serif);
+  font-size: 1.125rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+/* The two differ by line style and label, never by colour: dashed before, solid after. */
+.lesson-before .lesson-quote {
+  border-left: 2px dashed var(--line-strong);
+  color: var(--ink-2);
+}
+.lesson-after .lesson-quote {
+  border-left: 2px solid var(--accent);
+  color: var(--ink);
+}
+.lesson-habit {
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.lesson-habit-title {
+  font-size: 1.125rem;
+  margin-bottom: 6px;
+}
+.lesson-habit p {
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+.lesson-source {
+  margin-top: 16px;
+}
+.lesson-nav {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.lesson-nav-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+/* ---- Settings: the progress panel ---- */
+.settings-progress-links {
+  margin-top: -4px;
+}
+
+/* ---- Progress: one small multiple per rule ---- */
+.progress {
+  display: grid;
+  gap: 16px;
+  max-width: 48rem;
+}
+.progress-board {
+  display: grid;
+  gap: 12px;
+}
+.progress-board-title {
+  font-size: 1.25rem;
+}
+.progress-board-help {
+  max-width: var(--measure);
+  text-wrap: pretty;
+}
+.trend-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.trend {
+  display: grid;
+  gap: 4px;
+  padding: 14px 0;
+}
+.trend + .trend {
+  border-top: 1px solid var(--line);
+}
+.trend-name {
+  font-weight: 650;
+}
+.trend-chart {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+}
+.spark {
+  flex: none;
+  overflow: visible;
+}
+.spark-base {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.spark-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.spark-hit {
+  fill: transparent;
+}
+.spark-hit:hover {
+  fill: var(--surface-2);
+}
+.spark-end {
+  fill: var(--accent);
+  stroke: var(--bg);
+  stroke-width: 2;
+  pointer-events: none;
+}
+.trend-values {
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+}
+.trend-word {
+  color: var(--ink);
+  font-weight: 650;
+}
+.trend-lesson {
+  font-size: 0.9375rem;
+}
+.progress-table summary {
+  cursor: pointer;
+  min-height: 32px;
+  font-weight: 600;
+}
+.progress-values {
+  margin-top: 8px;
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.9375rem;
+}
+.progress-values th,
+.progress-values td {
+  text-align: left;
+  vertical-align: top;
+  padding: 6px 12px 6px 0;
+  border-bottom: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+.progress-values td {
+  font-variant-numeric: tabular-nums;
+}
+.progress-values thead th {
+  color: var(--ink-2);
+  font-weight: 600;
+}
+.progress-delete {
+  margin-top: 8px;
+}
+
+/* ---- Label: compose, label, export ---- */
+.label-studio {
+  display: grid;
+  gap: 16px;
+  max-width: 48rem;
+}
+.label-help summary {
+  cursor: pointer;
+  font-weight: 650;
+  min-height: 32px;
+}
+.label-help-body {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+  max-width: var(--measure);
+}
+.label-verdicts {
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+.label-verdicts dt {
+  font-weight: 650;
+}
+.label-verdicts dd {
+  margin: 0 0 4px;
+  text-wrap: pretty;
+}
+.label-composer {
+  display: grid;
+  gap: 12px;
+}
+.label-count {
+  font-weight: 600;
+}
+.label-text {
+  width: 100%;
+  min-height: 9rem;
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  resize: vertical;
+}
+.label-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+}
+.label-results {
+  display: grid;
+  gap: 10px;
+}
+.label-verdict {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.label-verdict-btn {
+  background: var(--surface);
+  border-color: var(--line-strong);
+  min-width: 6rem;
+}
+.label-verdict-btn:hover {
+  background: var(--surface-2);
+}
+/* The chosen verdict: the accent, the same for all three (never colour by verdict). */
+.label-verdict-btn.is-on,
+.label-verdict-btn.is-on:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.label-export {
+  display: grid;
+  gap: 10px;
+}
+
+/* ---- Word pane: the reporting checklist ---- */
+.tp-check .tp-checklist {
+  width: 100%;
+}
+.tp-check .tp-checklist .select {
+  width: 100%;
+  min-width: 0;
+}
+.wchecklist {
+  max-width: var(--measure);
+}
+.wchecklist-title {
+  font-size: 1.0625rem;
+}
+.wchecklist-design {
+  font-weight: 400;
+  color: var(--ink-2);
+}
+.wchecklist-note {
+  margin-top: 4px;
+  text-wrap: pretty;
+}
+.wchecklist-items {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+.wchecklist-item {
+  padding: 10px 0;
+}
+.wchecklist-item + .wchecklist-item {
+  border-top: 1px solid var(--line);
+}
+.wchecklist-topic {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 12px;
+}
+.wchecklist-topic-name {
+  font-weight: 650;
+}
+/* The status is a word; "needs your check" is a prompt, so it is set in italic, not in a colour. */
+.wchecklist-status {
+  font-size: 0.875rem;
+  color: var(--ink-2);
+}
+.wchecklist-status-check {
+  font-style: italic;
+}
+.wchecklist-question {
+  margin-top: 2px;
+  font-size: 0.9375rem;
+  text-wrap: pretty;
+}
+.wchecklist-evidence {
+  margin-top: 6px;
+  padding-left: 12px;
+  border-left: 2px solid var(--line-strong);
+  font-family: var(--serif);
+  font-size: 1rem;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.wchecklist-evidence q {
+  quotes: "\201C" "\201D";
+}
+.wchecklist-plain {
+  margin-top: 6px;
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+.wchecklist .card-source {
+  margin-top: 10px;
+}
+
+@media (forced-colors: active) {
+  .spark-line,
+  .spark-end {
+    stroke: CanvasText;
+  }
+  .spark-end {
+    fill: CanvasText;
+  }
+}
+
+/* On a phone the header keeps one row: Lessons stays, the email gives way (it is in full in the menu). */
+@media (max-width: 560px) {
+  .header-end {
+    gap: 4px 8px;
+  }
+  .header-end .account-button {
+    max-width: 27vw;
+  }
+}

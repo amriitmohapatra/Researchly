@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from "react";
 import type { RuleInfo } from "@researchly/contract";
 import {
@@ -12,6 +13,7 @@ import {
   unmuteRule,
 } from "@/lib/account";
 import { openSignIn, useAuth } from "@/lib/auth";
+import { deleteProgress, loadKeepProgress, saveKeepProgress } from "@/lib/progress";
 import { CATEGORIES, categoryMeta } from "@/lib/categories";
 import { listRules } from "@/lib/engine";
 import {
@@ -23,6 +25,7 @@ import {
   type UserSettings,
 } from "@/lib/settings";
 import { CategoryIcon } from "./CategoryIcon";
+import { ConfirmDelete } from "./pages/ConfirmDelete";
 
 const nf = new Intl.NumberFormat("en-GB");
 /** Above this many words the list gets a filter box. */
@@ -73,6 +76,23 @@ function SignedInSettings() {
   const [status, setStatus] = useState<Status>(null);
   const [busy, setBusy] = useState(false);
   const [reload, setReload] = useState(0);
+  /** "Keep my progress" (S4c): null while loading; loaded on its own, so a database without the column fails only this. */
+  const [keep, setKeep] = useState<boolean | null>(null);
+  const [keepError, setKeepError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    void loadKeepProgress().then((r) => {
+      if (!live) return;
+      if (r.ok) {
+        setKeep(r.data);
+        setKeepError(null);
+      } else setKeepError(r.message);
+    });
+    return () => {
+      live = false;
+    };
+  }, [reload]);
 
   useEffect(() => {
     let live = true;
@@ -204,14 +224,43 @@ function SignedInSettings() {
         }
       />
 
+      <KeepProgress
+        keep={keep}
+        loadError={keepError}
+        busy={busy}
+        onChange={(on) => {
+          // The switch moves at once; if the save fails it moves back and says why.
+          const before = keep;
+          setKeep(on);
+          void act(
+            () => saveKeepProgress(on),
+            () =>
+              on
+                ? "Your progress will be recorded after each check."
+                : "Progress is no longer recorded. What was recorded stays until you delete it.",
+          ).then((saved) => {
+            if (!saved) setKeep(before);
+          });
+        }}
+        onDelete={() => act(deleteProgress, () => "Your recorded progress was deleted.")}
+      />
+
       <DeleteData
         busy={busy}
         onDelete={() =>
-          act(deleteMyData, () => {
-            setSettings({ ...DEFAULT_SETTINGS, disabled_rules: [] });
-            setWords([]);
-            return "Your settings and dictionary were deleted.";
-          })
+          act(
+            async () => {
+              // Progress first: it is the only thing that refers to past checks.
+              const progress = await deleteProgress();
+              return progress.ok ? deleteMyData() : progress;
+            },
+            () => {
+              setSettings({ ...DEFAULT_SETTINGS, disabled_rules: [] });
+              setWords([]);
+              setKeep(false);
+              return "Your settings, dictionary and progress were deleted.";
+            },
+          )
         }
       />
     </div>
@@ -481,6 +530,77 @@ function Dictionary({
   );
 }
 
+/** The exact help text under the switch (pinned by tests). */
+export const KEEP_PROGRESS_HELP =
+  "Records how many times each check fired and how many words were checked, after each check. Never your text. Off by default; switching it off stops recording.";
+
+function KeepProgress({
+  keep,
+  loadError,
+  busy,
+  onChange,
+  onDelete,
+}: {
+  keep: boolean | null;
+  loadError: string | null;
+  busy: boolean;
+  onChange: (on: boolean) => void;
+  onDelete: () => Promise<boolean>;
+}) {
+  const ids = { keep: useId(), help: useId() };
+  return (
+    <section className="panel settings-section" aria-labelledby="progress-title" data-testid="keep-progress">
+      <h2 id="progress-title" className="panel-title">
+        Your progress
+      </h2>
+      <div className="setting-row">
+        <label className="control-toggle setting-toggle" htmlFor={ids.keep}>
+          <input
+            id={ids.keep}
+            type="checkbox"
+            role="switch"
+            className="switch"
+            checked={keep === true}
+            aria-describedby={ids.help}
+            aria-disabled={busy || keep === null || undefined}
+            onChange={(e) => {
+              if (busy || keep === null) return;
+              onChange(e.target.checked);
+            }}
+            data-testid="keep-progress-switch"
+          />
+          <span>Keep my progress</span>
+        </label>
+        <p id={ids.help} className="help" data-testid="keep-progress-help">
+          {KEEP_PROGRESS_HELP}
+        </p>
+        {loadError ? (
+          <p className="field-problem" role="alert" data-testid="keep-progress-error">
+            This switch could not be loaded, so it is off. {loadError}
+          </p>
+        ) : null}
+      </div>
+      <p className="help settings-progress-links">
+        <Link className="inline-link" href="/progress">
+          See your progress
+        </Link>
+      </p>
+      <div className="setting-row">
+        <ConfirmDelete
+          label="Delete my progress…"
+          title="Delete your recorded progress?"
+          body="Every recorded check (rule counts and word counts) will be removed from your account. Your settings and dictionary stay. This can’t be undone."
+          keepLabel="Keep it"
+          confirmLabel="Delete it"
+          busy={busy}
+          onConfirm={onDelete}
+          testId="delete-progress"
+        />
+      </div>
+    </section>
+  );
+}
+
 function DeleteData({ busy, onDelete }: { busy: boolean; onDelete: () => Promise<boolean> }) {
   const ref = useRef<HTMLDialogElement>(null);
   const openerRef = useRef<HTMLButtonElement>(null);
@@ -494,8 +614,8 @@ function DeleteData({ busy, onDelete }: { busy: boolean; onDelete: () => Promise
         Delete my settings and dictionary
       </h2>
       <p className="muted section-intro">
-        Removes your muted rules, your display choices and every word in your dictionary. You stay signed in and can
-        start again; Researchly never had any of your text to delete.
+        Removes your muted rules, your display choices, every word in your dictionary and any recorded progress. You
+        stay signed in and can start again; Researchly never had any of your text to delete.
       </p>
       <button
         ref={openerRef}
@@ -525,8 +645,8 @@ function DeleteData({ busy, onDelete }: { busy: boolean; onDelete: () => Promise
             Delete your settings and dictionary?
           </h2>
           <p id={ids.body}>
-            Your muted rules, display choices and dictionary words will be removed from your account on every device.
-            This can&rsquo;t be undone.
+            Your muted rules, display choices, dictionary words and recorded progress will be removed from your account on
+            every device. This can&rsquo;t be undone.
           </p>
           <div className="dialog-actions">
             <button ref={keepRef} type="button" className="btn btn-secondary" onClick={() => ref.current?.close()}>

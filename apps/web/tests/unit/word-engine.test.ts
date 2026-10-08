@@ -44,20 +44,28 @@ afterEach(() => vi.unstubAllGlobals());
 const PARAS = [{ text: "A synthetic sentence.", style: "Normal", kind: "body" as const }];
 
 describe("POST /v1/analyze-word", () => {
-  it("always sends the mode, the preference switch, any mutes, the article type and whether the brief is wanted", () => {
+  it("always sends the mode, the preference switch, any mutes, the article type and whether the brief and the map are wanted", () => {
     expect(buildWordRequest({ paragraphs: PARAS, showPreferences: false, mode: "draft" })).toEqual({
       paragraphs: PARAS,
-      options: { show_preferences: false, disabled_rules: [], mode: "draft", document_type: "auto", review: false },
+      options: { show_preferences: false, disabled_rules: [], mode: "draft", document_type: "auto", review: false, narrative: false },
     });
     expect(
-      buildWordRequest({ paragraphs: PARAS, showPreferences: true, mode: "revise", disabledRules: ["G101"], documentType: "thesis-chapter", review: true })
-        .options,
+      buildWordRequest({
+        paragraphs: PARAS,
+        showPreferences: true,
+        mode: "revise",
+        disabledRules: ["G101"],
+        documentType: "thesis-chapter",
+        review: true,
+        narrative: true,
+      }).options,
     ).toEqual({
       show_preferences: true,
       disabled_rules: ["G101"],
       mode: "revise",
       document_type: "thesis-chapter",
       review: true,
+      narrative: true,
     });
   });
 

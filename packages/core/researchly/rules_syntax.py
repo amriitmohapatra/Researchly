@@ -562,7 +562,7 @@ def c303_causal(doc, document: Document):
 
 
 # ---------------------------------------------------------------------------
-# E7xx (syntax) — from Dr Akira Endo's scientific-writing lecture
+# E7xx (syntax) — from the owner's lecture notes on scientific writing
 # ---------------------------------------------------------------------------
 
 @rule("E702", "adversative-run", Category.IMPROVEMENT,
@@ -576,7 +576,7 @@ def c303_causal(doc, document: Document):
              'Each one turns the argument around, so the reader loses track of '
              'which way it is going. Join one contrast into the other sentence, '
              'or remove one.'),
-      source="Endo")
+      source="lecture")
 def e702_adversative_run(doc, document: Document):
     ADV = re.compile(r"^\s*(However|Nevertheless|Nonetheless|Yet|"
                      r"On the other hand|Conversely)\b[, ]", re.IGNORECASE)
@@ -605,9 +605,9 @@ def e702_adversative_run(doc, document: Document):
              "what 'This' refers to. Add a noun: 'This assumption', 'This "
              "difference', 'This result'. Then the reader knows exactly what you "
              'mean.'),
-      source="Endo")
+      source="lecture")
 def e703_naked_this(doc, document: Document):
-    # Precision guard (Endo's own caveat): the reference is ambiguous when
+    # Precision guard (the lecture's own caveat): the reference is ambiguous when
     # the PRECEDING sentence is long enough to offer multiple candidate
     # referents. After a short simple sentence, "This suggests…" is usually
     # clear — we stay quiet there.
@@ -643,7 +643,7 @@ def e703_naked_this(doc, document: Document):
              "instead, and put the figure in brackets at the end: 'Cases peaked "
              "in July (Figure 1).' The reader gets the result first."),
       sections_only=("results",),
-      source="Endo", aggregate=True)
+      source="lecture", aggregate=True)
 def e707_display_first(doc, document: Document):
     for sent in doc.sents:
         m = re.match(lx.FIGURE_OPENER_RX, sent.text)

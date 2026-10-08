@@ -16,6 +16,8 @@ interface Props {
   onShowPreferences: (v: boolean) => void;
   /** The "Check as" control (S4), the same one the composer shows. */
   typeControl?: ReactNode;
+  /** The "Reporting checklist" control (S4), beside "Check as". */
+  checklistControl?: ReactNode;
   onChooseFile: () => void;
   onCancel: () => void;
   onBack: () => void;
@@ -48,6 +50,7 @@ export function FilePanel({
   showPreferences,
   onShowPreferences,
   typeControl,
+  checklistControl,
   onChooseFile,
   onCancel,
   onBack,
@@ -106,6 +109,7 @@ export function FilePanel({
 
       <div className="controls">
         {typeControl}
+        {checklistControl}
         <label className="control control-toggle" htmlFor={ids.prefs}>
           <input
             id={ids.prefs}

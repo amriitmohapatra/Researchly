@@ -2,11 +2,13 @@
  * The only things this app remembers in the browser: the chosen input format,
  * the article type to check as (S4; shared by the website and the Word add-in,
  * which are one origin) and, in the Word add-in, the engine choice and
- * Draft/Revise. The document itself is never persisted (no localStorage,
- * sessionStorage or IndexedDB for text in S1) — scripts/check-boundary.mjs
- * enforces that storage APIs are used in this file only.
+ * Draft/Revise and (S4c) the reporting checklist; on the Label page, the
+ * verdicts given so far (rule ids and verdicts, never text). The document
+ * itself is never persisted (no localStorage, sessionStorage or IndexedDB
+ * for text) — scripts/check-boundary.mjs enforces that storage APIs are used
+ * in this file only.
  */
-import type { DocumentType, Format } from "@researchly/contract";
+import type { ChecklistChoice, DocumentType, Format } from "@researchly/contract";
 import { isDocumentType } from "./profiles";
 import { isFormat } from "./validate";
 
@@ -107,8 +109,62 @@ export function saveModeChoice(v: ModeChoice): void {
 /** For useSyncExternalStore: another taskpane or tab changing a Word preference updates this one. */
 export function subscribeWordPrefs(onChange: () => void): () => void {
   const handler = (e: StorageEvent) => {
-    if (e.key === ENGINE_KEY || e.key === MODE_KEY) onChange();
+    if (e.key === ENGINE_KEY || e.key === MODE_KEY || e.key === CHECKLIST_KEY) onChange();
   };
   window.addEventListener("storage", handler);
   return () => window.removeEventListener("storage", handler);
+}
+
+/* ---------- the reporting checklist (S4c, Word): a choice, never text ---------- */
+
+/** "none", or a checklist the engine checks the text against ("auto": the one the text's words point to). */
+export type ChecklistPref = "none" | ChecklistChoice;
+
+const CHECKLIST_KEY = "researchly.word.checklist";
+const CHECKLIST_PREFS: readonly string[] = ["none", "auto", "strobe", "consort", "prisma", "epiforge"];
+
+export function isChecklistPref(v: unknown): v is ChecklistPref {
+  return typeof v === "string" && CHECKLIST_PREFS.includes(v);
+}
+
+/** The checklist chosen on this computer, or null when never chosen (None applies). */
+export function loadChecklistChoice(): ChecklistPref | null {
+  const v = read(CHECKLIST_KEY);
+  return isChecklistPref(v) ? v : null;
+}
+
+export function saveChecklistChoice(v: ChecklistPref): void {
+  write(CHECKLIST_KEY, v);
+}
+
+/* ---------- the Label page (S4 exit check): verdicts on flags, never text ---------- */
+
+const LABELS_KEY = "researchly.labels";
+
+/**
+ * The labelling session as stored: the paragraph number being labelled and
+ * every label so far (rule id, category, section, verdict). Never the
+ * paragraph or the flagged words. lib/labels.ts checks the shape, so a
+ * tampered store reads as empty rather than breaking the page.
+ */
+export function loadLabelStore(): unknown {
+  const v = read(LABELS_KEY);
+  if (v === null) return null;
+  try {
+    return JSON.parse(v) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+export function saveLabelStore(value: unknown): void {
+  write(LABELS_KEY, JSON.stringify(value));
+}
+
+export function clearLabelStore(): void {
+  try {
+    window.localStorage.removeItem(LABELS_KEY);
+  } catch {
+    /* storage unavailable: nothing was kept */
+  }
 }
