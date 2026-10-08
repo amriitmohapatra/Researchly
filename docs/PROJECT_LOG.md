@@ -1895,3 +1895,39 @@ report exists only on paper, everything else hidden; the browser's own
 print command mounts it too). Also in PLAN's inbox today: a presentation
 deck for an external audience (with a reminder set for the owner).
 
+## 2026-10-08 — Codex broad codebase and feature review
+
+**What/why.** At the owner's request, reviewed current `main` at
+`5414cdce9b7290959cdb1731977410a564ca672b`, including S4a profiles,
+the reviewer's brief and printable reports. Added
+`Codex_Review_8Oct2026.md`: eight prioritized findings, twelve feature
+improvements, evidence and acceptance criteria, and suggested implementation
+batches. This is a review document; application code, tests, manifests,
+lockfiles and PLAN completion flags are unchanged.
+
+**Findings.** Synthetic probes reproduced current taskpane requests being
+rejected by the local Word engine, Auto misclassifying an IMRaD article
+with Recommendations as a policy brief, brief assertions confusing
+disabled checks or missing sections with evidence, inherited Draft mode
+hiding web document checks, and LSP code-point columns differing from
+UTF-16 after emoji. Office adapter fakes showed field-probe failure allowing
+an insertion, and tracking-restoration failure reporting no change after
+insertion. Real Word-host behavior remains to be validated. Suggestions
+cover revision queues, session-only dismissal, evidence navigation,
+coverage, genre-specific review, reporting checklists, long-document
+recovery, Learn cards, spelling policy and account/local-mode capabilities.
+
+**Evidence.** Python 3.10: core 820 passed / 2 skipped (macOS Java stub and
+optional real remote LanguageTool); service 166 passed. Web lint/boundary
+and types passed; 240 unit tests passed; OpenAPI and generated TS drift
+checks passed. Existing browser suites: 105 passed / 7 optional screenshot
+cases skipped, against two production builds with mocked engine,
+Supabase and Office.js, using system Chromium and four workers via an
+external config. No private-corpus run, production load test, real Word
+automation or live account deletion was performed.
+
+**Lesson.** Passing shape/unit tests can miss a real consumer sending newer
+options to an older local adapter. Heuristic coaching must distinguish
+“not assessed” from “not present,” and editing recovery must not promise
+that a document is untouched after a partially successful host operation.
+
