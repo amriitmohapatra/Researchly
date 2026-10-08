@@ -168,7 +168,11 @@ test.describe("signed in", () => {
     await expect(page.getByRole("heading", { name: "2 suggestions" })).toBeVisible();
     expect(tokenLabel(calls[0]!.authorization)).toBe("initial");
     expect(calls[0]!.authorization).toMatch(/^Bearer [\w-]+\.[\w-]+\.[\w-]+$/);
-    expect(calls[0]!.json).toEqual({ content: PASTE_TEXT, format: "plain", options: { show_preferences: false } });
+    expect(calls[0]!.json).toEqual({
+      content: PASTE_TEXT,
+      format: "plain",
+      options: { show_preferences: false, document_type: "auto", review: true },
+    });
 
     await menu.focus();
     await page.keyboard.press("Enter");
@@ -180,6 +184,28 @@ test.describe("signed in", () => {
     await expect(page.getByTestId("account-panel")).toBeHidden();
     await expect(menu).toBeFocused();
     expect(await axeSerious(page, [...AXE_TAGS, "best-practice"])).toEqual([]);
+  });
+
+  test("the article type comes from the account, and a change is saved to it and checked again (S4)", async ({ page }) => {
+    await seedSession(page);
+    const sb = await mockSupabase(page, {
+      settings: { disabled_rules: [], show_preferences: false, locale: "en-US", document_type: "manuscript" },
+    });
+    const calls = await mockEngineAuth(page, (_c, route) => reply(route, 200, signedInPaste));
+    await page.goto("/");
+    // From the account, not from this browser.
+    await expect(page.getByLabel("Check as")).toHaveValue("manuscript");
+    await pasteAndCheck(page);
+    await expect(page.getByRole("heading", { name: "2 suggestions" })).toBeVisible();
+    const typeOf = (i: number) => (calls[i]!.json as { options: { document_type: string } }).options.document_type;
+    expect(typeOf(0)).toBe("manuscript");
+
+    await page.getByLabel("Check as").selectOption("abstract");
+    await expect.poll(() => sb.settings?.document_type).toBe("abstract");
+    const upsert = sb.sent.find((r) => r.path === "/rest/v1/user_settings" && r.method === "POST");
+    expect(JSON.parse(upsert!.body)).toEqual({ document_type: "abstract" });
+    await expect.poll(() => calls.length).toBe(2);
+    expect(typeOf(1)).toBe("abstract");
   });
 
   test("401 unauthorized: refresh once, retry once with the new token", async ({ page }) => {
@@ -292,7 +318,7 @@ test.describe("uploads", () => {
     expect(c.path).toBe("/v1/analyze-file");
     expect(c.headers["content-type"]).toBe("application/octet-stream");
     expect(c.headers["x-researchly-filename"]).toBe("Kapitel-%C3%BC%205.md");
-    expect(JSON.parse(c.headers["x-researchly-options"]!)).toEqual({ show_preferences: false });
+    expect(JSON.parse(c.headers["x-researchly-options"]!)).toEqual({ show_preferences: false, document_type: "auto", review: true });
     expect(tokenLabel(c.authorization)).toBe("initial");
     expect(c.bytes).toBe(Buffer.byteLength(MD_TEXT));
 

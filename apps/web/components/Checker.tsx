@@ -18,24 +18,35 @@ import {
   MAX_CONTENT_CHARS,
   type AnalyzeFileResponse,
   type AnalyzeResponse,
+  type DocumentType,
   type Format,
   type Suggestion,
 } from "@researchly/contract";
-import { addWord, loadSettings, muteRule } from "@/lib/account";
+import { addWord, loadDocumentType, loadSettings, muteRule, saveDocumentType } from "@/lib/account";
 import { getEngineAuth, openSignIn, useAuth } from "@/lib/auth";
 import { analyze, analyzeFile } from "@/lib/engine";
 import { clientError, UPLOAD_TYPES_SENTENCE, type CheckError } from "@/lib/errors";
 import { ENGINE_URL } from "@/lib/config";
-import { loadFormat, saveFormat, subscribeFormat } from "@/lib/prefs";
+import {
+  loadDocumentTypeChoice,
+  loadFormat,
+  saveDocumentTypeChoice,
+  saveFormat,
+  subscribeDocumentType,
+  subscribeFormat,
+} from "@/lib/prefs";
+import { useProfileChoices } from "@/lib/registry";
 import { useRuleScopes } from "@/lib/scope";
 import { codePointLength } from "@/lib/segments";
 import { ACCEPT_ATTR, checkFile } from "@/lib/source";
 import { FORMATS, isFormat, validateContent, type InputProblem } from "@/lib/validate";
 import { revealNeedsRecheck, shownSuggestions, summarySentence } from "@/lib/view";
 import { FilePanel, type DropHandlers } from "./FilePanel";
+import { ProfileSelect } from "./ProfileSelect";
 import { ReadingKey } from "./ReadingKey";
 import { Results } from "./Results";
 import type { CardActions } from "./SuggestionCard";
+import type { ResultsView } from "./ViewTabs";
 
 type Phase = "idle" | "loading" | "done" | "error";
 /** Pasting into the editor (S1), or reading an uploaded file (S2, signed in). */
@@ -82,6 +93,15 @@ export function Checker() {
   const storedFormat = useSyncExternalStore(subscribeFormat, loadFormat, () => null);
   const [chosenFormat, setFormat] = useState<Format | null>(null);
   const format: Format = chosenFormat ?? storedFormat ?? "plain";
+  // The article type to check as (S4): this session's choice, else the
+  // account's (signed in), else this browser's, else Auto.
+  const storedType = useSyncExternalStore(subscribeDocumentType, loadDocumentTypeChoice, () => null);
+  const [accountType, setAccountType] = useState<DocumentType | null>(null);
+  const [chosenType, setChosenType] = useState<DocumentType | null>(null);
+  const documentType: DocumentType = chosenType ?? (signedIn ? accountType : null) ?? storedType ?? "auto";
+  const [typeNote, setTypeNote] = useState<string | null>(null);
+  const profiles = useProfileChoices(ENGINE_URL);
+  const [view, setView] = useState<ResultsView>("suggestions");
   const [showPreferences, setShowPreferences] = useState(false);
   const [problem, setProblem] = useState<InputProblem | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
@@ -109,6 +129,7 @@ export function Checker() {
     hint: useId(),
     problem: useId(),
     format: useId(),
+    type: useId(),
     prefs: useId(),
     privacy: useId(),
     upload: useId(),
@@ -143,6 +164,18 @@ export function Checker() {
     };
   }, [signedIn]);
 
+  // Signed in: the article type comes from the account (shared with the Word add-in).
+  useEffect(() => {
+    if (!signedIn) return;
+    let live = true;
+    void loadDocumentType().then((r) => {
+      if (live && r.ok && r.data) setAccountType(r.data);
+    });
+    return () => {
+      live = false;
+    };
+  }, [signedIn]);
+
   const onExample = () => {
     setText(EXAMPLE_DRAFT);
     setProblem(null);
@@ -150,9 +183,10 @@ export function Checker() {
   };
 
   const runCheck = useCallback(
-    async (target: Target = { kind: "paste" }, opts?: { showPreferences?: boolean }) => {
+    async (target: Target = { kind: "paste" }, opts?: { showPreferences?: boolean; documentType?: DocumentType }) => {
       if (loadingRef.current) return;
       const prefs = opts?.showPreferences ?? showPreferences;
+      const type = opts?.documentType ?? documentType;
       const submitted = text;
       if (target.kind === "paste") {
         const invalid = validateContent(text);
@@ -176,15 +210,25 @@ export function Checker() {
         setAnnouncement("");
       };
       try {
+        // The brief is always asked for here: the website has no Draft stage
+        // of its own, and the engine applies the account's choice.
         if (target.kind === "paste") {
-          const r = await analyze({ content: submitted, format, showPreferences: prefs, signal: ctrl.signal }, undefined, auth);
+          const r = await analyze(
+            { content: submitted, format, showPreferences: prefs, documentType: type, review: true, signal: ctrl.signal },
+            undefined,
+            auth,
+          );
           if (r.ok) {
             setChecked((prev) => ({ seq: (prev?.seq ?? 0) + 1, data: r.data, text: submitted, format }));
             setPhase("done");
             setAnnouncement(summarySentence(shownSuggestions(r.data, prefs)));
           } else fail(r.error);
         } else {
-          const r = await analyzeFile({ file: target.file, showPreferences: prefs, signal: ctrl.signal }, undefined, auth);
+          const r = await analyzeFile(
+            { file: target.file, showPreferences: prefs, documentType: type, review: true, signal: ctrl.signal },
+            undefined,
+            auth,
+          );
           if (r.ok) {
             shownFileRef.current = target.file;
             setFileChecked((prev) => ({ seq: (prev?.seq ?? 0) + 1, data: r.data, file: target.file }));
@@ -213,12 +257,12 @@ export function Checker() {
         abortRef.current = null;
       }
     },
-    [text, format, showPreferences, checked],
+    [text, format, showPreferences, documentType, checked],
   );
 
   /** Check again whatever is on screen: the file, or the editor's text. */
   const recheck = useCallback(
-    (opts?: { showPreferences?: boolean }) => {
+    (opts?: { showPreferences?: boolean; documentType?: DocumentType }) => {
       // In file mode, the file on screen, or the one whose first check failed.
       const file = fileChecked?.file ?? pendingFile;
       if (mode === "file") return file ? runCheck({ kind: "file", file }, opts) : undefined;
@@ -387,6 +431,24 @@ export function Checker() {
   const describedBy = [ids.hint, problem ? ids.problem : null].filter(Boolean).join(" ");
   const current = mode === "file" ? fileChecked : checked;
   const signInPrompt = accounts && error?.kind === "sign_in_required";
+
+  // A changed type checks again whatever is on screen, exactly as a stage change does in Word.
+  const onTypeChange = (next: DocumentType) => {
+    if (next === documentType) return;
+    setChosenType(next);
+    saveDocumentTypeChoice(next);
+    setTypeNote(null);
+    if (signedIn) {
+      void saveDocumentType(next).then((r) => {
+        if (r.ok) setAccountType(next);
+        else setTypeNote(`This choice could not be saved to your account, so it applies in this browser only. ${r.message}`);
+      });
+    }
+    if (current) void recheck({ documentType: next });
+  };
+  const typeControl = (
+    <ProfileSelect id={ids.type} value={documentType} choices={profiles} onChange={onTypeChange} note={typeNote} />
+  );
   // Which rules read the whole document (for the section chooser). Asked once, after the first results; no text is sent.
   const scopes = useRuleScopes(ENGINE_URL, current !== null);
 
@@ -403,6 +465,7 @@ export function Checker() {
             problem={fileProblem}
             showPreferences={showPreferences}
             onShowPreferences={onPrefsChange}
+            typeControl={typeControl}
             onChooseFile={chooseFile}
             onCancel={() => abortRef.current?.abort()}
             onBack={backToEditor}
@@ -510,6 +573,8 @@ export function Checker() {
                   ))}
                 </select>
               </div>
+
+              {typeControl}
 
               {/* Label wraps the switch: one hit target, no dead zone between them. */}
               <label className="control control-toggle" htmlFor={ids.prefs}>
@@ -686,6 +751,8 @@ export function Checker() {
           source={fileChecked.data.document}
           actions={cardActions}
           scopes={scopes}
+          view={view}
+          onView={setView}
         />
       ) : mode === "paste" && checked ? (
         <Results
@@ -698,6 +765,8 @@ export function Checker() {
           onRevealPreferences={onRevealPreferences}
           actions={cardActions}
           scopes={scopes}
+          view={view}
+          onView={setView}
         />
       ) : null}
     </>
