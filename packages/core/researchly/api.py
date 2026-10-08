@@ -87,6 +87,10 @@ class Analysis:
     review: Optional[dict] = None
     # The narrative map (discourse/narrative.py), when asked for.
     narrative: Optional[dict] = None
+    # A reporting checklist (packs/), when asked for; and the one the
+    # text's own words point to, always (a cheap pass over the text).
+    checklist: Optional[dict] = None
+    suggested_checklist: Optional[str] = None
     metrics: Optional[metrics_mod.Metrics] = None
     sections_detected: list = field(default_factory=list)
     health: list = field(default_factory=list)
@@ -109,6 +113,8 @@ class Analysis:
                         "rules_off": sorted(self.profile.rules_off)},
             "review": self.review,
             "narrative": self.narrative,
+            "checklist": self.checklist,
+            "suggested_checklist": self.suggested_checklist,
             "metrics": self.metrics.to_dict() if self.metrics else None,
             "sections_detected": list(self.sections_detected),
             "health": [t.to_dict() for t in self.health],
@@ -157,6 +163,7 @@ def analyze(source: Union[str, Path, Sequence[dict], Document],
             with_metrics: bool = True,
             with_review: bool = False,
             with_narrative: bool = False,
+            checklist: Optional[str] = None,
             **overrides: Any) -> Analysis:
     """Check one document and return everything the surfaces render.
 
@@ -213,6 +220,14 @@ def analyze(source: Union[str, Path, Sequence[dict], Document],
         review = build_review(document, nlp, suggestions=everything,
                               spacy_doc=spacy_doc, metrics=mets,
                               profile=profile)
+    from . import packs
+    suggested = packs.suggest(document.masked)
+    checked = None
+    if checklist:
+        cid = suggested if checklist == "auto" else checklist
+        if cid:
+            checked = packs.check(document, cid, spacy_doc=spacy_doc,
+                                  suggested=suggested)
     narrative = None
     if with_narrative:
         from .discourse.narrative import build_narrative
@@ -228,6 +243,8 @@ def analyze(source: Union[str, Path, Sequence[dict], Document],
         profile_guessed=guessed,
         review=review,
         narrative=narrative,
+        checklist=checked,
+        suggested_checklist=suggested,
         metrics=mets if with_metrics else None,
         sections_detected=sorted({h.section for h in document.headings}),
         health=engine_status(cfg, nlp=nlp),

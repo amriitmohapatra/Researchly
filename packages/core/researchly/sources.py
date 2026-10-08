@@ -36,6 +36,7 @@ GUIDE_SECTIONS = {
     "9.3": "Uncertainty is not a caveat, it is the finding",
     "9.2": "Equations are sentences — make them grammatical",
     "9.4": "A model is an argument, not an oracle",
+    "9.5": "Reproducibility is part of the writing",
     "7.3": "Tag the three funnel moves and the argument spine",
     "9.7": "Figures are arguments too",
     "9.8": "Translate for the decision-maker",
@@ -57,6 +58,15 @@ WORKS = {
                "of a research introduction"),
     "Toulmin": ("S. E. Toulmin (1958), The Uses of Argument, Cambridge "
                 "University Press (claim, grounds, warrant)"),
+    "STROBE": ("E. von Elm et al. (2007), the STROBE statement for "
+               "reporting observational studies in epidemiology"),
+    "CONSORT": ("K. F. Schulz, D. G. Altman and D. Moher (2010), the "
+                "CONSORT 2010 statement for reporting randomised trials"),
+    "PRISMA": ("M. J. Page et al. (2021), the PRISMA 2020 statement for "
+               "reporting systematic reviews"),
+    "EPIFORGE": ("S. Pollett et al. (2021), the EPIFORGE 2020 guidelines "
+                 "for reporting epidemic forecasting and prediction "
+                 "research"),
     "WW": ("M. Wallace & A. Wray (2016), Critical Reading and Writing for "
            "Postgraduates, 3rd ed., SAGE"),
     "LanguageTool": "LanguageTool, open-source grammar checker",

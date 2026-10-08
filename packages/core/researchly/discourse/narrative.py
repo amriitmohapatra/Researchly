@@ -13,6 +13,7 @@ from __future__ import annotations
 import re
 from typing import Optional
 
+from .. import learn
 from .. import lexicons as lx
 from .. import sources
 from ..document import Document
@@ -57,12 +58,13 @@ def _quote(text: str) -> str:
 
 
 def _move_entry(move_id: str, status: str, evidence: Optional[str] = None,
-                note: str = "") -> dict:
+                note: str = "", section: str = "") -> dict:
     m = MOVES[move_id]
     return {
         "id": m.id, "label": m.label, "status": status,
         "question": m.question, "plain": m.plain, "frame": m.frame,
         "source": m.citation, "evidence": evidence, "note": note,
+        "learn_ref": learn.card_for_move(section, m.id),
     }
 
 
@@ -79,7 +81,7 @@ def _section_map(section: str, sents: list) -> dict:
     misplaced = _misplaced(schema, first) if section in ORDERED else set()
     for j, mid in enumerate(schema):
         if mid not in first:
-            out.append(_move_entry(mid, "missing"))
+            out.append(_move_entry(mid, "missing", section=section))
             continue
         status, note = "present", ""
         if mid in misplaced:
@@ -92,7 +94,7 @@ def _section_map(section: str, sents: list) -> dict:
                 note = "Appears after " + MOVES[after[-1]].label.lower() + "."
             elif before:
                 note = "Appears before " + MOVES[before[0]].label.lower() + "."
-        out.append(_move_entry(mid, status, evidence[mid], note))
+        out.append(_move_entry(mid, status, evidence[mid], note, section))
     present = sum(1 for e in out if e["status"] != "missing")
     return {
         "section": section,
@@ -209,6 +211,7 @@ def build_narrative(document: Document, spacy_doc=None,
                 "label": SECTION_LABELS.get(obj.section, obj.section),
                 "code": code,
                 "message": message,
+                "learn_ref": learn.card_for_link(code),
                 "source": sources.cite("WW+Toulmin+§4"),
             })
 
