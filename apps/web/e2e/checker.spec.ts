@@ -756,3 +756,66 @@ test.describe("security", () => {
     expect(external).toEqual([]);
   });
 });
+
+test.describe("print or save as PDF (S4)", () => {
+  test("the report exists only on paper: numbered highlights beside the suggestions, then the brief, nothing else", async ({ page }) => {
+    // The browser's print dialog cannot open here: record the call instead.
+    await page.addInitScript(() => {
+      (window as unknown as { __printed: number }).__printed = 0;
+      window.print = () => {
+        (window as unknown as { __printed: number }).__printed += 1;
+      };
+    });
+    await mockEngine(page);
+    await page.goto("/");
+    await paste(page, SAMPLE_TEXT);
+    await check(page);
+    await expect(page.getByTestId("results")).toBeVisible();
+    // Nothing of the report is in the page until it is asked for.
+    await expect(page.getByTestId("print-report")).toHaveCount(0);
+
+    await page.getByTestId("print-report-button").click();
+    await expect.poll(() => page.evaluate(() => (window as unknown as { __printed: number }).__printed)).toBe(1);
+
+    // On paper: the report, and only the report.
+    await page.emulateMedia({ media: "print" });
+    const report = page.getByTestId("print-report");
+    await expect(report).toBeVisible();
+    await expect(page.getByTestId("results")).toBeHidden();
+    await expect(page.locator(".site-header")).toBeHidden();
+    await expect(page.locator(".site-footer")).toBeHidden();
+    const marks = report.getByTestId("print-mark");
+    expect(await marks.count()).toBeGreaterThan(0);
+    const cards = report.getByTestId("print-card");
+    expect(await cards.count()).toBe(happyResponse.suggestions.length);
+    // Every number on a highlight is the number of a listed suggestion.
+    const refs = (await report.locator(".print-ref").allTextContents()).flatMap((t) => t.split(",").map(Number));
+    const listed = (await report.locator(".print-n").allTextContents()).map(Number);
+    expect(refs.length).toBeGreaterThan(0);
+    for (const n of refs) expect(listed).toContain(n);
+    await expect(report.locator(".print-brief [data-question]")).toHaveCount(5);
+    await expect(report).toContainText("Nothing was sent anywhere");
+
+    // After printing the report is gone again; the screen is as before.
+    await page.emulateMedia({ media: "screen" });
+    await page.evaluate(() => window.dispatchEvent(new Event("afterprint")));
+    await expect(page.getByTestId("print-report")).toHaveCount(0);
+    await expect(page.getByTestId("results")).toBeVisible();
+  });
+
+  test("the browser's own print command (beforeprint) mounts the report too", async ({ page }) => {
+    // A real window.print() in headless Chromium fires afterprint at once, which would unmount it again.
+    await page.addInitScript(() => {
+      window.print = () => {};
+    });
+    await mockEngine(page);
+    await page.goto("/");
+    await paste(page, SAMPLE_TEXT);
+    await check(page);
+    await expect(page.getByTestId("results")).toBeVisible();
+    await page.evaluate(() => window.dispatchEvent(new Event("beforeprint")));
+    await expect(page.getByTestId("print-report")).toHaveCount(1);
+    await page.evaluate(() => window.dispatchEvent(new Event("afterprint")));
+    await expect(page.getByTestId("print-report")).toHaveCount(0);
+  });
+});

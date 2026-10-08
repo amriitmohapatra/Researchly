@@ -2300,3 +2300,162 @@ main:focus {
 .tp-results .brief-q {
   padding: 12px 0 10px;
 }
+
+/* ---------- S4: the printable report (print or save as PDF) ---------- */
+
+/* On screen the report does not exist; the button beside the results heading. */
+.print-report {
+  display: none;
+}
+.results-print {
+  flex-basis: 100%;
+  font-size: 0.9rem;
+}
+
+@media print {
+  @page {
+    margin: 16mm 14mm;
+  }
+  /* The report is portalled to <body>: on paper it is the only thing there. */
+  body > :not(.print-report) {
+    display: none !important;
+  }
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .print-report {
+    display: block;
+    color: #000;
+    font-size: 10pt;
+    line-height: 1.4;
+  }
+  .print-report h1 {
+    font-size: 16pt;
+    margin: 0 0 4pt;
+    letter-spacing: -0.01em;
+  }
+  .print-report h2 {
+    font-size: 11pt;
+    margin: 0 0 6pt;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .print-report h3 {
+    font-size: 10.5pt;
+    margin: 10pt 0 2pt;
+  }
+  .print-meta,
+  .print-muted,
+  .print-foot,
+  .print-key {
+    color: #333;
+    font-size: 9pt;
+    margin: 0 0 3pt;
+  }
+  .print-key {
+    margin-bottom: 10pt;
+  }
+  .print-grid {
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    column-gap: 8mm;
+    border-top: 0.5pt solid #000;
+    padding-top: 8pt;
+  }
+  .print-text {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: 9.5pt;
+  }
+  .print-hl {
+    background: #e8e8e8;
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-thickness: 0.6pt;
+    text-underline-offset: 1.5pt;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .print-hl-correction {
+    text-decoration-style: solid;
+  }
+  .print-hl-improvement {
+    text-decoration-style: double;
+  }
+  .print-hl-convention {
+    text-decoration-style: dotted;
+  }
+  .print-hl-preference {
+    text-decoration-style: dashed;
+  }
+  .print-ref {
+    font-weight: 700;
+    font-size: 7pt;
+    line-height: 0;
+    margin-left: 1pt;
+  }
+  .print-cards {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .print-card {
+    break-inside: avoid;
+    padding: 5pt 0 6pt;
+    border-bottom: 0.5pt solid #bbb;
+  }
+  .print-card p {
+    margin: 0 0 2pt;
+  }
+  .print-card-head {
+    display: flex;
+    gap: 6pt;
+    align-items: baseline;
+    font-size: 8.5pt;
+  }
+  .print-n {
+    font-weight: 700;
+    font-size: 10pt;
+    min-width: 14pt;
+  }
+  .print-cat {
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .print-sec {
+    color: #444;
+  }
+  .print-msg {
+    font-weight: 600;
+  }
+  .print-plain,
+  .print-repl {
+    font-size: 9pt;
+  }
+  .print-source {
+    font-size: 8pt;
+    color: #444;
+  }
+  .print-brief {
+    break-before: page;
+  }
+  .print-brief .brief,
+  .print-brief .brief-line {
+    margin: 0;
+  }
+  .print-brief .brief-q {
+    break-inside: avoid;
+    border-color: #bbb;
+  }
+  .print-brief .brief-evidence q {
+    color: #000;
+  }
+  .print-foot {
+    margin-top: 12pt;
+    border-top: 0.5pt solid #000;
+    padding-top: 4pt;
+  }
+}
+

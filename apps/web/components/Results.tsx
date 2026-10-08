@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { createPortal, flushSync } from "react-dom";
 import type { AnalyzeResponse, SourceInfo, Suggestion } from "@researchly/contract";
 import { CATEGORIES, CATEGORY_ORDER, countByCategory, sectionLabel } from "@/lib/categories";
 import { briefState, profileLine } from "@/lib/profiles";
@@ -20,6 +21,7 @@ import { CategoryIcon } from "./CategoryIcon";
 import { DocumentView } from "./DocumentView";
 import { HealthBanner } from "./HealthBanner";
 import { MetricsPanel } from "./MetricsPanel";
+import { PrintReport } from "./PrintReport";
 import { ReviewBrief } from "./ReviewBrief";
 import { SuggestionCard, type CardActions } from "./SuggestionCard";
 import { ViewTabs, viewIds, type ResultsView } from "./ViewTabs";
@@ -76,6 +78,27 @@ export function Results({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [focusReq, setFocusReq] = useState<FocusRequest | null>(null);
   const docColRef = useRef<HTMLDivElement>(null);
+  // The printable report (S4) is mounted only while printing: from the
+  // button, or from the browser's own print command (Ctrl/Cmd+P), whose
+  // beforeprint event has to see it in the DOM synchronously.
+  const [printing, setPrinting] = useState<Date | null>(null);
+  const printHelpId = useId();
+  const onPrint = useCallback(() => setPrinting(new Date()), []);
+  useEffect(() => {
+    if (!printing) return;
+    const id = window.setTimeout(() => window.print(), 0);
+    return () => window.clearTimeout(id);
+  }, [printing]);
+  useEffect(() => {
+    const before = () => flushSync(() => setPrinting((p) => p ?? new Date()));
+    const after = () => setPrinting(null);
+    window.addEventListener("beforeprint", before);
+    window.addEventListener("afterprint", after);
+    return () => {
+      window.removeEventListener("beforeprint", before);
+      window.removeEventListener("afterprint", after);
+    };
+  }, []);
 
   const shown = useMemo(() => shownSuggestions(data, showPreferences), [data, showPreferences]);
   const counts = useMemo(() => countByCategory(shown), [shown]);
@@ -168,6 +191,15 @@ export function Results({
         <p className="muted results-meta">
           {sections.length > 0 ? <>Sections detected: {sections.join(", ")}</> : <>No section headings detected</>}
           {" · "}checked in {seconds}&nbsp;s
+        </p>
+        <p className="results-print">
+          <button type="button" className="btn-link" onClick={onPrint} aria-describedby={printHelpId} data-testid="print-report-button">
+            Print or save as PDF
+          </button>
+          <span id={printHelpId} className="sr-only">
+            Opens your browser&rsquo;s print dialog with the text, its highlights and the suggestions side by side, then the
+            reviewer&rsquo;s brief. Choose Save as PDF there to keep a file. Nothing leaves this page.
+          </span>
         </p>
       </div>
       {profileText ? (
@@ -332,6 +364,12 @@ export function Results({
         Checked by engine {data.engine.service_version} (core {data.engine.core_version}) with{" "}
         {data.engine.rules_loaded} rules. Each suggestion names its source; open &ldquo;The full reasoning&rdquo; for the detail.
       </p>
+      {printing && typeof document !== "undefined"
+        ? createPortal(
+            <PrintReport data={data} submittedText={submittedText} showPreferences={showPreferences} source={source} scopes={scopes} at={printing} />,
+            document.body,
+          )
+        : null}
     </section>
   );
 }

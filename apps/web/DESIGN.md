@@ -69,6 +69,24 @@ own "Whole document" group so they are never lost. The chooser starts at
   In Draft the tab says the brief needs Revise, with a switch where the
   surface has one (Word). Nothing of the brief is stored.
 
+## The printable report (S4)
+
+- **"Print or save as PDF"** sits beside the results heading as a link-style
+  button. It opens the browser's own print dialog; Save as PDF there is the
+  PDF. Nothing is generated anywhere else and no text leaves the page.
+- On paper the page is the report and nothing else: a header (title, date,
+  counts, sections, the profile line, a one-line key), then the text with
+  every highlight numbered on the left and the suggestions under the same
+  numbers on the right, whole-document checks after them, then the
+  reviewer's brief on a new page, and a footer saying nothing was stored.
+- Light ink only: a grey tint on highlights, an underline whose style says
+  the category (solid, double, dotted, dashed), bold numbers, no colour by
+  verdict, no meters. A4 and Letter both fit; the two columns are a grid,
+  so they flow across pages together.
+- The report is mounted only while printing (the button, or the browser's
+  own print command) and removed afterwards, so a long document is never
+  laid out twice on screen.
+
 ## Type: who is speaking
 
 - **Serif** (Iowan Old Style / Charter / Georgia stack) is for writing: the

@@ -1861,3 +1861,37 @@ steps as S3's), then deploy the engine and the web app.
 including the canary); two-user database suite 92 on a local Postgres 16
 with the new migration; contract drift check clean; ruff clean.
 
+**Addendum (same day): the surfaces, and a printable report.** The
+surfaces sub-agent worked in its own git worktree (d4ab5f3, cherry-picked;
+re-run by the lead: web lint, typecheck, 229 unit, 103 e2e). Web and Word
+gained a "Check as" selector whose labels come from `GET /v1/rules`
+(the contract's list with ids as labels when the registry is unavailable,
+as with the local engine), saved in the browser and, signed in, to the
+account; a changed type re-checks, as a changed mode does. A profile line
+under the results heading says what the check ran as (the engine's note
+alone when there is one; nothing for a guessed "general"). The brief is a
+tab beside the suggestions (ARIA tablist; only the active panel renders)
+and a tab in the taskpane; the web always asks for it, Word in Revise
+mode, and a Draft check gets one line saying the brief needs Revise.
+
+The owner then asked for a printable version of the output, "preserving
+the highlighted parts and the review side by side". `PrintReport.tsx`:
+one check on paper, made entirely in the browser (a print stylesheet and
+the browser's own Save-as-PDF; no text leaves the page, nothing is
+generated server-side). The text with every highlight numbered on the
+left, the suggestions under the same numbers on the right (number,
+category, section, message, suggested revision, the plain explanation,
+the source), whole-document checks after them, then the reviewer's brief
+on its own page, and a footer saying nothing was sent or stored. It is
+portalled to `<body>` and mounted only while printing, from the button or
+from the browser's own print command (`beforeprint` with `flushSync`, so
+Ctrl/Cmd+P sees it), and unmounted on `afterprint`, so a long document is
+never laid out twice. Light ink: grey tint, an underline whose style says
+the category, no colour by verdict. The lead rendered the A4 and Letter
+PDFs in headless Chromium with the e2e mock engine and read all four
+pages: text and suggestions side by side on pages 1–2, the brief on 3–4.
+Tests: 11 unit (`print.test.ts`, `print-report.test.tsx`) and 2 e2e (the
+report exists only on paper, everything else hidden; the browser's own
+print command mounts it too). Also in PLAN's inbox today: a presentation
+deck for an external audience (with a reminder set for the owner).
+
