@@ -56,6 +56,13 @@ git push
 `--sync-to` replaces the clone's tree with the export and commits; it
 never pushes. Publishing is always a deliberate push.
 
+## The launch video
+
+`media/` holds the 50-second launch video (the music-only cut) and its
+poster, shown at the top of the public README. The gate admits video only
+from `media/`. The voiced cut stays out until someone has listened to it;
+to swap it in, replace `media/researchly-in-50-seconds.mp4` and publish.
+
 ## Changing what is published
 
 - To publish a new folder or document, add it to `include.txt`, run

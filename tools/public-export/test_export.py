@@ -108,6 +108,8 @@ def test_gate_refuses_terms_secrets_emails_and_file_types(toy, tmp_path):
         "img.png": b"\x89PNG\x00\x00",
         "stray.zip": b"PK\x03\x04\x00",
         "demo/dist/demo.zip": b"PK\x03\x04\x00",
+        "media/launch.mp4": b"\x00\x00\x00\x18ftypmp42",
+        "apps/web/public/clip.mp4": b"\x00\x00\x00\x18ftypmp42",
     }, symlinks=["link.py"])
     assert found == sorted([
         ("private term", "names.md"),
@@ -117,6 +119,7 @@ def test_gate_refuses_terms_secrets_emails_and_file_types(toy, tmp_path):
         ("file type", "paper.pdf"),
         ("file type", "blob.bin"),
         ("file type", "stray.zip"),
+        ("file type", "apps/web/public/clip.mp4"),
         ("symlink", "link.py"),
     ])
 
@@ -151,7 +154,8 @@ def test_the_real_policy_keeps_private_material_out():
         assert not policy.admits(rel), rel
     for rel in ("LICENSE", "packages/core/researchly/api.py", "apps/web/app/page.tsx",
                 "services/engine/Dockerfile", "supabase/migrations/x.sql", "demo/dist/researchly-demo.docx",
-                "ml/realdocs/run.py", ".github/workflows/realdocs.yml", "apps/web/.env.example"):
+                "ml/realdocs/run.py", ".github/workflows/realdocs.yml", "apps/web/.env.example",
+                "media/researchly-in-50-seconds.mp4"):
         assert policy.admits(rel), rel
     assert policy.terms, "private-terms.txt must not be empty"
 

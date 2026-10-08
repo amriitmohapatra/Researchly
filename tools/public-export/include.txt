@@ -17,6 +17,9 @@ services/
 apps/
 supabase/
 
+# The launch video and its poster (the music-only cut; made from the demo paper).
+media/
+
 # The synthetic demo manuscript (made up for Researchly; no third-party text).
 demo/
 

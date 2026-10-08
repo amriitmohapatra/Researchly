@@ -50,9 +50,11 @@ OVERLAY = HERE / "overlay"
 MAX_BYTES = 10 * 1024 * 1024
 # Binary files the public tree may hold; anything else binary is refused.
 BINARY_OK = {".png", ".ico", ".icns", ".svg", ".docx", ".zip", ".woff",
-             ".woff2", ".ttf"}
-# Archives are allowed only where they are the demo's own output.
+             ".woff2", ".ttf", ".mp4"}
+# Archives are allowed only where they are the demo's own output, and video
+# only in media/ (the launch video, reviewed before it was added).
 ARCHIVE_DIRS = ("demo/dist/", "apps/web/public/demo/")
+VIDEO_DIRS = ("media/",)
 FORBIDDEN_SUFFIXES = {".pdf", ".joblib", ".pkl", ".pickle", ".gz", ".tgz",
                       ".dmg", ".exe", ".onnx", ".pt", ".bin", ".npz", ".npy",
                       ".pem", ".key", ".p12", ".pfx"}
@@ -243,6 +245,8 @@ def gate(out: Path, policy: Policy, repo: Path = REPO, symlinks=(),
                 findings.append(Finding("file type", rel, 0, "binary %s files are not on the list" % (suffix or "(no suffix)")))
             elif suffix == ".zip" and not rel.startswith(ARCHIVE_DIRS):
                 findings.append(Finding("file type", rel, 0, "archives are published only as the demo's output"))
+            elif suffix == ".mp4" and not rel.startswith(VIDEO_DIRS):
+                findings.append(Finding("file type", rel, 0, "video is published only from media/"))
             continue
         text = data.decode("utf-8", "replace")
         texts.append((Path(rel), text))

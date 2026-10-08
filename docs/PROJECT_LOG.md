@@ -2208,3 +2208,16 @@ it, and the owner reviews it and switches it to Public.
   missed a fake key that gitleaks flags.
 - Prove the public tree stands alone by running its suites from the export
   directory, not from the private checkout.
+
+**Addendum (same day): the repository is live, with the launch video.** The
+owner created `amriitmohapatra/researchly-public` and gave the Claude app
+access. Claude pushed the single gated commit (953a0a1). Its first CI run
+passed all eight jobs: lint, engine, service, contract, web (unit and e2e),
+engine image, two-user RLS and gitleaks.
+
+At the owner's request the launch video was added. The 50-second
+music-only cut is in `media/`, with a poster carrying a play button at the
+top of the public README; the link opens the raw file, because GitHub plays
+an mp4 in the browser but does not embed a repository file inline. The gate
+admits video only from `media/`. The voiced cut stays out because nobody has
+listened to it yet.
