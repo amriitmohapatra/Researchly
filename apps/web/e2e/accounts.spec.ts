@@ -505,7 +505,7 @@ test.describe("settings page", () => {
     await expect(dialog.getByRole("button", { name: "Keep them" })).toBeFocused();
     expect(await axeSerious(page)).toEqual([]);
     await dialog.getByTestId("delete-confirm").click();
-    await expect(page.getByTestId("settings-status")).toHaveText("Your settings and dictionary were deleted.");
+    await expect(page.getByTestId("settings-status")).toHaveText("Your settings, dictionary and progress were deleted.");
     await expect(dialog).toBeHidden();
     await expect(page.getByTestId("muted-empty")).toBeVisible();
     await expect(page.getByTestId("word-count")).toHaveText("Your dictionary is empty.");
@@ -513,6 +513,9 @@ test.describe("settings page", () => {
     expect(sb.words).toEqual([]);
 
     const deletes = sb.sent.filter((r) => r.method === "DELETE");
+    // "Delete my data": progress first (S4c), then the dictionary and the settings, each by the caller's own id.
+    const wholesale = deletes.filter((r) => r.search.includes(`user_id=eq.${USER.id}`)).map((r) => r.path);
+    expect(wholesale[0]).toBe("/rest/v1/progress_events");
     expect(deletes.some((r) => r.path === "/rest/v1/user_settings" && r.search.includes(`user_id=eq.${USER.id}`))).toBe(true);
     expect(deletes.some((r) => r.path === "/rest/v1/dictionary_words" && r.search.includes(`user_id=eq.${USER.id}`))).toBe(true);
     // Never another user's id; inserts and upserts carry no user id at all (the column defaults to auth.uid()).

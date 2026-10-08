@@ -22,6 +22,12 @@ interface Props {
   active: boolean;
   /** The fix was applied in the document: the card stays, its actions go. */
   applied: boolean;
+  /**
+   * An edit in this paragraph may have moved the words, or an Apply ended in
+   * an unknown state: no Apply until the document is checked again, so a
+   * possibly-made edit is never repeated blindly (Codex review R3).
+   */
+  stale?: boolean;
   note: CardNote | null;
   /** Word is busy with another action, or a check is running. */
   busy: boolean;
@@ -46,7 +52,7 @@ function quote(text: string): string {
  * the words in the document; "Apply" appears only when the engine proposed
  * a concrete revision.
  */
-export const WordCard = memo(function WordCard({ suggestion: s, active, applied, note, busy, onSelect, onApply, actions }: Props) {
+export const WordCard = memo(function WordCard({ suggestion: s, active, applied, stale = false, note, busy, onSelect, onApply, actions }: Props) {
   const meta = categoryMeta(s.category);
   const section = sectionLabel(s.section);
   const msgId = `wmsg-${s.id}`;
@@ -71,6 +77,7 @@ export const WordCard = memo(function WordCard({ suggestion: s, active, applied,
       data-tier={s.tier}
       data-category={meta.id}
       data-paragraph={s.location.paragraph}
+      data-stale={stale || undefined}
     >
       <div className="card-head">
         <CategoryBadge category={meta.id} />
@@ -132,7 +139,7 @@ export const WordCard = memo(function WordCard({ suggestion: s, active, applied,
         >
           Show in document
         </button>
-        {hasFix && !applied ? (
+        {hasFix && !applied && !stale ? (
           <button
             type="button"
             className="btn btn-secondary btn-compact"

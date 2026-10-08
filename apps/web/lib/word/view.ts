@@ -1,6 +1,7 @@
 /** Pure view-model helpers for the Word taskpane (unit-tested). */
-import type { AnalyzeWordResponse, Coverage, WordParagraph, WordSuggestion } from "@researchly/contract";
+import type { AnalyzeWordResponse, Coverage, ProfileInfo, WordParagraph, WordSuggestion } from "@researchly/contract";
 import { CATEGORY_ORDER } from "../categories";
+import { profileLine } from "../profiles";
 import { splitForSection, type ScopeMap, type SectionSplit } from "../scope";
 
 /** Preferences hidden unless asked for (CLAUDE.md #3); the rest in document order. */
@@ -106,3 +107,34 @@ export function sectionSummary(split: SectionSplit<WordSuggestion>, focus: Secti
   const head = listed === 0 ? `Check complete. No suggestions in ${sectionName(focus)}.` : `Check complete. ${plural(listed, "suggestion", "suggestions")} in ${sectionName(focus)}.`;
   return split.elsewhere > 0 ? `${head} ${plural(split.elsewhere, "more", "more")} elsewhere in the document.` : head;
 }
+
+/* ---------- what the check ran as (S4c) ---------- */
+
+/**
+ * The profile line in the pane. For a guessed type it names the headings the
+ * guess rested on ("from the headings: Methods, Results"), so the writer can
+ * see why and choose otherwise; everything else is the shared line.
+ */
+export function wordProfileLine(profile: ProfileInfo | null | undefined): string | null {
+  const base = profileLine(profile);
+  if (!profile || !base || !profile.guessed) return base;
+  const evidence = (profile.evidence ?? "").trim();
+  if (!evidence) return base;
+  if (profile.note.trim()) return `${profile.note.trim()} The guess came from the headings: ${evidence}.`;
+  return `Checked as ${profile.label} (from the headings: ${evidence}).`;
+}
+
+/* ---------- after an edit in the document (S4c, Codex review R3) ---------- */
+
+/**
+ * The suggestions an edit in paragraph `paragraph` has made stale: every
+ * other one located in that paragraph (their offsets may have moved). They
+ * keep "Show in document", which re-verifies the text before selecting, but
+ * lose Apply until the document is checked again.
+ */
+export function staleAfterEdit(list: readonly WordSuggestion[], paragraph: number, except: string): string[] {
+  return list.filter((s) => s.location.paragraph === paragraph && s.id !== except).map((s) => s.id);
+}
+
+export const STALE_NOTE =
+  "The text here changed after the check, so this suggestion may have moved. Check the document again before acting on it.";

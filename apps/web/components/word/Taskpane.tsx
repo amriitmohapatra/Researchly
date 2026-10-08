@@ -10,23 +10,28 @@ import {
   type WordSuggestion,
 } from "@researchly/contract";
 import { addWord, loadDocumentType, loadMode, loadSettings, muteRule, saveDocumentType, saveMode } from "@/lib/account";
+import { loadKeepProgress, recordProgress } from "@/lib/progress";
 import { getEngineAuth, signOut, useAuth } from "@/lib/auth";
 import { ENGINE_URL, LOCAL_ENGINE_URL, reportProblemHref } from "@/lib/config";
 import { analyzeWord, engineHealth } from "@/lib/engine";
 import { clientError, type CheckError } from "@/lib/errors";
 import { healthBanners } from "@/lib/health";
-import { briefState, narrativeState, profileLine } from "@/lib/profiles";
+import { briefState, narrativeState } from "@/lib/profiles";
 import { useProfileChoices } from "@/lib/registry";
 import { useRuleScopes } from "@/lib/scope";
 import {
+  isChecklistPref,
+  loadChecklistChoice,
   loadDocumentTypeChoice,
   loadEngineChoice,
   loadModeChoice,
+  saveChecklistChoice,
   saveDocumentTypeChoice,
   saveEngineChoice,
   saveModeChoice,
   subscribeDocumentType,
   subscribeWordPrefs,
+  type ChecklistPref,
   type EngineChoice,
   type ModeChoice,
 } from "@/lib/prefs";
@@ -42,6 +47,13 @@ import {
   type HostStatus,
 } from "@/lib/word/office";
 import {
+  checklistHelp,
+  checklistLabel,
+  checklistOptions,
+  checklistState,
+  useChecklistChoices,
+} from "@/lib/word/checklist";
+import {
   coverageSentences,
   heldBackSentence,
   sectionAround,
@@ -49,6 +61,9 @@ import {
   sectionSummary,
   sectionView,
   shownWordSuggestions,
+  STALE_NOTE,
+  staleAfterEdit,
+  wordProfileLine,
   wordSummary,
   type SectionFocus,
 } from "@/lib/word/view";
@@ -56,9 +71,10 @@ import { HealthBanner } from "../HealthBanner";
 import { NarrativeMap } from "../NarrativeMap";
 import { ProfileSelect } from "../ProfileSelect";
 import { ReviewBrief } from "../ReviewBrief";
-import { ViewTabs, viewIds, type ResultsView } from "../ViewTabs";
 import { CodeSignIn } from "./CodeSignIn";
 import { WordCard, type CardNote, type WordCardActions } from "./WordCard";
+import { WordChecklist } from "./WordChecklist";
+import { WordTabs, wordViewIds, type WordView } from "./WordTabs";
 
 type Phase = "idle" | "reading" | "checking" | "done" | "error";
 
@@ -68,6 +84,8 @@ interface Checked {
   engine: EngineChoice;
   /** "Check this section": the paragraphs around the cursor at check time. The whole document was still checked. */
   focus: SectionFocus | null;
+  /** The reporting checklist this check asked for (S4c). */
+  checklist: ChecklistPref;
 }
 
 type Problem = { title: string; message: string };
@@ -120,8 +138,12 @@ export function Taskpane() {
   const [chosenType, setChosenType] = useState<DocumentType | null>(null);
   const documentType: DocumentType = chosenType ?? (signedIn ? accountType : null) ?? storedType ?? "auto";
   const [typeNote, setTypeNote] = useState<string | null>(null);
-  /** Suggestions, the reviewer's brief or the narrative map: survives a re-check, never stored. */
-  const [resultsView, setResultsView] = useState<ResultsView>("suggestions");
+  // The reporting checklist (S4c): this session's choice, else this computer's, else None.
+  const storedChecklist = useSyncExternalStore(subscribeWordPrefs, loadChecklistChoice, () => null);
+  const [chosenChecklist, setChosenChecklist] = useState<ChecklistPref | null>(null);
+  const checklist: ChecklistPref = chosenChecklist ?? storedChecklist ?? "none";
+  /** Suggestions, the reviewer's brief, the narrative map or the checklist: survives a re-check, never stored. */
+  const [resultsView, setResultsView] = useState<WordView>("suggestions");
   const [showPreferences, setShowPreferences] = useState(false);
 
   const [phase, setPhase] = useState<Phase>("idle");
@@ -131,6 +153,8 @@ export function Taskpane() {
   const [health, setHealth] = useState<{ engine: EngineChoice; tiers: TierHealth[] | null; reachable: boolean } | null>(null);
   const [notes, setNotes] = useState<Record<string, CardNote>>({});
   const [applied, setApplied] = useState<ReadonlySet<string>>(new Set());
+  /** Cards an edit has made out of date (their paragraph changed, or an Apply ended unknown): no Apply until a re-check. */
+  const [stale, setStale] = useState<ReadonlySet<string>>(new Set());
   const [activeId, setActiveId] = useState<string | null>(null);
   const [wordBusy, setWordBusy] = useState(false);
   const [accountNote, setAccountNote] = useState<AccountNote | null>(null);
@@ -146,6 +170,8 @@ export function Taskpane() {
     mode: useId(),
     modeHelp: useId(),
     type: useId(),
+    checklist: useId(),
+    checklistHelp: useId(),
     tabs: useId(),
     sectionHelp: useId(),
     privacy: useId(),
@@ -218,16 +244,25 @@ export function Taskpane() {
   const scopes = useRuleScopes(engine === "cloud" ? ENGINE_URL : null, checked !== null);
   // The article types' labels, from the same registry; the local server has none, so the ids stand in.
   const profiles = useProfileChoices(engine === "cloud" ? ENGINE_URL : null);
+  // The reporting checklists' labels, from the same registry when it lists them; the built-in list otherwise.
+  const checklists = useChecklistChoices(engine === "cloud" ? ENGINE_URL : null);
 
   /* ---------- checking ---------- */
 
   const runCheck = useCallback(
-    async (opts?: { mode?: ModeChoice; showPreferences?: boolean; section?: boolean; documentType?: DocumentType }) => {
+    async (opts?: {
+      mode?: ModeChoice;
+      showPreferences?: boolean;
+      section?: boolean;
+      documentType?: DocumentType;
+      checklist?: ChecklistPref;
+    }) => {
       const api = officeApi();
       if (runningRef.current || !api || host?.status !== "word") return;
       runningRef.current = true;
       const useMode = opts?.mode ?? mode;
       const useType = opts?.documentType ?? documentType;
+      const useChecklist = opts?.checklist ?? checklist;
       const prefs = opts?.showPreferences ?? showPreferences;
       // A re-check (mute, stage change) keeps the current view: section or whole document.
       const wantSection = opts?.section ?? (checked?.focus !== null && checked?.focus !== undefined && !showWhole);
@@ -284,7 +319,7 @@ export function Taskpane() {
         abortRef.current = ctrl;
         setPhase("checking");
         setAnnouncement("Checking your document…");
-        // The brief and the narrative map are whole-document reads, so they are asked for in Revise only.
+        // The brief, the narrative map and the checklist are whole-document reads, so they are asked for in Revise only.
         const r = await analyzeWord(
           {
             paragraphs,
@@ -294,6 +329,7 @@ export function Taskpane() {
             documentType: useType,
             review: useMode === "revise",
             narrative: useMode === "revise",
+            checklist: useMode === "revise" && useChecklist !== "none" ? useChecklist : null,
             signal: ctrl.signal,
           },
           engineUrlFor(useEngine),
@@ -301,14 +337,23 @@ export function Taskpane() {
         );
         if (r.ok) {
           const focus = cursor !== null ? sectionAround(paragraphs, cursor) : null;
-          setChecked((prev) => ({ seq: (prev?.seq ?? 0) + 1, data: r.data, engine: useEngine, focus }));
+          setChecked((prev) => ({ seq: (prev?.seq ?? 0) + 1, data: r.data, engine: useEngine, focus, checklist: useChecklist }));
           setShowWhole(false);
           setNotes({});
           setApplied(new Set());
+          setStale(new Set());
           setActiveId(null);
           setPhase("done");
           const listed = shownWordSuggestions(r.data, prefs);
           setAnnouncement(focus ? sectionSummary(sectionView(listed, focus, scopes), focus) : wordSummary(listed.length));
+          // Opt-in progress (S4c): rule counts and words only, never text, and only
+          // when the writer switched it on. A local check stays on this computer.
+          if (signedIn && useEngine === "cloud") {
+            const data = r.data;
+            void loadKeepProgress()
+              .then((k) => (k.ok && k.data ? recordProgress(data, true) : null))
+              .catch(() => undefined);
+          }
         } else {
           setError(useEngine === "local" ? localDownError(r.error) : r.error);
           setPhase("error");
@@ -327,7 +372,7 @@ export function Taskpane() {
         abortRef.current = null;
       }
     },
-    [host, mode, documentType, showPreferences, engine, signedIn, checked, showWhole, scopes],
+    [host, mode, documentType, checklist, showPreferences, engine, signedIn, checked, showWhole, scopes],
   );
 
   const onTypeChange = (next: DocumentType) => {
@@ -342,6 +387,14 @@ export function Taskpane() {
       });
     }
     if (checked) void runCheck({ documentType: next });
+  };
+
+  const onChecklistChange = (next: ChecklistPref) => {
+    if (next === checklist) return;
+    setChosenChecklist(next);
+    saveChecklistChoice(next);
+    // Like a changed type: a check on screen is checked again, in Revise only (Draft never asks for it).
+    if (checked && mode === "revise") void runCheck({ checklist: next });
   };
 
   const onModeChange = (next: ModeChoice) => {
@@ -395,25 +448,50 @@ export function Taskpane() {
     } else note(s.id, null);
   }, []);
 
-  const onApply = useCallback(async (s: WordSuggestion) => {
-    const api = officeApi();
-    if (!api || s.replacement === null || s.replacement === undefined) return;
-    setActiveId(s.id);
-    setWordBusy(true);
-    const r = await applyReplacement(api, s.location, s.replacement);
-    setWordBusy(false);
-    if (!r.ok) {
-      note(s.id, { tone: "problem", text: r.message });
-      return;
-    }
-    setApplied((prev) => new Set(prev).add(s.id));
-    note(s.id, {
-      tone: "ok",
-      text: r.tracked
-        ? "Applied as a tracked change. Accept or reject it in Word's Review tab."
-        : "Applied as a direct edit: this version of Word can't track it. Undo with Ctrl+Z (Cmd+Z on a Mac).",
-    });
-  }, []);
+  const onApply = useCallback(
+    async (s: WordSuggestion) => {
+      const api = officeApi();
+      if (!api || s.replacement === null || s.replacement === undefined) return;
+      setActiveId(s.id);
+      setWordBusy(true);
+      const r = await applyReplacement(api, s.location, s.replacement);
+      setWordBusy(false);
+      if (r.outcome === "not_applied") {
+        note(s.id, { tone: "problem", text: r.message });
+        return;
+      }
+      // Applied, or perhaps applied: the paragraph's other suggestions may have
+      // moved. They lose Apply until a re-check (Codex review R3), and say why.
+      const others = staleAfterEdit(checked?.data.suggestions ?? [], s.location.paragraph, s.id);
+      setStale((prev) => {
+        const next = new Set(prev);
+        for (const id of others) next.add(id);
+        if (r.outcome === "unknown") next.add(s.id);
+        return next;
+      });
+      setNotes((prev) => {
+        const next = { ...prev };
+        for (const id of others) if (!next[id] || next[id]!.tone !== "problem") next[id] = { tone: "info", text: STALE_NOTE };
+        return next;
+      });
+      if (r.outcome === "unknown") {
+        note(s.id, { tone: "problem", text: r.message });
+        return;
+      }
+      setApplied((prev) => new Set(prev).add(s.id));
+      if (r.outcome === "restore_failed") {
+        note(s.id, { tone: "problem", text: r.message });
+        return;
+      }
+      note(s.id, {
+        tone: "ok",
+        text: r.tracked
+          ? "Applied as a tracked change. Accept or reject it in Word's Review tab."
+          : "Applied as a direct edit: this version of Word can't track it. Undo with Ctrl+Z (Cmd+Z on a Mac).",
+      });
+    },
+    [checked],
+  );
 
   /* ---------- account actions (signed in) ---------- */
 
@@ -463,6 +541,11 @@ export function Taskpane() {
   // After a check, its own report of the tiers; before, the engine's health.
   const tiers = checked && checked.engine === engine ? checked.data.health : health?.engine === engine ? health.tiers : null;
   const localDown = engine === "local" && health?.engine === "local" && !health.reachable;
+  const suggestedChecklist = checked ? checklistLabel(checklists, checked.data.suggested_checklist) : null;
+  // The Checklist tab: when this check asked for one, or one came back.
+  const checklistTab = Boolean(checked && (checked.checklist !== "none" || checked.data.checklist));
+  const shownView: WordView = resultsView === "checklist" && !checklistTab ? "suggestions" : resultsView;
+  const profileText = checked ? wordProfileLine(checked.data.profile) : null;
 
   const wordCard = (s: WordSuggestion) => (
     <WordCard
@@ -470,6 +553,7 @@ export function Taskpane() {
       suggestion={s}
       active={activeId === s.id}
       applied={applied.has(s.id)}
+      stale={stale.has(s.id)}
       note={notes[s.id] ?? null}
       busy={wordBusy || busy}
       onSelect={onSelect}
@@ -592,6 +676,33 @@ export function Taskpane() {
 
               <ProfileSelect id={ids.type} value={documentType} choices={profiles} onChange={onTypeChange} note={typeNote} />
 
+              <div className="control tp-checklist">
+                <label htmlFor={ids.checklist} className="control-label">
+                  Reporting checklist
+                </label>
+                <select
+                  id={ids.checklist}
+                  className="select"
+                  value={checklist}
+                  aria-describedby={ids.checklistHelp}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (isChecklistPref(v)) onChecklistChange(v);
+                  }}
+                  data-testid="checklist-select"
+                >
+                  {checklistOptions(checklists).map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+                <p id={ids.checklistHelp} className="help control-help" data-testid="checklist-help">
+                  {checklistHelp(checklists, checklist)}
+                  {checklist === "none" && suggestedChecklist ? ` Your text's words point to ${suggestedChecklist}.` : ""}
+                </p>
+              </div>
+
               <div className="tp-row">
                 <button
                   type="button"
@@ -711,27 +822,37 @@ export function Taskpane() {
                   {checked.data.mode === "draft" ? "Draft" : "Revise"}
                   {checked.engine === "local" ? ", checked on this computer" : ""}. Click a suggestion to find it in the document.
                 </p>
-                {profileLine(checked.data.profile) ? (
+                {profileText ? (
                   <p className="profile-line muted" data-testid="profile-line">
-                    {profileLine(checked.data.profile)}
+                    {profileText}
                   </p>
                 ) : null}
-                <ViewTabs view={resultsView} onChange={setResultsView} idBase={ids.tabs} />
-                {resultsView === "brief" ? (
+                <WordTabs view={shownView} onChange={setResultsView} idBase={ids.tabs} checklist={checklistTab} />
+                {shownView === "checklist" ? (
                   <div
                     role="tabpanel"
-                    id={viewIds(ids.tabs, "brief").panel}
-                    aria-labelledby={viewIds(ids.tabs, "brief").tab}
+                    id={wordViewIds(ids.tabs, "checklist").panel}
+                    aria-labelledby={wordViewIds(ids.tabs, "checklist").tab}
+                    className="view-panel"
+                    data-testid="checklist-panel"
+                  >
+                    <WordChecklist state={checklistState(checked.data, checked.checklist)} onSwitchToRevise={() => onModeChange("revise")} />
+                  </div>
+                ) : shownView === "brief" ? (
+                  <div
+                    role="tabpanel"
+                    id={wordViewIds(ids.tabs, "brief").panel}
+                    aria-labelledby={wordViewIds(ids.tabs, "brief").tab}
                     className="view-panel"
                     data-testid="brief-panel"
                   >
                     <ReviewBrief state={briefState(checked.data)} onSwitchToRevise={() => onModeChange("revise")} />
                   </div>
-                ) : resultsView === "narrative" ? (
+                ) : shownView === "narrative" ? (
                   <div
                     role="tabpanel"
-                    id={viewIds(ids.tabs, "narrative").panel}
-                    aria-labelledby={viewIds(ids.tabs, "narrative").tab}
+                    id={wordViewIds(ids.tabs, "narrative").panel}
+                    aria-labelledby={wordViewIds(ids.tabs, "narrative").tab}
                     className="view-panel"
                     data-testid="narrative-panel"
                   >
@@ -740,8 +861,8 @@ export function Taskpane() {
                 ) : (
                   <div
                     role="tabpanel"
-                    id={viewIds(ids.tabs, "suggestions").panel}
-                    aria-labelledby={viewIds(ids.tabs, "suggestions").tab}
+                    id={wordViewIds(ids.tabs, "suggestions").panel}
+                    aria-labelledby={wordViewIds(ids.tabs, "suggestions").tab}
                     className="view-panel tp-suggestions"
                   >
                     <div className="tp-notes">

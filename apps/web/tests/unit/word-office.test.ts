@@ -7,14 +7,18 @@ import {
   codePointSlice,
   countOccurrences,
   FIELD_MESSAGE,
+  FIELD_UNKNOWN_MESSAGE,
   NOT_FOUND_MESSAGE,
   readParagraphs,
   readSelectionParagraph,
   RANGE_CHANGED_MESSAGE,
+  RESTORE_FAILED_MESSAGE,
   restoreHistory,
   selectSpan,
   toWordParagraph,
+  UNKNOWN_MESSAGE,
   waitForOffice,
+  WORD_FAILED_MESSAGE,
   type OfficeApi,
 } from "@/lib/word/office";
 import { installFakeOffice, type FakeWordConfig } from "../../e2e/fake-office";
@@ -118,7 +122,7 @@ describe("applying a fix", () => {
   it("with WordApi 1.4: replaces only that copy, as a tracked change, and restores Track Changes", async () => {
     const { api, state } = fake({ api14: true, trackingMode: "Off" });
     const r = await applyReplacement(api, loc(1), "the");
-    expect(r).toEqual({ ok: true, tracked: true });
+    expect(r).toEqual({ ok: true, outcome: "applied", tracked: true });
     expect(state.paragraphs[1]!.text).toBe("Then the the model was fitted and the priors were weak.");
     expect(state.edits).toEqual([expect.objectContaining({ before: "the the", text: "the", tracked: true })]);
     expect(state.trackingWrites).toEqual(["TrackAll", "Off"]);
@@ -127,14 +131,14 @@ describe("applying a fix", () => {
 
   it("leaves Track Changes alone when the writer already had it on", async () => {
     const { api, state } = fake({ trackingMode: "TrackAll" });
-    expect(await applyReplacement(api, loc(0), "the")).toMatchObject({ ok: true, tracked: true });
+    expect(await applyReplacement(api, loc(0), "the")).toMatchObject({ ok: true, outcome: "applied", tracked: true });
     expect(state.trackingWrites).toEqual([]);
   });
 
   it("without WordApi 1.4: never sets changeTrackingMode (it would silently fail the batch) and edits directly", async () => {
     const { api, state } = fake({ api14: false });
     const r = await applyReplacement(api, loc(0), "the");
-    expect(r).toEqual({ ok: true, tracked: false });
+    expect(r).toEqual({ ok: true, outcome: "applied", tracked: false });
     expect(state.trackingWrites).toEqual([]);
     expect(state.failedBatches).toBe(0);
     expect(state.edits).toEqual([expect.objectContaining({ tracked: false, text: "the" })]);
@@ -171,28 +175,105 @@ describe("applying a fix", () => {
         };
         return batch(ctx);
       });
-    expect(await applyReplacement(api, loc(0), "the")).toEqual({ ok: false, message: RANGE_CHANGED_MESSAGE });
+    expect(await applyReplacement(api, loc(0), "the")).toEqual({ ok: false, outcome: "not_applied", message: RANGE_CHANGED_MESSAGE });
     expect(state.edits).toEqual([]);
   });
 
   it("refuses when the document changed since the check", async () => {
     const { api, state } = fake();
     state.paragraphs[1]!.text = state.paragraphs[1]!.text.replace("the the", "the");
-    expect(await applyReplacement(api, loc(0), "the")).toEqual({ ok: false, message: CHANGED_MESSAGE });
+    expect(await applyReplacement(api, loc(0), "the")).toEqual({ ok: false, outcome: "not_applied", message: CHANGED_MESSAGE });
     expect(state.edits).toEqual([]);
   });
 
   it("refuses an approximate location: a prefix must never be replaced", async () => {
     const { api, state } = fake();
     const r = await applyReplacement(api, { ...loc(0), exact: false }, "The");
-    expect(r).toEqual({ ok: false, message: APPROXIMATE_APPLY_MESSAGE });
+    expect(r).toEqual({ ok: false, outcome: "not_applied", message: APPROXIMATE_APPLY_MESSAGE });
     expect(state.edits).toEqual([]);
   });
 
   it("refuses to edit inside a Word field such as a citation", async () => {
     const { api, state } = fake({ fieldParagraphs: [1] });
-    expect(await applyReplacement(api, loc(0), "the")).toEqual({ ok: false, message: FIELD_MESSAGE });
+    expect(await applyReplacement(api, loc(0), "the")).toEqual({ ok: false, outcome: "not_applied", message: FIELD_MESSAGE });
     expect(state.edits).toEqual([]);
+  });
+});
+
+/* The Codex review's R3 reproductions: each host failure on its own side of the edit. */
+describe("applying a fix when Word fails (fails closed, says what happened)", () => {
+  const ORIGINAL = PARAS[1]!.text;
+
+  it("field enumeration fails: the range is treated as unsafe, nothing is inserted, a manual edit is offered", async () => {
+    const { api, state } = fake({ failures: { fields: true } });
+    const r = await applyReplacement(api, loc(0), "the");
+    expect(r).toEqual({ ok: false, outcome: "not_applied", message: FIELD_UNKNOWN_MESSAGE });
+    expect(r.ok ? "" : r.message).toMatch(/by hand/);
+    expect(state.edits).toEqual([]);
+    expect(state.paragraphs[1]!.text).toBe(ORIGINAL);
+    // Tracking was never switched on, so there is nothing to put back.
+    expect(state.trackingWrites).toEqual([]);
+  });
+
+  it("insertion fails with nothing changed: not applied, and Track Changes is put back", async () => {
+    const { api, state } = fake({ failures: { insert: "before" }, trackingMode: "Off" });
+    const r = await applyReplacement(api, loc(0), "the");
+    expect(r).toEqual({ ok: false, outcome: "not_applied", message: WORD_FAILED_MESSAGE });
+    expect(state.paragraphs[1]!.text).toBe(ORIGINAL);
+    expect(state.trackingWrites).toEqual(["TrackAll", "Off"]);
+    expect(state.trackingMode).toBe("Off");
+  });
+
+  it("Word reports an error after the insertion ran: the outcome is unknown, never \"nothing was changed\"", async () => {
+    const { api, state } = fake({ failures: { insert: "after" } });
+    const r = await applyReplacement(api, loc(0), "the");
+    expect(r).toEqual({ ok: false, outcome: "unknown", message: UNKNOWN_MESSAGE });
+    expect(UNKNOWN_MESSAGE).toBe("Word reported an error after the edit; check the text before trying again.");
+    expect(r.ok ? "" : r.message).not.toMatch(/nothing was changed/i);
+    expect(state.edits).toHaveLength(1);
+    expect(state.trackingMode).toBe("Off");
+  });
+
+  it("selection fails after a good edit: still applied (the selection is not the edit)", async () => {
+    const { api, state } = fake({ failures: { select: true } });
+    expect(await applyReplacement(api, loc(0), "the")).toEqual({ ok: true, outcome: "applied", tracked: true });
+    expect(state.edits).toHaveLength(1);
+    expect(state.selection).toBeNull();
+    expect(state.trackingMode).toBe("Off");
+  });
+
+  it("selection fails when showing a suggestion: refused, with nothing changed", async () => {
+    const { api, state } = fake({ failures: { select: true } });
+    expect(await selectSpan(api, loc(0))).toEqual({ ok: false, message: WORD_FAILED_MESSAGE });
+    expect(state.edits).toEqual([]);
+  });
+
+  it("restoring Track Changes fails after the insertion: applied, and said plainly", async () => {
+    const { api, state } = fake({ failures: { restoreTracking: true }, trackingMode: "Off" });
+    const r = await applyReplacement(api, loc(1), "the");
+    expect(r).toEqual({ ok: true, outcome: "restore_failed", tracked: true, message: RESTORE_FAILED_MESSAGE });
+    expect(RESTORE_FAILED_MESSAGE).toBe("The change was made, but Track Changes could not be switched back; check Word's Review tab.");
+    // The one insertion happened, and the review's bug (reporting it as "nothing was changed") is gone.
+    expect(state.edits).toEqual([expect.objectContaining({ before: "the the", text: "the", tracked: true })]);
+    expect(state.trackingMode).toBe("TrackAll");
+  });
+
+  it("a host that refuses the whole batch after reading: looks again before saying nothing changed", async () => {
+    const { api, state } = fake();
+    const realRun = api.Word.run.bind(api.Word);
+    let calls = 0;
+    // The first batch edits the document and then the host throws from Word.run itself.
+    api.Word.run = (async (batch: Parameters<typeof realRun>[0]) => {
+      calls++;
+      if (calls === 1) {
+        await realRun(batch);
+        throw new Error("RichApi.Error: the host went away");
+      }
+      return realRun(batch);
+    }) as typeof api.Word.run;
+    const r = await applyReplacement(api, loc(0), "the");
+    expect(r).toEqual({ ok: false, outcome: "unknown", message: UNKNOWN_MESSAGE });
+    expect(state.edits).toHaveLength(1);
   });
 });
 

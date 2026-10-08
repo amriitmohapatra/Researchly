@@ -39,6 +39,18 @@ def test_a_labels_file_with_text_is_refused(tmp_path):
         lp.load(p)
 
 
+def test_the_web_pages_export_is_read():
+    """ml/eval/fixtures/web-labels.json is what the website's Label page
+    exports for a known session (apps/web/tests/unit/labels.test.ts checks
+    the page produces exactly this file), so the two cannot drift apart."""
+    from pathlib import Path
+    ls = lp.load(Path(__file__).parent / "fixtures" / "web-labels.json")
+    out = lp.report(ls, min_flags=2)
+    assert "4 flags in 2 paragraphs" in out
+    assert "| All flags | 2 | 1 | 1 | 67% |" in out
+    assert "| C201 | 1 | 0 | 1 | 100% |" in out
+
+
 def test_cli_round_trip(tmp_path, capsys):
     p = tmp_path / "l.json"
     p.write_text(json.dumps({"version": 1, "labels": labels(

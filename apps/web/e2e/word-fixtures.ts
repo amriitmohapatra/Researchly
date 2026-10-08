@@ -7,9 +7,12 @@ import type { Page, Route } from "@playwright/test";
 import type {
   AnalyzeWordRequest,
   AnalyzeWordResponse,
+  ChecklistReport,
+  DocumentType,
   HealthResponse,
   NarrativeMap,
   ReviewReport,
+  ProfileInfo,
   RuleInfo,
   TierHealth,
   WordSuggestion,
@@ -78,6 +81,7 @@ function wsugg(
     span: { start: OFFSETS[paragraph]! + start, end: OFFSETS[paragraph]! + end, line: 1, col: start + 1 },
     text,
     location: { paragraph, start, end, snippet: needle, occurrence, exact },
+    learn_ref: null,
     ...extra,
   };
 }
@@ -180,11 +184,13 @@ export const WORD_RULES: RuleInfo[] = [...new Set(ALL.map((s) => s.rule_id))].ma
 /** The critical reader's brief for DOC (S4). Synthetic; the evidence is the document's own sentence. */
 export const WORD_REVIEW: ReviewReport = {
   source: REVIEW_SOURCE,
+  disclaimer: "The brief reads the writing, not the science: it cannot tell whether the design or the analysis was right.",
   sections: ["methods", "discussion"],
   words: 38,
   questions: [
     {
       id: "A",
+      status: "yours",
       question: "Why am I reading this?",
       verdict: "Yours to answer: what do you need from this document?",
       points: ["The brief below reads it as a sceptical reader would, from the evidence in the text alone."],
@@ -192,6 +198,7 @@ export const WORD_REVIEW: ReviewReport = {
     },
     {
       id: "B",
+      status: "detected",
       question: "What are the authors trying to achieve?",
       verdict: "An aim is stated.",
       points: [],
@@ -199,6 +206,7 @@ export const WORD_REVIEW: ReviewReport = {
     },
     {
       id: "C",
+      status: "detected",
       question: "What are they claiming?",
       verdict: "1 causal claim the design must carry.",
       points: ["the effect of vector control was large"],
@@ -206,6 +214,7 @@ export const WORD_REVIEW: ReviewReport = {
     },
     {
       id: "D",
+      status: "detected",
       question: "How convincing are the claims?",
       verdict: "2 things weaken the claims; see the points.",
       points: [
@@ -216,6 +225,7 @@ export const WORD_REVIEW: ReviewReport = {
     },
     {
       id: "E",
+      status: "not_detected",
       question: "What use can be made of this?",
       verdict: "No sentence says what a reader can do with this.",
       points: ["The ending never widens back out: say what should change in the field or in practice, and for whom."],
@@ -255,6 +265,7 @@ export const WORD_NARRATIVE: NarrativeMap = {
           source: WORD_MOVE_SOURCE,
           evidence: null,
           note: "",
+          learn_ref: null,
         },
         {
           id: "methods.analysis",
@@ -266,6 +277,7 @@ export const WORD_NARRATIVE: NarrativeMap = {
           source: WORD_MOVE_SOURCE,
           evidence: "In order to estimate the effective reproduction number, a renewal model was fitted.",
           note: "",
+          learn_ref: null,
         },
       ],
     },
@@ -287,6 +299,7 @@ export const WORD_NARRATIVE: NarrativeMap = {
           source: WORD_MOVE_SOURCE,
           evidence: "It is clearly proven that the the effect of vector control was large, and the the data agree.",
           note: "",
+          learn_ref: null,
         },
         {
           id: "discussion.prior",
@@ -298,6 +311,7 @@ export const WORD_NARRATIVE: NarrativeMap = {
           source: WORD_MOVE_SOURCE,
           evidence: null,
           note: "",
+          learn_ref: null,
         },
         {
           id: "discussion.limits",
@@ -309,6 +323,7 @@ export const WORD_NARRATIVE: NarrativeMap = {
           source: WORD_MOVE_SOURCE,
           evidence: null,
           note: "",
+          learn_ref: null,
         },
         {
           id: "discussion.implication",
@@ -320,6 +335,7 @@ export const WORD_NARRATIVE: NarrativeMap = {
           source: WORD_MOVE_SOURCE,
           evidence: null,
           note: "",
+          learn_ref: null,
         },
       ],
     },
@@ -329,6 +345,8 @@ export const WORD_NARRATIVE: NarrativeMap = {
       section: "discussion",
       label: "Discussion",
       code: "claim_without_warrant",
+      learn_ref: "warranting",
+      evidence: ["It is clearly proven that the the effect of vector control was large, and the the data agree."],
       message:
         "1 claim-type sentence in the Discussion but no warrant signal (because, this suggests that, consistent with). The reader is given the claim but not why the evidence supports it.",
       source: "M. Wallace & A. Wray (2016), Critical Reading and Writing for Postgraduates, 3rd ed., SAGE; S. Toulmin (1958), The Uses of Argument",
@@ -340,15 +358,64 @@ export const WORD_NARRATIVE: NarrativeMap = {
   ],
 };
 
+/** The profile a check ran under; a guess names the headings it rested on (S4c). */
+export function wordProfileFor(type: DocumentType | null | undefined): ProfileInfo {
+  const p = profileFor(type);
+  return { ...p, evidence: p.guessed ? "Methods" : "" };
+}
+
+/** A STROBE report for DOC (S4c). Synthetic: one item reported by the document's own sentence, two that need the writer's check. */
+export const WORD_CHECKLIST: ChecklistReport = {
+  id: "strobe",
+  label: "STROBE",
+  design: "observational studies (cohort, case-control, cross-sectional)",
+  source: "STROBE Statement (2007), checklist for observational studies",
+  suggested: false,
+  reported: 1,
+  total: 3,
+  note: "1 of 3 items were found in the text. The others need your check: they may be reported in a table, a figure or the supplement, or not apply to this study. This checks reporting only, never the science.",
+  items: [
+    {
+      id: "methods.statistics",
+      topic: "Statistical methods",
+      question: "Are the statistical methods described, including how confounding was handled?",
+      plain: "A reader needs the model to judge the estimate.",
+      sections: ["methods"],
+      status: "reported",
+      evidence: "In order to estimate the effective reproduction number, a renewal model was fitted.",
+    },
+    {
+      id: "methods.setting",
+      topic: "Setting",
+      question: "Are the setting, locations and dates of the study described?",
+      plain: "Where and when the data come from decides whom the result applies to.",
+      sections: ["methods"],
+      status: "needs_check",
+      evidence: null,
+    },
+    {
+      id: "discussion.limitations",
+      topic: "Limitations",
+      question: "Are the limitations discussed, with the direction of any bias?",
+      plain: "Stating the limits yourself keeps the claim inside them.",
+      sections: ["discussion"],
+      status: "needs_check",
+      evidence: null,
+    },
+  ],
+};
+
 export const reviseResponse = {
   schema_version: "1",
   signed_in: false,
   warnings: [],
   mode: "revise",
   hidden_by_mode: 0,
-  profile: profileFor("auto"),
+  profile: wordProfileFor("auto"),
   review: WORD_REVIEW,
   narrative: WORD_NARRATIVE,
+  checklist: null,
+  suggested_checklist: "strobe",
   suggestions: ALL,
   counts: { correction: 4, improvement: 2, convention: 2 },
   hidden_preferences: 1,
@@ -380,9 +447,15 @@ export function wordResponseFor(req: AnalyzeWordRequest): AnalyzeWordResponse {
   const base = req.options?.mode === "draft" ? draftResponse : reviseResponse;
   return {
     ...base,
-    profile: profileFor(req.options?.document_type),
+    profile: wordProfileFor(req.options?.document_type),
     review: req.options?.review ? WORD_REVIEW : null,
     narrative: req.options?.narrative ? WORD_NARRATIVE : null,
+    // "auto" and "strobe" both resolve to STROBE for DOC; another checklist comes back with its own label.
+    checklist: req.options?.checklist
+      ? req.options.checklist === "auto" || req.options.checklist === "strobe"
+        ? WORD_CHECKLIST
+        : { ...WORD_CHECKLIST, id: req.options.checklist, label: req.options.checklist.toUpperCase() }
+      : null,
   };
 }
 

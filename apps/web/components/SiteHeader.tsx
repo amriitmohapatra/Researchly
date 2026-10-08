@@ -32,11 +32,18 @@ export function SiteHeader({ home = false }: { home?: boolean }) {
           </Link>
         )}
         <p className="tagline">The writing coach you&rsquo;re allowed to use. It advises; it never drafts.</p>
-        {ACCOUNTS_ENABLED ? (
-          <div className="header-account">
-            <AccountMenu />
-          </div>
-        ) : null}
+        <div className="header-end">
+          <nav className="site-nav" aria-label="Site">
+            <Link href="/learn" className="site-nav-link" data-testid="nav-lessons">
+              Lessons
+            </Link>
+          </nav>
+          {ACCOUNTS_ENABLED ? (
+            <div className="header-account">
+              <AccountMenu />
+            </div>
+          ) : null}
+        </div>
       </div>
     </header>
   );
