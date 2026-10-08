@@ -153,5 +153,5 @@ def test_review_lens_report():
     assert r["significance"]["present"]
     report = render_review(r)
     assert "REVIEWER'S BRIEF" in report
-    assert "aim stated" in report
-    assert "limitations section: present" in report
+    assert "An aim is stated." in report
+    assert "A limitations section is present" in report

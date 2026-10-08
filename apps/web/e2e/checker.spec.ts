@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { MAX_CONTENT_CHARS, READING_KEY } from "@researchly/contract";
+import { DOCUMENT_TYPES, MAX_CONTENT_CHARS, READING_KEY } from "@researchly/contract";
 import {
+  COMMENTARY_NOTE,
   compoundSuggestion,
   degradedGrammarResponse,
   emptyResponse,
@@ -10,6 +11,8 @@ import {
   error429,
   error500,
   happyResponse,
+  PROFILES,
+  REVIEW,
   SAMPLE_TEXT,
   withDocumentWideResponse,
   withPreferencesResponse,
@@ -32,7 +35,11 @@ test.describe("happy path", () => {
 
     // The request carries exactly the text, straight to the engine.
     expect(sent).toHaveLength(1);
-    expect(sent[0]).toEqual({ content: SAMPLE_TEXT, format: "plain", options: { show_preferences: false } });
+    expect(sent[0]).toEqual({
+      content: SAMPLE_TEXT,
+      format: "plain",
+      options: { show_preferences: false, document_type: "auto", review: true },
+    });
     // ...and nothing went to the Next.js server except page/asset GETs.
     expect(own.filter((r) => r.method() !== "GET")).toEqual([]);
     expect(own.some((r) => (r.postData() ?? "").includes("Dengue"))).toBe(false);
@@ -292,6 +299,142 @@ test.describe("taxonomy", () => {
   });
 });
 
+test.describe("article type and the reviewer's brief (S4)", () => {
+  test("Check as: sent on every request, re-checks on change, said in the results, remembered as the choice alone", async ({ page }) => {
+    const sent = await mockEngine(page);
+    await page.goto("/");
+    const select = page.getByLabel("Check as");
+    await expect(select).toHaveValue("auto");
+    // The labels come from the engine's registry, in its order; the chosen type's summary reads under the control.
+    await expect(select.locator("option")).toHaveText(PROFILES.map((p) => p.label));
+    await expect(page.getByTestId("document-type-help")).toHaveText("Guess from the headings; otherwise general.");
+
+    await paste(page, SAMPLE_TEXT);
+    await check(page);
+    await expect(page.getByTestId("results")).toBeVisible();
+    expect(sent[0]!.options?.document_type).toBe("auto");
+    await expect(page.getByTestId("profile-line")).toHaveText("Checked as Research article (from the headings).");
+
+    await select.selectOption("commentary");
+    await expect.poll(() => sent.length).toBe(2);
+    expect(sent[1]!.options?.document_type).toBe("commentary");
+    await expect(page.getByTestId("document-type-help")).toHaveText("An opinion or perspective piece: argued, not reported.");
+    // The engine's note stands alone: "Checked as" is never said twice.
+    await expect(page.getByTestId("profile-line")).toHaveText(COMMENTARY_NOTE);
+    await expect(page.locator("body")).not.toContainText("Checked as Commentary");
+
+    await select.selectOption("grant");
+    await expect.poll(() => sent.length).toBe(3);
+    await expect(page.getByTestId("profile-line")).toHaveText("Checked as Grant proposal.");
+
+    // Remembered in this browser: the choice, and nothing of the text or the answer.
+    await page.reload();
+    await expect(page.getByLabel("Check as")).toHaveValue("grant");
+    const stored = await page.evaluate(() => ({ keys: Object.keys(localStorage).sort(), values: Object.values(localStorage).join("") }));
+    expect(stored.keys).toEqual(["researchly.document-type"]);
+    expect(stored.values).not.toContain("Dengue");
+    expect(stored.values).not.toContain("causal claim");
+  });
+
+  test("without the engine's registry the selector still offers every type", async ({ page }) => {
+    await mockEngine(page, undefined, null);
+    await page.goto("/");
+    const options = page.getByLabel("Check as").locator("option");
+    await expect(options).toHaveCount(DOCUMENT_TYPES.length);
+    await expect(options.nth(2)).toHaveText("manuscript");
+    await expect(page.getByTestId("document-type-help")).toHaveCount(0);
+  });
+
+  test("the brief: five questions in order, the evidence quoted in the serif, the frequent checks, the source; never a score", async ({ page }) => {
+    const sent = await mockEngine(page);
+    await page.goto("/");
+    await paste(page, SAMPLE_TEXT);
+    await check(page);
+    expect(sent[0]!.options?.review).toBe(true);
+
+    const tabs = page.getByRole("tablist", { name: "Results view" });
+    await expect(tabs.getByRole("tab")).toHaveText(["Suggestions", "Reviewer’s brief"]);
+    await expect(page.getByTestId("view-suggestions")).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByTestId("brief")).toHaveCount(0);
+
+    await page.getByTestId("view-brief").click();
+    await expect(page.getByTestId("view-brief")).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByTestId("suggestion-card")).toHaveCount(0);
+    const brief = page.getByTestId("brief");
+    const questions = brief.getByTestId("brief-question");
+    await expect(questions).toHaveCount(5);
+    for (const [i, q] of REVIEW.questions.entries()) {
+      await expect(questions.nth(i)).toHaveAttribute("data-question", q.id);
+      await expect(questions.nth(i).locator("h3")).toContainText(q.question);
+      await expect(questions.nth(i).locator(".brief-verdict")).toHaveText(q.verdict);
+    }
+    // Question A is the writer's, as the engine gives it.
+    await expect(questions.nth(0)).toContainText("Yours to answer");
+    // The evidence is the writer's own sentence, quoted and set in the serif, in an evidence list.
+    const evidence = questions.nth(2).locator(".brief-evidence q");
+    await expect(evidence).toHaveText("It is clearly proven that vector control reduces transmission.");
+    expect(await evidence.evaluate((el) => getComputedStyle(el).fontFamily)).toMatch(/Charter|Georgia/);
+    await expect(questions.nth(4).locator(".brief-evidence q")).toHaveText("This could potentially suggest seasonal forcing.");
+    await expect(questions.nth(1).locator(".brief-evidence")).toHaveCount(0);
+    // Then the checks that fired most, in words, and the source set like a card's.
+    const rules = brief.getByTestId("brief-rules");
+    await expect(rules.locator("li")).toHaveText(["Repeated word 2 times", "Booster overclaims certainty once"]);
+    await expect(brief.locator(".brief-source cite")).toHaveText(REVIEW.source);
+    await expect(page.locator("body")).not.toContainText(/overall score|grade|\d+ ?\/ ?10/i);
+    await expect(page.locator("meter, progress")).toHaveCount(0);
+
+    // Arrow keys move between the tabs; the suggestions come back untouched.
+    await page.getByTestId("view-brief").focus();
+    await page.keyboard.press("ArrowLeft");
+    await expect(page.getByTestId("view-suggestions")).toBeFocused();
+    await expect(page.getByTestId("suggestion-card")).toHaveCount(8);
+    await expect(page.getByTestId("brief")).toHaveCount(0);
+
+    // The brief view survives a re-check, and nothing of it is stored.
+    await page.getByTestId("view-brief").click();
+    await check(page);
+    await expect(page.getByTestId("brief-question")).toHaveCount(5);
+    expect(sent).toHaveLength(2);
+    expect(await page.evaluate(() => Object.keys(localStorage))).toEqual([]);
+  });
+
+  test("no brief from the engine, or a check run in Draft, is said in one line", async ({ page }) => {
+    let draft = false;
+    await mockEngine(page, (_r, route) => json(route, 200, draft ? { ...happyResponse, mode: "draft", review: null } : { ...happyResponse, review: null }));
+    await page.goto("/");
+    await paste(page, SAMPLE_TEXT);
+    await check(page);
+    await page.getByTestId("view-brief").click();
+    await expect(page.getByTestId("brief-missing")).toContainText("did not return a brief");
+    draft = true;
+    await check(page);
+    const line = page.getByTestId("brief-needs-revise");
+    await expect(line).toContainText("needs Revise mode");
+    // The website has no stage control, so no switch is offered here.
+    await expect(line.getByRole("button")).toHaveCount(0);
+  });
+
+  for (const scheme of ["light", "dark"] as const) {
+    test(`the brief on a phone, ${scheme}: no horizontal scroll, no serious axe violations`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.setViewportSize({ width: 375, height: 812 });
+      await mockEngine(page);
+      await page.goto("/");
+      await paste(page, SAMPLE_TEXT);
+      await check(page);
+      await page.getByLabel("Check as").selectOption("commentary");
+      await expect(page.getByTestId("profile-line")).toHaveText(COMMENTARY_NOTE);
+      await page.getByTestId("view-brief").click();
+      await expect(page.getByTestId("brief-question")).toHaveCount(5);
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(overflow).toBeLessThanOrEqual(0);
+      const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "best-practice"]).analyze();
+      const bad = results.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
+      expect(bad.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).slice(0, 3).join(", ")}`)).toEqual([]);
+    });
+  }
+});
+
 test.describe("idle state", () => {
   test("the key teaches all four types, with the same non-colour cues as the highlights", async ({ page }) => {
     await page.goto("/");
@@ -495,6 +638,8 @@ test.describe("accessibility", () => {
     await page.keyboard.press("Tab");
     await expect(page.getByLabel("Format")).toBeFocused();
     await page.keyboard.press("Tab");
+    await expect(page.getByLabel("Check as")).toBeFocused();
+    await page.keyboard.press("Tab");
     await expect(page.getByLabel("Show preferences")).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(page.getByTestId("check")).toBeFocused();
@@ -609,5 +754,68 @@ test.describe("security", () => {
     await check(page);
     await expect(page.getByTestId("results")).toBeVisible();
     expect(external).toEqual([]);
+  });
+});
+
+test.describe("print or save as PDF (S4)", () => {
+  test("the report exists only on paper: numbered highlights beside the suggestions, then the brief, nothing else", async ({ page }) => {
+    // The browser's print dialog cannot open here: record the call instead.
+    await page.addInitScript(() => {
+      (window as unknown as { __printed: number }).__printed = 0;
+      window.print = () => {
+        (window as unknown as { __printed: number }).__printed += 1;
+      };
+    });
+    await mockEngine(page);
+    await page.goto("/");
+    await paste(page, SAMPLE_TEXT);
+    await check(page);
+    await expect(page.getByTestId("results")).toBeVisible();
+    // Nothing of the report is in the page until it is asked for.
+    await expect(page.getByTestId("print-report")).toHaveCount(0);
+
+    await page.getByTestId("print-report-button").click();
+    await expect.poll(() => page.evaluate(() => (window as unknown as { __printed: number }).__printed)).toBe(1);
+
+    // On paper: the report, and only the report.
+    await page.emulateMedia({ media: "print" });
+    const report = page.getByTestId("print-report");
+    await expect(report).toBeVisible();
+    await expect(page.getByTestId("results")).toBeHidden();
+    await expect(page.locator(".site-header")).toBeHidden();
+    await expect(page.locator(".site-footer")).toBeHidden();
+    const marks = report.getByTestId("print-mark");
+    expect(await marks.count()).toBeGreaterThan(0);
+    const cards = report.getByTestId("print-card");
+    expect(await cards.count()).toBe(happyResponse.suggestions.length);
+    // Every number on a highlight is the number of a listed suggestion.
+    const refs = (await report.locator(".print-ref").allTextContents()).flatMap((t) => t.split(",").map(Number));
+    const listed = (await report.locator(".print-n").allTextContents()).map(Number);
+    expect(refs.length).toBeGreaterThan(0);
+    for (const n of refs) expect(listed).toContain(n);
+    await expect(report.locator(".print-brief [data-question]")).toHaveCount(5);
+    await expect(report).toContainText("Nothing was sent anywhere");
+
+    // After printing the report is gone again; the screen is as before.
+    await page.emulateMedia({ media: "screen" });
+    await page.evaluate(() => window.dispatchEvent(new Event("afterprint")));
+    await expect(page.getByTestId("print-report")).toHaveCount(0);
+    await expect(page.getByTestId("results")).toBeVisible();
+  });
+
+  test("the browser's own print command (beforeprint) mounts the report too", async ({ page }) => {
+    // A real window.print() in headless Chromium fires afterprint at once, which would unmount it again.
+    await page.addInitScript(() => {
+      window.print = () => {};
+    });
+    await mockEngine(page);
+    await page.goto("/");
+    await paste(page, SAMPLE_TEXT);
+    await check(page);
+    await expect(page.getByTestId("results")).toBeVisible();
+    await page.evaluate(() => window.dispatchEvent(new Event("beforeprint")));
+    await expect(page.getByTestId("print-report")).toHaveCount(1);
+    await page.evaluate(() => window.dispatchEvent(new Event("afterprint")));
+    await expect(page.getByTestId("print-report")).toHaveCount(0);
   });
 });

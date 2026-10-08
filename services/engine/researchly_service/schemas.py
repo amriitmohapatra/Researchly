@@ -41,6 +41,22 @@ class Mode(str, Enum):
     revise = "revise"
 
 
+class DocumentType(str, Enum):
+    """Article-type profile (S4). `auto` guesses from the headings and is
+    otherwise `general`; the others switch off the checks that do not
+    apply to that kind of document and say what section unheaded prose is
+    in (a commentary is argued like a Discussion)."""
+    auto = "auto"
+    general = "general"
+    manuscript = "manuscript"
+    thesis_chapter = "thesis-chapter"
+    abstract = "abstract"
+    commentary = "commentary"
+    policy_brief = "policy-brief"
+    grant = "grant"
+    response_to_reviewers = "response-to-reviewers"
+
+
 class Scope(str, Enum):
     """What a rule needs to judge: the sentence, or the whole document
     (figure citations, abbreviations defined once). Draft hides `document`."""
@@ -79,6 +95,12 @@ class AnalyzeOptions(_Strict):
     mode: Optional[Mode] = Field(
         None, description="Draft or Revise for this request. Omitted: the "
                           "caller's saved setting, else revise.")
+    document_type: Optional[DocumentType] = Field(
+        None, description="The article type to check as. Omitted: the "
+                          "caller's saved setting, else auto.")
+    review: bool = Field(
+        False, description="Also build the critical reader's brief "
+                           "(`review` in the response) from the same analysis.")
 
 
 class AnalyzeRequest(_Strict):
@@ -185,9 +207,54 @@ class EngineInfo(_Strict):
     rules_loaded: int
 
 
+class ProfileInfo(_Strict):
+    """The article-type profile a check ran under."""
+    id: DocumentType
+    label: str
+    guessed: bool = Field(..., description="True when the type was `auto` "
+                          "and guessed from the headings.")
+    note: str = Field("", description="One line saying what the profile "
+                      "switched off, empty when nothing.")
+    rules_off: List[str] = Field(default_factory=list,
+                                 description="Rules not run for this type.")
+
+
+class ReviewQuestion(_Strict):
+    id: str = Field(..., description="A to E.")
+    question: str
+    verdict: str = Field(..., description="One line answering the question "
+                         "from the evidence.")
+    points: List[str] = Field(default_factory=list)
+    evidence: List[str] = Field(default_factory=list,
+                                description="Sentences of the document the "
+                                "verdict rests on (never logged).")
+
+
+class ReviewRuleCount(_Strict):
+    id: str
+    short: str
+    count: int = Field(..., ge=0)
+
+
+class ReviewReport(_Strict):
+    """The critical reader's brief: five questions answered from the same
+    deterministic analysis as the suggestions."""
+    source: str
+    sections: List[str]
+    words: int = Field(..., ge=0)
+    questions: List[ReviewQuestion]
+    top_rules: List[ReviewRuleCount] = Field(default_factory=list)
+
+
 class AnalyzeResponse(_Strict):
     schema_version: Literal["1"] = SCHEMA_VERSION
     mode: Mode = Field(Mode.revise, description="The mode this check ran in.")
+    profile: ProfileInfo = Field(
+        default_factory=lambda: ProfileInfo(id=DocumentType.general,
+                                            label="General", guessed=True),
+        description="The article-type profile this check ran under.")
+    review: Optional[ReviewReport] = Field(
+        None, description="Present when `options.review` was true.")
     hidden_by_mode: int = Field(0, ge=0, description="Document-level "
                                 "suggestions Draft mode held back (0 in Revise).")
     signed_in: bool = Field(False, description="True when a valid account token "
@@ -306,8 +373,17 @@ class RuleInfo(_Strict):
     sections_excluded: Optional[List[str]] = None
 
 
+class ProfileChoice(_Strict):
+    id: DocumentType
+    label: str
+    summary: str
+
+
 class RulesResponse(_Strict):
     rules: List[RuleInfo]
+    profiles: List[ProfileChoice] = Field(
+        default_factory=list, description="Article types a caller can "
+        "check as, in display order (S4).")
 
 
 class ErrorBody(_Strict):

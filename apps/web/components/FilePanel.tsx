@@ -14,6 +14,8 @@ interface Props {
   problem: string | null;
   showPreferences: boolean;
   onShowPreferences: (v: boolean) => void;
+  /** The "Check as" control (S4), the same one the composer shows. */
+  typeControl?: ReactNode;
   onChooseFile: () => void;
   onCancel: () => void;
   onBack: () => void;
@@ -45,6 +47,7 @@ export function FilePanel({
   problem,
   showPreferences,
   onShowPreferences,
+  typeControl,
   onChooseFile,
   onCancel,
   onBack,
@@ -102,6 +105,7 @@ export function FilePanel({
       ) : null}
 
       <div className="controls">
+        {typeControl}
         <label className="control control-toggle" htmlFor={ids.prefs}>
           <input
             id={ids.prefs}

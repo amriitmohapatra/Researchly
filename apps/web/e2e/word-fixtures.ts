@@ -4,8 +4,17 @@
  * `satisfies` so a contract change breaks the tests' build, not their meaning.
  */
 import type { Page, Route } from "@playwright/test";
-import type { AnalyzeWordRequest, AnalyzeWordResponse, HealthResponse, RuleInfo, TierHealth, WordSuggestion } from "@researchly/contract";
+import type {
+  AnalyzeWordRequest,
+  AnalyzeWordResponse,
+  HealthResponse,
+  ReviewReport,
+  RuleInfo,
+  TierHealth,
+  WordSuggestion,
+} from "@researchly/contract";
 import { fakeOfficeScript, type FakeWordConfig, type FakeWordState } from "./fake-office";
+import { profileFor, PROFILES, REVIEW_SOURCE } from "./fixtures";
 
 export const OFFICE_JS = "https://appsforoffice.microsoft.com/lib/1/hosted/office.js";
 export const LOCAL_ENGINE = "http://localhost:3517";
@@ -167,12 +176,65 @@ export const WORD_RULES: RuleInfo[] = [...new Set(ALL.map((s) => s.rule_id))].ma
   scope: id === "W211" ? "document" : "sentence",
 }));
 
+/** The critical reader's brief for DOC (S4). Synthetic; the evidence is the document's own sentence. */
+export const WORD_REVIEW: ReviewReport = {
+  source: REVIEW_SOURCE,
+  sections: ["methods", "discussion"],
+  words: 38,
+  questions: [
+    {
+      id: "A",
+      question: "Why am I reading this?",
+      verdict: "Yours to answer: what do you need from this document?",
+      points: ["The brief below reads it as a sceptical reader would, from the evidence in the text alone."],
+      evidence: [],
+    },
+    {
+      id: "B",
+      question: "What are the authors trying to achieve?",
+      verdict: "An aim is stated.",
+      points: [],
+      evidence: ["In order to estimate the effective reproduction number, a renewal model was fitted."],
+    },
+    {
+      id: "C",
+      question: "What are they claiming?",
+      verdict: "1 causal claim the design must carry.",
+      points: ["the effect of vector control was large"],
+      evidence: ["It is clearly proven that the the effect of vector control was large, and the the data agree."],
+    },
+    {
+      id: "D",
+      question: "How convincing are the claims?",
+      verdict: "2 things weaken the claims; see the points.",
+      points: [
+        "1 overclaiming verb such as 'prove' or 'conclusively': reserve strong verbs for strong evidence.",
+        "No limitations section: the reviewer will supply the rebuttal instead.",
+      ],
+      evidence: [],
+    },
+    {
+      id: "E",
+      question: "What use can be made of this?",
+      verdict: "No sentence says what a reader can do with this.",
+      points: ["The ending never widens back out: say what should change in the field or in practice, and for whom."],
+      evidence: [],
+    },
+  ],
+  top_rules: [
+    { id: "S010", short: "Repeated word", count: 4 },
+    { id: "C120", short: "Wordy phrase", count: 1 },
+  ],
+};
+
 export const reviseResponse = {
   schema_version: "1",
   signed_in: false,
   warnings: [],
   mode: "revise",
   hidden_by_mode: 0,
+  profile: profileFor("auto"),
+  review: WORD_REVIEW,
   suggestions: ALL,
   counts: { correction: 4, improvement: 2, convention: 2 },
   hidden_preferences: 1,
@@ -195,7 +257,14 @@ export const draftResponse = {
   hidden_by_mode: 2,
   suggestions: SENTENCE_LEVEL,
   counts: { correction: 4, improvement: 2, convention: 1 },
+  review: null,
 } satisfies AnalyzeWordResponse;
+
+/** The answer for a request, as the engine would give it: the stage, the profile asked for, the brief only when asked. */
+export function wordResponseFor(req: AnalyzeWordRequest): AnalyzeWordResponse {
+  const base = req.options?.mode === "draft" ? draftResponse : reviseResponse;
+  return { ...base, profile: profileFor(req.options?.document_type), review: req.options?.review ? WORD_REVIEW : null };
+}
 
 export const healthResponse = (tiers: TierHealth[] = HEALTHY) =>
   ({
@@ -253,14 +322,18 @@ export async function mockWordEngine(
       return route.fulfill({ status: 200, headers: CORS, contentType: "application/json", body: JSON.stringify(healthResponse(opts.health)) });
     }
     if (path === "/v1/rules") {
-      return route.fulfill({ status: 200, headers: CORS, contentType: "application/json", body: JSON.stringify({ rules: opts.rules ?? WORD_RULES }) });
+      return route.fulfill({
+        status: 200,
+        headers: CORS,
+        contentType: "application/json",
+        body: JSON.stringify({ rules: opts.rules ?? WORD_RULES, profiles: PROFILES }),
+      });
     }
     if (path !== "/v1/analyze-word") return route.fulfill({ status: 404, headers: CORS, body: "" });
     const body = req.postDataJSON() as AnalyzeWordRequest;
     calls.push({ url: req.url(), body, authorization: req.headers()["authorization"] });
     if (opts.respond) return opts.respond(body, route);
-    const data = body.options?.mode === "draft" ? draftResponse : reviseResponse;
-    return route.fulfill({ status: 200, headers: CORS, contentType: "application/json", body: JSON.stringify(data) });
+    return route.fulfill({ status: 200, headers: CORS, contentType: "application/json", body: JSON.stringify(wordResponseFor(body)) });
   });
   return calls;
 }

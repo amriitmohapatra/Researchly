@@ -45,6 +45,48 @@ references, abbreviations defined once; rule scope "document") kept in their
 own "Whole document" group so they are never lost. The chooser starts at
 "All sections" on every check and is not stored.
 
+## Article type and the reviewer's brief (S4)
+
+- **"Check as"** is one more control in the composer's row (Format, Check
+  as, Show preferences), a select whose labels come from the engine's
+  registry, default Auto. The chosen type's one-line summary reads under
+  it. A change checks again whatever is on screen, like a stage change in
+  Word. The choice is remembered (this browser, or the account when signed
+  in); it is the only thing remembered.
+- **One line under the results heading** says what the check ran as:
+  "Checked as Research article (from the headings)." for a guess, "Checked
+  as Grant proposal." for a choice, or the engine's own note when it
+  switched checks off. A guessed General says nothing.
+- **The brief is a second view of the same check**, chosen from a quiet
+  tab strip (Suggestions | Reviewer's brief) above the results; it reads
+  as a document at the reading measure, with hairline dividers and no
+  boxes: for each of the five questions, the letter and question as a
+  heading, the verdict in bold, the points as a list, and the writer's own
+  sentences quoted in the serif as evidence. Then "Most frequent checks"
+  in words ("3 times", "once") and the source set like a card's. Nothing
+  in it is a score: no meters, no numbers but a rule's tally, no colour by
+  verdict. Question A is the writer's and is shown as the engine gives it.
+  In Draft the tab says the brief needs Revise, with a switch where the
+  surface has one (Word). Nothing of the brief is stored.
+
+## The printable report (S4)
+
+- **"Print or save as PDF"** sits beside the results heading as a link-style
+  button. It opens the browser's own print dialog; Save as PDF there is the
+  PDF. Nothing is generated anywhere else and no text leaves the page.
+- On paper the page is the report and nothing else: a header (title, date,
+  counts, sections, the profile line, a one-line key), then the text with
+  every highlight numbered on the left and the suggestions under the same
+  numbers on the right, whole-document checks after them, then the
+  reviewer's brief on a new page, and a footer saying nothing was stored.
+- Light ink only: a grey tint on highlights, an underline whose style says
+  the category (solid, double, dotted, dashed), bold numbers, no colour by
+  verdict, no meters. A4 and Letter both fit; the two columns are a grid,
+  so they flow across pages together.
+- The report is mounted only while printing (the button, or the browser's
+  own print command) and removed afterwards, so a long document is never
+  laid out twice on screen.
+
 ## Type: who is speaking
 
 - **Serif** (Iowan Old Style / Charter / Georgia stack) is for writing: the

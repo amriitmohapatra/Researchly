@@ -65,7 +65,7 @@ test.describe("Word taskpane", () => {
       { text: DOC[3]!.text, style: "Normal", kind: "body" },
       { text: "Region", style: "Normal", kind: "table" },
     ]);
-    expect(body.options).toEqual({ show_preferences: false, disabled_rules: [], mode: "revise" });
+    expect(body.options).toEqual({ show_preferences: false, disabled_rules: [], mode: "revise", document_type: "auto", review: true });
     expect(calls[0]!.authorization).toBeUndefined();
 
     await expect(page.getByRole("heading", { name: "8 suggestions" })).toBeVisible();
@@ -195,6 +195,52 @@ test.describe("Word taskpane", () => {
     await expect(page.getByTestId("mode-draft")).toBeChecked();
   });
 
+  test("the reviewer's brief is a tab in the pane: Draft asks for Revise and switches; Check as is sent, re-checks and is said", async ({ page }) => {
+    await fakeOffice(page);
+    const calls = await mockWordEngine(page, ENGINE);
+    await page.goto("/word");
+    await page.getByTestId("mode-draft").check();
+    await page.getByTestId("check-document").click();
+    await expect(page.getByTestId("tp-results")).toBeVisible();
+    // Draft never asks for the brief: it is a whole-document read.
+    expect(calls[0]!.body.options?.review).toBe(false);
+    await page.getByTestId("view-brief").click();
+    await expect(page.getByTestId("brief-needs-revise")).toContainText("needs Revise mode");
+    await expect(page.getByTestId("word-card")).toHaveCount(0);
+
+    await page.getByTestId("brief-switch-revise").click();
+    await expect(page.getByTestId("mode-revise")).toBeChecked();
+    await expect.poll(() => calls.length).toBe(2);
+    expect(calls[1]!.body.options?.review).toBe(true);
+    const questions = page.getByTestId("brief-question");
+    await expect(questions).toHaveCount(5);
+    await expect(questions.nth(0)).toContainText("Why am I reading this?");
+    await expect(questions.nth(0)).toContainText("Yours to answer");
+    await expect(questions.nth(2).locator(".brief-evidence q")).toHaveText(
+      "It is clearly proven that the the effect of vector control was large, and the the data agree.",
+    );
+    await expect(page.getByTestId("brief-rules").locator("li")).toHaveText(["Repeated word 4 times", "Wordy phrase once"]);
+    await expect(page.getByTestId("brief")).toContainText("Source: M. Wallace & A. Wray (2016)");
+    await expect(page.locator("meter, progress")).toHaveCount(0);
+
+    // The suggestions tab brings the cards back without another check.
+    await page.getByTestId("view-suggestions").click();
+    await expect(page.getByTestId("word-card")).toHaveCount(8);
+    expect(calls).toHaveLength(2);
+
+    // Check as: Auto by default, the guess said in the results; a choice is sent, checks again, is said, and is remembered here.
+    await expect(page.getByTestId("document-type")).toHaveValue("auto");
+    await expect(page.getByTestId("profile-line")).toHaveText("Checked as Research article (from the headings).");
+    await page.getByTestId("document-type").selectOption("commentary");
+    await expect.poll(() => calls.length).toBe(3);
+    expect(calls[2]!.body.options?.document_type).toBe("commentary");
+    await expect(page.getByTestId("document-type-help")).toHaveText("An opinion or perspective piece: argued, not reported.");
+    await expect(page.getByTestId("profile-line")).toContainText("Checked as a commentary:");
+    await page.reload();
+    await expect(page.getByTestId("document-type")).toHaveValue("commentary");
+    expect(await page.evaluate(() => Object.keys(localStorage).sort())).toEqual(["researchly.document-type", "researchly.word.mode"]);
+  });
+
   test("Check this section: the whole document is sent, only the cursor's section is listed, document-wide checks kept", async ({ page }) => {
     await fakeOffice(page, { cursor: 3 });
     const calls = await mockWordEngine(page, ENGINE);
@@ -212,7 +258,7 @@ test.describe("Word taskpane", () => {
     const note = page.getByTestId("section-focus");
     await expect(note).toContainText("Showing the section at the cursor, “Discussion”.");
     await expect(note).toContainText("3 more suggestions are elsewhere in it.");
-    const inSection = page.locator(".tp-results > .tp-cards [data-testid=word-card]");
+    const inSection = page.locator(".tp-suggestions > .tp-cards [data-testid=word-card]");
     await expect(inSection).toHaveCount(4);
     expect(await inSection.evaluateAll((els) => els.map((e) => e.getAttribute("data-paragraph")))).toEqual(["3", "3", "3", "3"]);
     const whole = page.getByTestId("whole-document");

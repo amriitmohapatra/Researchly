@@ -8,9 +8,9 @@
  * of truth. When it has not arrived, or does not list a rule (an older
  * engine), the ids the engine marks `scope="document"` today stand in.
  */
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import type { RuleInfo, Scope } from "@researchly/contract";
-import { listRules } from "./engine";
+import { useRegistry } from "./registry";
 
 /** Rule scope by id, from the engine's registry. */
 export type ScopeMap = ReadonlyMap<string, Scope>;
@@ -53,34 +53,14 @@ export function splitForSection<T extends { rule_id: string }>(
   return out;
 }
 
-/* ---------- loading the registry (once per engine) ---------- */
-
-const cache = new Map<string, ScopeMap>();
-/** Engines that answered without a registry: not asked again this session. */
-const unavailable = new Set<string>();
+/* ---------- loading the registry (once per engine, shared: lib/registry.ts) ---------- */
 
 /**
- * The engine's rule scopes, fetched once per engine URL when `wanted`
- * (after the first results). Null until then, or when the engine has no
- * registry (the local server): the built-in list stands in.
+ * The engine's rule scopes, from the registry fetched once per engine URL
+ * when `wanted` (after the first results). Null until then, or when the
+ * engine has no registry (the local server): the built-in list stands in.
  */
 export function useRuleScopes(engineUrl: string | null, wanted: boolean): ScopeMap | null {
-  const [, bump] = useState(0);
-  const cached = engineUrl ? (cache.get(engineUrl) ?? null) : null;
-  useEffect(() => {
-    if (!wanted || !engineUrl || cache.has(engineUrl) || unavailable.has(engineUrl)) return;
-    const ctrl = new AbortController();
-    void listRules(engineUrl, ctrl.signal)
-      .then((r) => {
-        if (ctrl.signal.aborted) return;
-        if (r.ok) cache.set(engineUrl, scopeMap(r.data));
-        else unavailable.add(engineUrl);
-        bump((n) => n + 1);
-      })
-      .catch(() => {
-        /* no registry: the built-in list applies */
-      });
-    return () => ctrl.abort();
-  }, [engineUrl, wanted]);
-  return cached;
+  const registry = useRegistry(engineUrl, wanted);
+  return useMemo(() => (registry ? scopeMap(registry.rules) : null), [registry]);
 }

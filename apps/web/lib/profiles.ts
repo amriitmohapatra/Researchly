@@ -1,0 +1,47 @@
+/**
+ * Article-type profiles (S4) and the critical reader's brief, as the
+ * surfaces present them. Pure and unit-tested; the engine decides what a
+ * profile switches off, and this file only words it.
+ */
+import { DOCUMENT_TYPES, type DocumentType, type Mode, type ProfileChoice, type ProfileInfo, type ReviewReport } from "@researchly/contract";
+
+export function isDocumentType(v: unknown): v is DocumentType {
+  return typeof v === "string" && (DOCUMENT_TYPES as readonly string[]).includes(v);
+}
+
+/**
+ * The selector's choices when the engine's registry has not arrived or has
+ * none (the local server): the contract's list, with the id as its label.
+ */
+export const FALLBACK_PROFILES: readonly ProfileChoice[] = DOCUMENT_TYPES.map((id) => ({ id, label: id, summary: "" }));
+
+/** The chosen profile's one-line summary, for the help line under the selector. */
+export function profileSummary(choices: readonly ProfileChoice[], id: DocumentType): string {
+  return choices.find((c) => c.id === id)?.summary ?? "";
+}
+
+/**
+ * The one quiet line under the results heading saying what the check was
+ * run as. The engine's note already reads "Checked as a commentary: …", so
+ * when there is one it stands alone. A guessed "general" says nothing: that
+ * is the engine's long-standing behaviour, not a finding.
+ */
+export function profileLine(profile: ProfileInfo | null | undefined): string | null {
+  if (!profile) return null;
+  if (profile.note.trim()) return profile.note.trim();
+  if (profile.guessed) return profile.id === "general" ? null : `Checked as ${profile.label} (from the headings).`;
+  return `Checked as ${profile.label}.`;
+}
+
+/** What the brief tab shows for a check: the brief, or why there is none. */
+export type BriefState = { kind: "ready"; review: ReviewReport } | { kind: "needs_revise" } | { kind: "missing" };
+
+export function briefState(data: { mode: Mode; review?: ReviewReport | null }): BriefState {
+  if (data.mode === "draft") return { kind: "needs_revise" };
+  return data.review ? { kind: "ready", review: data.review } : { kind: "missing" };
+}
+
+/** "once", "3 times": a rule's tally in "Most frequent checks". Plain words, not a score. */
+export function timesPhrase(n: number): string {
+  return n === 1 ? "once" : `${n.toLocaleString("en-GB")} times`;
+}

@@ -9,6 +9,8 @@
  */
 import "client-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DocumentType } from "@researchly/contract";
+import { isDocumentType } from "./profiles";
 import { isRuleId, normaliseSettings, type UserSettings } from "./settings";
 import { getSupabase } from "./supabase";
 
@@ -164,6 +166,29 @@ export function loadMode(): Promise<AccountResult<SavedMode | null>> {
 export function saveMode(mode: SavedMode): Promise<AccountResult<null>> {
   return run(async (sb) => {
     const { error } = await sb.from("user_settings").upsert({ mode }, { onConflict: "user_id" });
+    return error ? { ok: false, message: accountErrorMessage(error) } : { ok: true, data: null };
+  });
+}
+
+/* ---------- the article type (S4), shared by the web app and the Word add-in ---------- */
+
+/**
+ * The account's article-type choice (user_settings.document_type), or null
+ * when never saved. Read on its own, like the mode, so an account database
+ * without the S4 migration fails only this.
+ */
+export function loadDocumentType(): Promise<AccountResult<DocumentType | null>> {
+  return run(async (sb) => {
+    const { data, error } = await sb.from("user_settings").select("document_type").maybeSingle();
+    if (error) return { ok: false, message: accountErrorMessage(error) };
+    const type = (data as { document_type?: unknown } | null)?.document_type;
+    return { ok: true, data: isDocumentType(type) ? type : null };
+  });
+}
+
+export function saveDocumentType(document_type: DocumentType): Promise<AccountResult<null>> {
+  return run(async (sb) => {
+    const { error } = await sb.from("user_settings").upsert({ document_type }, { onConflict: "user_id" });
     return error ? { ok: false, message: accountErrorMessage(error) } : { ok: true, data: null };
   });
 }

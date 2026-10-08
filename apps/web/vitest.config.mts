@@ -9,8 +9,10 @@ export default defineConfig({
       "@": path.resolve(import.meta.dirname, "."),
     },
   },
+  // Component tests (.test.tsx) render to static markup with react-dom/server; no DOM is needed.
+  // JSX follows tsconfig's "react-jsx".
   test: {
-    include: ["tests/unit/**/*.test.ts"],
+    include: ["tests/unit/**/*.test.{ts,tsx}"],
     environment: "node",
   },
 });

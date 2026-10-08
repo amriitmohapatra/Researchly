@@ -25,12 +25,14 @@ from typing import List, Optional, Union
 from . import _core  # noqa: F401  (import path + isolation first)
 from . import __version__ as SERVICE_VERSION
 from .schemas import (AnalyzeOptions, AnalyzeResponse, AnalyzeWordResponse,
-                      Category, Coverage, EngineInfo, FixSafety, Metrics,
-                      Mode, RuleInfo, Scope, Span, Suggestion, TierHealth,
+                      Category, Coverage, DocumentType, EngineInfo,
+                      FixSafety, Metrics, Mode, ProfileChoice, ProfileInfo,
+                      ReviewQuestion, ReviewReport, ReviewRuleCount,
+                      RuleInfo, Scope, Span, Suggestion, TierHealth,
                       WordLocation, WordSuggestion)
 
 import researchly
-from researchly import api, wordloc
+from researchly import api, profiles, wordloc
 from researchly.config import Config, apply_remote
 from researchly.document import Document
 from researchly.engine import REGISTRY
@@ -86,7 +88,30 @@ def build_config(options: Optional[AnalyzeOptions],
         # toggles it per check); otherwise the account's saved one.
         if options.mode is not None:
             cfg.mode = options.mode.value
+        if options.document_type is not None:
+            cfg.document_type = options.document_type.value
     return cfg
+
+
+def to_profile(a) -> ProfileInfo:
+    p = a.profile
+    return ProfileInfo(id=DocumentType(p.id), label=p.label,
+                       guessed=a.profile_guessed, note=p.note,
+                       rules_off=sorted(p.rules_off))
+
+
+def to_review(r: Optional[dict]) -> Optional[ReviewReport]:
+    if r is None:
+        return None
+    return ReviewReport(
+        source=r["source"], sections=list(r["sections"]),
+        words=int(r["metrics"]["words"]),
+        questions=[ReviewQuestion(**q) for q in r["questions"]],
+        top_rules=[ReviewRuleCount(**t) for t in r["top_rules"]])
+
+
+def profile_choices() -> list:
+    return [ProfileChoice(**row) for row in profiles.listing()]
 
 
 def fingerprint(rule_id: str, start: int, end: int, text: str) -> str:
@@ -167,7 +192,8 @@ def run_analysis(source: Union[str, Document], fmt: str,
     t0 = time.perf_counter()
     cfg = build_config(options, grammar_enabled, account)
     with ENGINE_LOCK:
-        a = api.analyze(source, kind=fmt, cfg=cfg)
+        a = api.analyze(source, kind=fmt, cfg=cfg,
+                        with_review=bool(options and options.review))
     health = [to_tier(t) for t in a.health]
     if signed_in:
         health.append(account_tier(account_error))
@@ -185,6 +211,8 @@ def run_analysis(source: Union[str, Document], fmt: str,
     out = response_cls(
         signed_in=signed_in,
         mode=Mode(a.config.mode),
+        profile=to_profile(a),
+        review=to_review(a.review),
         hidden_by_mode=a.hidden_by_mode,
         suggestions=suggestions,
         counts=dict(a.counts),

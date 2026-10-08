@@ -29,10 +29,10 @@ USER_DIR = Path.home() / ".researchly"
 USER_CONFIG_FILE = USER_DIR / "config.toml"
 PROJECT_CONFIG_NAME = ".researchly.toml"
 
-# Document-type profiles. The engine is section-aware; these say what KIND of
-# document the sections belong to, which the lenses condition on.
-DOCUMENT_TYPES = ("auto", "thesis-chapter", "manuscript", "abstract",
-                  "grant", "response-to-reviewers")
+# Document-type profiles (researchly/profiles.py, S4). The engine is
+# section-aware; a profile says what KIND of document the sections belong
+# to: which checks do not apply, and what section unheaded prose is in.
+from .profiles import DOCUMENT_TYPES  # noqa: E402
 
 # How loudly to talk. Not a quality dial — it moves the Preference/Convention
 # floor, never the Correction tier.
@@ -199,6 +199,8 @@ def apply_remote(cfg: Config, data: dict) -> Config:
         cfg.locale = data["locale"]
     if data.get("mode") in MODES:
         cfg.mode = data["mode"]
+    if data.get("document_type") in DOCUMENT_TYPES:
+        cfg.document_type = data["document_type"]
     words = data.get("dictionary")
     if isinstance(words, list):
         good = [w for w in words[:MAX_REMOTE_WORDS]

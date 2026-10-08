@@ -16,9 +16,11 @@ import type {
   AnalyzeResponse,
   AnalyzeWordRequest,
   AnalyzeWordResponse,
+  DocumentType,
   Format,
   HealthResponse,
   Mode,
+  ProfileChoice,
   RuleInfo,
   WordParagraph,
 } from "@researchly/contract";
@@ -48,7 +50,20 @@ export interface CheckParams {
   content: string;
   format: Format;
   showPreferences: boolean;
+  /** The article type to check as (S4). Omitted: "auto", the engine's guess from the headings. */
+  documentType?: DocumentType | null;
+  /** Also ask for the critical reader's brief (a whole-document read; Revise only). */
+  review?: boolean;
   signal?: AbortSignal;
+}
+
+/** The S4 options every analysis call carries, always explicit, so a request reads the same from every surface. */
+export function analysisOptions(p: { showPreferences: boolean; documentType?: DocumentType | null; review?: boolean }) {
+  return {
+    show_preferences: p.showPreferences,
+    document_type: p.documentType ?? "auto",
+    review: p.review ?? false,
+  } as const;
 }
 
 /**
@@ -94,11 +109,13 @@ export async function withBearer<T>(
   return { ok: false, error: signedOutError() };
 }
 
-export function buildRequest(p: Pick<CheckParams, "content" | "format" | "showPreferences">): AnalyzeRequest {
+export function buildRequest(
+  p: Pick<CheckParams, "content" | "format" | "showPreferences" | "documentType" | "review">,
+): AnalyzeRequest {
   return {
     content: p.content,
     format: p.format,
-    options: { show_preferences: p.showPreferences },
+    options: analysisOptions(p),
   };
 }
 
@@ -221,6 +238,8 @@ export async function analyze(
 export interface FileCheckParams {
   file: File;
   showPreferences: boolean;
+  documentType?: DocumentType | null;
+  review?: boolean;
   signal?: AbortSignal;
 }
 
@@ -243,7 +262,7 @@ export function encodeFilename(name: string): string {
 /** Everything /v1/analyze-file needs except the transport: unit-tested. */
 export function buildFileRequest(
   file: Blob & { name: string },
-  opts: { showPreferences: boolean },
+  opts: { showPreferences: boolean; documentType?: DocumentType | null; review?: boolean },
   token: string | null,
 ): { method: "POST"; headers: Record<string, string>; body: Blob } {
   return {
@@ -252,7 +271,7 @@ export function buildFileRequest(
       "content-type": "application/octet-stream",
       accept: "application/json",
       "x-researchly-filename": encodeFilename(file.name),
-      "x-researchly-options": JSON.stringify({ show_preferences: opts.showPreferences }),
+      "x-researchly-options": JSON.stringify(analysisOptions(opts)),
       ...authHeader(token),
     },
     // The File itself: the browser streams its bytes. Nothing is read into
@@ -270,7 +289,7 @@ export async function analyzeFile(
   return withBearer(auth, (token) =>
     call(
       `${engineUrl}/v1/analyze-file`,
-      buildFileRequest(p.file, { showPreferences: p.showPreferences }, token),
+      buildFileRequest(p.file, { showPreferences: p.showPreferences, documentType: p.documentType, review: p.review }, token),
       p.signal,
       looksLikeAnalyzeFileResponse,
       { engineUrl, upload: true },
@@ -278,7 +297,14 @@ export async function analyzeFile(
   );
 }
 
-function looksLikeRules(body: unknown): body is { rules: RuleInfo[] } {
+/** What GET /v1/rules answers: the rules, and (S4) the article types a caller can check as. */
+export interface Registry {
+  rules: RuleInfo[];
+  /** Empty from an engine older than S4; the surface then falls back to the contract's list. */
+  profiles: ProfileChoice[];
+}
+
+function looksLikeRules(body: unknown): body is { rules: RuleInfo[]; profiles?: unknown } {
   const rules = (body as { rules?: unknown } | null)?.rules;
   return (
     Array.isArray(rules) &&
@@ -286,12 +312,26 @@ function looksLikeRules(body: unknown): body is { rules: RuleInfo[] } {
   );
 }
 
-/** The rule registry (names and one-line descriptions) for the settings page: GET /v1/rules. No text is sent. */
-export async function listRules(engineUrl: string = ENGINE_URL, signal?: AbortSignal): Promise<CheckResult<RuleInfo[]>> {
+function looksLikeProfile(p: unknown): p is ProfileChoice {
+  if (typeof p !== "object" || p === null) return false;
+  const c = p as Record<string, unknown>;
+  return typeof c.id === "string" && typeof c.label === "string" && typeof c.summary === "string";
+}
+
+/** The engine's registry: rule names and descriptions, and the article-type choices. GET /v1/rules; no text is sent. */
+export async function listRegistry(engineUrl: string = ENGINE_URL, signal?: AbortSignal): Promise<CheckResult<Registry>> {
   const r = await call(`${engineUrl}/v1/rules`, { method: "GET", headers: { accept: "application/json" } }, signal, looksLikeRules, {
     engineUrl,
     versioned: false,
   });
+  if (!r.ok) return r;
+  const profiles = Array.isArray(r.data.profiles) ? r.data.profiles.filter(looksLikeProfile) : [];
+  return { ok: true, data: { rules: r.data.rules, profiles } };
+}
+
+/** The rule registry (names and one-line descriptions) for the settings page. */
+export async function listRules(engineUrl: string = ENGINE_URL, signal?: AbortSignal): Promise<CheckResult<RuleInfo[]>> {
+  const r = await listRegistry(engineUrl, signal);
   return r.ok ? { ok: true, data: r.data.rules } : r;
 }
 
@@ -304,14 +344,20 @@ export interface WordCheckParams {
   mode: Mode;
   /** Rules to mute for this request (added to the account's own on the hosted engine). */
   disabledRules?: string[];
+  /** The article type to check as (S4); omitted: "auto". */
+  documentType?: DocumentType | null;
+  /** The critical reader's brief: asked for in Revise, never in Draft (a whole-document read). */
+  review?: boolean;
   signal?: AbortSignal;
 }
 
-export function buildWordRequest(p: Pick<WordCheckParams, "paragraphs" | "showPreferences" | "mode" | "disabledRules">): AnalyzeWordRequest {
+export function buildWordRequest(
+  p: Pick<WordCheckParams, "paragraphs" | "showPreferences" | "mode" | "disabledRules" | "documentType" | "review">,
+): AnalyzeWordRequest {
   return {
     paragraphs: p.paragraphs,
     options: {
-      show_preferences: p.showPreferences,
+      ...analysisOptions(p),
       disabled_rules: p.disabledRules ?? [],
       mode: p.mode,
     },

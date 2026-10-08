@@ -178,7 +178,7 @@ def test_review_lens_carries_argument_summary():
     assert "argument" in r
     assert r["argument"]["missing_links"]
     report = render_review(r)
-    assert "argument structure" in report
+    assert "Argument, discussion" in report
     assert "warrant" in report.lower()
 
 
@@ -191,4 +191,4 @@ def test_review_lens_argument_block_absent_when_clean():
     r = build_review(text, NLP)
     report = render_review(r)
     if not r["argument"]["missing_links"]:
-        assert "argument structure" not in report
+        assert "Argument, " not in report

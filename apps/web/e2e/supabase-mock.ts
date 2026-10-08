@@ -9,6 +9,7 @@
  */
 import type { Page, Route } from "@playwright/test";
 import type { RuleInfo } from "@researchly/contract";
+import { PROFILES } from "./fixtures";
 
 export const SUPABASE_URL = "https://researchlye2e.supabase.co";
 export const SUPABASE_KEY = "sb_publishable_e2e_mock_key_0000";
@@ -92,7 +93,7 @@ export interface SentRequest {
 }
 
 export interface SupabaseState {
-  settings: { disabled_rules: string[]; show_preferences: boolean; locale: string; mode?: string } | null;
+  settings: { disabled_rules: string[]; show_preferences: boolean; locale: string; mode?: string; document_type?: string } | null;
   words: string[];
   /** Response for POST /auth/v1/otp (default: 200 {}). */
   otp: { status: number; body: unknown } | null;
@@ -205,7 +206,7 @@ export async function mockEngineAuth(page: Page, handler: EngineHandler, rules: 
     const req = route.request();
     if (req.method() === "OPTIONS") return reply(route, 204);
     const path = new URL(req.url()).pathname;
-    if (path === "/v1/rules") return reply(route, 200, { rules });
+    if (path === "/v1/rules") return reply(route, 200, { rules, profiles: PROFILES });
     if (path === "/v1/health") return reply(route, 200, { status: "ok", tiers: [], engine: { service_version: "0", core_version: "0", rules_loaded: 0 } });
     const buf = req.postDataBuffer();
     const headers = req.headers();

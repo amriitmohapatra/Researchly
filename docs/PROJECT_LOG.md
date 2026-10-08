@@ -1786,3 +1786,112 @@ end on a colon, so no new flags; LaTeX unchanged at 5. Not verified in
 real Word: what Office JS returns as the text of an equation paragraph
 (if it is empty rather than linear maths, the add-in route sees nothing
 and the upload route still works; the owner is asked to try it).
+
+## P36 — 2026-10-08 — S4 begins: article-type profiles, the reviewer's brief on every surface, the selling point
+
+**Why.** P35 merged (amriitmohapatra/Researchly#9) and the owner deployed
+it: "Now to move to next steps." PLAN's S3 exit check (a week of real use)
+continues in parallel; the current slice is S4. The first batch is the
+three items the owner asked for on 2026-10-08 and 2026-10-04: article-type
+profiles (commentary and policy brief first), the critical-reader review
+on the hosted surfaces, and the selling point.
+
+**Article-type profiles** (`packages/core/researchly/profiles.py`).
+`document_type` had been stored and never read. A profile now says what
+kind of document the sections belong to:
+
+- *rules off*, each with a plain reason the cards show ("it may argue
+  assertively, so the hedging prompts are off"): commentary and policy
+  brief drop the abstract moves (AB801, AB802), the gap statement (D902)
+  and the hedging prompts (C302, C303); a response to reviewers drops the
+  float checks (X101–X104) because the figures belong to the manuscript
+  it answers; a grant drops AB802;
+- *body section*: prose with no IMRaD heading over it ("unknown",
+  "front", "other") is read as the profile says. A commentary's body is
+  argued like a Discussion, so the section-gated claim and calibration
+  rules run (`Document.default_section`, applied in `section_at`); the
+  "abstract" profile judges a pasted abstract whole (AB802 reads the
+  text when there is no heading);
+- *expected sections*, for the review lens.
+
+Nine types: auto, general, manuscript, thesis-chapter, abstract,
+commentary, policy-brief, grant, response-to-reviewers. "auto" guesses
+only from strong signals (IMRaD headings → research article; a chapter
+with methods → thesis chapter; a Recommendations / Key messages / Policy
+options heading, or such a line on its own in plain text → policy brief)
+and is otherwise "general", which is the engine exactly as before. It
+never guesses "abstract" or "commentary": a pasted paragraph must not be
+judged as an abstract (AB802 would ask it for six moves), and an opinion
+piece looks like any other prose. The chosen type always wins.
+
+Plumbing: `Config.document_type` now validates against the profiles;
+the account layer reads `document_type` (migration
+`20261008120000_s4_document_type.sql`, `my_config()`); the service takes
+`options.document_type` and returns `profile` (id, label, guessed, note,
+rules off); `GET /v1/rules` lists the profiles for a selector.
+
+**The reviewer's brief** (`review.py`). The prototype's review lens
+re-ran every rule on its own. `api.analyze(..., with_review=True)` now
+builds it from the same parse, suggestions and metrics as the
+suggestions (no second pass; the engine lock is held once). Restructured
+as five questions, each with a one-line verdict, its points and the
+sentences it rests on, in plain words (the INTERNAL ban from P35 applies;
+"Toulmin", "CARS" and "OCAR" left the user-visible lines; the source line
+cites Wallace & Wray and the owner's learnings). Profile-aware: a
+commentary is not asked for a limitations section or a gap statement; a
+pasted paragraph with no headings is not asked for sections at all. The
+service exposes it as `options.review` → `review` on every analysis
+route; the canary test proves the quoted sentences reach only the
+response body, never a log. The CLI's `researchly review` renders the
+same structure.
+
+**Surfaces** (sub-agents; details in the addendum): a "Check as"
+selector on the website and in the Word add-in, saved locally and to the
+account like the mode; a profile line under the results; a "Reviewer's
+brief" view beside the suggestions, requested in Revise mode. And the
+selling point on the landing page and README, from ARCHITECTURE §1.3 and
+the owner's framing (the problem; what an LLM cannot do; who it is for;
+"the app encourages writing, it never delegates it").
+
+**Owner steps.** Run the S4 migration in the Supabase SQL Editor (same
+steps as S3's), then deploy the engine and the web app.
+
+**Evidence (engine and service, 63be8ea).** Core 820 passed (24 new in
+`test_profiles.py`); service 158 + 8 (`test_profiles_service.py`,
+including the canary); two-user database suite 92 on a local Postgres 16
+with the new migration; contract drift check clean; ruff clean.
+
+**Addendum (same day): the surfaces, and a printable report.** The
+surfaces sub-agent worked in its own git worktree (d4ab5f3, cherry-picked;
+re-run by the lead: web lint, typecheck, 229 unit, 103 e2e). Web and Word
+gained a "Check as" selector whose labels come from `GET /v1/rules`
+(the contract's list with ids as labels when the registry is unavailable,
+as with the local engine), saved in the browser and, signed in, to the
+account; a changed type re-checks, as a changed mode does. A profile line
+under the results heading says what the check ran as (the engine's note
+alone when there is one; nothing for a guessed "general"). The brief is a
+tab beside the suggestions (ARIA tablist; only the active panel renders)
+and a tab in the taskpane; the web always asks for it, Word in Revise
+mode, and a Draft check gets one line saying the brief needs Revise.
+
+The owner then asked for a printable version of the output, "preserving
+the highlighted parts and the review side by side". `PrintReport.tsx`:
+one check on paper, made entirely in the browser (a print stylesheet and
+the browser's own Save-as-PDF; no text leaves the page, nothing is
+generated server-side). The text with every highlight numbered on the
+left, the suggestions under the same numbers on the right (number,
+category, section, message, suggested revision, the plain explanation,
+the source), whole-document checks after them, then the reviewer's brief
+on its own page, and a footer saying nothing was sent or stored. It is
+portalled to `<body>` and mounted only while printing, from the button or
+from the browser's own print command (`beforeprint` with `flushSync`, so
+Ctrl/Cmd+P sees it), and unmounted on `afterprint`, so a long document is
+never laid out twice. Light ink: grey tint, an underline whose style says
+the category, no colour by verdict. The lead rendered the A4 and Letter
+PDFs in headless Chromium with the e2e mock engine and read all four
+pages: text and suggestions side by side on pages 1–2, the brief on 3–4.
+Tests: 11 unit (`print.test.ts`, `print-report.test.tsx`) and 2 e2e (the
+report exists only on paper, everything else hidden; the browser's own
+print command mounts it too). Also in PLAN's inbox today: a presentation
+deck for an external audience (with a reminder set for the owner).
+

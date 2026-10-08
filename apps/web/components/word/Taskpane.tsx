@@ -2,19 +2,30 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { MAX_WORD_PARAGRAPHS, type AnalyzeWordResponse, type TierHealth, type WordSuggestion } from "@researchly/contract";
-import { addWord, loadMode, loadSettings, muteRule, saveMode } from "@/lib/account";
+import {
+  MAX_WORD_PARAGRAPHS,
+  type AnalyzeWordResponse,
+  type DocumentType,
+  type TierHealth,
+  type WordSuggestion,
+} from "@researchly/contract";
+import { addWord, loadDocumentType, loadMode, loadSettings, muteRule, saveDocumentType, saveMode } from "@/lib/account";
 import { getEngineAuth, signOut, useAuth } from "@/lib/auth";
 import { ENGINE_URL, LOCAL_ENGINE_URL, reportProblemHref } from "@/lib/config";
 import { analyzeWord, engineHealth } from "@/lib/engine";
 import { clientError, type CheckError } from "@/lib/errors";
 import { healthBanners } from "@/lib/health";
+import { briefState, profileLine } from "@/lib/profiles";
+import { useProfileChoices } from "@/lib/registry";
 import { useRuleScopes } from "@/lib/scope";
 import {
+  loadDocumentTypeChoice,
   loadEngineChoice,
   loadModeChoice,
+  saveDocumentTypeChoice,
   saveEngineChoice,
   saveModeChoice,
+  subscribeDocumentType,
   subscribeWordPrefs,
   type EngineChoice,
   type ModeChoice,
@@ -42,6 +53,9 @@ import {
   type SectionFocus,
 } from "@/lib/word/view";
 import { HealthBanner } from "../HealthBanner";
+import { ProfileSelect } from "../ProfileSelect";
+import { ReviewBrief } from "../ReviewBrief";
+import { ViewTabs, viewIds, type ResultsView } from "../ViewTabs";
 import { CodeSignIn } from "./CodeSignIn";
 import { WordCard, type CardNote, type WordCardActions } from "./WordCard";
 
@@ -98,6 +112,15 @@ export function Taskpane() {
   const [accountMode, setAccountMode] = useState<ModeChoice | null>(null);
   const [chosenMode, setChosenMode] = useState<ModeChoice | null>(null);
   const mode: ModeChoice = chosenMode ?? (signedIn ? accountMode : null) ?? storedMode ?? "revise";
+  // The article type to check as (S4), resolved like the stage: this
+  // session's choice, else the account's, else this computer's, else Auto.
+  const storedType = useSyncExternalStore(subscribeDocumentType, loadDocumentTypeChoice, () => null);
+  const [accountType, setAccountType] = useState<DocumentType | null>(null);
+  const [chosenType, setChosenType] = useState<DocumentType | null>(null);
+  const documentType: DocumentType = chosenType ?? (signedIn ? accountType : null) ?? storedType ?? "auto";
+  const [typeNote, setTypeNote] = useState<string | null>(null);
+  /** Suggestions or the reviewer's brief: survives a re-check, never stored. */
+  const [resultsView, setResultsView] = useState<ResultsView>("suggestions");
   const [showPreferences, setShowPreferences] = useState(false);
 
   const [phase, setPhase] = useState<Phase>("idle");
@@ -118,7 +141,16 @@ export function Taskpane() {
   const runningRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
   const errorRef = useRef<HTMLDivElement>(null);
-  const ids = { mode: useId(), modeHelp: useId(), sectionHelp: useId(), privacy: useId(), engine: useId(), prefs: useId() };
+  const ids = {
+    mode: useId(),
+    modeHelp: useId(),
+    type: useId(),
+    tabs: useId(),
+    sectionHelp: useId(),
+    privacy: useId(),
+    engine: useId(),
+    prefs: useId(),
+  };
 
   /* ---------- start-up: where are we running? ---------- */
 
@@ -163,6 +195,18 @@ export function Taskpane() {
     };
   }, [signedIn]);
 
+  // Signed in: the article type comes from the account too (shared with the website).
+  useEffect(() => {
+    if (!signedIn) return;
+    let live = true;
+    void loadDocumentType().then((r) => {
+      if (live && r.ok && r.data) setAccountType(r.data);
+    });
+    return () => {
+      live = false;
+    };
+  }, [signedIn]);
+
   useEffect(() => {
     if (error) errorRef.current?.focus();
   }, [error]);
@@ -171,15 +215,18 @@ export function Taskpane() {
   // section view). From the cloud engine's registry, once; the local server
   // has none, so the built-in list applies there.
   const scopes = useRuleScopes(engine === "cloud" ? ENGINE_URL : null, checked !== null);
+  // The article types' labels, from the same registry; the local server has none, so the ids stand in.
+  const profiles = useProfileChoices(engine === "cloud" ? ENGINE_URL : null);
 
   /* ---------- checking ---------- */
 
   const runCheck = useCallback(
-    async (opts?: { mode?: ModeChoice; showPreferences?: boolean; section?: boolean }) => {
+    async (opts?: { mode?: ModeChoice; showPreferences?: boolean; section?: boolean; documentType?: DocumentType }) => {
       const api = officeApi();
       if (runningRef.current || !api || host?.status !== "word") return;
       runningRef.current = true;
       const useMode = opts?.mode ?? mode;
+      const useType = opts?.documentType ?? documentType;
       const prefs = opts?.showPreferences ?? showPreferences;
       // A re-check (mute, stage change) keeps the current view: section or whole document.
       const wantSection = opts?.section ?? (checked?.focus !== null && checked?.focus !== undefined && !showWhole);
@@ -236,8 +283,17 @@ export function Taskpane() {
         abortRef.current = ctrl;
         setPhase("checking");
         setAnnouncement("Checking your document…");
+        // The brief is a whole-document read, so it is asked for in Revise only.
         const r = await analyzeWord(
-          { paragraphs, showPreferences: prefs, mode: useMode, disabledRules, signal: ctrl.signal },
+          {
+            paragraphs,
+            showPreferences: prefs,
+            mode: useMode,
+            disabledRules,
+            documentType: useType,
+            review: useMode === "revise",
+            signal: ctrl.signal,
+          },
           engineUrlFor(useEngine),
           useEngine === "local" ? null : getEngineAuth(),
         );
@@ -269,8 +325,22 @@ export function Taskpane() {
         abortRef.current = null;
       }
     },
-    [host, mode, showPreferences, engine, signedIn, checked, showWhole, scopes],
+    [host, mode, documentType, showPreferences, engine, signedIn, checked, showWhole, scopes],
   );
+
+  const onTypeChange = (next: DocumentType) => {
+    if (next === documentType) return;
+    setChosenType(next);
+    saveDocumentTypeChoice(next);
+    setTypeNote(null);
+    if (signedIn) {
+      void saveDocumentType(next).then((r) => {
+        if (r.ok) setAccountType(next);
+        else setTypeNote(`This choice could not be saved to your account, so it applies on this computer only. ${r.message}`);
+      });
+    }
+    if (checked) void runCheck({ documentType: next });
+  };
 
   const onModeChange = (next: ModeChoice) => {
     if (next === mode) return;
@@ -518,6 +588,8 @@ export function Taskpane() {
                 ) : null}
               </fieldset>
 
+              <ProfileSelect id={ids.type} value={documentType} choices={profiles} onChange={onTypeChange} note={typeNote} />
+
               <div className="tp-row">
                 <button
                   type="button"
@@ -637,61 +709,86 @@ export function Taskpane() {
                   {checked.data.mode === "draft" ? "Draft" : "Revise"}
                   {checked.engine === "local" ? ", checked on this computer" : ""}. Click a suggestion to find it in the document.
                 </p>
-                <div className="tp-notes">
-                  {focus ? (
-                    <p className="tp-note" data-testid="section-focus">
-                      Showing the section at the cursor, {sectionName(focus)}. The whole document was checked
-                      {split.elsewhere > 0
-                        ? `; ${split.elsewhere === 1 ? "1 more suggestion is" : `${split.elsewhere.toLocaleString("en-GB")} more suggestions are`} elsewhere in it.`
-                        : "."}{" "}
-                      <button type="button" className="btn-link" onClick={() => setShowWhole(true)} data-testid="show-whole-document">
-                        Show the whole document
-                      </button>
-                    </p>
-                  ) : null}
-                  {heldBack ? (
-                    <p className="tp-note" data-testid="held-back">
-                      {heldBack}{" "}
-                      <button type="button" className="btn-link" onClick={() => onModeChange("revise")}>
-                        Switch to Revise
-                      </button>
-                    </p>
-                  ) : null}
-                  {hiddenPrefs > 0 ? (
-                    <p className="tp-note" data-testid="hidden-prefs">
-                      {hiddenPrefs === 1 ? "1 preference is hidden" : `${hiddenPrefs} preferences are hidden`}: matters of taste.{" "}
-                      <button type="button" className="btn-link" onClick={onRevealPreferences}>
-                        Show {hiddenPrefs === 1 ? "it" : "them"}
-                      </button>
-                    </p>
-                  ) : null}
-                  {coverage ? (
-                    <p className="tp-note" data-testid="coverage">
-                      {coverage.checked} {coverage.notChecked}
-                    </p>
-                  ) : null}
-                </div>
-                {split.inSection.length === 0 ? (
-                  <div className="empty" data-testid="tp-empty">
-                    <p className="empty-title">{focus ? "Nothing to flag in this section" : "Nothing to flag"}</p>
-                    <p className="muted">
-                      {focus ? `No suggestions in ${sectionName(focus)}. ` : "No suggestions for the parts that were checked. "}This is not a score.
-                    </p>
+                {profileLine(checked.data.profile) ? (
+                  <p className="profile-line muted" data-testid="profile-line">
+                    {profileLine(checked.data.profile)}
+                  </p>
+                ) : null}
+                <ViewTabs view={resultsView} onChange={setResultsView} idBase={ids.tabs} />
+                {resultsView === "brief" ? (
+                  <div
+                    role="tabpanel"
+                    id={viewIds(ids.tabs, "brief").panel}
+                    aria-labelledby={viewIds(ids.tabs, "brief").tab}
+                    className="view-panel"
+                    data-testid="brief-panel"
+                  >
+                    <ReviewBrief state={briefState(checked.data)} onSwitchToRevise={() => onModeChange("revise")} />
                   </div>
                 ) : (
-                  <div className="cards tp-cards">{split.inSection.map(wordCard)}</div>
+                  <div
+                    role="tabpanel"
+                    id={viewIds(ids.tabs, "suggestions").panel}
+                    aria-labelledby={viewIds(ids.tabs, "suggestions").tab}
+                    className="view-panel tp-suggestions"
+                  >
+                    <div className="tp-notes">
+                      {focus ? (
+                        <p className="tp-note" data-testid="section-focus">
+                          Showing the section at the cursor, {sectionName(focus)}. The whole document was checked
+                          {split.elsewhere > 0
+                            ? `; ${split.elsewhere === 1 ? "1 more suggestion is" : `${split.elsewhere.toLocaleString("en-GB")} more suggestions are`} elsewhere in it.`
+                            : "."}{" "}
+                          <button type="button" className="btn-link" onClick={() => setShowWhole(true)} data-testid="show-whole-document">
+                            Show the whole document
+                          </button>
+                        </p>
+                      ) : null}
+                      {heldBack ? (
+                        <p className="tp-note" data-testid="held-back">
+                          {heldBack}{" "}
+                          <button type="button" className="btn-link" onClick={() => onModeChange("revise")}>
+                            Switch to Revise
+                          </button>
+                        </p>
+                      ) : null}
+                      {hiddenPrefs > 0 ? (
+                        <p className="tp-note" data-testid="hidden-prefs">
+                          {hiddenPrefs === 1 ? "1 preference is hidden" : `${hiddenPrefs} preferences are hidden`}: matters of taste.{" "}
+                          <button type="button" className="btn-link" onClick={onRevealPreferences}>
+                            Show {hiddenPrefs === 1 ? "it" : "them"}
+                          </button>
+                        </p>
+                      ) : null}
+                      {coverage ? (
+                        <p className="tp-note" data-testid="coverage">
+                          {coverage.checked} {coverage.notChecked}
+                        </p>
+                      ) : null}
+                    </div>
+                    {split.inSection.length === 0 ? (
+                      <div className="empty" data-testid="tp-empty">
+                        <p className="empty-title">{focus ? "Nothing to flag in this section" : "Nothing to flag"}</p>
+                        <p className="muted">
+                          {focus ? `No suggestions in ${sectionName(focus)}. ` : "No suggestions for the parts that were checked. "}This is not a score.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="cards tp-cards">{split.inSection.map(wordCard)}</div>
+                    )}
+                    {split.wholeDocument.length > 0 ? (
+                      <section className="card-group" aria-labelledby="tp-whole-document-title" data-testid="whole-document">
+                        <h3 id="tp-whole-document-title" className="col-title card-group-title">
+                          Whole document
+                        </h3>
+                        <p className="help card-group-help">
+                          Checks that read the whole text, such as figure references and abbreviations defined once.
+                        </p>
+                        <div className="cards tp-cards">{split.wholeDocument.map(wordCard)}</div>
+                      </section>
+                    ) : null}
+                  </div>
                 )}
-                {split.wholeDocument.length > 0 ? (
-                  <section className="card-group" aria-labelledby="tp-whole-document-title" data-testid="whole-document">
-                    <h3 id="tp-whole-document-title" className="col-title card-group-title">
-                      Whole document
-                    </h3>
-                    <p className="help card-group-help">
-                      Checks that read the whole text, such as figure references and abbreviations defined once.
-                    </p>
-                    <div className="cards tp-cards">{split.wholeDocument.map(wordCard)}</div>
-                  </section>
-                ) : null}
               </section>
             ) : null}
 

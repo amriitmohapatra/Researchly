@@ -3,7 +3,18 @@
  * `satisfies` the contract, so a contract change breaks the build of the
  * tests instead of silently drifting.
  */
-import type { AnalyzeRequest, AnalyzeResponse, ErrorResponse, RuleInfo, Suggestion, TierHealth } from "@researchly/contract";
+import type {
+  AnalyzeRequest,
+  AnalyzeResponse,
+  DocumentType,
+  ErrorResponse,
+  ProfileChoice,
+  ProfileInfo,
+  ReviewReport,
+  RuleInfo,
+  Suggestion,
+  TierHealth,
+} from "@researchly/contract";
 import { SAMPLE_SUGGESTIONS, SAMPLE_TEXT } from "./sample";
 
 export { SAMPLE_TEXT };
@@ -49,6 +60,94 @@ function countsOf(list: Suggestion[]): Record<string, number> {
 const withoutPrefs = SAMPLE_SUGGESTIONS.filter((s) => s.category !== "preference");
 const prefsOnly = SAMPLE_SUGGESTIONS.filter((s) => s.category === "preference");
 
+/* ---------- S4: article types and the reviewer's brief ---------- */
+
+/** GET /v1/rules `profiles`, as the engine lists them (packages/core/researchly/profiles.py), in display order. */
+export const PROFILES: ProfileChoice[] = [
+  { id: "auto", label: "Auto", summary: "Guess from the headings; otherwise general." },
+  { id: "general", label: "General", summary: "Any research prose: every check on, sections from the headings." },
+  { id: "manuscript", label: "Research article", summary: "A journal article with introduction, methods, results and discussion." },
+  { id: "thesis-chapter", label: "Thesis chapter", summary: "One chapter of a thesis; sections as the chapter has them." },
+  { id: "abstract", label: "Abstract", summary: "An abstract on its own: the six-move check runs on the whole text." },
+  { id: "commentary", label: "Commentary", summary: "An opinion or perspective piece: argued, not reported." },
+  { id: "policy-brief", label: "Policy brief", summary: "Evidence for decision-makers: context, evidence, options, recommendations." },
+  { id: "grant", label: "Grant proposal", summary: "Aims, background and approach for a funder." },
+  { id: "response-to-reviewers", label: "Response to reviewers", summary: "Point-by-point replies; the manuscript's own checks do not apply." },
+];
+
+export const COMMENTARY_NOTE =
+  "Checked as a commentary: it may argue assertively, so the hedging prompts are off; no research gap is expected; there is no abstract to judge.";
+
+/** The profile a check ran under, as the engine reports it for a requested type ("auto" guesses from the sample's headings). */
+export function profileFor(type: DocumentType | null | undefined): ProfileInfo {
+  if (!type || type === "auto") return { id: "manuscript", label: "Research article", guessed: true, note: "", rules_off: [] };
+  const choice = PROFILES.find((p) => p.id === type)!;
+  const commentary = type === "commentary";
+  return {
+    id: type,
+    label: choice.label,
+    guessed: false,
+    note: commentary ? COMMENTARY_NOTE : "",
+    rules_off: commentary ? ["AB801", "AB802", "C302", "C303", "D902"] : [],
+  };
+}
+
+export const REVIEW_SOURCE =
+  "M. Wallace & A. Wray (2016), Critical Reading and Writing for Postgraduates, 3rd ed., SAGE; Amriit's learnings from scientific-writing training (Researchly notes)";
+
+/** The critical reader's brief for SAMPLE_TEXT. Synthetic; the evidence sentences are the sample's own. */
+export const REVIEW: ReviewReport = {
+  source: REVIEW_SOURCE,
+  sections: ["introduction", "methods", "discussion"],
+  words: 74,
+  questions: [
+    {
+      id: "A",
+      question: "Why am I reading this?",
+      verdict: "Yours to answer: what do you need from this document?",
+      points: ["The brief below reads it as a sceptical reader would, from the evidence in the text alone."],
+      evidence: [],
+    },
+    {
+      id: "B",
+      question: "What are the authors trying to achieve?",
+      verdict: "No sentence says what this document sets out to answer.",
+      points: ["Where does the reader learn what question this document answers? One sentence near the end of the introduction usually does it."],
+      evidence: [],
+    },
+    {
+      id: "C",
+      question: "What are they claiming?",
+      verdict: "1 causal claim the design must carry.",
+      points: ["vector control reduces transmission"],
+      evidence: ["It is clearly proven that vector control reduces transmission."],
+    },
+    {
+      id: "D",
+      question: "How convincing are the claims?",
+      verdict: "3 things weaken the claims; see the points.",
+      points: [
+        "No gap statement found: the reader is not told what was missing before this work, so the demand for it is unstated.",
+        "Calibration: balanced (1.5:1) (hedges 4.05 per 100 words against boosters 2.7).",
+        "1 overclaiming verb such as 'prove' or 'conclusively': reserve strong verbs for strong evidence.",
+        "No limitations section: the reviewer will supply the rebuttal instead.",
+      ],
+      evidence: [],
+    },
+    {
+      id: "E",
+      question: "What use can be made of this?",
+      verdict: "No sentence says what a reader can do with this.",
+      points: ["The ending never widens back out: say what should change in the field or in practice, and for whom."],
+      evidence: ["This could potentially suggest seasonal forcing."],
+    },
+  ],
+  top_rules: [
+    { id: "S010", short: "Repeated word", count: 2 },
+    { id: "C201", short: "Booster overclaims certainty", count: 1 },
+  ],
+};
+
 /** show_preferences: false — the engine withholds preferences and reports how many. */
 export const happyResponse = {
   schema_version: "1",
@@ -64,6 +163,8 @@ export const happyResponse = {
   elapsed_ms: 412,
   mode: "revise",
   hidden_by_mode: 0,
+  profile: profileFor("auto"),
+  review: REVIEW,
 } satisfies AnalyzeResponse;
 
 /** show_preferences: true */
@@ -160,7 +261,8 @@ export const RULES_REGISTRY: RuleInfo[] = ["C201", "P110", "V305", "V310", "G110
   scope: id === "W211" ? "document" : "sentence",
 }));
 
-/** Pick the right success fixture for a request, as the real engine would. */
+/** Pick the right success fixture for a request, as the real engine would: preferences, the profile asked for, the brief only when asked. */
 export function responseFor(req: AnalyzeRequest): AnalyzeResponse {
-  return req.options?.show_preferences ? withPreferencesResponse : happyResponse;
+  const base = req.options?.show_preferences ? withPreferencesResponse : happyResponse;
+  return { ...base, profile: profileFor(req.options?.document_type), review: req.options?.review ? REVIEW : null };
 }

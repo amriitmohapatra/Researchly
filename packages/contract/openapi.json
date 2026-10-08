@@ -58,6 +58,21 @@
             "default": "revise",
             "description": "The mode this check ran in."
           },
+          "profile": {
+            "$ref": "#/components/schemas/ProfileInfo",
+            "description": "The article-type profile this check ran under."
+          },
+          "review": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReviewReport"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Present when `options.review` was true."
+          },
           "schema_version": {
             "const": "1",
             "default": "1",
@@ -118,6 +133,17 @@
             "title": "Disabled Rules",
             "type": "array"
           },
+          "document_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DocumentType"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The article type to check as. Omitted: the caller's saved setting, else auto."
+          },
           "mode": {
             "anyOf": [
               {
@@ -128,6 +154,12 @@
               }
             ],
             "description": "Draft or Revise for this request. Omitted: the caller's saved setting, else revise."
+          },
+          "review": {
+            "default": false,
+            "description": "Also build the critical reader's brief (`review` in the response) from the same analysis.",
+            "title": "Review",
+            "type": "boolean"
           },
           "show_preferences": {
             "default": false,
@@ -217,6 +249,21 @@
             "$ref": "#/components/schemas/Mode",
             "default": "revise",
             "description": "The mode this check ran in."
+          },
+          "profile": {
+            "$ref": "#/components/schemas/ProfileInfo",
+            "description": "The article-type profile this check ran under."
+          },
+          "review": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReviewReport"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Present when `options.review` was true."
           },
           "schema_version": {
             "const": "1",
@@ -345,6 +392,21 @@
             "default": "revise",
             "description": "The mode this check ran in."
           },
+          "profile": {
+            "$ref": "#/components/schemas/ProfileInfo",
+            "description": "The article-type profile this check ran under."
+          },
+          "review": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReviewReport"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Present when `options.review` was true."
+          },
           "schema_version": {
             "const": "1",
             "default": "1",
@@ -434,6 +496,22 @@
         ],
         "title": "Coverage",
         "type": "object"
+      },
+      "DocumentType": {
+        "description": "Article-type profile (S4). `auto` guesses from the headings and is\notherwise `general`; the others switch off the checks that do not\napply to that kind of document and say what section unheaded prose is\nin (a commentary is argued like a Discussion).",
+        "enum": [
+          "auto",
+          "general",
+          "manuscript",
+          "thesis-chapter",
+          "abstract",
+          "commentary",
+          "policy-brief",
+          "grant",
+          "response-to-reviewers"
+        ],
+        "title": "DocumentType",
+        "type": "string"
       },
       "EngineInfo": {
         "additionalProperties": false,
@@ -626,6 +704,178 @@
         "title": "Mode",
         "type": "string"
       },
+      "ProfileChoice": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/DocumentType"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "summary"
+        ],
+        "title": "ProfileChoice",
+        "type": "object"
+      },
+      "ProfileInfo": {
+        "additionalProperties": false,
+        "description": "The article-type profile a check ran under.",
+        "properties": {
+          "guessed": {
+            "description": "True when the type was `auto` and guessed from the headings.",
+            "title": "Guessed",
+            "type": "boolean"
+          },
+          "id": {
+            "$ref": "#/components/schemas/DocumentType"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "description": "One line saying what the profile switched off, empty when nothing.",
+            "title": "Note",
+            "type": "string"
+          },
+          "rules_off": {
+            "description": "Rules not run for this type.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Rules Off",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "guessed"
+        ],
+        "title": "ProfileInfo",
+        "type": "object"
+      },
+      "ReviewQuestion": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence": {
+            "description": "Sentences of the document the verdict rests on (never logged).",
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "id": {
+            "description": "A to E.",
+            "title": "Id",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "verdict": {
+            "description": "One line answering the question from the evidence.",
+            "title": "Verdict",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "question",
+          "verdict"
+        ],
+        "title": "ReviewQuestion",
+        "type": "object"
+      },
+      "ReviewReport": {
+        "additionalProperties": false,
+        "description": "The critical reader's brief: five questions answered from the same\ndeterministic analysis as the suggestions.",
+        "properties": {
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewQuestion"
+            },
+            "title": "Questions",
+            "type": "array"
+          },
+          "sections": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sections",
+            "type": "array"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "top_rules": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewRuleCount"
+            },
+            "title": "Top Rules",
+            "type": "array"
+          },
+          "words": {
+            "minimum": 0.0,
+            "title": "Words",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "source",
+          "sections",
+          "words",
+          "questions"
+        ],
+        "title": "ReviewReport",
+        "type": "object"
+      },
+      "ReviewRuleCount": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "minimum": 0.0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "short": {
+            "title": "Short",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "short",
+          "count"
+        ],
+        "title": "ReviewRuleCount",
+        "type": "object"
+      },
       "RuleInfo": {
         "additionalProperties": false,
         "properties": {
@@ -714,6 +964,14 @@
       "RulesResponse": {
         "additionalProperties": false,
         "properties": {
+          "profiles": {
+            "description": "Article types a caller can check as, in display order (S4).",
+            "items": {
+              "$ref": "#/components/schemas/ProfileChoice"
+            },
+            "title": "Profiles",
+            "type": "array"
+          },
           "rules": {
             "items": {
               "$ref": "#/components/schemas/RuleInfo"

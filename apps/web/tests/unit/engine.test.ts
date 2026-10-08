@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { analyze, listRules } from "@/lib/engine";
+import { analyze, buildRequest, listRegistry, listRules } from "@/lib/engine";
 
 function respond(body: unknown, status = 200) {
   vi.stubGlobal(
@@ -29,6 +29,42 @@ describe("contract version", () => {
     respond({ rules: [{ id: "G101", name: "n", short: "s" }] });
     const r = await listRules("http://engine.test");
     expect(r.ok && r.data.map((x) => x.id)).toEqual(["G101"]);
+  });
+});
+
+describe("S4 options on every request", () => {
+  it("names the article type (Auto unless chosen) and whether the brief is wanted", () => {
+    expect(buildRequest({ content: "x", format: "plain", showPreferences: false })).toEqual({
+      content: "x",
+      format: "plain",
+      options: { show_preferences: false, document_type: "auto", review: false },
+    });
+    expect(buildRequest({ content: "x", format: "latex", showPreferences: true, documentType: "commentary", review: true }).options).toEqual({
+      show_preferences: true,
+      document_type: "commentary",
+      review: true,
+    });
+    expect(buildRequest({ content: "x", format: "plain", showPreferences: false, documentType: null }).options?.document_type).toBe("auto");
+  });
+
+  it("sends them on the wire", async () => {
+    respond({ ...minimal, schema_version: "1" });
+    await analyze({ ...params, documentType: "grant", review: true }, "http://engine.test");
+    const [, init] = vi.mocked(fetch).mock.calls[0]!;
+    expect(JSON.parse(String(init!.body)).options).toEqual({ show_preferences: false, document_type: "grant", review: true });
+  });
+
+  it("/v1/rules carries the article types; an older engine's answer (no profiles, odd entries) still works", async () => {
+    respond({
+      rules: [{ id: "G101", name: "n", short: "s" }],
+      profiles: [{ id: "grant", label: "Grant proposal", summary: "Aims for a funder." }, { id: "x" }, "y"],
+    });
+    const r = await listRegistry("http://engine.test");
+    expect(r.ok && r.data.rules.map((x) => x.id)).toEqual(["G101"]);
+    expect(r.ok && r.data.profiles).toEqual([{ id: "grant", label: "Grant proposal", summary: "Aims for a funder." }]);
+    respond({ rules: [] });
+    const old = await listRegistry("http://engine.test");
+    expect(old.ok && old.data.profiles).toEqual([]);
   });
 });
 

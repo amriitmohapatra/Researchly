@@ -1,7 +1,7 @@
 import type { Page, Request, Route } from "@playwright/test";
 import type { AnalyzeRequest } from "@researchly/contract";
 import type { RuleInfo } from "@researchly/contract";
-import { ENGINE, responseFor, RULES_REGISTRY } from "./fixtures";
+import { ENGINE, PROFILES, responseFor, RULES_REGISTRY } from "./fixtures";
 
 const CORS = {
   "access-control-allow-origin": "*",
@@ -17,16 +17,17 @@ export async function json(route: Route, status: number, body: unknown, headers:
 }
 
 /**
- * Mock /v1/analyze (and /v1/rules, which the page asks once after its first
- * results: `rules` is the registry, or null for an engine without one).
- * Returns the list of request bodies the page sent.
+ * Mock /v1/analyze (and /v1/rules, which the page asks once per engine, for
+ * the article types' labels and the rules' scopes: `rules` is the registry,
+ * or null for an engine without one). Returns the list of request bodies
+ * the page sent.
  */
 export async function mockEngine(page: Page, handler?: Handler, rules: RuleInfo[] | null = RULES_REGISTRY): Promise<AnalyzeRequest[]> {
   const seen: AnalyzeRequest[] = [];
   await page.route(`${ENGINE}/v1/rules`, async (route) => {
     if (route.request().method() === "OPTIONS") return route.fulfill({ status: 204, headers: CORS });
     if (rules === null) return json(route, 500, { error: { code: "internal", message: "no registry", request_id: "req-rules" } });
-    return json(route, 200, { rules });
+    return json(route, 200, { rules, profiles: PROFILES });
   });
   await page.route(`${ENGINE}/v1/analyze`, async (route) => {
     if (route.request().method() === "OPTIONS") {

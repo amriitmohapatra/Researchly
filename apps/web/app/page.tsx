@@ -1,5 +1,6 @@
 import { Checker } from "@/components/Checker";
 import { SiteFooter, SiteHeader } from "@/components/SiteHeader";
+import { WhyResearchly } from "@/components/WhyResearchly";
 
 /**
  * The checker: paste text (S1) or, signed in, check a file (S2).
@@ -23,6 +24,7 @@ export default function Home() {
           </p>
         </div>
         <Checker />
+        <WhyResearchly />
       </main>
       <SiteFooter />
     </>

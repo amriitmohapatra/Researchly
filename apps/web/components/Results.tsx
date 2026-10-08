@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { createPortal, flushSync } from "react-dom";
 import type { AnalyzeResponse, SourceInfo, Suggestion } from "@researchly/contract";
 import { CATEGORIES, CATEGORY_ORDER, countByCategory, sectionLabel } from "@/lib/categories";
+import { briefState, profileLine } from "@/lib/profiles";
 import type { ScopeMap } from "@/lib/scope";
 import { resolveSpans, segment } from "@/lib/segments";
 import { buildLocator, isMultiFile } from "@/lib/source";
@@ -19,7 +21,10 @@ import { CategoryIcon } from "./CategoryIcon";
 import { DocumentView } from "./DocumentView";
 import { HealthBanner } from "./HealthBanner";
 import { MetricsPanel } from "./MetricsPanel";
+import { PrintReport } from "./PrintReport";
+import { ReviewBrief } from "./ReviewBrief";
 import { SuggestionCard, type CardActions } from "./SuggestionCard";
+import { ViewTabs, viewIds, type ResultsView } from "./ViewTabs";
 
 interface Props {
   data: AnalyzeResponse;
@@ -35,6 +40,9 @@ interface Props {
   actions?: CardActions | null;
   /** Rule scopes from the engine's registry, when loaded; null means the built-in list applies. */
   scopes?: ScopeMap | null;
+  /** Suggestions, or the reviewer's brief (S4). Held by the parent so a re-check keeps the view. */
+  view: ResultsView;
+  onView: (v: ResultsView) => void;
 }
 
 type FocusRequest = { id: string; target: "mark" | "card"; seq: number };
@@ -47,15 +55,50 @@ function prefersReducedMotion(): boolean {
 
 const lineFmt = new Intl.NumberFormat("en-GB");
 
-export function Results({ data, submittedText, showPreferences, stale, busy, onRevealPreferences, source, actions, scopes = null }: Props) {
+export function Results({
+  data,
+  submittedText,
+  showPreferences,
+  stale,
+  busy,
+  onRevealPreferences,
+  source,
+  actions,
+  scopes = null,
+  view,
+  onView,
+}: Props) {
   const [filter, setFilter] = useState<Filter>("all");
   // The section the writer is working on. Starts at "all" for every check
   // (the component remounts per check) and is never stored anywhere.
   const [section, setSection] = useState<SectionFilter>("all");
   const sectionId = useId();
+  const tabsId = useId();
+  const profileText = profileLine(data.profile);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [focusReq, setFocusReq] = useState<FocusRequest | null>(null);
   const docColRef = useRef<HTMLDivElement>(null);
+  // The printable report (S4) is mounted only while printing: from the
+  // button, or from the browser's own print command (Ctrl/Cmd+P), whose
+  // beforeprint event has to see it in the DOM synchronously.
+  const [printing, setPrinting] = useState<Date | null>(null);
+  const printHelpId = useId();
+  const onPrint = useCallback(() => setPrinting(new Date()), []);
+  useEffect(() => {
+    if (!printing) return;
+    const id = window.setTimeout(() => window.print(), 0);
+    return () => window.clearTimeout(id);
+  }, [printing]);
+  useEffect(() => {
+    const before = () => flushSync(() => setPrinting((p) => p ?? new Date()));
+    const after = () => setPrinting(null);
+    window.addEventListener("beforeprint", before);
+    window.addEventListener("afterprint", after);
+    return () => {
+      window.removeEventListener("beforeprint", before);
+      window.removeEventListener("afterprint", after);
+    };
+  }, []);
 
   const shown = useMemo(() => shownSuggestions(data, showPreferences), [data, showPreferences]);
   const counts = useMemo(() => countByCategory(shown), [shown]);
@@ -149,7 +192,23 @@ export function Results({ data, submittedText, showPreferences, stale, busy, onR
           {sections.length > 0 ? <>Sections detected: {sections.join(", ")}</> : <>No section headings detected</>}
           {" · "}checked in {seconds}&nbsp;s
         </p>
+        <p className="results-print">
+          <button type="button" className="btn-link" onClick={onPrint} aria-describedby={printHelpId} data-testid="print-report-button">
+            Print or save as PDF
+          </button>
+          <span id={printHelpId} className="sr-only">
+            Opens your browser&rsquo;s print dialog with the text, its highlights and the suggestions side by side, then the
+            reviewer&rsquo;s brief. Choose Save as PDF there to keep a file. Nothing leaves this page.
+          </span>
+        </p>
       </div>
+      {profileText ? (
+        <p className="profile-line muted" data-testid="profile-line">
+          {profileText}
+        </p>
+      ) : null}
+
+      <ViewTabs view={view} onChange={onView} idBase={tabsId} />
 
       {stale ? (
         <p className="notice notice-quiet" data-testid="stale-note">
@@ -170,16 +229,26 @@ export function Results({ data, submittedText, showPreferences, stale, busy, onR
         </div>
       ) : null}
 
-      {shown.length === 0 ? (
-        <>
+      {view === "brief" ? (
+        <div
+          role="tabpanel"
+          id={viewIds(tabsId, "brief").panel}
+          aria-labelledby={viewIds(tabsId, "brief").tab}
+          className="view-panel"
+          data-testid="brief-panel"
+        >
+          <ReviewBrief state={briefState(data)} />
+        </div>
+      ) : shown.length === 0 ? (
+        <div role="tabpanel" id={viewIds(tabsId, "suggestions").panel} aria-labelledby={viewIds(tabsId, "suggestions").tab}>
           {hiddenNote}
           <div className="empty" data-testid="empty-state">
             <p className="empty-title">No suggestions. That&rsquo;s not a score.</p>
             <p className="muted">It means none of our checks fired on this text. The read-outs below still describe it.</p>
           </div>
-        </>
+        </div>
       ) : (
-        <>
+        <div role="tabpanel" id={viewIds(tabsId, "suggestions").panel} aria-labelledby={viewIds(tabsId, "suggestions").tab}>
           <div className="toolbar">
             <div className="filters" role="group" aria-label="Filter suggestions by category">
               {chips.map((c) => {
@@ -286,7 +355,7 @@ export function Results({ data, submittedText, showPreferences, stale, busy, onR
               ) : null}
             </div>
           </div>
-        </>
+        </div>
       )}
 
       {data.metrics ? <MetricsPanel metrics={data.metrics} /> : null}
@@ -295,6 +364,12 @@ export function Results({ data, submittedText, showPreferences, stale, busy, onR
         Checked by engine {data.engine.service_version} (core {data.engine.core_version}) with{" "}
         {data.engine.rules_loaded} rules. Each suggestion names its source; open &ldquo;The full reasoning&rdquo; for the detail.
       </p>
+      {printing && typeof document !== "undefined"
+        ? createPortal(
+            <PrintReport data={data} submittedText={submittedText} showPreferences={showPreferences} source={source} scopes={scopes} at={printing} />,
+            document.body,
+          )
+        : null}
     </section>
   );
 }

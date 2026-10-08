@@ -49,6 +49,8 @@ WORKS = {
     "NG5001-U1": LEARNINGS,
     "NG5001-U2": LEARNINGS,
     "Shehzad": 'W. Shehzad (2008), "Move two: establishing a niche"',
+    "WW": ("M. Wallace & A. Wray (2016), Critical Reading and Writing for "
+           "Postgraduates, 3rd ed., SAGE"),
     "LanguageTool": "LanguageTool, open-source grammar checker",
     "symspellpy": ("SymSpell spelling engine with Researchly's scientific "
                    "lexicon"),

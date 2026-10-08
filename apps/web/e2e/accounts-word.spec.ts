@@ -149,6 +149,30 @@ test.describe("Word taskpane, signed in", () => {
     expect(JSON.parse(upsert!.body)).toEqual({ mode: "revise" });
   });
 
+  test("the article type is saved to the account and read back from it (S4)", async ({ page }) => {
+    await seedSession(page);
+    const sb = await mockSupabase(page, {
+      settings: { disabled_rules: [], show_preferences: false, locale: "en-GB", document_type: "thesis-chapter" },
+    });
+    await fakeOffice(page);
+    const calls = await mockEngineAuth(page, (_c, route) => reply(route, 200, { ...reviseResponse, signed_in: true }));
+    await page.goto("/word");
+    // From the account, not from this computer.
+    await expect(page.getByTestId("document-type")).toHaveValue("thesis-chapter");
+    await check(page);
+    const typeOf = (i: number) =>
+      (calls.filter((c) => c.path === "/v1/analyze-word")[i]!.json as { options: { document_type: string } }).options.document_type;
+    expect(typeOf(0)).toBe("thesis-chapter");
+
+    await page.getByTestId("document-type").selectOption("grant");
+    await expect.poll(() => sb.settings?.document_type).toBe("grant");
+    const upsert = sb.sent.find((r) => r.path === "/rest/v1/user_settings" && r.method === "POST");
+    expect(JSON.parse(upsert!.body)).toEqual({ document_type: "grant" });
+    // A changed type checks again, as a changed stage does.
+    await expect.poll(() => calls.filter((c) => c.path === "/v1/analyze-word").length).toBe(2);
+    expect(typeOf(1)).toBe("grant");
+  });
+
   test("a failed save of Draft/Revise is said, and the choice still applies here", async ({ page }) => {
     await seedSession(page);
     await mockSupabase(page);

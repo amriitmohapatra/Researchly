@@ -37,7 +37,7 @@ def test_analyze_returns_a_complete_payload(isolated):
     assert a.document is not None
     d = a.to_dict()
     assert set(d) == {"suggestions", "counts", "hidden_preferences",
-                      "hidden_by_mode",
+                      "hidden_by_mode", "profile", "review",
                       "metrics", "sections_detected", "health", "config"}
 
 
