@@ -38,6 +38,8 @@ export interface FakeWordConfig {
   fieldParagraphs?: number[];
   /** Mimic office.js removing history.pushState/replaceState. */
   nullHistory?: boolean;
+  /** Where the cursor is when the pane opens: a paragraph index (default 0). */
+  cursor?: number;
 }
 
 export interface FakeEdit {
@@ -89,14 +91,31 @@ export function installFakeOffice(target: any, config: FakeWordConfig): FakeWord
     let ops: (() => void)[] = [];
     let poisoned = false;
 
-    function makeRange(pi: number, start: number, end: number) {
+    // A range inside one paragraph; `endPi` > pi only for a range made by expandTo.
+    function makeRange(pi: number, start: number, end: number, endPi: number = pi) {
       const r: any = {
         pi,
         start,
         end,
+        endPi,
         text: state.paragraphs[pi]!.text.slice(start, end),
         load() {
           r.text = state.paragraphs[r.pi]!.text.slice(r.start, r.end);
+        },
+        getRange(where?: string) {
+          if (where === "End") return makeRange(r.endPi, r.end, r.end);
+          if (where === "Start") return makeRange(r.pi, r.start, r.start);
+          return makeRange(r.pi, r.start, r.end, r.endPi);
+        },
+        expandTo(other: any) {
+          const first = other.pi < r.pi || (other.pi === r.pi && other.start < r.start) ? other : r;
+          const last = other.endPi > r.endPi || (other.endPi === r.endPi && other.end > r.end) ? other : r;
+          return makeRange(first.pi, first.start, last.end, last.endPi);
+        },
+        get paragraphs() {
+          const items: any[] = [];
+          for (let i = r.pi; i <= r.endPi; i++) items.push(makeParagraph(i));
+          return { items, load() {} };
         },
         select() {
           ops.push(() => {
@@ -148,8 +167,22 @@ export function installFakeOffice(target: any, config: FakeWordConfig): FakeWord
     };
 
     const document: any = {
-      body: { paragraphs },
+      body: {
+        paragraphs,
+        getRange(where?: string) {
+          const last = state.paragraphs.length - 1;
+          if (where === "Start") return makeRange(0, 0, 0);
+          if (where === "End") return makeRange(last, state.paragraphs[last]!.text.length, state.paragraphs[last]!.text.length);
+          return makeRange(0, 0, state.paragraphs[last]!.text.length, last);
+        },
+      },
       load() {},
+      getSelection() {
+        const sel = state.selection;
+        if (sel) return makeRange(sel.paragraph, sel.start, sel.end);
+        const pi = Math.min(Math.max(config.cursor ?? 0, 0), state.paragraphs.length - 1);
+        return makeRange(pi, 0, 0);
+      },
     };
     Object.defineProperty(document, "changeTrackingMode", {
       get: () => state.trackingMode,

@@ -2,7 +2,7 @@
 
 import { memo, type MouseEvent } from "react";
 import type { Suggestion } from "@researchly/contract";
-import { categoryMeta, sectionLabel, tierLabel } from "@/lib/categories";
+import { categoryMeta, sectionLabel } from "@/lib/categories";
 import { dictionaryCandidate, isRuleId } from "@/lib/settings";
 import { CategoryBadge } from "./CategoryIcon";
 
@@ -33,6 +33,16 @@ function quote(text: string): string {
   return t.length > MAX_QUOTE ? `${t.slice(0, MAX_QUOTE - 1)}…` : t;
 }
 
+/** The label of the disclosure that holds the technical account. Pinned by the e2e suite. */
+export const REASONING_LABEL = "The full reasoning";
+
+/**
+ * One suggestion (DESIGN.md): category and section, what was noticed, the
+ * flagged words, the revision (your call), the explanation in everyday
+ * words, then the full reasoning behind a disclosure, and the source as a
+ * reference. The rule id and tier are data attributes only: a writer never
+ * needs them, an account action or a test does.
+ */
 export const SuggestionCard = memo(function SuggestionCard({
   suggestion: s,
   active,
@@ -48,6 +58,9 @@ export const SuggestionCard = memo(function SuggestionCard({
   // Only ids the settings table accepts can be muted (e.g. "G101").
   const mutable = isRuleId(s.rule_id);
   const hasActions = Boolean(actions && (mutable || word));
+  // An older engine sends no plain explanation: the fuller account takes its place, once.
+  const plain = s.plain.trim() || s.why.trim();
+  const reasoning = s.plain.trim() && s.why.trim() && s.why.trim() !== plain ? s.why.trim() : null;
 
   // Mouse convenience: clicking the card's body jumps to the text. Keyboard
   // users have the explicit "Show in text" button.
@@ -66,6 +79,8 @@ export const SuggestionCard = memo(function SuggestionCard({
       onClick={onClick}
       data-testid="suggestion-card"
       data-category={meta.id}
+      data-rule={s.rule_id}
+      data-tier={s.tier}
     >
       <div className="card-head">
         <CategoryBadge category={meta.id} />
@@ -102,63 +117,56 @@ export const SuggestionCard = memo(function SuggestionCard({
           {s.replacement === "" ? <em>remove this</em> : <q>{s.replacement}</q>}
         </p>
       ) : null}
-      <p className="card-source">
-        <span className="card-source-label">Source</span> <cite>{s.source}</cite>
-      </p>
-      <div className={`card-foot${hasActions ? " card-foot-actions" : ""}`}>
-        <details className="why">
-          <summary>Why?</summary>
+      {plain ? (
+        <p className="card-plain" data-testid="card-plain">
+          {plain}
+        </p>
+      ) : null}
+      {reasoning ? (
+        <details className="why" data-testid="card-reasoning">
+          <summary>{REASONING_LABEL}</summary>
           <div className="why-body">
-            <p>{s.why}</p>
-            <dl className="why-meta">
-              <div>
-                <dt>Rule</dt>
-                <dd>
-                  <span translate="no">{s.rule_id}</span> · {s.rule_name}
-                </dd>
-              </div>
-              <div>
-                <dt>Checked by</dt>
-                <dd>{tierLabel(s.tier)}</dd>
-              </div>
-            </dl>
+            <p>{reasoning}</p>
           </div>
         </details>
-        {actions && hasActions ? (
-          <div className="card-actions">
-            {mutable ? (
-              <button
-                type="button"
-                className="btn-link btn-link-quiet"
-                aria-describedby={msgId}
-                aria-disabled={actions.busy || undefined}
-                onClick={() => {
-                  if (!actions.busy) actions.onMute(s);
-                }}
-                data-testid="mute-rule"
-              >
-                Mute this rule
-              </button>
-            ) : null}
-            {word ? (
-              <button
-                type="button"
-                className="btn-link btn-link-quiet"
-                aria-disabled={actions.busy || undefined}
-                onClick={() => {
-                  if (!actions.busy) actions.onAddWord(s, word);
-                }}
-                data-testid="add-word"
-              >
-                {/* One text run: a flex button would drop the spaces between separate nodes. */}
-                <span>
-                  Add <q translate="no">{word}</q> to dictionary
-                </span>
-              </button>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+      ) : null}
+      <p className="card-source">
+        <span className="card-source-label">Source:</span> <cite>{s.source}</cite>
+      </p>
+      {actions && hasActions ? (
+        <div className="card-foot card-actions">
+          {mutable ? (
+            <button
+              type="button"
+              className="btn-link btn-link-quiet"
+              aria-describedby={msgId}
+              aria-disabled={actions.busy || undefined}
+              onClick={() => {
+                if (!actions.busy) actions.onMute(s);
+              }}
+              data-testid="mute-rule"
+            >
+              Mute this rule
+            </button>
+          ) : null}
+          {word ? (
+            <button
+              type="button"
+              className="btn-link btn-link-quiet"
+              aria-disabled={actions.busy || undefined}
+              onClick={() => {
+                if (!actions.busy) actions.onAddWord(s, word);
+              }}
+              data-testid="add-word"
+            >
+              {/* One text run: a flex button would drop the spaces between separate nodes. */}
+              <span>
+                Add <q translate="no">{word}</q> to dictionary
+              </span>
+            </button>
+          ) : null}
+        </div>
+      ) : null}
     </article>
   );
 });

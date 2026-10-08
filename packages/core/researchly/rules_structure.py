@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 
-from .document import Document
+from .document import _RELATION, Document
 from .engine import Category, Suggestion, rule
 from .structure import Structure, analyse, number_text
 
@@ -78,11 +78,12 @@ def _text_mentions(st: Structure):
 
 @rule("X101", "float-not-cited", Category.CONVENTION,
       "A figure or table the text never cites.",
-      "Every figure and table should be cited in the text, so the reader "
-      "knows when to look at it and what to see there. One that is never "
-      "cited is either missing its sentence in the Results or not needed. "
-      "(ICMJE Recommendations: number figures and tables in the order the "
-      "text first cites them.)",
+      'Every figure and table should be cited in the text, so the reader '
+      'knows when to look at it and what to see there. One that is never '
+      'cited is either missing its sentence in the Results or not needed.',
+      plain=('The text never mentions this figure or table. Readers need a '
+             'sentence that tells them when to look at it and what to see. If no '
+             'sentence needs it, it may not be needed.'),
       source="ICMJE",
       scope="document")
 def x101_float_not_cited(doc, document: Document):
@@ -110,10 +111,13 @@ def x101_float_not_cited(doc, document: Document):
 
 @rule("X102", "float-cited-out-of-order", Category.CONVENTION,
       "Figures or tables first cited out of numerical order.",
-      "Figures and tables are numbered in the order the text first cites "
-      "them, so a reader meets Figure 2 before Figure 3. When the text "
-      "cites Figure 3 first, either the numbering or the order of the "
-      "argument needs changing. (ICMJE Recommendations.)",
+      'Figures and tables are numbered in the order the text first cites '
+      'them, so a reader meets Figure 2 before Figure 3. When the text '
+      'cites Figure 3 first, either the numbering or the order of the '
+      'argument needs changing.',
+      plain=('Figures and tables should be numbered in the order you first '
+             'mention them. Here a later one is mentioned before an earlier one. '
+             'Renumber them, or change the order of the text.'),
       source="ICMJE",
       scope="document")
 def x102_cited_out_of_order(doc, document: Document):
@@ -140,8 +144,10 @@ def x102_cited_out_of_order(doc, document: Document):
       "A cross-reference to a figure, table or label that does not exist.",
       "A \\ref to a label that is never defined prints as '??' in the PDF; "
       "a 'Figure 5' in a document with four figures sends the reader "
-      "nowhere. Usually a typo in the label or a figure that was removed. "
-      "(ICMJE Recommendations.)",
+      'nowhere. Usually a typo in the label or a figure that was removed.',
+      plain=('The text refers to a figure, table or label that does not exist. '
+             "In LaTeX this prints as '??'. It is usually a typo in the label, "
+             'or a figure that was removed.'),
       source="ICMJE",
       scope="document")
 def x103_broken_reference(doc, document: Document):
@@ -187,10 +193,13 @@ def x103_broken_reference(doc, document: Document):
 
 @rule("X104", "float-before-first-citation", Category.CONVENTION,
       "A figure or table placed before the text first cites it.",
-      "A reader should meet the sentence that cites a figure before the "
-      "figure itself; placed earlier, it interrupts the paragraph before "
-      "it with something not yet introduced. (ICMJE Recommendations.) "
-      "Word documents only: LaTeX places floats itself.",
+      'A reader should meet the sentence that cites a figure before the '
+      'figure itself; placed earlier, it interrupts the paragraph before '
+      'it with something not yet introduced. Word documents only: LaTeX '
+      'places floats itself.',
+      plain=('This figure or table appears before the sentence that first '
+             'mentions it. Move it after that paragraph, so readers meet the '
+             'explanation before the picture.'),
       source="ICMJE",
       scope="document")
 def x104_before_first_citation(doc, document: Document):
@@ -238,10 +247,13 @@ _WORDS = re.compile(r"[A-Za-z][A-Za-z'-]*")
 
 @rule("X202", "caption-too-short", Category.IMPROVEMENT,
       "A figure caption too short to be read on its own.",
-      "Readers look at figures and tables before they read the text, and "
+      'Readers look at figures and tables before they read the text, and '
       "many read nothing else. A caption should state the figure's point "
-      "and define what it shows, so the figure can be read unaided; a "
-      "label of two or three words cannot. (Guide §9.7.)",
+      'and define what it shows, so the figure can be read unaided; a '
+      'label of two or three words cannot.',
+      plain=('This figure caption is only a few words. Many readers look at the '
+             'figures first, so the caption should say what the figure shows and '
+             'what each part means, without needing the main text.'),
       source="§9.7",
       scope="document")
 def x202_caption_too_short(doc, document: Document):
@@ -271,10 +283,13 @@ _NUMBERED_ENV = re.compile(
 
 @rule("X301", "equation-not-referenced", Category.PREFERENCE,
       "A numbered equation the text never refers to.",
-      "Introduce an equation, display it, then interpret it. A numbered "
-      "equation the text never refers to back is often one that floats in "
-      "unannounced or is never interpreted; if it is, unnumber it "
-      "(equation*). (Guide §9.2.)",
+      'Introduce an equation, display it, then interpret it. A numbered '
+      'equation the text never refers back to is often one that floats in '
+      'unannounced or is never interpreted; if so, remove the number '
+      '(equation*).',
+      plain=('This equation has a number but the text never refers to it. '
+             'Numbers are for equations you refer back to. Either mention it in '
+             'the text, or remove the number.'),
       source="§9.2",
       scope="document")
 def x301_equation_not_referenced(doc, document: Document):
@@ -344,6 +359,91 @@ def _numbers_in(env: str, body: str) -> int:
     return max(0, rows - len(re.findall(r"\\(?:nonumber|notag)\b", body)))
 
 
+# --- X302: is the equation part of a sentence? -----------------------------------------
+
+# "e.g.", "i.e.", "Eq.", "Fig.", an initial: a full stop that is not the end
+# of a sentence.
+_ABBREV_STOP = re.compile(
+    r"(?:\b(?:e\.g|i\.e|cf|vs|etc|et al|Eq|Eqs|Fig|Figs|Ref|Refs|No|resp|"
+    r"approx|ca|viz)\.|\b[A-Z]\.)$")
+
+
+@rule("X302", "equation-not-in-sentence", Category.CONVENTION,
+      "A displayed equation that is not part of a sentence.",
+      "An equation is a clause of the sentence around it: the words before "
+      "it lead in ('the force of infection is') and the words after it "
+      "interpret it ('where beta is'). When the sentence before ends with a "
+      "full stop, the equation floats in on its own, unannounced, and the "
+      "reader has to guess what it is for. Introduce it, display it, then "
+      "interpret it.",
+      plain=("The sentence before this equation ends with a full stop, so "
+             "the equation stands alone. Make it part of a sentence: lead "
+             "in with words like 'is given by' or 'as', and follow it with "
+             "what it means, such as 'where N is the population'."),
+      source="§9.2")
+def x302_equation_not_in_sentence(doc, document: Document):
+    if document.kind == "latex":
+        starts = [it.start for it in document.structure
+                  if it.kind == "equation"]
+    elif document.kind == "word":
+        starts = list(_word_display_equations(document))
+    else:
+        return
+    masked = document.masked
+    for start in starts:
+        before = masked[:start].rstrip()
+        if not before:
+            continue                       # nothing readable before it
+        if before[-1] != "." or _ABBREV_STOP.search(before[-14:]):
+            continue
+        # "...} ." from a masked \cite or \ref is still the sentence's end.
+        a, b = _word_near(document, start, start)
+        yield Suggestion(
+            message="This equation starts after a full stop — make it part "
+                    "of a sentence (lead in, display, then interpret).",
+            start=a, end=b)
+
+
+# A displayed equation's paragraph in Word, once the equation object is
+# masked: nothing, or its number ("\t(3)", "(3a)").
+_EQ_NUMBER_ONLY = re.compile(r"^\s*(?:\(?\d{1,3}[a-z]?\)?)?\s*$")
+# Function names that are maths, not words, in a typed equation.
+_MATH_WORDS = frozenset(
+    "log ln exp sin cos tan sinh cosh tanh max min arg lim sup inf det "
+    "diag var cov dt dx dy ds du".split())
+
+
+def _equation_paragraph(text: str) -> bool:
+    """A Word paragraph that IS an equation written as text: a relation
+    sign and no ordinary word. The add-in reads paragraph text only, so an
+    equation object arrives in its linear form ("R0 = βS/N"); a PDF
+    conversion flattens one the same way."""
+    text = text.strip()
+    if not text or len(text) > 240 or not _RELATION.search(text):
+        return False
+    return not any(w.lower() not in _MATH_WORDS
+                   for w in re.findall(r"[A-Za-z]{2,}", text))
+
+
+def _word_display_equations(document: Document):
+    """Start offsets of the paragraphs that are a displayed equation: an
+    equation object on its own (an uploaded .docx, where the reader masks
+    it), or a paragraph of maths written as text (the add-in). An equation
+    inside a sentence's paragraph is inline and never judged here."""
+    offs = document.para_offsets
+    objects = [it.start for it in document.structure if it.kind == "equation"]
+    for i, off in enumerate(offs):
+        end = offs[i + 1] - 2 if i + 1 < len(offs) else len(document.original)
+        text = document.original[off:end]
+        if not text.strip() or document.in_table(off):
+            continue
+        if any(off <= s < end for s in objects):
+            if _EQ_NUMBER_ONLY.match(document.masked[off:end]):
+                yield off
+        elif _equation_paragraph(text):
+            yield off
+
+
 # --- X401: does the number quoted from a table appear in it? ------------------------
 
 _VALUE = re.compile(
@@ -376,11 +476,15 @@ def _in_table(value: float, decimals: int, table_text: str) -> bool:
 
 @rule("X401", "number-not-in-table", Category.CORRECTION,
       "A number quoted with 'Table N' that Table N does not contain.",
-      "When a sentence cites a table and quotes a figure from it, the "
-      "reader will look for that number in the table. A mismatch is "
-      "usually a typo, a value from an older run, or a number from "
-      "another table. Derived numbers (differences, ratios) are worth a "
-      "word saying so. (Guide §6: let the numbers carry the weight.)",
+      'When a sentence cites a table and quotes a figure from it, the '
+      'reader will look for that number in the table. A mismatch is '
+      'usually a typo, a value from an older run, or a number from '
+      'another table. Derived numbers (differences, ratios) are worth a '
+      'word saying so.',
+      plain=('This sentence cites a table and quotes a number, but that number '
+             'is not in the table. It may be a typo, an old value, or a number '
+             'from a different table. If you calculated it from the table, say '
+             'so.'),
       source="§6",
       scope="document")
 def x401_number_not_in_table(doc, document: Document):
@@ -449,6 +553,10 @@ _LEVEL_BEFORE = re.compile(r"(?:\bp|\bP|α|alpha|level of)\s*[<>=≤≥]?\s*$")
       "body text in a heading style puts the whole paragraph into all "
       "three, and a heading run into its first paragraph (common after "
       "converting a PDF) hides where the section starts.",
+      plain=('This paragraph of normal text has a heading style. Word uses '
+             'heading styles to build the table of contents and the navigation '
+             'pane, so this whole paragraph will appear there. Give it a body '
+             'style.'),
       source="Word",
       scope="document")
 def x501_heading_style_on_body(doc, document: Document):

@@ -9,6 +9,7 @@ import {
   FIELD_MESSAGE,
   NOT_FOUND_MESSAGE,
   readParagraphs,
+  readSelectionParagraph,
   RANGE_CHANGED_MESSAGE,
   restoreHistory,
   selectSpan,
@@ -224,5 +225,20 @@ describe("start-up", () => {
     restoreHistory(win as unknown as Window);
     expect(win.history.pushState).toBe(push);
     expect(win.history.replaceState).toBe(replace);
+  });
+});
+
+describe("where the cursor is", () => {
+  it("counts the paragraphs from the start of the body to the selection", async () => {
+    const { api } = fake({ cursor: 2 });
+    expect(await readSelectionParagraph(api)).toBe(2);
+    expect(await readSelectionParagraph(fake({ cursor: 0 }).api)).toBe(0);
+    expect(await readSelectionParagraph(fake().api)).toBe(0);
+  });
+
+  it("follows a selection made since (clicking a card moved the cursor)", async () => {
+    const { api } = fake({ cursor: 0 });
+    await selectSpan(api, loc(1));
+    expect(await readSelectionParagraph(api)).toBe(1);
   });
 });

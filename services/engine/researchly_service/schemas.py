@@ -140,6 +140,8 @@ class Suggestion(_Strict):
     section: str = Field(..., description="Detected section, e.g. methods, discussion, unknown.")
     message: str = Field(..., description="One-line rationale, always shown.")
     why: str = Field(..., description="The teachable explanation.")
+    plain: str = Field("", description="The explanation in everyday words, "
+                       "shown first; `why` is the fuller account.")
     source: str = Field(..., description="Named provenance of the advice (CLAUDE.md #6).")
     learn_ref: Optional[str] = Field(None, description="Lesson id; Learn cards arrive in S4.")
     replacement: Optional[str] = Field(
@@ -294,6 +296,7 @@ class RuleInfo(_Strict):
     category: Category
     short: str
     why: str
+    plain: str = ""
     source: str
     tier: str
     fix_safety: FixSafety

@@ -25,9 +25,12 @@ def _finditer(pattern: str, text: str) -> Iterable[re.Match]:
 
 @rule("W201", "grand-word", Category.IMPROVEMENT,
       "Prefer plain words to grand ones (utilize → use).",
-      "Complexity should live in your ideas, never in your vocabulary. "
-      "Grand words are camouflage, and experienced readers read them as "
-      "camouflage. (Guide §6.)",
+      'Complexity should live in your ideas, never in your vocabulary. '
+      'Grand words are camouflage, and experienced readers read them as '
+      'camouflage.',
+      plain=("A simpler word says the same thing: 'use' instead of 'utilize'. "
+             'Big words do not make the science bigger, and experienced readers '
+             'notice them.'),
       source="§6", fix_safety="safe")
 def w201_grand_words(doc, document: Document):
     for word, plain in lx.GRAND_WORDS.items():
@@ -48,9 +51,11 @@ def _is_verb(doc, offset: int) -> bool:
 
 @rule("W202", "wordy-phrase", Category.IMPROVEMENT,
       "Compress wordy phrases (due to the fact that → because).",
-      "Cut ruthlessly, but second: on a revision pass, try to remove 10% of "
-      "the words without losing meaning — you almost always can, and the "
-      "prose tightens every time. (Guide §6.)",
+      'Cut ruthlessly, but second: on a revision pass, try to remove ten '
+      'per cent of the words without losing meaning. You almost always '
+      'can, and the prose tightens every time.',
+      plain=("This phrase can be shorter: 'because' instead of 'due to the fact "
+             "that'. Shorter is easier to read, and the meaning stays the same."),
       source="§6", fix_safety="safe")
 def w202_wordy_phrases(doc, document: Document):
     for phrase, tight in lx.WORDY_PHRASES.items():
@@ -62,10 +67,13 @@ def w202_wordy_phrases(doc, document: Document):
 
 @rule("W203", "hype", Category.CONVENTION,
       "Buzzwords (novel, cutting-edge) signal thin substance.",
-      "Credibility comes from concreteness: facts, figures, mechanisms. "
-      "Buzzwords and hype do the opposite — they signal that the substance "
-      "may be thin. Let the numbers carry the weight. Convention, not error: "
-      "'novel' survives review in some venues; you decide. (Guide §6.)",
+      'Credibility comes from concreteness: facts, figures, mechanisms. '
+      'Buzzwords and hype do the opposite; they signal that the substance '
+      'may be thin. Let the numbers carry the weight. A convention, not '
+      "an error: 'novel' survives review in some venues; you decide.",
+      plain=("Words like 'novel' and 'cutting-edge' promise a lot but show "
+             'nothing. Readers trust facts and numbers more than big claims. '
+             'Some journals accept these words, so this is your call.'),
       source="§6")
 def w203_hype(doc, document: Document):
     text = document.masked
@@ -82,8 +90,11 @@ def w203_hype(doc, document: Document):
 
 @rule("W204", "intensifier", Category.PREFERENCE,
       "Intensifiers (very, extremely) rarely add information.",
-      "In calibrated scientific prose, 'very important' is not more important "
-      "than 'important'. If magnitude matters, quantify it. (Guide §6.)",
+      "In calibrated scientific prose, 'very important' is not more "
+      "important than 'important'. If magnitude matters, quantify it.",
+      plain=("'Very' or 'extremely' does not add information. 'Very important' "
+             "is not more important than 'important'. If size matters, give the "
+             'number.'),
       source="§6")
 def w204_intensifiers(doc, document: Document):
     for word in lx.INTENSIFIERS:
@@ -95,10 +106,12 @@ def w204_intensifiers(doc, document: Document):
 
 @rule("W205", "filler", Category.IMPROVEMENT,
       "Throat-clearing ('It should be noted that…') delays the point.",
-      "Every sentence either reduces or increases the reader's mental load. "
-      "'It is important to note that X' is usually just 'X' — if it matters, "
-      "the stress position will say so better than an announcement. "
-      "(Guide §0, §6.)",
+      "Every sentence either reduces or increases the reader's mental "
+      "load. 'It is important to note that X' is usually just 'X': if it "
+      'matters, the end of the sentence will say so better than an '
+      'announcement.',
+      plain=("'It should be noted that' delays the point. Remove it and say the "
+             'point directly. If it matters, the reader will see that.'),
       source="§6", fix_safety="safe")
 def w205_filler(doc, document: Document):
     for phrase in lx.FILLER_PHRASES:
@@ -110,7 +123,9 @@ def w205_filler(doc, document: Document):
 
 @rule("W206", "redundant-pair", Category.IMPROVEMENT,
       "Redundant pairs (each and every, end result).",
-      "Omit needless words: one of the pair is doing no work. (Guide §6.)",
+      'Omit needless words: one of the pair is doing no work.',
+      plain=("These two words say the same thing, like 'each and every' or 'end "
+             "result'. Keep one."),
       source="§6", fix_safety="safe")
 def w206_redundant_pairs(doc, document: Document):
     for pair, keep in lx.REDUNDANT_PAIRS.items():
@@ -122,8 +137,9 @@ def w206_redundant_pairs(doc, document: Document):
 
 @rule("W207", "doubled-word", Category.CORRECTION,
       "Accidentally doubled word (the the).",
-      "A mechanical slip the eye forgives and the reader stumbles on — the "
-      "read-aloud test catches these. (Guide §8.)",
+      'A mechanical slip the eye forgives and the reader stumbles on; the '
+      'read-aloud test catches these.',
+      plain=("A word is repeated by accident, like 'the the'. Delete one."),
       source="§8", fix_safety="safe")
 def w207_doubled_word(doc, document: Document):
     masked = document.masked
@@ -154,9 +170,12 @@ def w207_doubled_word(doc, document: Document):
 
 @rule("W208", "contraction", Category.CONVENTION,
       "Contractions are unconventional in formal scientific prose.",
-      "A register convention, not a grammar rule: journals and theses "
-      "conventionally avoid contractions. Fine in talks, blogs, and emails. "
-      "(Guide §6, register.)",
+      'A register convention, not a grammar rule: journals and theses '
+      'conventionally avoid contractions. Fine in talks, blogs, and '
+      'emails.',
+      plain=("Short forms like 'don't' or 'it's' are unusual in papers and "
+             "theses. Write the full words: 'do not', 'it is'. Fine in talks and "
+             'emails.'),
       source="§6")
 def w208_contractions(doc, document: Document):
     for word in lx.CONTRACTIONS:
@@ -168,8 +187,10 @@ def w208_contractions(doc, document: Document):
 
 @rule("W209", "in-terms-of", Category.PREFERENCE,
       "'In terms of' is usually a vague connector.",
-      "It typically hides the real relationship between ideas; naming the "
-      "relationship ('as', 'for', 'measured by') is more precise. (Guide §6.)",
+      'It typically hides the real relationship between ideas; naming the '
+      "relationship ('as', 'for', 'measured by') is more precise.",
+      plain=("'In terms of' is vague. Say what the relationship really is: 'as', "
+             "'for', 'measured by'."),
       source="§6")
 def w209_in_terms_of(doc, document: Document):
     for m in _finditer(r"\bin terms of\b", document.masked):
@@ -199,11 +220,15 @@ def _is_mathematical(document: Document, a: int, b: int) -> bool:
 
 @rule("C302", "overclaim", Category.CONVENTION,
       "Overclaiming (prove, conclusively) exceeds what empirical evidence supports.",
-      "Reserve strong verbs for strong evidence. An unqualified claim reads "
-      "as naive; 'prove' almost never belongs in empirical science — "
-      "models and data support, suggest, indicate, or are consistent with. "
-      "Match the confidence of the language to the strength of the grounds. "
-      "(Guide §4, Toulmin qualifiers.)",
+      'Reserve strong verbs for strong evidence. An unqualified claim '
+      "reads as naive; 'prove' almost never belongs in empirical science. "
+      'Models and data support, suggest, indicate, or are consistent '
+      'with. Match the confidence of the language to the strength of the '
+      'grounds.',
+      plain=("Words like 'prove' and 'conclusively' claim more than most studies "
+             "can show. Data and models usually 'suggest', 'indicate' or "
+             "'support'. Match the strength of your words to the strength of "
+             'your evidence.'),
       sections_only=("abstract", "results", "discussion", "conclusion",
                      "introduction", "limitations"),
       source="§4")
@@ -225,9 +250,13 @@ def c302_overclaim(doc, document: Document):
 
 @rule("C305", "assertive-adverb", Category.CONVENTION,
       "Assertive adverbs (clearly, obviously) assert what structure should show.",
-      "If it were clear, the word would be unnecessary; if it is not, the "
-      "word will not make it so. Put the important idea in the stress "
-      "position and let the evidence do the convincing. (Guide §4, §5.2.6.)",
+      'If it were clear, the word would be unnecessary; if it is not, the '
+      'word will not make it so. Put the important idea in the stress '
+      'position and let the evidence do the convincing.',
+      plain=("Words like 'clearly' and 'obviously' tell the reader to agree "
+             'instead of showing them why. If the point is clear, you do not '
+             'need the word. If it is not, the word will not help. Let the '
+             'evidence do the work.'),
       source="§4", aggregate=True)
 def c305_assertive(doc, document: Document):
     for pat in lx.ASSERTIVE_PATTERNS:
@@ -240,10 +269,13 @@ def c305_assertive(doc, document: Document):
 @rule("C304", "bare-significant", Category.CONVENTION,
       "Bare 'significant' is ambiguous (statistical vs substantive).",
       "In a results context, 'significant' invites the reader to hear "
-      "'statistically significant' — if that is meant, say so (with the "
-      "estimate and interval); if practical importance is meant, "
+      "'statistically significant'. If that is meant, say so, with the "
+      'estimate and interval; if practical importance is meant, '
       "'substantial' or a quantified statement is clearer. Uncertainty is "
-      "not a caveat — it is the finding. (Guide §9.3.)",
+      'not a caveat; it is the finding.',
+      plain=("'Significant' can mean two things: a statistical test passed, or "
+             'the effect is large enough to matter. Say which one you mean. If '
+             'it is the test, give the estimate and its interval too.'),
       sections_only=("abstract", "results", "discussion", "conclusion",
                      "limitations"),
       source="§9.3", aggregate=True)
@@ -268,9 +300,13 @@ _CAPS_RUN = re.compile(r"\b[A-Z][A-Z&'’-]+(?:\s+[A-Z][A-Z&'’-]+){2,}\b")
 
 @rule("F601", "acronym-undefined", Category.CONVENTION,
       "Acronym used without definition at first use.",
-      "Define a term the first time you use it, once, briefly, then use it "
-      "consistently. Your reader is expert — but rarely in every discipline "
-      "you are combining. (Guide §9.1.)",
+      'Define a term the first time you use it, once, briefly, then use '
+      'it consistently. Your reader is expert, but rarely in every '
+      'discipline you are combining.',
+      plain=('This abbreviation appears without its full name. Write the full '
+             'name the first time, with the abbreviation in brackets, then use '
+             'the abbreviation after that. Readers from other fields may not '
+             'know it.'),
       source="§9.1",
       scope="document")
 def f601_acronyms(doc, document: Document):
@@ -347,11 +383,15 @@ def f601_acronyms(doc, document: Document):
 
 @rule("G108", "weak-stress-position", Category.IMPROVEMENT,
       "Sentence trails off in attribution; the finding is buried mid-sentence.",
-      "The end of a sentence is the stress position — the point of natural "
-      "emphasis. 'Attack rates rose sharply, according to our simulations' "
-      "spends the emphasis on the attribution; 'Our simulations show attack "
-      "rates rising sharply' spends it on the result. Put what you most "
-      "want remembered at the end. (Guide §5.2.2.)",
+      'The end of a sentence is the stress position, the point of natural '
+      "emphasis. 'Attack rates rose sharply, according to our "
+      "simulations' spends the emphasis on the attribution; 'Our "
+      "simulations show attack rates rising sharply' spends it on the "
+      'result. Put what you most want remembered at the end.',
+      plain=('The end of a sentence is where readers remember things, and this '
+             "one ends on 'according to our simulations' rather than on the "
+             "finding. Put the result at the end: 'Our simulations show attack "
+             "rates rising sharply.'"),
       source="§5.2.2")
 def g108_stress_position(doc, document: Document):
     for sent in doc.sents:
@@ -374,13 +414,14 @@ def g108_stress_position(doc, document: Document):
 
 @rule("E701", "empty-phrase", Category.CONVENTION,
       "Low-information phrase ('sheds light on', 'holistic understanding').",
-      "Information density: Endo's lecture warns against sentences that "
-      "sound substantive but carry no information. A claim that a study "
-      "offers 'a holistic understanding' of a system could describe any "
-      "paper; a sentence naming the mechanism or estimate the study "
-      "actually produced tells the reader what was learned. Say "
-      "specifically what the work shows. (Endo lecture, 'Information "
-      "density'.)",
+      'Sentences that sound substantive but carry no information waste '
+      "the reader's attention. A claim that a study offers 'a holistic "
+      "understanding' of a system could describe any paper; a sentence "
+      'naming the mechanism or estimate the study actually produced tells '
+      'the reader what was learned. Say specifically what the work shows.',
+      plain=("This phrase sounds important but says nothing specific. 'Sheds "
+             "light on' or 'a holistic understanding' could describe any paper. "
+             'Say exactly what your work shows or measures.'),
       source="Endo", aggregate=True)
 def e701_empty_phrase(doc, document: Document):
     for phrase in lx.EMPTY_PHRASES:
@@ -393,12 +434,13 @@ def e701_empty_phrase(doc, document: Document):
 
 @rule("E704", "uncited-consensus", Category.CONVENTION,
       "'Is known/considered to be…' — who says? Cite it or own it.",
-      "Endo's lecture asks writers to keep facts and opinions apart. A "
-      "passive consensus formula ('X is considered/known to be…') hides "
-      "whose view it is: if the point is established, cite the evidence; "
-      "if it is your judgement, own it ('we consider…'). (Endo lecture, "
-      "'Facts vs opinions'; also NG5001 Unit 1 on warranting every "
-      "claim.)",
+      "Keep facts and opinions apart. A passive consensus formula ('X is "
+      "considered/known to be') hides whose view it is: if the point is "
+      'established, cite the evidence; if it is your judgement, own it '
+      "('we consider').",
+      plain=("'Is known to be' or 'is considered' does not say who knows or "
+             'considers it. If it is established, add a citation. If it is your '
+             "own view, say 'we consider'."),
       source="Endo", aggregate=True)
 def e704_uncited_consensus(doc, document: Document):
     for sent in doc.sents:
@@ -419,12 +461,14 @@ def e704_uncited_consensus(doc, document: Document):
 
 @rule("E705", "absolute-novelty", Category.CONVENTION,
       "'Has not been studied' — risky absolute claim; soften and cite.",
-      "Endo's lecture advises against claiming that something has never "
-      "been done unless you are certain: the literature is large, and a "
-      "reviewer who knows one counterexample will discount the claim. "
-      "Soften with 'to our knowledge' and cite the closest existing "
-      "attempts. (Endo lecture, avoid-list; the CARS literature makes the "
-      "same move safely: 'few studies have…'.)",
+      'Avoid claiming that something has never been done unless you are '
+      'certain: the literature is large, and a reviewer who knows one '
+      "counterexample will discount the claim. Soften with 'to our "
+      "knowledge' and cite the closest existing attempts; 'few studies "
+      "have' makes the same move safely.",
+      plain=("Saying something 'has never been studied' is risky. The literature "
+             'is large, and one counter-example from a reviewer will weaken your '
+             "claim. Write 'to our knowledge' and cite the closest earlier work."),
       source="Endo", aggregate=True)
 def e705_absolute_novelty(doc, document: Document):
     for sent in doc.sents:
@@ -446,10 +490,12 @@ def e705_absolute_novelty(doc, document: Document):
       "'Relatively' — compared with what?",
       "Words such as 'additional', 'increase', 'relatively' and "
       "'proportion' are incomplete without a reference point: 'relatively "
-      "high' leaves the reader asking 'relative to what?'. Endo's lecture "
-      "advises naming the comparator, or checking that the context allows "
-      "only one reading — otherwise drop the word. (Endo lecture, "
-      "'Implicit comparator/reference'.)",
+      "high' leaves the reader asking 'relative to what?'. Name the "
+      'comparator, or check that the context allows only one reading; '
+      'otherwise drop the word.',
+      plain=("'Relatively', 'higher' or 'additional' need a comparison: relative "
+             'to what? Name the thing you are comparing with, or remove the word '
+             'if the sentence works without it.'),
       source="Endo", aggregate=True)
 def e706_missing_comparator(doc, document: Document):
     for m in _finditer(r"\brelatively\b", document.masked):
@@ -460,11 +506,13 @@ def e706_missing_comparator(doc, document: Document):
 
 @rule("AB801", "vague-forward-reference", Category.CONVENTION,
       "'Results will be discussed' — say what the results are.",
-      "An abstract that promises results without stating any gives a "
-      "programme committee nothing to judge and readers no reason to "
-      "attend. State at least one concrete finding instead of deferring "
-      "it. (Pallas 2022 ch.7 / Schultz, "
-      "Eloquent Science, via NG5001 Unit 2.)",
+      'An abstract that promises results without stating any gives a '
+      'programme committee nothing to judge and readers no reason to '
+      'attend. State at least one concrete finding instead of deferring '
+      'it.',
+      plain=('Your abstract says results will be discussed but does not say what '
+             'they are. Readers decide from the abstract whether to read on. '
+             'Give them at least one real finding.'),
       sections_only=("abstract",),
       source="NG5001-U2", aggregate=True)
 def ab801_vague_forward(doc, document: Document):
@@ -477,13 +525,15 @@ def ab801_vague_forward(doc, document: Document):
 
 @rule("L901", "serial-summary-opener", Category.IMPROVEMENT,
       "'There are many studies on…' — catalogue opener, not an argument.",
-      "A literature review should be a conversation that leads to your gap, "
-      "not a catalogue: 'Many studies have looked at X. A reported… B "
-      "reported…' restates instead of synthesizing. Open with the "
-      "synthesis point ('Evidence consistently links X to Y'), then use the "
-      "sources as support — and let the review build toward a clear gap "
-      "statement. (NG5001 Unit 1, critical literature review; Week 2 key "
-      "points.)",
+      'A literature review should be a conversation that leads to your '
+      "gap, not a catalogue: 'Many studies have looked at X. A reported, "
+      "B reported' restates instead of synthesizing. Open with the "
+      "synthesis point ('Evidence consistently links X to Y'), then use "
+      'the sources as support, and let the review build toward a clear '
+      'gap statement.',
+      plain=("'There are many studies on' lists the literature instead of making "
+             'a point. Start with what the studies show together, then use them '
+             'as support, and lead to what is still missing.'),
       source="NG5001-U1", aggregate=True)
 def l901_serial_summary(doc, document: Document):
     for rx in lx.LITREVIEW_FILLER:
@@ -496,15 +546,18 @@ def l901_serial_summary(doc, document: Document):
 
 @rule("D902", "missing-niche-signal", Category.IMPROVEMENT,
       "Introduction has no detectable gap statement (CARS Move 2).",
-      "The gap statement is the turn on which an Introduction pivots: it "
-      "links what is already known to what this study sets out to do, and "
-      "creates the need for your contribution. It is usually one short "
-      "critical sentence, signalled by a "
-      "contrastive turn (however, although, yet) plus a gap word (limited, "
-      "few, little, remains unclear, has not been…). No signal detected "
-      "here — either the niche is missing, or it's phrased so gently the "
-      "reader may not notice it. (Shehzad 2008 on CARS Move 2; Swales & "
-      "Feak; guide §3.)",
+      'The gap statement is the turn on which an Introduction pivots: it '
+      'links what is already known to what this study sets out to do, and '
+      'creates the need for your contribution. It is usually one short '
+      'critical sentence, signalled by a contrastive turn (however, '
+      'although, yet) plus a gap word (limited, few, little, remains '
+      'unclear, has not been). No signal was detected here: either the '
+      'niche is missing, or it is phrased so gently the reader may not '
+      'notice it.',
+      plain=('An introduction needs a sentence that says what is still unknown '
+             'or unsolved. That sentence is why your study exists. We could not '
+             "find one here. It usually starts with 'However' or 'Although' and "
+             'names what is missing.'),
       source="Shehzad",
       scope="document")
 def d902_missing_niche(doc, document: Document):
@@ -544,14 +597,13 @@ from . import abstract_lens  # noqa: E402,F401
 
 @rule("W210", "variant-consistency", Category.CONVENTION,
       "Mixed UK/US spellings of the same word (modelling AND modeling).",
-      "One term, one meaning — and one spelling. Rephrasing or re-spelling "
-      "the same term reads as if you mean different things (Endo's "
-      "lecture: readers assume a changed term signals a changed meaning; "
-      "guide §6; the "
-      "critical-reader checklist asks whether authors are consistent in "
-      "their key terms). Pick the variant your venue prefers and use it "
-      "throughout — co-authored drafts drift into mixtures without anyone "
-      "noticing.",
+      'One term, one meaning, and one spelling. Readers assume a changed '
+      'term signals a changed meaning. Pick the variant your venue '
+      'prefers and use it throughout; co-authored drafts drift into '
+      'mixtures without anyone noticing.',
+      plain=('The same word is spelled in both British and American ways, such '
+             "as 'modelling' and 'modeling'. Pick the one your journal uses and "
+             'keep it the same throughout.'),
       source="§6+Endo")
 def w210_variant_consistency(doc, document: Document):
     text = document.masked.lower()

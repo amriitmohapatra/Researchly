@@ -157,15 +157,16 @@ def missing_moves(text: str) -> list[str]:
 
 
 @rule("AB802", "abstract-completeness", Category.IMPROVEMENT,
-      "Abstract is missing one of the six moves (Belcher/Pallas).",
-      "A strong SciQua abstract compresses the whole paper into six moves: "
-      "background (conventional wisdom) → gap (problematization) → research "
-      "question → methods → findings → significance. Reviewers scan for "
-      "exactly these; a missing move reads as a missing part of the "
-      "argument. "
-      "Run `researchly abstract` for the full breakdown with fill-in "
-      "sentence frames for whatever is missing. (Belcher 2021; Pallas 2022 "
-      "ch.7, via NG5001 Unit 2.)",
+      "Abstract is missing one of its six moves (background, gap, question, methods, findings, significance).",
+      'A strong abstract compresses the whole paper into six moves: '
+      'background (conventional wisdom), gap (problematization), research '
+      'question, methods, findings and significance. Reviewers scan for '
+      'exactly these; a missing move reads as a missing part of the '
+      'argument. The card names the moves it could not find.',
+      plain=('A good abstract answers six things in order: what is known, what '
+             'is missing, what you asked, how you did it, what you found, and '
+             'why it matters. One of these is missing here. Reviewers look for '
+             'all six.'),
       sections_only=("abstract",),
       source="NG5001-U2",
       scope="document")

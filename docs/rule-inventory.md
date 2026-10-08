@@ -17,6 +17,8 @@ Every actionable heuristic in the writing guide, converted into a typed rule ent
 
 **Status codes:** `MVP` = in the v0.1 Python prototype (deterministic, spaCy/regex). `DET` = deterministic, feasible next. `LLM` = needs LLM assistance. `RES` = research-grade (see research/03).
 
+**Plain explanations (P35, 2026-10-08):** every rule carries a `plain=` text beside its `why=`: the same advice in everyday words, for a writer who knows their science but not the grammar vocabulary (owner feedback from the first real use). The cards show the plain text first and the technical why behind it. Neither may mention this repository's internals: `tests/test_explanations.py` fails on a section number, a course code, a lecturer's name, a book citation or a command-line instruction in any user-visible text. Citations live on the Source line only.
+
 **Scope and Draft mode (S3, 2026-10-04):** every rule declares a scope. *Sentence* rules judge the sentence in front of the writer; *document* rules need the whole document. Draft mode (P1) shows sentence-level rules only and says how many document-level suggestions it held back; Revise shows everything. Document-level today: X101–X104, X202, X301, X401, X501, F601, F612, F613, N101, W211, D902, AB802 (`GET /v1/rules` reports each rule's `scope`).
 
 **Section-conditioning:** rules may fire differently by IMRaD section (detected from headings in v0.1). This is the defining Researchly behavior — the same sentence gets different advice in Methods vs Discussion.
@@ -169,6 +171,7 @@ Structural checks read `researchly/structure.py`: floats (figures and tables wit
 | X104 | Figure/table placed before the text first cites it | Convention | Word | ICMJE | S2b |
 | X202 | Caption under five words | Improvement | LaTeX, Word | §9.7 | S2b |
 | X301 | Numbered equation never referred to | Preference | LaTeX | §9.2 | S2b |
+| X302 | A displayed equation that is not part of a sentence: the text before it ends with a full stop (abbreviations such as "e.g." and "Eq." excepted). LaTeX: equation environments. Word: an equation object alone in its paragraph (an uploaded .docx; its number may follow), or a paragraph of maths written as text with no ordinary word (the add-in reads text only, so an equation object arrives in its linear form; a PDF conversion flattens one the same way). Equations inside a sentence's paragraph are inline and not judged. 5 of 102 equations on the 17 real LaTeX projects, all genuine; none on the 36 real Word files (their equations are led in or follow a colon) | Convention | LaTeX, Word | §9.2 (the owner's professor made the same correction) | P35 |
 | X401 | Decimal or percentage quoted with "Table N" that Table N does not hold (rounding allowed; levels, versions and totals skipped) | Correction | LaTeX, Word | §6 | S2b |
 | F612 | Abbreviation defined twice (abstract, a new chapter, captions and definitions 3,000+ words apart exempt) | Convention | all | §9.1 | S2b |
 | F613 | Abbreviation defined but then used once or not at all | Preference | all | §9.1 | S2b |

@@ -27,12 +27,15 @@ from .engine import Category, Suggestion, TIER_GEC, rule
 
 @rule("GEC001", "learned-correction", Category.CORRECTION,
       "Minimal token-level edits from a local learned tagger (opt-in).",
-      "A local, non-generative edit tagger (GECToR-style) proposing "
-      "minimal corrections the deterministic tiers cannot express. It "
-      "runs entirely on this machine, is off unless you enable "
-      "`[tiers] gec = true`, scores every edit, and abstains below "
-      "confidence threshold. Its suggestions are never applied "
-      "automatically and never included in bulk Polish.",
+      'A local, non-generative edit tagger proposing minimal corrections '
+      'the deterministic tiers cannot express. It runs entirely on this '
+      'machine, is off unless you enable it in settings, scores every '
+      'edit, and abstains below a confidence threshold. Its suggestions '
+      'are never applied automatically and never included in bulk Polish.',
+      plain=('A small correction from a model that runs on this computer only. '
+             'It never writes new text; it proposes a tiny edit and says how '
+             'sure it is. It is off unless you turn it on, and it never changes '
+             'anything by itself.'),
       source="local GEC",
       tier=TIER_GEC, fix_safety="review")
 def gec001_learned_corrections(doc, document: Document):

@@ -148,6 +148,18 @@ journal/venue awareness goal.
 
 ---
 
+## 9b. What the user sees as the source (owner decision, 2026-10-08)
+
+This map is internal. On a suggestion card, rules mined from Dr Endo's
+lecture (§1) and from the NG5001 course (§§2–9) show the source
+**"Amriit's learnings from scientific-writing training (Researchly notes)"**
+(`sources.LEARNINGS`), not the lecture or the course by name: naming them
+to the public could read as their endorsement, which is theirs to give.
+Rules from the owner's own guide cite the guide and its section; published
+works (Shehzad 2008, ICMJE, the SI Brochure, the AMA Manual) are cited by
+name. The `source=` codes on the rules are unchanged, so this map still
+traces every rule to where it came from.
+
 ## 10. Published style references (S2b, 2026-10-04)
 
 Named in `researchly/sources.py`; cited by name only, never quoted.
@@ -158,7 +170,7 @@ Named in `researchly/sources.py`; cited by name only, never quoted.
 | BIPM, SI Brochure (9th ed.) | A space separates a number from its unit | **N101** (as consistency, not prescription) |
 | AMA Manual of Style (11th ed.) | Do not begin a sentence with a numeral | **N102** |
 | Guide §9.1 (owner's) | Define a term once, at first use, then use it consistently | **F612, F613, W211** (Endo's "different terms = different things" corroborates W211) |
-| Guide §9.2 | Introduce, display, interpret every equation | **X301** |
+| Guide §9.2 | Introduce, display, interpret every equation; an equation is a clause of its sentence | **X301**, **X302** (the owner's professor made the same correction, 2026-10-08) |
 | Guide §9.7 | A caption states the figure's point and lets it be read unaided | **X202** (Endo's figure self-sufficiency corroborates) |
 | Guide §6 | Be concrete and credible; let the numbers carry the weight | **X401** |
 | Microsoft Word documentation (heading styles) | Heading styles build the navigation pane, the table of contents and the section structure, so body text must not carry one | **X501** (P33) |

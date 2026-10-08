@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { MAX_CONTENT_CHARS, READING_KEY } from "@researchly/contract";
 import {
+  compoundSuggestion,
   degradedGrammarResponse,
   emptyResponse,
   error413,
@@ -10,6 +11,7 @@ import {
   error500,
   happyResponse,
   SAMPLE_TEXT,
+  withDocumentWideResponse,
   withPreferencesResponse,
 } from "./fixtures";
 import { check, isReddish, json, mockEngine, paste, recordOwnOriginRequests, rgb } from "./helpers";
@@ -56,9 +58,12 @@ test.describe("happy path", () => {
     await expect(first).toContainText("Improvement");
     await expect(first).toContainText("Introduction");
     await expect(first).toContainText("clearly proven");
-    await first.getByText("Why?").click();
-    await expect(first.getByText(/Boosters such as/)).toBeVisible();
+    // The explanation in everyday words is open from the start; the technical account is one click away.
+    await expect(first.getByTestId("card-plain")).toContainText("In everyday words");
     await expect(first.getByText(/Hyland \(2005\)/)).toBeVisible();
+    await expect(first.getByText(/Boosters such as/)).toBeHidden();
+    await first.getByText("The full reasoning").click();
+    await expect(first.getByText(/Boosters such as/)).toBeVisible();
 
     // A replacement is labelled as a suggestion; there is no apply button.
     const wordy = page.locator(`#card-${byRule("C120").id}`);
@@ -126,6 +131,118 @@ test.describe("happy path", () => {
     expect(stored.localValues).not.toContain("Dengue");
     expect(stored.session).toEqual([]);
     expect(await page.context().cookies()).toEqual([]);
+  });
+});
+
+test.describe("cards", () => {
+  test("plain explanation first, the full reasoning behind a disclosure, no rule code or tier on show", async ({ page }) => {
+    await mockEngine(page);
+    await page.goto("/");
+    await paste(page, SAMPLE_TEXT);
+    await check(page);
+    const card = page.locator(`#card-${byRule("C120").id}`);
+    // Order: message, flagged words, revision, the plain explanation, the disclosure, then the source as a reference.
+    const order = await card.evaluate((el) =>
+      [".card-msg", ".card-quote", ".card-repl", ".card-plain", "details.why", ".card-source"].map((sel) =>
+        Array.from(el.querySelectorAll("*")).indexOf(el.querySelector(sel)!),
+      ),
+    );
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(order.every((i) => i >= 0)).toBe(true);
+    await expect(card.getByTestId("card-plain")).toBeVisible();
+    await expect(card.locator("details.why")).not.toHaveAttribute("open");
+    await expect(card).toContainText("Source:");
+    // The rule id and the tier are data, not copy.
+    await expect(card).toHaveAttribute("data-rule", "C120");
+    await expect(card).not.toContainText("Rule");
+    await expect(card).not.toContainText("Checked by");
+    await expect(card).not.toContainText("C120");
+    // The only "Checked by" on the page is the footer's engine version, never a tier on a card.
+    await expect(page.locator("body")).not.toContainText(/Checked by (?!engine)/);
+    await card.getByText("The full reasoning").click();
+    await expect(card.locator("details.why")).toHaveAttribute("open", "");
+    await expect(card.locator(".why-body")).toContainText(byRule("C120").why);
+  });
+
+  test("an older engine without plain explanations shows the reasoning in its place, once", async ({ page }) => {
+    const stripped = {
+      ...happyResponse,
+      suggestions: happyResponse.suggestions.map((s) => ({ ...s, plain: "" })),
+    };
+    await mockEngine(page, (_r, route) => json(route, 200, stripped));
+    await page.goto("/");
+    await paste(page, SAMPLE_TEXT);
+    await check(page);
+    const card = page.locator(`#card-${byRule("C201").id}`);
+    await expect(card.getByTestId("card-plain")).toContainText(/Boosters such as/);
+    await expect(card.locator("details.why")).toHaveCount(0);
+  });
+});
+
+test.describe("sections", () => {
+  test("choosing a section lists only its suggestions, with document-wide ones kept under Whole document", async ({ page }) => {
+    const sent = await mockEngine(page, (_r, route) => json(route, 200, withDocumentWideResponse));
+    await page.goto("/");
+    await paste(page, SAMPLE_TEXT);
+    await check(page);
+    await expect(page.getByRole("heading", { name: "9 suggestions" })).toBeVisible();
+    const chooser = page.getByTestId("section-filter");
+    await expect(chooser).toHaveValue("all");
+    await expect(chooser.locator("option")).toHaveText(["All sections (9)", "Introduction (2)", "Methods (3)", "Discussion (4)"]);
+    await expect(page.getByTestId("whole-document")).toHaveCount(0);
+
+    await chooser.selectOption("methods");
+    // The whole text was sent once; the filter is instant and client-side.
+    expect(sent).toHaveLength(1);
+    await expect(page.getByRole("heading", { name: "Suggestions in Methods" })).toBeVisible();
+    const inSection = page.locator(".list-col > ol [data-testid=suggestion-card]");
+    await expect(inSection).toHaveCount(3);
+    for (const el of await inSection.all()) await expect(el).toContainText("Methods");
+    const whole = page.getByTestId("whole-document");
+    await expect(whole.getByRole("heading", { name: "Whole document" })).toBeVisible();
+    await expect(whole.getByTestId("suggestion-card")).toHaveCount(1);
+    await expect(whole.getByTestId("suggestion-card")).toHaveAttribute("data-rule", "W211");
+    await expect(page.getByTestId("section-blurb")).toContainText("Showing the Methods section");
+    // The text column stays whole; only the highlights narrow (two marks, one insertion point, and the document-wide one).
+    await expect(page.getByTestId("document")).toContainText("further studies are needed");
+    await expect(page.getByTestId("document").locator("mark")).toHaveCount(3);
+    await expect(page.getByTestId("document").locator(".pt")).toHaveCount(1);
+    await expect(mark(page, compoundSuggestion.id)).toBeVisible();
+
+    // Category and section filters combine.
+    await page.getByTestId("filter-convention").click();
+    await expect(inSection).toHaveCount(2);
+    await expect(whole.getByTestId("suggestion-card")).toHaveCount(1);
+    await page.getByTestId("filter-improvement").click();
+    await expect(page.getByTestId("no-cards")).toContainText("No improvements in the Methods section.");
+    await expect(page.getByTestId("whole-document")).toHaveCount(0);
+    await page.getByTestId("filter-all").click();
+
+    // Back to all: one list again.
+    await chooser.selectOption("all");
+    await expect(page.getByTestId("suggestion-card")).toHaveCount(9);
+    await expect(page.getByTestId("whole-document")).toHaveCount(0);
+
+    // A new check starts from "All sections".
+    await chooser.selectOption("discussion");
+    await expect(inSection).toHaveCount(4);
+    await check(page);
+    await expect(page.getByTestId("section-filter")).toHaveValue("all");
+    await expect(page.getByTestId("suggestion-card")).toHaveCount(9);
+    expect(sent).toHaveLength(2);
+  });
+
+  test("without a rule registry the engine's document-wide rules are still kept aside", async ({ page }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (e) => errors.push(e.message));
+    await mockEngine(page, (_r, route) => json(route, 200, withDocumentWideResponse), null);
+    await page.goto("/");
+    await paste(page, SAMPLE_TEXT);
+    await check(page);
+    await page.getByTestId("section-filter").selectOption("introduction");
+    await expect(page.locator(".list-col > ol [data-testid=suggestion-card]")).toHaveCount(1);
+    await expect(page.getByTestId("whole-document").getByTestId("suggestion-card")).toHaveAttribute("data-rule", "W211");
+    expect(errors).toEqual([]);
   });
 });
 
@@ -394,7 +511,7 @@ test.describe("accessibility", () => {
     await expect(page.locator(`#card-${firstId!.split(" ")[0]}`)).toBeFocused();
 
     // Tab onwards to the card's Why, open it, then "Show in text".
-    await tabTo(() => active((el) => el.tagName === "SUMMARY" && el.textContent === "Why?"));
+    await tabTo(() => active((el) => el.tagName === "SUMMARY" && el.textContent === "The full reasoning"));
     await page.keyboard.press("Enter");
     await expect(page.locator("details.why[open]")).toHaveCount(1);
     await tabTo(() => active((el) => el.textContent === "Show in text"));
@@ -414,7 +531,9 @@ test.describe("accessibility", () => {
       await page.getByLabel("Show preferences").check();
       await check(page);
       await expect(page.getByTestId("suggestion-card")).toHaveCount(10);
-      await page.getByTestId("suggestion-card").first().getByText("Why?").click();
+      await page.getByTestId("suggestion-card").first().getByText("The full reasoning").click();
+      await page.getByTestId("section-filter").selectOption("methods");
+      await expect(page.getByTestId("whole-document")).toHaveCount(0);
       await page.getByTestId("check").focus();
       const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "best-practice"]).analyze();
       const bad = results.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
@@ -440,7 +559,8 @@ test.describe("accessibility", () => {
       await paste(page, SAMPLE_TEXT + "\nA very long unbroken token: " + "x".repeat(300) + "\nhttps://example.org/" + "a/".repeat(80));
       await check(page);
       await expect(page.getByTestId("suggestion-card").first()).toBeVisible();
-      await page.getByTestId("suggestion-card").first().getByText("Why?").click();
+      await page.getByTestId("suggestion-card").first().getByText("The full reasoning").click();
+      await page.getByTestId("section-filter").selectOption("discussion");
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       expect(overflow).toBeLessThanOrEqual(0);
     });

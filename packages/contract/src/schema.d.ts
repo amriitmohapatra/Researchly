@@ -437,6 +437,11 @@ export interface components {
             /** Name */
             name: string;
             /**
+             * Plain
+             * @default
+             */
+            plain: string;
+            /**
              * @description Draft mode shows sentence-level rules only.
              * @default sentence
              */
@@ -581,6 +586,12 @@ export interface components {
              * @description One-line rationale, always shown.
              */
             message: string;
+            /**
+             * Plain
+             * @description The explanation in everyday words, shown first; `why` is the fuller account.
+             * @default
+             */
+            plain: string;
             /**
              * Replacement
              * @description A concrete fix, only from deterministic rules or a ≤40-char learned edit. Never generated prose.
@@ -727,6 +738,12 @@ export interface components {
              * @description One-line rationale, always shown.
              */
             message: string;
+            /**
+             * Plain
+             * @description The explanation in everyday words, shown first; `why` is the fuller account.
+             * @default
+             */
+            plain: string;
             /**
              * Replacement
              * @description A concrete fix, only from deterministic rules or a ≤40-char learned edit. Never generated prose.

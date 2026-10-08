@@ -40,6 +40,17 @@ _BROKEN_BEFORE = re.compile(
     r"[A-Za-z]-[ \t]{0,3}\n(?:[ \t]{0,3}\n)?[ \t]{0,3}\Z")
 
 
+def _in_latin_phrase(text: str, m) -> bool:
+    """"ad valorem", "per capita": the word and a neighbour form a phrase."""
+    before = re.search(r"([A-Za-z]+)[\s-]+$", text[max(0, m.start() - 20):m.start()])
+    after = re.match(r"[\s-]+([A-Za-z]+)", text[m.end():m.end() + 20])
+    w = m.group(0).lower()
+    return ((before is not None
+             and f"{before.group(1).lower()} {w}" in lx.LATIN_PHRASES)
+            or (after is not None
+                and f"{w} {after.group(1).lower()}" in lx.LATIN_PHRASES))
+
+
 def _in_url_like(text: str, start: int, end: int) -> bool:
     prev = text[start - 1] if start > 0 else " "
     nxt = text[end] if end < len(text) else " "
@@ -63,12 +74,15 @@ _AUTHOR_NAME = re.compile(
 
 @rule("S001", "spelling", Category.CORRECTION,
       "Possible misspelling (SymSpell dictionary + scientific lexicon).",
-      "Basic spelling against a frequency dictionary plus a scientific "
-      "lexicon (seroprevalence, covariates, nowcasting… are not errors "
-      "here). Proper nouns, acronyms, UK/US variants, and terms you use "
-      "repeatedly are skipped. False alarm on your terminology? "
-      "`researchly dict add <word>` teaches it your word permanently "
-      "(stored locally in ~/.researchly/dictionary.txt).",
+      'Spelling against a frequency dictionary plus a scientific lexicon '
+      '(seroprevalence, covariates, nowcasting are not errors here). '
+      'Proper nouns, acronyms, UK/US variants, and terms you use '
+      'repeatedly are skipped. A false alarm on your own terminology: '
+      "'Add to dictionary' on the card teaches it the word.",
+      plain=('This word is not in the dictionary, so it may be a typo. '
+             'Scientific terms, names and abbreviations are usually recognised. '
+             'If it is a real word you use, add it to your dictionary from this '
+             'card and it will not be flagged again.'),
       source="symspellpy",
       tier="spelling", fix_safety="review")
 def s001_spelling(doc, document: Document):
@@ -110,6 +124,8 @@ def s001_spelling(doc, document: Document):
         if counts[lower] >= 3:
             continue
         if _in_url_like(text, m.start(), m.end()):
+            continue
+        if lower in lx._LATIN_WORDS and _in_latin_phrase(text, m):
             continue
         # "mis-ordered", "non-zero", "co-circulating": a prefix before a
         # hyphen is half of a compound, not a word on its own.

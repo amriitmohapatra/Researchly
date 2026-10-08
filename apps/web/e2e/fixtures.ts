@@ -3,7 +3,7 @@
  * `satisfies` the contract, so a contract change breaks the build of the
  * tests instead of silently drifting.
  */
-import type { AnalyzeRequest, AnalyzeResponse, ErrorResponse, Suggestion, TierHealth } from "@researchly/contract";
+import type { AnalyzeRequest, AnalyzeResponse, ErrorResponse, RuleInfo, Suggestion, TierHealth } from "@researchly/contract";
 import { SAMPLE_SUGGESTIONS, SAMPLE_TEXT } from "./sample";
 
 export { SAMPLE_TEXT };
@@ -111,6 +111,54 @@ export const error500 = {
 export const error422 = {
   error: { code: "invalid_request", message: "format must be one of: plain, markdown, latex", request_id: "req-422-11aa" },
 } satisfies ErrorResponse;
+
+/** Code-point offset of `needle` in SAMPLE_TEXT (Python indices, as the engine counts). */
+function cp(needle: string): number {
+  const i = SAMPLE_TEXT.indexOf(needle);
+  if (i < 0) throw new Error(`fixture needle not found: ${needle}`);
+  return Array.from(SAMPLE_TEXT.slice(0, i)).length;
+}
+
+/** A document-wide suggestion (rule scope "document"): one spelling of a compound differs elsewhere. Synthetic. */
+export const compoundSuggestion: Suggestion = {
+  id: "e2e-compound-1",
+  rule_id: "W211",
+  rule_name: "Compound spelled two ways",
+  category: "convention",
+  tier: "craft",
+  span: { start: cp("South-East"), end: cp("South-East") + "South-East".length, line: 2, col: 42 },
+  section: "introduction",
+  message: "‘South-East’ is also written ‘Southeast’ elsewhere in this text.",
+  why: "A compound written two ways reads as two terms. Pick one spelling and use it throughout.",
+  plain: "In everyday words: the same advice, written for a reader who knows their science but not the grammar terms.",
+  source: "The Craft of Scientific Writing §6",
+  learn_ref: null,
+  replacement: null,
+  fix_safety: "review",
+  confidence: 1,
+  text: "South-East",
+};
+
+/** The happy response plus one document-wide suggestion (9 shown). */
+export const withDocumentWideResponse = {
+  ...happyResponse,
+  suggestions: [...withoutPrefs, compoundSuggestion],
+  counts: countsOf([...withoutPrefs, compoundSuggestion]),
+} satisfies AnalyzeResponse;
+
+/** GET /v1/rules, as the mocked engine answers it: scopes for the rules the fixtures use. */
+export const RULES_REGISTRY: RuleInfo[] = ["C201", "P110", "V305", "V310", "G110", "C120", "S010", "D401", "C205", "P120", "W211"].map((id) => ({
+  id,
+  name: id,
+  short: "A synthetic rule for the e2e suite.",
+  why: "w",
+  plain: "In everyday words: the same advice, written for a reader who knows their science but not the grammar terms.",
+  source: "s",
+  category: "improvement",
+  tier: "craft",
+  fix_safety: "review",
+  scope: id === "W211" ? "document" : "sentence",
+}));
 
 /** Pick the right success fixture for a request, as the real engine would. */
 export function responseFor(req: AnalyzeRequest): AnalyzeResponse {

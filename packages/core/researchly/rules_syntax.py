@@ -26,11 +26,15 @@ def _is_heading_line(document: Document, start: int) -> bool:
 
 @rule("G101", "subject-verb-separation", Category.IMPROVEMENT,
       "Long interruption between subject and verb.",
-      "Readers hold their breath from the subject until the verb arrives; "
-      "anything long jammed between them reads as an interruption and drains "
-      "emphasis. Move the machinery out: 'The model predicts X. It "
-      "incorporates A, B, and C.' rather than 'The model, which incorporates "
-      "A, B, and C, predicts X.' (Guide §5.2.1, Gopen & Swan.)",
+      'Readers hold their breath from the subject until the verb arrives; '
+      'anything long jammed between them reads as an interruption and '
+      "drains emphasis. Move the machinery out: 'The model predicts X. It "
+      "incorporates A, B, and C.' rather than 'The model, which "
+      "incorporates A, B, and C, predicts X.'",
+      plain=('There are many words between the subject of this sentence and its '
+             'verb. Readers wait for the verb and lose the thread. Move the '
+             'extra material into its own sentence, or bring the verb closer to '
+             'the subject.'),
       source="§5.2.1")
 def g101_subject_verb(doc, document: Document):
     # Dogfooding tune (8 theses, v0.1): plain long subject noun phrases
@@ -132,10 +136,13 @@ def _conjugate(verb: str, light_tag: str) -> str:
 
 @rule("G102", "buried-action", Category.IMPROVEMENT,
       "Action buried in a noun (performed an estimation → estimated).",
-      "English readers look for the action of a sentence in its verb. When "
-      "the action hides in a nominalization, the sentence goes limp. Turn "
-      "the noun back into a verb and the prose comes alive and shortens by "
-      "a third. (Guide §5.2.4, Gopen & Swan.)",
+      'English readers look for the action of a sentence in its verb. '
+      'When the action hides in a nominalization, the sentence goes limp. '
+      'Turn the noun back into a verb and the prose comes alive and '
+      'shortens by a third.',
+      plain=("The action here is hidden in a noun, such as 'performed an "
+             "estimation'. Use the verb instead: 'estimated'. The sentence "
+             'becomes shorter and clearer.'),
       source="§5.2.4", fix_safety="safe")
 def g102_buried_action(doc, document: Document):
     for tok in doc:
@@ -173,9 +180,13 @@ def g102_buried_action(doc, document: Document):
 
 @rule("G103", "nominalization-density", Category.IMPROVEMENT,
       "Three or more nominalizations in one sentence.",
-      "Each -tion/-ment/-ance word is a verb in a box. One is fine; three in "
-      "a sentence and the prose reads as fog even though every word is "
-      "correct. Hunt them, un-box the most important one. (Guide §5.2.4.)",
+      'Each -tion/-ment/-ance word is a verb in a box. One is fine; three '
+      'in a sentence and the prose reads as fog even though every word is '
+      'correct. Hunt them, and un-box the most important one.',
+      plain=('This sentence has several nouns made from verbs, such as '
+             "'implementation' or 'assessment'. One is fine; three make the "
+             'sentence hard to follow. Turn the most important one back into a '
+             'verb.'),
       source="§5.2.4")
 def g103_nominalization_density(doc, document: Document):
     for sent in doc.sents:
@@ -208,13 +219,17 @@ def g103_nominalization_density(doc, document: Document):
 
 @rule("G104", "passive-with-agent", Category.CONVENTION,
       "Passive with a stated agent ('was shown by X') — active is usually stronger.",
-      "Active and passive both have jobs. Passive is right when the doer is "
-      "irrelevant ('samples were incubated at 37°C') — which is why this "
-      "rule stays SILENT in Methods. But when the agent appears in a "
+      'Active and passive both have jobs. Passive is right when the doer '
+      "is irrelevant ('samples were incubated at 37 °C'), which is why "
+      'this rule stays silent in Methods. But when the agent appears in a '
       "'by'-phrase, the sentence pays the passive's cost without its "
-      "benefit: 'X showed…' is shorter and puts the actor in the topic "
-      "position. Choose by what belongs in the topic position, not by "
-      "superstition. (Guide §6.)",
+      "benefit: 'X showed' is shorter and puts the actor in the topic "
+      'position. Choose by what belongs at the start of the sentence, not '
+      'by habit.',
+      plain=("This sentence is passive and names who did the action ('was shown "
+             "by X'). The active form is shorter and puts the actor first: 'X "
+             "showed'. Passive is fine in Methods, where the actor does not "
+             'matter, so we never flag it there.'),
       sections_excluded=("methods", "appendix"),
       source="§6")
 def g104_passive_agent(doc, document: Document):
@@ -266,9 +281,13 @@ def g104_passive_agent(doc, document: Document):
 @rule("G105", "expletive-opener", Category.IMPROVEMENT,
       "Empty opener ('There are…', 'It is…that') wastes the topic position.",
       "The start of a sentence tells the reader whose story it is. 'There "
-      "are three factors that drive transmission' gives that slot to nobody; "
-      "'Three factors drive transmission' gives it to the factors. "
-      "(Guide §5.2.3.)",
+      "are three factors that drive transmission' gives that slot to "
+      "nobody; 'Three factors drive transmission' gives it to the "
+      'factors.',
+      plain=("'There are' or 'It is' at the start of a sentence gives the first "
+             "words to nothing. Start with the real subject: 'Three factors "
+             "drive transmission' instead of 'There are three factors that drive "
+             "transmission'."),
       source="§5.2.3")
 def g105_expletive(doc, document: Document):
     for sent in doc.sents:
@@ -290,10 +309,13 @@ def g105_expletive(doc, document: Document):
 
 @rule("G106", "overlong-sentence", Category.IMPROVEMENT,
       "Sentence over 50 words — check it carries one idea.",
-      "Not an error — some long sentences earn their length. But past ~40 "
-      "words, check: is this one idea, or two ideas sharing a sentence? "
-      "If you stumble reading it aloud, the reader will stumble too. "
-      "(Guide §5.1, §8.)",
+      'Not an error: some long sentences earn their length. But past '
+      'about 40 words, check whether this is one idea or two ideas '
+      'sharing a sentence. If you stumble reading it aloud, the reader '
+      'will stumble too.',
+      plain=('This sentence is very long. Long sentences are not wrong, but '
+             'check whether it carries one idea or two. If you would pause for '
+             'breath reading it aloud, split it there.'),
       source="§5.1")
 def g106_overlong(doc, document: Document):
     # Dogfooding tune: in 8 accepted theses the p90 sentence length was 48
@@ -326,9 +348,12 @@ def g106_overlong(doc, document: Document):
 @rule("G107", "noun-string", Category.IMPROVEMENT,
       "Four or more stacked nouns — unpack with prepositions.",
       "'Income quintile contact matrix estimation procedure' forces the "
-      "reader to parse backwards from the last noun. Unpack: 'the procedure "
-      "for estimating contact matrices by income quintile'. (Guide §6, "
-      "plain-structure corollary.)",
+      "reader to parse backwards from the last noun. Unpack it: 'the "
+      "procedure for estimating contact matrices by income quintile'.",
+      plain=('Several nouns are stacked in a row here, and the reader has to '
+             "work backwards to understand them. Add small words like 'of' and "
+             "'for': 'the procedure for estimating contact matrices' is easier "
+             "than 'contact matrix estimation procedure'."),
       source="§6")
 def g107_noun_string(doc, document: Document):
     def is_citation_like(tokens) -> bool:
@@ -375,13 +400,34 @@ def g107_noun_string(doc, document: Document):
 # C301 — hedge stacking
 # ---------------------------------------------------------------------------
 
+_CLAUSE = frozenset({"ccomp", "xcomp", "advcl", "relcl", "acl", "csubj"})
+
+
+def _in_complement_of(tok, verb) -> bool:
+    """Is `tok` inside a clause subordinate to `verb`? True when a clause
+    boundary (a ccomp, xcomp, relcl, ...) lies on the path from `tok` up
+    to `verb`; False if `verb` is not an ancestor at all."""
+    # spaCy hands out a fresh Token view on every access, so identity
+    # (`is`) never matches: compare positions.
+    crossed = tok.dep_ in _CLAUSE
+    for anc in tok.ancestors:
+        if anc.i == verb.i:
+            return crossed
+        if anc.dep_ in _CLAUSE:
+            crossed = True
+    return False
+
+
 @rule("C301", "hedge-stack", Category.IMPROVEMENT,
       "Stacked hedges ('may possibly suggest') — one calibrated qualifier is stronger.",
-      "Qualifiers are strength, not weakness: a well-placed hedge reads as "
-      "command of the evidence. But stacking them ('it might possibly be "
-      "tentatively suggested') is a calibration failure in the other "
-      "direction — you talk yourself out of your own result. Pick the one "
-      "hedge that matches the evidence and delete the rest. (Guide §4.2.)",
+      'Qualifiers are strength, not weakness: a well-placed hedge reads '
+      "as command of the evidence. But stacking them ('it might possibly "
+      "be tentatively suggested') is a calibration failure in the other "
+      'direction: you talk yourself out of your own result. Pick the one '
+      'hedge that matches the evidence and delete the rest.',
+      plain=("You have used two cautious words close together, such as 'may "
+             "possibly'. One is enough. Two make you sound unsure of your own "
+             'result. Keep the one that fits your evidence.'),
       source="§4")
 def c301_hedge_stack(doc, document: Document):
     # Dogfooding tunes: (1) "suggests that X may…" spreads one hedge over a
@@ -402,6 +448,12 @@ def c301_hedge_stack(doc, document: Document):
                 continue
             if any(t.lower_ in {"not", "n't", "never"}
                    for t in sent.doc[max(a.i - 2, 0):b.i]):
+                continue
+            # "suggests transition support could cost": "that" left out.
+            # The second hedge sits in the clause the reporting verb
+            # introduces, so it is the same hedge spread over two words,
+            # exactly as "suggests that ... could" above (P35).
+            if a.pos_ in ("VERB", "AUX") and _in_complement_of(b, a):
                 continue
             yield Suggestion(
                 message=f"'{a.text} … {b.text}' — keep one.",
@@ -434,12 +486,17 @@ def _has_object(tok) -> bool:
 @rule("C303", "causal-verb", Category.CONVENTION,
       "Causal verb — check the study design supports a causal claim.",
       "'Reduced', 'increased', 'prevented' assert causation. From a "
-      "randomized or well-identified design, that is exactly right; from an "
-      "observational or purely model-based result, 'was associated with', "
-      "'is consistent with', or 'the model implies' keeps the claim inside "
-      "the evidence. This is a prompt, not a verdict — you know your "
-      "design. Also keep 'the model implies X' distinct from 'the world "
-      "will do X'. (Guide §9.4; Am J Epidemiol 2022 word lists.)",
+      'randomized or well-identified design, that is exactly right; from '
+      "an observational or purely model-based result, 'was associated "
+      "with', 'is consistent with', or 'the model implies' keeps the "
+      'claim inside the evidence. This is a prompt, not a verdict: you '
+      "know your design. Also keep 'the model implies X' distinct from "
+      "'the world will do X'.",
+      plain=('This verb says one thing caused another. That is right if your '
+             'study design can show cause, such as a randomised trial. If your '
+             "data are observational or from a model, 'was associated with' or "
+             "'the model implies' is safer. You know your design; this is only a "
+             'reminder.'),
       sections_only=("abstract", "results", "discussion", "conclusion",
                      "limitations"),
       source="§9.4")
@@ -510,13 +567,15 @@ def c303_causal(doc, document: Document):
 
 @rule("E702", "adversative-run", Category.IMPROVEMENT,
       "Consecutive sentences opening with However/Nevertheless — whiplash.",
-      "Endo's lecture advises using conjunctions deliberately, and "
-      "adversatives sparingly. Each 'However' reverses direction; two in "
-      "quick succession ('Surveys are costly. However, they find hidden "
-      "infections. However, assays cross-react.') leave the reader unsure "
-      "which way the argument points. Fold one contrast into an 'although' "
-      "clause, or restructure so a single turn carries it. (Endo lecture, "
-      "conjunctions.)",
+      'Use conjunctions deliberately, and adversatives sparingly. Each '
+      "'However' reverses direction; two in quick succession leave the "
+      'reader unsure which way the argument points. Fold one contrast '
+      "into an 'although' clause, or restructure so a single turn carries "
+      'it.',
+      plain=("Two sentences in a row start with 'However' or a similar word. "
+             'Each one turns the argument around, so the reader loses track of '
+             'which way it is going. Join one contrast into the other sentence, '
+             'or remove one.'),
       source="Endo")
 def e702_adversative_run(doc, document: Document):
     ADV = re.compile(r"^\s*(However|Nevertheless|Nonetheless|Yet|"
@@ -537,12 +596,15 @@ def e702_adversative_run(doc, document: Document):
 
 @rule("E703", "naked-this", Category.IMPROVEMENT,
       "Sentence-initial 'This' with no noun — what does it refer to?",
-      "Endo's lecture flags this/that/it/which as a common source of "
-      "ambiguity: after a long sentence several referents are possible, and "
-      "the writer, who knows the intended one, does not notice the gap. "
-      "Give 'This' a noun — 'This assumption…', 'This discrepancy…', 'This "
-      "3-fold difference…' — and the reference becomes checkable. (Endo "
-      "lecture, ambiguous reference.)",
+      'This, that, it and which are a common source of ambiguity: after a '
+      'long sentence several referents are possible, and the writer, who '
+      "knows the intended one, does not notice the gap. Give 'This' a "
+      "noun ('This assumption', 'This discrepancy', 'This 3-fold "
+      "difference') and the reference becomes checkable.",
+      plain=("This sentence starts with 'This' on its own, and it is not clear "
+             "what 'This' refers to. Add a noun: 'This assumption', 'This "
+             "difference', 'This result'. Then the reader knows exactly what you "
+             'mean.'),
       source="Endo")
 def e703_naked_this(doc, document: Document):
     # Precision guard (Endo's own caveat): the reference is ambiguous when
@@ -571,13 +633,15 @@ def e703_naked_this(doc, document: Document):
 
 @rule("E707", "display-first-opener", Category.IMPROVEMENT,
       "'Figure 1 shows…' — lead with the finding, cite the figure after.",
-      "Endo's lecture recommends that Results keep a narrative: rather "
-      "than opening with what a display shows ('Figure 2 shows the weekly "
-      "incidence…'), state what the results mean and cite the display at "
-      "the end ('Weekly incidence peaked in July in every district "
-      "(Figure 2).'). The reader gets the finding in the topic position and "
-      "the pointer in parentheses. (Endo lecture, Results section; kin to "
-      "the stress-position principle, guide §5.2.2.)",
+      'Results should keep a narrative: rather than opening with what a '
+      "display shows ('Figure 2 shows the weekly incidence'), state what "
+      "the results mean and cite the display at the end ('Weekly "
+      "incidence peaked in July in every district (Figure 2).'). The "
+      'reader gets the finding in the topic position and the pointer in '
+      'parentheses.',
+      plain=("This sentence starts with 'Figure 1 shows'. Start with the finding "
+             "instead, and put the figure in brackets at the end: 'Cases peaked "
+             "in July (Figure 1).' The reader gets the result first."),
       sections_only=("results",),
       source="Endo", aggregate=True)
 def e707_display_first(doc, document: Document):

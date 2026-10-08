@@ -9,6 +9,8 @@ import AxeBuilder from "@axe-core/playwright";
 import { ENGINE } from "./fixtures";
 import {
   at,
+  BOOSTER,
+  COMPOUND,
   DEGRADED,
   DOC,
   fakeOffice,
@@ -66,16 +68,23 @@ test.describe("Word taskpane", () => {
     expect(body.options).toEqual({ show_preferences: false, disabled_rules: [], mode: "revise" });
     expect(calls[0]!.authorization).toBeUndefined();
 
-    await expect(page.getByRole("heading", { name: "7 suggestions" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "8 suggestions" })).toBeVisible();
     const rules = await page.getByTestId("word-card").evaluateAll((els) => els.map((e) => e.getAttribute("data-rule")));
-    expect(rules).toEqual(["C120", "S010", "S001", "G106", "C201", "S010", "S010"]);
-    // Every card: category, message, source, Why?
+    expect(rules).toEqual(["C120", "S010", "S001", "G106", "C201", "S010", "W211", "S010"]);
+    // Every card: category, message, the plain explanation, the source; the full reasoning behind a disclosure.
     const first = card(page, "In order to");
     await expect(first).toContainText("Improvement");
     await expect(first).toContainText("Methods");
-    await expect(first).toContainText("The Craft of Scientific Writing, §4");
-    await first.getByText("Why?").click();
-    await expect(first).toContainText("A synthetic explanation");
+    await expect(first.getByTestId("card-plain")).toContainText("In everyday words");
+    await expect(first).toContainText("Source: The Craft of Scientific Writing, §4");
+    await expect(first.getByText("A synthetic explanation")).toBeHidden();
+    await expect(first).not.toContainText("Rule");
+    await expect(first).not.toContainText("Checked by");
+    await expect(first).not.toContainText("C120");
+    await first.getByText("The full reasoning").click();
+    await expect(first.getByText("A synthetic explanation")).toBeVisible();
+    // The stage's help says what each stage checks.
+    await expect(page.getByTestId("mode-help")).toHaveText("Draft: check what you've written so far. Revise: check the finished manuscript.");
 
     await expect(page.getByTestId("coverage")).toContainText("Checked 5 paragraphs of the document body, 1 of them in a table.");
     await expect(page.getByTestId("coverage")).toContainText(
@@ -186,6 +195,72 @@ test.describe("Word taskpane", () => {
     await expect(page.getByTestId("mode-draft")).toBeChecked();
   });
 
+  test("Check this section: the whole document is sent, only the cursor's section is listed, document-wide checks kept", async ({ page }) => {
+    await fakeOffice(page, { cursor: 3 });
+    const calls = await mockWordEngine(page, ENGINE);
+    await page.goto("/word");
+    await page.getByTestId("mode-draft").check();
+    await expect(page.getByTestId("mode-help")).toHaveText("Draft: check what you've written so far. Revise: check the finished manuscript.");
+    await page.getByTestId("mode-revise").check();
+    await page.getByTestId("check-section").click();
+    await expect(page.getByTestId("tp-results")).toBeVisible();
+    // Never truncated: every paragraph went to the engine.
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.body.paragraphs).toHaveLength(DOC.length);
+
+    await expect(page.getByRole("heading", { name: "5 suggestions in “Discussion”" })).toBeVisible();
+    const note = page.getByTestId("section-focus");
+    await expect(note).toContainText("Showing the section at the cursor, “Discussion”.");
+    await expect(note).toContainText("3 more suggestions are elsewhere in it.");
+    const inSection = page.locator(".tp-results > .tp-cards [data-testid=word-card]");
+    await expect(inSection).toHaveCount(4);
+    expect(await inSection.evaluateAll((els) => els.map((e) => e.getAttribute("data-paragraph")))).toEqual(["3", "3", "3", "3"]);
+    const whole = page.getByTestId("whole-document");
+    await expect(whole.getByRole("heading", { name: "Whole document" })).toBeVisible();
+    await expect(whole.getByTestId("word-card")).toHaveAttribute("data-rule", "W211");
+    await expect(card(page, "In order to")).toHaveCount(0);
+    await expect(page.getByTestId("tp-announcer")).toHaveText("Check complete. 5 suggestions in “Discussion”. 3 more elsewhere in the document.");
+
+    // The section's cards still work in the document.
+    await card(page, "second time").getByTestId("select-in-document").click();
+    await expect.poll(async () => (await wordState(page)).selection?.paragraph).toBe(3);
+
+    // Everything, without another check.
+    await page.getByTestId("show-whole-document").click();
+    await expect(page.getByRole("heading", { name: "8 suggestions" })).toBeVisible();
+    await expect(page.getByTestId("section-focus")).toHaveCount(0);
+    await expect(page.getByTestId("whole-document")).toHaveCount(0);
+    expect(calls).toHaveLength(1);
+
+    // The cursor above the first heading, and a document that lists no rule scopes (the built-in list applies).
+    await page.evaluate(() => {
+      (window as unknown as { __fakeWord: { selection: unknown } }).__fakeWord.selection = { paragraph: 1, start: 0, end: 0, text: "" };
+    });
+    await page.getByTestId("check-section").click();
+    await expect(page.getByRole("heading", { name: "4 suggestions in “Methods”" })).toBeVisible();
+    await expect(inSection).toHaveCount(3);
+    await expect(page.getByTestId("whole-document").getByTestId("word-card")).toHaveCount(1);
+    expect(calls).toHaveLength(2);
+  });
+
+  test("Check this section: a section with nothing to flag, and an engine whose registry lists no scopes", async ({ page }) => {
+    await fakeOffice(page, { cursor: 1 });
+    await mockWordEngine(page, ENGINE, {
+      rules: [],
+      respond: (_req, route) =>
+        fulfillJson(route, 200, { ...reviseResponse, suggestions: [LONG, BOOSTER, COMPOUND], counts: { improvement: 1, convention: 2 } }),
+    });
+    await page.goto("/word");
+    await page.getByTestId("check-section").click();
+    await expect(page.getByTestId("tp-results")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "1 suggestion in “Methods”" })).toBeVisible();
+    await expect(page.getByTestId("tp-empty")).toContainText("Nothing to flag in this section");
+    await expect(page.getByTestId("tp-empty")).toContainText("This is not a score");
+    await expect(page.getByTestId("section-focus")).toContainText("2 more suggestions are elsewhere in it.");
+    // W211 is not in the registry the engine sent: the built-in list keeps it document-wide.
+    await expect(page.getByTestId("whole-document").getByTestId("word-card")).toHaveAttribute("data-rule", "W211");
+  });
+
   test("hidden preferences can be revealed (a re-check that asks for them)", async ({ page }) => {
     await fakeOffice(page);
     const calls = await mockWordEngine(page, ENGINE);
@@ -223,7 +298,7 @@ test.describe("Word taskpane", () => {
     await expect(page.getByTestId("tp-error")).toContainText("Something went wrong on our side");
     await expect(page.getByTestId("tp-error")).toContainText("req-word-500");
     await page.getByTestId("tp-retry").click();
-    await expect(page.getByRole("heading", { name: "7 suggestions" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "8 suggestions" })).toBeVisible();
   });
 
   test("an empty document is said, and nothing is sent", async ({ page }) => {
@@ -316,7 +391,7 @@ test.describe("Word taskpane layout and accessibility", () => {
       await page.getByTestId("check-document").click();
       await expect(page.getByTestId("tp-results")).toBeVisible();
       await card(page, "This sentence is long").getByTestId("select-in-document").click();
-      await card(page, "In order to").getByText("Why?").click();
+      await card(page, "In order to").getByText("The full reasoning").click();
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       expect(overflow).toBeLessThanOrEqual(0);
       expect(await axeSerious(page)).toEqual([]);

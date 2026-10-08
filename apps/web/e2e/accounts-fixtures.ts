@@ -26,6 +26,7 @@ function sugg(text: string, needle: string, extra: Partial<Suggestion> & Pick<Su
     section: "unknown",
     message: "A synthetic message.",
     why: "A synthetic explanation.",
+    plain: "In everyday words: the same advice, written for a reader who knows their science but not the grammar terms.",
     source: "The Craft of Scientific Writing §4",
     learn_ref: null,
     replacement: null,
@@ -50,6 +51,7 @@ export const nowcastingSpelling = sugg(PASTE_TEXT, "nowcasting", {
   section: "methods",
   message: "‘nowcasting’ is not in the dictionary.",
   why: "Possible misspelling. If it is a term from your field, add it to your dictionary.",
+  plain: "In everyday words: the same advice, written for a reader who knows their science but not the grammar terms.",
   source: "Spelling tier: SymSpell with a scientific lexicon",
 });
 
@@ -181,6 +183,7 @@ export const RULES: RuleInfo[] = [
     name: "Wordy phrase",
     short: "Prefer the shorter phrase when it says the same.",
     why: "w",
+    plain: "In everyday words: the same advice, written for a reader who knows their science but not the grammar terms.",
     source: "s",
     category: "improvement",
     tier: "craft",
@@ -192,6 +195,7 @@ export const RULES: RuleInfo[] = [
     name: "Subject-verb agreement",
     short: "A verb should agree with its subject in number.",
     why: "w",
+    plain: "In everyday words: the same advice, written for a reader who knows their science but not the grammar terms.",
     source: "s",
     category: "correction",
     tier: "grammar",

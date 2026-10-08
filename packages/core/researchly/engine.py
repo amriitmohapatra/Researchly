@@ -65,6 +65,7 @@ class Suggestion:
     rule_name: str = ""
     category: Category = Category.IMPROVEMENT
     why: str = ""                     # teachable explanation
+    plain: str = ""                   # the same, in everyday words (P35)
     source: str = ""                  # provenance (guide section, paper)
     tier: str = TIER_CRAFT
     fix_safety: str = FIX_REVIEW
@@ -82,6 +83,7 @@ class Suggestion:
             "message": self.message,
             "replacement": self.replacement,
             "why": self.why,
+            "plain": self.plain,
             "source": self.source,
             "tier": self.tier,
             "fix_safety": self.fix_safety,
@@ -121,6 +123,10 @@ class Rule:
     # checks only (P1, S3), because a half-written chapter fails every
     # document-level check for no fault of the sentence being written.
     scope: str = "sentence"
+    # The why in everyday words, for a writer who knows their science but
+    # not the grammar vocabulary (owner feedback, P35). Shown first; the
+    # technical why sits behind it. Required: test_explanations enforces it.
+    plain: str = ""
 
 
 SCOPES = ("sentence", "document")
@@ -129,7 +135,7 @@ REGISTRY: dict[str, Rule] = {}
 
 
 def rule(id: str, name: str, category: Category, short: str, why: str,
-         sections_only: Iterable[str] | None = None,
+         sections_only: Iterable[str] | None = None, *, plain: str = "",
          sections_excluded: Iterable[str] | None = None,
          source: str = "", aggregate: bool = False,
          tier: str = TIER_CRAFT, fix_safety: str = FIX_REVIEW,
@@ -141,6 +147,7 @@ def rule(id: str, name: str, category: Category, short: str, why: str,
     def wrap(func):
         REGISTRY[id] = Rule(
             id=id, name=name, category=category, short=short, why=why,
+            plain=plain,
             func=func,
             sections_only=frozenset(sections_only) if sections_only else None,
             sections_excluded=(frozenset(sections_excluded)
@@ -204,7 +211,7 @@ def check(document: Document, nlp, *,
             s.rule_id, s.rule_name, s.category = r.id, r.name, r.category
             # Carry the explanation and provenance on the suggestion itself.
             # Every surface used to re-join these out of REGISTRY by hand.
-            s.why, s.source = r.why, r.source
+            s.why, s.source, s.plain = r.why, r.source, r.plain
             s.tier, s.fix_safety = r.tier, r.fix_safety
             section = document.section_at(s.start)
             if not _section_allows(r, section):

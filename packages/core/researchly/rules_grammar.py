@@ -310,13 +310,15 @@ def reset() -> None:
 
 @rule("LT001", "grammar", Category.CORRECTION,
       "Grammar (agreement, verb forms, articles) via LanguageTool.",
-      "The commodity grammar layer, delegated to LanguageTool — a mature "
-      "open-source, non-AI rule engine (Java) that runs on this machine "
-      "or, in the hosted service, beside the engine in the same region. "
-      "Only genuine grammar categories are used; spelling belongs to S001 "
-      "and style to Researchly's own rules, so nothing is flagged twice. "
-      "If this rule never fires, LanguageTool isn't installed: "
-      "`pip install language-tool-python` (plus Java 17+).",
+      'The grammar layer, delegated to LanguageTool, a mature open-source '
+      'rule engine that runs beside the engine. Only genuine grammar '
+      "categories are used; spelling and style belong to Researchly's own "
+      'rules, so nothing is flagged twice. If grammar checking is '
+      'unavailable, the health notice says so.',
+      plain=('A grammar check: things like a verb that does not match its '
+             'subject, a missing article, or the wrong word form. It comes from '
+             'LanguageTool, an open-source grammar checker that runs with '
+             'Researchly and never sends your text anywhere else.'),
       source="LanguageTool",
       tier="grammar", fix_safety="review")
 def lt001_grammar(doc, document: Document):

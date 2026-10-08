@@ -1710,3 +1710,79 @@ manifests and fails on the old file. The local manifest is now named
 "Researchly (local)" so the two cannot be confused. Lesson: Mac Word gives
 no error for a bad manifest; validate against the documented limits in CI,
 since Microsoft's validator is unreachable here.
+
+## P35 — 2026-10-08 — The owner's first real use: plain explanations, sources, three fixes
+
+**What.** The owner ran an assignment's `.tex` through the website and
+sent `Researchly_Improvements_8Oct2026.docx` (read in memory, three
+screenshots). Findings, in their order:
+- "Rule" and "Checked by" on the cards are for us, not users (surfaces,
+  next commit).
+- "Why?" is too technical and full of internal references: "Guide §4.2",
+  "Run `researchly abstract`", "via NG5001 Unit 2". Every rule now carries
+  a `plain=` explanation in everyday words (shown first; the technical why
+  sits behind it), written for a writer who knows their science but not
+  the grammar vocabulary. All 52 why texts were rewritten without section
+  numbers, course codes, lecturer names, book citations or CLI commands;
+  `test_explanations.py` forbids them in any user-visible text. The edit
+  was done with an `ast`-driven script over the decorators (ast columns
+  are byte offsets; the em dashes bit once).
+- Sources: the lecture and the NUS course are shown as **"Amriit's
+  learnings from scientific-writing training (Researchly notes)"**; the
+  published works and the owner's guide stay named (owner decision; the
+  codes are unchanged, so `knowledge-base.md` §9b still traces provenance).
+- "ad valorem" → "galore": the spelling tier read "valorem" alone.
+  `lexicons.LATIN_PHRASES`; a word is skipped when it and a neighbour form
+  a known phrase.
+- "suggests transition support could" flagged as a hedge stack: "that"
+  left out. C301 now walks the dependency parse: a hedge inside a clause
+  subordinate to the reporting verb (ccomp, xcomp, advcl, relcl, acl) is
+  the same hedge. (spaCy Token identity: compare `.i`, never `is`.)
+- The owner's professor's correction, "equations are part of sentences":
+  **X302** (LaTeX, Convention, guide §9.2): a displayed equation after a
+  full stop (abbreviations excepted). On the 17 real LaTeX projects: 5 of
+  102 equations, all genuine.
+- Contract: `Suggestion.plain`, `RuleInfo.plain`; types regenerated; web
+  fixtures carry the field.
+
+**Discussed, recorded in PLAN.** Section-by-section checking: analyse the
+whole document, show the chosen section (truncating breaks the
+document-wide checks); the owner's point that those checks need a complete
+draft becomes the mode's own wording. Article-type profiles (commentary and
+policy brief first) and the selling point go to S4. Jev (TypeSafe AI) is an
+S5 candidate only if it runs inside our container.
+
+**Evidence.** Core 787 passed; service 158; web typecheck, lint and 193
+unit tests; contract drift check; ruff; third-party scan 0 hits. Noise
+gate and bench: addendum below.
+
+**Addendum (same day).** Noise floor unchanged at 11.67/1000w (no corpus
+instance of the C301 pattern; X302 is LaTeX-only); real-document bench
+PASS, 13.69/1000w, X302 5 on LaTeX. Surfaces (sub-agent, reviewed and
+re-run by the lead; 6d8daea): cards lead with the plain explanation, the
+technical why sits behind "The full reasoning", "Rule"/"Checked by" are
+gone (ids stay as data attributes); a Section view on the web and "Check
+this section" in Word, both over a whole-document analysis with the
+document-wide checks grouped; the mode help now says what Draft and
+Revise are for. Rule scopes come from `/v1/rules`, with the engine's
+document-scope list as the fallback for the local server. Web 205 unit,
+94 e2e, lint, types. Not verified in real Word: the cursor-section read.
+
+**Addendum 2 (same day): X302 for Word.** The owner: "I thought you were
+supposed to deploy it for word as well." The rule had been LaTeX-only
+because that is where equations are marked up. Word now has two routes
+(`rules_structure._word_display_equations`): an uploaded .docx records
+each `m:oMath` as an equation item, so an equation object alone in its
+paragraph (its number may follow, "\t(1)") is a displayed equation; the
+add-in sends paragraph text only, so an equation object arrives in its
+linear form ("λ = βI/N") and a paragraph with a relation sign and no
+ordinary word (function names such as log and exp excepted) counts as
+one, which also catches a PDF conversion's flattened equations (P33). An
+equation inside a sentence's paragraph is inline and never judged; table
+cells never count. Same full-stop test and anchor as LaTeX. Tests: fire
+and five quiet cases through `Document.from_word`, one through the .docx
+reader. Bench: the five real Word files with equations lead them in or
+end on a colon, so no new flags; LaTeX unchanged at 5. Not verified in
+real Word: what Office JS returns as the text of an equation paragraph
+(if it is empty rather than linear maths, the add-in route sees nothing
+and the upload route still works; the owner is asked to try it).

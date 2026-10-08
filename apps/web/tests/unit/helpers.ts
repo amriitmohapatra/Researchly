@@ -18,6 +18,7 @@ export function sugg(
     section: "unknown",
     message: "m",
     why: "w",
+    plain: "In everyday words: the same advice, written for a reader who knows their science but not the grammar terms.",
     source: "s",
     text: "",
     fix_safety: "review",

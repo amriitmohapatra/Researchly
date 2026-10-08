@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AnalyzeResponse, Suggestion } from "@researchly/contract";
-import { applyFilter, hiddenPreferenceCount, revealNeedsRecheck, shownSuggestions, summarySentence } from "@/lib/view";
+import { applyFilter, applySectionFilter, countBySection, hiddenPreferenceCount, revealNeedsRecheck, shownSuggestions, summarySentence } from "@/lib/view";
 import { sugg } from "./helpers";
 
 function response(suggestions: Suggestion[], hidden_preferences = 0): AnalyzeResponse {
@@ -55,5 +55,33 @@ describe("view model", () => {
     const s = summarySentence(shownSuggestions(response(list), false));
     expect(s).toBe("Check complete. 3 suggestions: 2 corrections, 1 improvement.");
     expect(s).not.toMatch(/score|grade|%/i);
+  });
+});
+
+describe("section view", () => {
+  const list = [
+    sugg("m1", 0, 2, "improvement", { section: "methods", rule_id: "C120" }),
+    sugg("m2", 3, 5, "convention", { section: "methods", rule_id: "F612" }),
+    sugg("d1", 6, 8, "improvement", { section: "discussion", rule_id: "C120" }),
+    sugg("d2", 9, 11, "convention", { section: "discussion", rule_id: "X101" }),
+    sugg("u1", 12, 13, "correction", { section: "unknown", rule_id: "S010" }),
+  ];
+
+  it("counts shown suggestions per section", () => {
+    expect(countBySection(list)).toEqual({ methods: 2, discussion: 2, unknown: 1 });
+  });
+
+  it("'all' lists everything in one group", () => {
+    const r = applySectionFilter(list, "all", null);
+    expect(r.inSection).toHaveLength(5);
+    expect(r.wholeDocument).toEqual([]);
+    expect(r.elsewhere).toBe(0);
+  });
+
+  it("a section keeps its sentence-level suggestions and the document-wide ones, wherever they are", () => {
+    const r = applySectionFilter(list, "methods", null);
+    expect(r.inSection.map((s) => s.id)).toEqual(["m1"]);
+    expect(r.wholeDocument.map((s) => s.id)).toEqual(["m2", "d2"]);
+    expect(r.elsewhere).toBe(2);
   });
 });

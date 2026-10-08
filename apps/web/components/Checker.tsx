@@ -25,7 +25,9 @@ import { addWord, loadSettings, muteRule } from "@/lib/account";
 import { getEngineAuth, openSignIn, useAuth } from "@/lib/auth";
 import { analyze, analyzeFile } from "@/lib/engine";
 import { clientError, UPLOAD_TYPES_SENTENCE, type CheckError } from "@/lib/errors";
+import { ENGINE_URL } from "@/lib/config";
 import { loadFormat, saveFormat, subscribeFormat } from "@/lib/prefs";
+import { useRuleScopes } from "@/lib/scope";
 import { codePointLength } from "@/lib/segments";
 import { ACCEPT_ATTR, checkFile } from "@/lib/source";
 import { FORMATS, isFormat, validateContent, type InputProblem } from "@/lib/validate";
@@ -385,6 +387,8 @@ export function Checker() {
   const describedBy = [ids.hint, problem ? ids.problem : null].filter(Boolean).join(" ");
   const current = mode === "file" ? fileChecked : checked;
   const signInPrompt = accounts && error?.kind === "sign_in_required";
+  // Which rules read the whole document (for the section chooser). Asked once, after the first results; no text is sent.
+  const scopes = useRuleScopes(ENGINE_URL, current !== null);
 
   return (
     <>
@@ -681,6 +685,7 @@ export function Checker() {
           onRevealPreferences={onRevealPreferences}
           source={fileChecked.data.document}
           actions={cardActions}
+          scopes={scopes}
         />
       ) : mode === "paste" && checked ? (
         <Results
@@ -692,6 +697,7 @@ export function Checker() {
           busy={loading}
           onRevealPreferences={onRevealPreferences}
           actions={cardActions}
+          scopes={scopes}
         />
       ) : null}
     </>
