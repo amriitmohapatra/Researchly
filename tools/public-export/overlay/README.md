@@ -88,7 +88,8 @@ npm ci
 NEXT_PUBLIC_ENGINE_URL=http://localhost:8080 npm run dev  # :3000
 ```
 
-`docs/deploy.md` describes the hosted setup (Cloud Run, Vercel, Supabase).
+The hosted setup (Cloud Run, Vercel, Supabase) is deployed from the private
+repository; `services/engine/README.md` shows how to run the service.
 
 ## Where the advice comes from
 
@@ -107,6 +108,10 @@ accepted theses used to measure how often the engine flags good writing,
 and course notes used to check that no third-party text ships. Those
 measurements are reported, but they cannot be reproduced from here. The
 real-document bench in `ml/realdocs/` uses openly licensed articles and can.
+
+Comments in the code sometimes mention `CLAUDE.md`, `PLAN.md`,
+`ARCHITECTURE.md` or the project log. Those are the private repository's
+planning documents and are not published.
 
 ## Licence
 

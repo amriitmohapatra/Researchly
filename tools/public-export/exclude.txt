@@ -47,3 +47,4 @@ tools/
 **/.env.*.local
 **/.env.production
 **/.env.development
+docs/deploy.md

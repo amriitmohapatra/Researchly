@@ -30,7 +30,6 @@ ml/realdocs/
 .github/workflows/realdocs.yml
 
 # Documentation written for people who run or contribute to the project.
-docs/deploy.md
 docs/labelling-guide.md
 docs/s2-design.md
 docs/windows-smoke-checklist.md
