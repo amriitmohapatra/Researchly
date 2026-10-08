@@ -81,6 +81,21 @@ def test_equation_masked_and_recorded():
     assert rules(doc, "S001") == []
 
 
+def test_displayed_equation_after_a_full_stop_is_flagged():
+    # the equation object alone in its paragraph, numbered: displayed
+    doc = load(para("We assume mass action.")
+               + para(equation("qzxvbn"), "\t(1)")
+               + para("where N is the population."))
+    (h,) = rules(doc, "X302")
+    assert doc.original[h.start:h.end] == "action."
+    # led in, and an equation inside a sentence: quiet
+    assert rules(load(para("The rate is") + para(equation("qzxvbn"))
+                      + para("where N is the population.")), "X302") == []
+    assert rules(load(para("We assume mass action.")
+                      + para("Here ", equation("qzxvbn"), " holds.")),
+                 "X302") == []
+
+
 def test_drawing_caption_and_table_structure():
     doc = load(para(drawing()) +
                para("Weekly incidense by region.", style="Beschriftung") +

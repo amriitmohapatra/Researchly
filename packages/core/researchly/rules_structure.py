@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 
-from .document import Document
+from .document import _RELATION, Document
 from .engine import Category, Suggestion, rule
 from .structure import Structure, analyse, number_text
 
@@ -382,23 +382,66 @@ _ABBREV_STOP = re.compile(
              "what it means, such as 'where N is the population'."),
       source="§9.2")
 def x302_equation_not_in_sentence(doc, document: Document):
-    if document.kind != "latex":
+    if document.kind == "latex":
+        starts = [it.start for it in document.structure
+                  if it.kind == "equation"]
+    elif document.kind == "word":
+        starts = list(_word_display_equations(document))
+    else:
         return
     masked = document.masked
-    for it in document.structure:
-        if it.kind != "equation":
-            continue
-        before = masked[:it.start].rstrip()
+    for start in starts:
+        before = masked[:start].rstrip()
         if not before:
             continue                       # nothing readable before it
         if before[-1] != "." or _ABBREV_STOP.search(before[-14:]):
             continue
         # "...} ." from a masked \cite or \ref is still the sentence's end.
-        a, b = _word_near(document, it.start, it.start)
+        a, b = _word_near(document, start, start)
         yield Suggestion(
             message="This equation starts after a full stop — make it part "
                     "of a sentence (lead in, display, then interpret).",
             start=a, end=b)
+
+
+# A displayed equation's paragraph in Word, once the equation object is
+# masked: nothing, or its number ("\t(3)", "(3a)").
+_EQ_NUMBER_ONLY = re.compile(r"^\s*(?:\(?\d{1,3}[a-z]?\)?)?\s*$")
+# Function names that are maths, not words, in a typed equation.
+_MATH_WORDS = frozenset(
+    "log ln exp sin cos tan sinh cosh tanh max min arg lim sup inf det "
+    "diag var cov dt dx dy ds du".split())
+
+
+def _equation_paragraph(text: str) -> bool:
+    """A Word paragraph that IS an equation written as text: a relation
+    sign and no ordinary word. The add-in reads paragraph text only, so an
+    equation object arrives in its linear form ("R0 = βS/N"); a PDF
+    conversion flattens one the same way."""
+    text = text.strip()
+    if not text or len(text) > 240 or not _RELATION.search(text):
+        return False
+    return not any(w.lower() not in _MATH_WORDS
+                   for w in re.findall(r"[A-Za-z]{2,}", text))
+
+
+def _word_display_equations(document: Document):
+    """Start offsets of the paragraphs that are a displayed equation: an
+    equation object on its own (an uploaded .docx, where the reader masks
+    it), or a paragraph of maths written as text (the add-in). An equation
+    inside a sentence's paragraph is inline and never judged here."""
+    offs = document.para_offsets
+    objects = [it.start for it in document.structure if it.kind == "equation"]
+    for i, off in enumerate(offs):
+        end = offs[i + 1] - 2 if i + 1 < len(offs) else len(document.original)
+        text = document.original[off:end]
+        if not text.strip() or document.in_table(off):
+            continue
+        if any(off <= s < end for s in objects):
+            if _EQ_NUMBER_ONLY.match(document.masked[off:end]):
+                yield off
+        elif _equation_paragraph(text):
+            yield off
 
 
 # --- X401: does the number quoted from a table appear in it? ------------------------

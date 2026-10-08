@@ -1767,3 +1767,22 @@ document-wide checks grouped; the mode help now says what Draft and
 Revise are for. Rule scopes come from `/v1/rules`, with the engine's
 document-scope list as the fallback for the local server. Web 205 unit,
 94 e2e, lint, types. Not verified in real Word: the cursor-section read.
+
+**Addendum 2 (same day): X302 for Word.** The owner: "I thought you were
+supposed to deploy it for word as well." The rule had been LaTeX-only
+because that is where equations are marked up. Word now has two routes
+(`rules_structure._word_display_equations`): an uploaded .docx records
+each `m:oMath` as an equation item, so an equation object alone in its
+paragraph (its number may follow, "\t(1)") is a displayed equation; the
+add-in sends paragraph text only, so an equation object arrives in its
+linear form ("λ = βI/N") and a paragraph with a relation sign and no
+ordinary word (function names such as log and exp excepted) counts as
+one, which also catches a PDF conversion's flattened equations (P33). An
+equation inside a sentence's paragraph is inline and never judged; table
+cells never count. Same full-stop test and anchor as LaTeX. Tests: fire
+and five quiet cases through `Document.from_word`, one through the .docx
+reader. Bench: the five real Word files with equations lead them in or
+end on a colon, so no new flags; LaTeX unchanged at 5. Not verified in
+real Word: what Office JS returns as the text of an equation paragraph
+(if it is empty rather than linear maths, the add-in route sees nothing
+and the upload route still works; the owner is asked to try it).

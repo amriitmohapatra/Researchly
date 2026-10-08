@@ -139,5 +139,48 @@ def test_x302_quiet(body):
     assert hits(tex(body), "X302", "latex") == []
 
 
-def test_x302_only_runs_on_latex():
+def test_x302_does_not_run_on_plain_text():
     assert hits("Methods\n\nWe assume mass action.\n\nr = 2\n", "X302") == []
+
+
+# Word: the add-in sends paragraph text, so an equation object arrives in
+# its linear form; an uploaded .docx records the object itself (below).
+
+def word(*paras):
+    doc = Document.from_word(
+        [{"text": "Methods", "style": "Heading 1"}]
+        + [p if isinstance(p, dict) else {"text": p} for p in paras])
+    return [s for s in api.analyze(doc, nlp=NLP,
+                                   show_preferences=True).suggestions
+            if s.rule_id == "X302"]
+
+
+def test_x302_fires_on_a_word_equation_paragraph_after_a_full_stop():
+    (h,) = word("We assume mass action.", "λ = βI/N",
+                "where N is the population.")
+    assert h.text == "action."
+
+
+@pytest.mark.parametrize("paras", [
+    # led in
+    ("The force of infection is", "λ = βI/N\t(1)", "where N is the population."),
+    # a colon is a lead-in
+    ("The force of infection is given by:", "R0 = β/γ"),
+    # an abbreviation's full stop
+    ("The rate is as in earlier work, e.g.", "r = 2"),
+    # an equation inside a sentence's paragraph is inline, not displayed
+    ("We assume mass action.", "Let x = 2 be the rate of growth."),
+    # a paragraph of words with an equals sign is prose
+    ("We assume mass action.", "Here the growth rate = births minus deaths."),
+    # a table cell is never a displayed equation
+    ("We assume mass action.", {"text": "N = 1,234", "kind": "table"}),
+])
+def test_x302_quiet_in_word(paras):
+    assert word(*paras) == []
+
+
+def test_x302_sees_a_flattened_pdf_equation():
+    # a PDF conversion flattens a displayed equation to symbols (P33)
+    (h,) = word("We assume mass action.",
+                "d log y j t = (1 − ε)d log c j t + d log x t")
+    assert h.text == "action."
