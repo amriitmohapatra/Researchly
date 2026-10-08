@@ -2139,3 +2139,72 @@ The deck (seven slides, Slides artifact) and the video (50 s with music;
 - Listen to the video's voice before sharing.
 - The label page links to the guide on the private GitHub repo, which only
   the owner can open.
+
+## P39 — 2026-10-08 — A public repository, generated from the private one
+
+**Why.** The owner wants to share the code without the material that cannot
+be redistributed, and chose a separate public repository with a fresh
+history ("Go with the separate public repo"). This repository stays private.
+Its git history has held the theses and the course PDFs since the first
+commits, so making it public was never an option.
+
+**What.**
+- **The export.** `tools/public-export/export.py` reads committed files at a
+  ref, never the working folder. It keeps what `include.txt` admits and
+  `exclude.txt` does not, then lays `overlay/` on top: the public README,
+  CONTRIBUTING, SECURITY and the public CI. The public CI is the private CI
+  minus the third-party job, which needs private sources.
+- **The gate** refuses the export on any of:
+  - an 8-word run shared with a private source, in any exported file;
+  - a private name from `private-terms.txt` (the lecturer, the course,
+    thesis authors, student ids);
+  - a credential, by its own patterns and by gitleaks;
+  - an email that is neither a placeholder nor listed;
+  - a PDF, pickle, model file or stray archive, an oversized file, or a
+    symlink.
+- **CI.** A `public-export` job runs the tool's tests and the gate on every
+  change.
+- **The engine stopped naming its private sources in its own code.** The
+  source codes are now `lecture`, `course-U1` and `course-U2`; the knowledge
+  base maps them. The explanation test reads the private terms list when it
+  is present.
+- **Fixture and copy fixes.**
+  - The web config test assembles its fake keys at run time, so gitleaks
+    stays green.
+  - Two phrases joined the third-party allow-list: the CC BY licence
+    statement and a published article's title.
+  - The landing page no longer says the noise is tracked "in the open".
+
+**Evidence.**
+- The first gate run found 129 findings: 126 were licence wording and one
+  paper title, plus 2 placeholder emails and 1 fixture key. A gitleaks run
+  later found 1 more fixture key. The final run is clean: 375 files,
+  4.1 MB.
+- The export, on its own, passes:
+
+| Check | Result |
+|---|---|
+| core | 918 passed, 2 skipped |
+| service | 183 |
+| database (Postgres 16) | 101 |
+| demo, eval and bench | 56 |
+| contract check | clean |
+| ruff | clean |
+| web lint and boundary check | clean |
+| web typecheck | 0 errors |
+| web unit | 345 |
+
+- A single-commit repository is staged. gitleaks reports no leaks.
+- The tool has 8 tests.
+
+**Blocked.** This session's GitHub access cannot create a repository (403).
+The owner creates an empty private `researchly-public`; Claude then pushes
+it, and the owner reviews it and switches it to Public.
+
+**Lessons.**
+- An allow-list, not a deny-list: a new folder stays private until someone
+  publishes it on purpose.
+- Gate with the same scanner the public CI will run. Our own patterns
+  missed a fake key that gitleaks flags.
+- Prove the public tree stands alone by running its suites from the export
+  directory, not from the private checkout.

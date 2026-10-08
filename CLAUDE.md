@@ -112,6 +112,7 @@ Researchly/
 │   ├── desktop-mac/              ← MAINTENANCE-ONLY (D5): pyobjc menu-bar app + .dmg build
 │   └── desktop-win/              ← MAINTENANCE-ONLY (D5): untested scaffold
 ├── services/                     ← hosted engine service (arrives in S1)
+├── tools/public-export/          ← generates the public repository (never exported itself)
 ├── ml/
 │   ├── datasets.yaml             ← licence registry: nothing ships unless permitted here
 │   ├── dogfood/                  ← noise-floor corpus run + gate (baseline.json)
@@ -225,3 +226,14 @@ first. Deleting the files in a new commit is **not enough** — they remain in
 git history. Either publish from a fresh repository that never contained
 them, or rewrite history (e.g. `git filter-repo`) and confirm with the user
 before doing so.
+
+**Decision (owner, 2026-10-08): share through a separate public repository,
+never by making this one public.** `tools/public-export/` generates it from
+committed files through an allow-list, adds a public README and CI, and
+gates every export (third-party text, the private names in
+`private-terms.txt`, secrets, emails, file types); CI runs the gate on every
+change. The public repository is `amriitmohapatra/researchly-public`, with
+its own fresh history. To publish something new, add it to
+`tools/public-export/include.txt`; read `tools/public-export/README.md` first.
+Never name the lecturer or the course in the engine's code: use the neutral
+source codes (`lecture`, `course-U1`, `course-U2`).
