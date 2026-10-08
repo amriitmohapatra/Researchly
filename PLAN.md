@@ -17,7 +17,7 @@ done and what's next*. Both the owner and Claude edit it.
   slice until the previous slice's exit check is ticked.
 - Substantive work still gets a dated entry in `docs/PROJECT_LOG.md`.
 
-**Current slice: S3 — Word add-in, hosted** (started 2026-10-04 after S2b merged as amriitmohapatra/Researchly#5 and the owner deployed it). S1's and S2's real-document exit checks are still open with the owner; S2b's passed.
+**Current slice: S4 — Narrative map v1** (started 2026-10-08 after P35 merged as amriitmohapatra/Researchly#9 and the owner deployed it; the owner: "move to next steps"). S3's exit check (a week of real use) runs on in parallel with the owner; S1's and S2's real-document exit checks are still open with the owner; S2b's passed.
 
 ---
 
@@ -153,12 +153,17 @@ Built 2026-10-04 (P32): `researchly/structure.py`, `rules_structure.py`, `rules_
 
 ## S4 — Narrative map v1
 
-- [ ] **Article-type profiles** (owner request 2026-10-08): `document_type` is stored but unused. Each type gets a profile: expected sections, rules that do not apply, what "section" means without IMRaD headings; "auto" guesses from headings. Start with **commentary** and **policy brief** (the owner's field, public health); keep the format open so other disciplines' types can be added. A commentary has no abstract moves and no Methods exemption, and may be assertive where a research paper must hedge
-- [ ] **Selling point on the landing page, README and demo** (owner request 2026-10-08): the problem (feedback on scientific writing arrives late and inconsistently; existing tools check grammar or write for you), what an LLM cannot do (same answer every time; a named source per suggestion; never sees the text in local mode; never writes for you; a measured false-flag rate; exact whole-document cross-checks), and the value for early-career and non-native writers (teaches the conventions while you write). The app encourages writing; it never delegates it
+- [~] **Article-type profiles** (owner request 2026-10-08): `document_type` is stored but unused. Each type gets a profile: expected sections, rules that do not apply, what "section" means without IMRaD headings; "auto" guesses from headings. Start with **commentary** and **policy brief** (the owner's field, public health); keep the format open so other disciplines' types can be added. A commentary has no abstract moves and no Methods exemption, and may be assertive where a research paper must hedge
+  - [x] Engine and service — 2026-10-08 (P36), 63be8ea: `researchly/profiles.py` (nine types; each switched-off check carries a plain reason; unheaded prose gets the profile's section; "auto" guesses only from IMRaD headings, a chapter or a recommendations heading, else "general" = the engine as before); `options.document_type`, the response's `profile`, `GET /v1/rules` lists the profiles; the account saves the type (migration `20261008120000_s4_document_type.sql`, two-user suite 92 green on Postgres 16). 24 core + 8 service tests
+  - [ ] "Check as" selector on the website and in the Word add-in, saved locally and to the account like the mode; the profile line under the results — in progress
+  - [ ] **Owner: run the S4 migration** in the Supabase SQL Editor (same steps as S3's), then deploy the engine and the web app **(Amriit)**
+- [~] **Selling point on the landing page, README and demo** (owner request 2026-10-08; landing page and README in progress 2026-10-08, the demo waits for the demo manuscript): the problem (feedback on scientific writing arrives late and inconsistently; existing tools check grammar or write for you), what an LLM cannot do (same answer every time; a named source per suggestion; never sees the text in local mode; never writes for you; a measured false-flag rate; exact whole-document cross-checks), and the value for early-career and non-native writers (teaches the conventions while you write). The app encourages writing; it never delegates it
 - [ ] Port `argument.py`, `guide.py`, `abstract_lens` into `tiers/discourse/`
 - [ ] Each discourse check = authored question + named source in `knowledge/`
 - [ ] `/v1/narrative` endpoint; narrative map UI (moves present/missing/out of order)
-- [ ] **Critical-reader review on the hosted surfaces** (the prototype's Review: `review.py`, Wallace & Wray's five critical-synopsis questions via NG5001 Unit 1). Works today in the CLI (`researchly review`) and the old local Word add-in only; bring it to the website and the hosted add-in (`/v1/review`, a Review tab), sharing the narrative map's evidence. Owner asked 2026-10-04; it had no PLAN item of its own
+- [~] **Critical-reader review on the hosted surfaces** (the prototype's Review: `review.py`, Wallace & Wray's five critical-synopsis questions via NG5001 Unit 1). Works today in the CLI (`researchly review`) and the old local Word add-in only; bring it to the website and the hosted add-in (`/v1/review`, a Review tab), sharing the narrative map's evidence. Owner asked 2026-10-04; it had no PLAN item of its own
+  - [x] Engine and service — 2026-10-08 (P36), 63be8ea: the brief is built from the same analysis as the suggestions (`api.analyze(with_review=True)`, no second pass): five questions, each a verdict, its points and the sentences it rests on, in plain words; it respects the profile (no limitations section asked of a commentary; a pasted paragraph is not asked for sections). `options.review` on every analysis route, `review` in the response; the canary test proves the quoted sentences reach only the response
+  - [ ] "Reviewer's brief" view on the website and in the Word add-in — in progress
 - [ ] Learn cards for every `learn_ref`
 - [ ] Hedging trajectory read-out (never a score)
 - [ ] Discipline-pack format + the epidemiology pack (P3): reporting checklists STROBE, CONSORT, PRISMA, EPIFORGE — checks *reporting*, never the science
