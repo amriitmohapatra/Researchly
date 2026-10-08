@@ -365,8 +365,11 @@ class Document:
                         continue
                     end = start + lead + cut
                     title = texts[i][lead:lead + cut].strip()
+                # A Title-styled paragraph is the document's title, not a
+                # section: "A compartmental model of..." is not Methods.
                 style_headings.append(
-                    Heading(start, title, classify_heading(title),
+                    Heading(start, title,
+                            "front" if style == "title" else classify_heading(title),
                             end=end, level=level))
                 _mask_spans(chars, [(start, end)])
         doc.table_spans = table_spans

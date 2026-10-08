@@ -212,3 +212,39 @@ def test_signals_find_the_move(sentence, section, move):
 ])
 def test_signals_stay_quiet(sentence, section, move):
     assert move not in moves_mod.label_moves(sentence, section)
+
+
+# --- recall on a well-written paper (from the demo manuscript, P37) --------------------
+
+def test_opening_sentence_counts_as_the_opening_move():
+    text = ("Abstract\n\nDengue returns to the lowland districts every year, "
+            "and the size of each season varies widely. However, the drivers "
+            "remain unclear. We aimed to estimate transmission.\n")
+    assert statuses(narrative(text), "abstract")["background"] == "present"
+    cold = ("Abstract\n\nWe aimed to estimate transmission. However, the "
+            "drivers remain unclear.\n")
+    assert statuses(narrative(cold), "abstract")["background"] == "missing"
+
+
+@pytest.mark.parametrize("sentence,section,move", [
+    ("We fitted an SEIR model to one season and found that transmission, "
+     "not reporting, explained the differences.", "discussion", "summary"),
+    ("The estimates have one practical use.", "discussion", "implications"),
+    ("It could be run at the end of each season to rank districts for "
+     "vector control.", "conclusion", "implications"),
+    ("The approach needs only routine weekly counts.", "conclusion",
+     "contribution"),
+])
+def test_signals_find_the_move_in_plain_prose(sentence, section, move):
+    assert move in moves_mod.label_moves(sentence, section)
+
+
+def test_a_word_title_is_front_matter_not_a_section():
+    doc = Document.from_word([
+        {"text": "A compartmental model of one dengue season", "style": "Title"},
+        {"text": "Abstract", "style": "Heading 1"},
+        {"text": "Dengue returns every year. We aimed to estimate it."},
+    ])
+    assert [h.section for h in doc.headings] == ["front", "abstract"]
+    n = api.analyze(doc, nlp=NLP, with_narrative=True).narrative
+    assert [s["section"] for s in n["sections"]] == ["abstract"]

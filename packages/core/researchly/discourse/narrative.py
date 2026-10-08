@@ -71,7 +71,7 @@ def _section_map(section: str, sents: list) -> dict:
     first: dict = {}          # move -> index of its first sentence
     evidence: dict = {}
     for i, (_, _, text) in enumerate(sents):
-        for mid in label_moves(text, section):
+        for mid in label_moves(text, section, first=(i == 0)):
             if mid not in first:
                 first[mid] = i
                 evidence[mid] = _quote(text)

@@ -32,6 +32,9 @@ class Move:
     plain: str           # the lesson, in everyday words
     frame: str           # a fill-in frame, Researchly's own wording
     signals: tuple       # regexes over one sentence (case-insensitive)
+    # An opening move: also present when the section's first sentence
+    # makes none of the later moves (it sets the scene by not jumping in).
+    opening: bool = False
 
     def matches(self, sentence: str) -> bool:
         return any(re.search(rx, sentence, re.IGNORECASE)
@@ -64,6 +67,9 @@ _GAP_STRONG = (
 
 _SUMMARY = (
     r"\b(in this (study|paper|work|thesis|chapter)|here),? we\b",
+    r"\b(we|this study|our (model|analysis|results|estimates|fit))\b[^.;]*"
+    r"\b(found|find|show|showed|shows|suggest|suggests|estimated|"
+    r"reproduced|demonstrated|identified) (that|how|whether|no|a|the)\b",
     r"\b(we|our (results|findings|analysis|model)) (found|find|show|showed|"
     r"shows|suggest|suggests|estimate|estimated|demonstrate|demonstrated|"
     r"observed|report)\b",
@@ -82,6 +88,27 @@ _COMPARISON = (
     r"estimates|values) (reported|found|observed)\b",
 )
 
+_IMPLICATIONS = (
+    r"\b(practical|policy|clinical|operational) (use|uses|implications?|"
+    r"value|relevance|consequences?)\b",
+    r"\bcould be (run|used|applied|adopted|repeated|extended) (at|by|in|"
+    r"to|for|before|after|each|every)\b",
+    r"\b(could|would|should|can) (be used to |help to |serve to )?"
+    r"(rank|prioriti[sz]e|target|guide|inform|time|plan|allocate|focus|"
+    r"direct|support) \b",
+    r"\b(would|could) have the (most|greatest|largest) (effect|impact|"
+    r"benefit)\b",
+    r"\b(the|each) next (season|outbreak|epidemic|wave|step|study)\b",
+)
+
+_CONTRIBUTION = (
+    r"\b(the|this|our) (approach|method|model|framework|analysis|study|"
+    r"work) (needs|requires|provides|offers|allows|makes it possible|"
+    r"enables|adds|extends|shows|showed|demonstrates|is the first)\b",
+    r"\b(we|this work|this paper) (provide|present|introduce|propose|"
+    r"extend|offer|report) (a|an|the|new)\b",
+)
+
 _DATA = (
     r"\bdata (from|were|was|on|set)\b", r"\bdataset\b",
     r"\bwere (recruited|collected|included|enrolled|obtained|extracted|"
@@ -93,7 +120,7 @@ _DATA = (
 )
 
 _ANALYSIS = (
-    r"\bwe (fitted|fit|used|use|developed|applied|analy[sz]ed|model(led|ed)|"
+    r"\bwe (fitted|fit|developed|applied|analy[sz]ed|model(led|ed)|"
     r"simulated|estimated|calibrated|implemented|assumed|compared|"
     r"computed|derived|specified|sampled)\b",
     r"\b(seir|sir|compartmental|branching process|regression|agent-based|"
@@ -119,7 +146,8 @@ MOVES: dict = {m.id: m for m in (
              r"\b(affects?|affecting|infects?) (millions|thousands|"
              r"\d[\d,.]* (million|thousand|people))\b",
              r"\b(public health|clinical|economic) (burden|importance|"
-             r"priority|concern)\b")),
+             r"priority|concern)\b"),
+         opening=True),
     Move("gap", "What is missing",
          "Does the Introduction say what is still unknown?",
          "Swales+Shehzad+§3",
@@ -153,7 +181,7 @@ MOVES: dict = {m.id: m for m in (
          "one sentence, before it says what was missing.",
          "“Studies of [topic] generally find that [current "
          "consensus].”",
-         tuple(_R["background"]) + (r"^(?!.*\bwe\b).*\b(is|are)\b",)),
+         tuple(_R["background"]), opening=True),
     Move("methods", "How it was done",
          "Does the abstract say how the question was answered?",
          "NG5001-U2",
@@ -245,14 +273,14 @@ MOVES: dict = {m.id: m for m in (
          "for the next study.",
          "“[Decision-makers] could use this to [action], provided "
          "[condition].”",
-         tuple(_R["implication"]) + tuple(_A["significance"])),
+         tuple(_R["implication"]) + tuple(_A["significance"]) + _IMPLICATIONS),
     Move("contribution", "What this adds",
          "Does the ending say what this work adds to the field?",
          "WW+§3",
          "Say plainly what is new: the reader should not have to work "
          "out the contribution for themselves.",
          "“This work adds [contribution] to [the field].”",
-         tuple(_R["contribution"])),
+         tuple(_R["contribution"]) + _CONTRIBUTION),
 )}
 
 # What each section is expected to do, in order. Sections not listed
@@ -279,6 +307,12 @@ SECTION_LABELS = {
 }
 
 
-def label_moves(sentence: str, section: str) -> list:
-    """The ids of the section's expected moves this sentence makes."""
-    return [m for m in SCHEMAS.get(section, ()) if MOVES[m].matches(sentence)]
+def label_moves(sentence: str, section: str, first: bool = False) -> list:
+    """The ids of the section's expected moves this sentence makes. The
+    section's first sentence also makes its opening move (what is known,
+    why it matters) when it makes none of the later moves."""
+    schema = SCHEMAS.get(section, ())
+    found = [m for m in schema if MOVES[m].matches(sentence)]
+    if first and not found:
+        found = [m for m in schema if MOVES[m].opening]
+    return found

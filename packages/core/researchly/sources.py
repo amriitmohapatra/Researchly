@@ -53,9 +53,8 @@ WORKS = {
     "NG5001-U1": LEARNINGS,
     "NG5001-U2": LEARNINGS,
     "Shehzad": 'W. Shehzad (2008), "Move two: establishing a niche"',
-    "Swales": ("J. M. Swales (1990), Genre Analysis: English in Academic "
-               "and Research Settings, Cambridge University Press (the "
-               "three moves of an introduction)"),
+    "Swales": ("J. M. Swales (1990), Genre Analysis, on the three moves "
+               "of a research introduction"),
     "Toulmin": ("S. E. Toulmin (1958), The Uses of Argument, Cambridge "
                 "University Press (claim, grounds, warrant)"),
     "WW": ("M. Wallace & A. Wray (2016), Critical Reading and Writing for "

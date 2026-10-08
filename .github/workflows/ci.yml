@@ -53,6 +53,10 @@ jobs:
         run: |
           python -m pip install -q -r ml/realdocs/requirements.txt
           python -m pytest ml/realdocs -q
+      - name: Demo manuscript (every planted error fires, nothing else)
+        run: |
+          python -m pip install -q -r demo/requirements.txt
+          python -m pytest demo/tests -q
 
   engine-service:
     # The hosted engine (services/engine): contract, errors, the Q6 privacy

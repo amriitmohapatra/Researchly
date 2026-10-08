@@ -150,7 +150,7 @@ def test_word_heading_levels():
     ])
     # The Title stands alone: it does not make the whole paper "methods".
     assert sections(doc) == [
-        ("Methods for nowcasting dengue", "methods"),
+        ("Methods for nowcasting dengue", "front"),
         ("Introduction", "introduction"), ("Methods", "methods"),
         ("Priors", "methods")]
     assert rule_sections(doc, "G104") == []

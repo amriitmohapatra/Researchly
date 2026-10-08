@@ -1950,3 +1950,42 @@ by the lead; details in the addendum.
 844 passed (24 new in `test_narrative.py`); service 170 (4 new); contract
 drift check clean; ruff clean; noise gate and bench in the addendum.
 
+**Addendum (same day): the demo manuscript, and what it taught the map.**
+The demo sub-agent wrote a made-up paper (an SEIR model fitted to one
+dengue season in three fictional districts; every name, number and
+reference invented) as one source of truth rendered three ways: a Word
+file with real heading and caption styles, a table, two figures and Office
+Math equations; an Overleaf project with `\input` sections, a `.bib` and
+labelled floats; and Markdown for the text box. Seventeen planted errors
+each fire exactly once in every format where the rule applies, and
+nothing else fires: 0 unplanted flags in all three renderings (the demo
+shows precision as much as recall). `demo/tests/test_demo.py` (25 tests)
+runs in CI with `demo/requirements.txt`. Two deviations from the brief,
+both documented in `demo/README.md`: the uncited float is Table 2 (two
+figures cited out of order leaves no figure uncited), and the abbreviation
+defined twice is EIP, not R0 (one capital letter is not an acronym to the
+engine). Three engine observations recorded for later, no engine changes:
+a definition within 150 characters of an author-year citation is dropped
+by the reference-entry guard in Word and Markdown; the abstract lens's
+percentage signal does not see LaTeX's escaped `\%`; a first name at a
+sentence start can be a spelling flag.
+
+Running the map over the demo found four recall gaps in the discourse
+signals, since the paper is good writing: a Word Title-styled paragraph
+("A compartmental model of...") was classified as a Methods heading by
+its keyword (now "front"); an abstract or introduction that sets the scene
+without the lexicon's phrases had no "what is known" move (the section's
+first sentence now counts as the opening move when it makes none of the
+later ones, as the abstract lens already reasoned); "We fitted a model
+and found that..." was not a restated finding; "The estimates have one
+practical use" and "could be run at the end of each season to rank
+districts" were not implications, and "The approach needs only routine
+weekly counts" not a contribution. With those, the demo maps as it should:
+every move present except the planted missing significance in the
+abstract. The Swales citation was shortened: its full subtitle and
+publisher matched a course PDF's reference list in the third-party scan.
+
+**Evidence.** Core 844 + 6 recall tests; service 170; demo 25; noise
+floor 11.67 unchanged (gate OK); bench PASS 13.69 unchanged; third-party
+scan 0 hits; ruff clean.
+

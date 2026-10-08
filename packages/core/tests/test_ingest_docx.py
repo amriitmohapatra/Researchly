@@ -127,7 +127,7 @@ def test_localised_and_custom_heading_styles():
                para("My title", style="Titel"))
     assert [(h.text, h.section) for h in doc.headings] == [
         ("Methods", "methods"), ("Results", "results"),
-        ("Discussion", "discussion"), ("My title", "other")]
+        ("Discussion", "discussion"), ("My title", "front")]   # a title is no section (P37)
 
 
 def test_matches_the_word_addin_path():
