@@ -147,8 +147,8 @@ Built 2026-10-04 (P32): `researchly/structure.py`, `rules_structure.py`, `rules_
   - [x] "Why?" texts too technical and full of internal references ("Guide §4.2", "Run `researchly abstract`", "via NG5001 Unit 2") — every rule now has a plain explanation shown first; internal references stripped and forbidden by test (P35)
   - [x] Sources: the lecture and the NUS course are shown to users as "Amriit's learnings from scientific-writing training"; the published works and the owner's guide are cited by name (owner decision 2026-10-08; knowledge-base §9b)
   - [x] New rule from the owner's professor: an equation must be part of a sentence — **X302** (LaTeX; 5 genuine flags on the 17 real projects) (P35)
-  - [ ] Cards: drop "Rule" and "Checked by"; plain explanation first, technical why behind "More"; source as a reference line (web + add-in)
-  - [ ] Section filter: analyse the whole document, show only the chosen section; document-wide checks grouped; Word "Check this section" from the cursor. Draft/Revise wording: "Draft: check what you've written so far. Revise: check the finished manuscript." (the owner's point: document-wide checks only make sense on a complete draft, so the mode must say so)
+  - [x] Cards: "Rule" and "Checked by" gone; plain explanation first, the technical why behind "The full reasoning"; source as a reference line (web + add-in) — 6d8daea, 2026-10-08
+  - [x] Section view: the whole document is analysed, the chosen section shown; document-wide checks grouped under "Whole document"; Word "Check this section" from the cursor (whole document still sent). Mode help: "Draft: check what you've written so far. Revise: check the finished manuscript." — 6d8daea; 205 unit + 94 e2e. **Owner: click "Check this section" once in real Word** (the fake Office.js covers it; real Word has not)
 
 ## S4 — Narrative map v1
 

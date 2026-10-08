@@ -1755,3 +1755,15 @@ S5 candidate only if it runs inside our container.
 **Evidence.** Core 787 passed; service 158; web typecheck, lint and 193
 unit tests; contract drift check; ruff; third-party scan 0 hits. Noise
 gate and bench: addendum below.
+
+**Addendum (same day).** Noise floor unchanged at 11.67/1000w (no corpus
+instance of the C301 pattern; X302 is LaTeX-only); real-document bench
+PASS, 13.69/1000w, X302 5 on LaTeX. Surfaces (sub-agent, reviewed and
+re-run by the lead; 6d8daea): cards lead with the plain explanation, the
+technical why sits behind "The full reasoning", "Rule"/"Checked by" are
+gone (ids stay as data attributes); a Section view on the web and "Check
+this section" in Word, both over a whole-document analysis with the
+document-wide checks grouped; the mode help now says what Draft and
+Revise are for. Rule scopes come from `/v1/rules`, with the engine's
+document-scope list as the fallback for the local server. Web 205 unit,
+94 e2e, lint, types. Not verified in real Word: the cursor-section read.
