@@ -1895,3 +1895,58 @@ report exists only on paper, everything else hidden; the browser's own
 print command mounts it too). Also in PLAN's inbox today: a presentation
 deck for an external audience (with a reminder set for the owner).
 
+## P37 — 2026-10-08 — S4b: the discourse tier and the narrative map; the demo manuscript
+
+**Why.** S4a merged (amriitmohapatra/Researchly#10) and deployed; the
+owner: "Go ahead with the narrative map and the demo manuscript." The map
+is S4's core (ARCHITECTURE ADR-05): a per-section strip of the moves a
+reader expects, present, missing or out of order, plus the argument's
+missing links, each with a lesson and a fill-in frame.
+
+**The discourse package** (`packages/core/researchly/discourse/`).
+`argument.py` and `abstract_lens.py` moved in (the old import paths
+re-export, so nothing outside broke). `moves.py` is the new piece: sixteen
+moves over six section kinds (abstract, introduction, methods, results,
+discussion, conclusion), each an *authored question* ("Does the
+Introduction say what is still unknown?"), a source code the registry
+expands (Swales for the three introduction moves, Shehzad for the niche,
+Wallace & Wray and Toulmin for the argument, the guide's §2 for the
+hourglass and §4 for warranting, the course unit for the abstract's six
+moves, shown as the owner's learnings), a lesson in everyday words and a
+fill-in frame in Researchly's own wording. The signals are shared with the
+abstract lens and the argument model so the three never disagree about
+what an aim or a limitation looks like; the aim signals gained the forms
+real introductions use ("We therefore set out to", "The present study
+quantifies"). The prototype's `guide.py` was not ported as code: its
+expected-moves table became `SCHEMAS`; its classifier and thesis-exemplar
+index stay out (S5; D6).
+
+**The map** (`narrative.py`). Built from the same parse as the
+suggestions (`api.analyze(with_narrative=True)`), so a document is
+analysed once. Per section in document order: the expected moves with
+their status, the sentence a present move rests on, and for a missing one
+its question, lesson and frame. Order is judged in the abstract and the
+introduction only, and one misplaced sentence is reported once: the
+moves off the longest in-order run are the ones out of place, not every
+move around them (a gap sentence moved to the end of an abstract used to
+mark aim, methods and findings all "out of order"). The argument's
+missing links appear for the argued sections only (a Results section
+shows data without reading them by design). The hedging trajectory
+(PLAN's own item) is hedges and boosters per 100 words per section with a
+reading word, never a score. Topical headings are listed as unmapped; no
+headings at all gives one plain line saying so. The CLI gained
+`researchly narrative`.
+
+**Service and contract.** `options.narrative` on every analysis route,
+`narrative` in the response (`NarrativeMap`), as the brief is: not the
+separate `/v1/narrative` endpoint ARCHITECTURE sketched, which would run
+the analysis twice for a caller who already has the suggestions. The
+canary test proves a quoted sentence reaches only the response body.
+
+**Surfaces and the demo manuscript.** Two sub-agents, reviewed and re-run
+by the lead; details in the addendum.
+
+**Evidence (engine and service, 9c7deb7 + the payload-test fix).** Core
+844 passed (24 new in `test_narrative.py`); service 170 (4 new); contract
+drift check clean; ruff clean; noise gate and bench in the addendum.
+

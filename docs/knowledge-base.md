@@ -176,6 +176,21 @@ Named in `researchly/sources.py`; cited by name only, never quoted.
 | Microsoft Word documentation (heading styles) | Heading styles build the navigation pane, the table of contents and the section structure, so body text must not carry one | **X501** (P33) |
 | Schwartz & Hearst (2003), *A simple algorithm for identifying abbreviation definitions in biomedical text* | How definitions are recognised (not a writing rule) | F612/F613 detection |
 
+## 11. The discourse tier: authored questions behind the narrative map (S4, 2026-10-08)
+
+`researchly/discourse/moves.py`. Each move a section is expected to make is an authored question with a named source, a lesson in everyday words and a fill-in frame in Researchly's own wording (curated text, never generated; the idea of one frame per move is Pallas's, her frames are not reproduced). Sources are cited by name on the map's source line; the questions, lessons and frames name none of them.
+
+| Section | Moves (in order) | Sources |
+|---|---|---|
+| Abstract | what is known, what is missing, what you set out to do, how it was done, what was found, why it matters now | the six-move abstract (the course's Unit 2, shown as the owner's learnings); guide §2 |
+| Introduction | why it matters, what is missing, what you set out to do | Swales (1990) CARS; Shehzad (2008) on the niche; guide §3 |
+| Methods | the data, the analysis | guide §2 |
+| Results | what was found, the evidence | guide §9.7 |
+| Discussion | the main finding restated, what it means, against earlier work, what this cannot show, what should change | guide §2 (OCAR, the hourglass), §4 (warranting), §7.3; Wallace & Wray; Toulmin (1958); guide §9.8 |
+| Conclusion | what this adds, what should change | Wallace & Wray; guide §2, §3, §9.8 |
+
+Order is judged in the abstract and the introduction only. The argument's missing links (`discourse/argument.py`: claim without warrant, claim without grounds, evidence without interpretation, limitation not reflected in claim strength, contribution unclear) cite Wallace & Wray, Toulmin and guide §4, and appear on the map for the argued sections (abstract, introduction, discussion, limitations, conclusion). The hedging trajectory reuses the hedge and booster lexicons of the metrics read-out (Hyland) per section.
+
 ## Shipped this phase (v0.4)
 
 **New rules (10):** E701 empty-phrase · E702 adversative-run · E703
