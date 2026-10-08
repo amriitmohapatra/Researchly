@@ -1,7 +1,9 @@
 # Researchly: codebase and feature review
 
-**Date:** 8 October 2026 (Singapore).  
-**Reviewed baseline:** `main` at `5414cdce9b7290959cdb1731977410a564ca672b` (PR #10 merged).  
+**Date:** 8 October 2026 (Singapore).
+
+**Reviewed baseline:** `main` at `5414cdce9b7290959cdb1731977410a564ca672b` (PR #10 merged).
+
 **Scope:** current core engine, hosted service, web revision studio, hosted and local Word add-ins, LSP/VS Code, account settings, ingestion, contracts, tests and evaluation. Desktop apps are maintenance-only; legacy experiments were considered context, not current product features.
 
 This is a review and a proposed backlog. It does not implement the recommendations or change the owner's product decisions. No cloud LLM, generative drafting, silent rewriting, new document storage or third-party text is proposed.
