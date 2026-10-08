@@ -37,12 +37,31 @@ export type AnalyzeWordResponse = S["AnalyzeWordResponse"];
 export type WordSuggestion = S["WordSuggestion"];
 export type WordLocation = S["WordLocation"];
 export type Coverage = S["Coverage"];
+export type DocumentType = S["DocumentType"];
+export type ProfileInfo = S["ProfileInfo"];
+export type ProfileChoice = S["ProfileChoice"];
+export type ReviewReport = S["ReviewReport"];
+export type ReviewQuestion = S["ReviewQuestion"];
+export type ReviewRuleCount = S["ReviewRuleCount"];
 
 /** Mirrors schemas.MAX_CONTENT_CHARS; checked client-side for usability only. */
 export const MAX_CONTENT_CHARS = 1_000_000;
 
 /** Mirrors schemas.MAX_WORD_PARAGRAPHS (/v1/analyze-word). */
 export const MAX_WORD_PARAGRAPHS = 50_000;
+
+/** Article types a caller can check as (S4), in the engine's display order; `GET /v1/rules` carries their labels. */
+export const DOCUMENT_TYPES = [
+  "auto",
+  "general",
+  "manuscript",
+  "thesis-chapter",
+  "abstract",
+  "commentary",
+  "policy-brief",
+  "grant",
+  "response-to-reviewers",
+] as const satisfies readonly DocumentType[];
 
 /**
  * The engine's default upload cap for /v1/analyze-file (RESEARCHLY_MAX_UPLOAD_BYTES,

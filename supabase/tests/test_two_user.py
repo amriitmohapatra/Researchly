@@ -51,6 +51,7 @@ DEFAULT_CONFIG = {
     "show_preferences": False,
     "locale": "en-US",
     "mode": "revise",
+    "document_type": "auto",
     "dictionary": [],
 }
 
@@ -269,7 +270,7 @@ def test_each_user_sees_only_their_own_rows(pg):
         assert sorted(config.pop("dictionary")) == ["Stan", "brms"]
         assert config == {
             "disabled_rules": ["S001", "LT001"], "show_preferences": True,
-            "locale": "en-GB", "mode": "revise"}
+            "locale": "en-GB", "mode": "revise", "document_type": "auto"}
 
     with as_user(pg, USER_B) as cur:
         cur.execute("select user_id from public.user_settings")
@@ -278,7 +279,8 @@ def test_each_user_sees_only_their_own_rows(pg):
         assert cur.fetchall() == [(USER_B, "NumPyro")]
         assert my_config(cur) == {
             "disabled_rules": ["AB802"], "show_preferences": False,
-            "locale": "en-US", "mode": "revise", "dictionary": ["NumPyro"]}
+            "locale": "en-US", "mode": "revise", "document_type": "auto",
+            "dictionary": ["NumPyro"]}
 
 
 def test_authenticated_without_sub_sees_nothing_and_cannot_write(pg):
@@ -803,3 +805,15 @@ def test_mode_is_saved_per_user_and_checked(pg):
     with pytest.raises(errors.CheckViolation):
         with as_user(pg, USER_A) as cur:
             cur.execute("update public.user_settings set mode = 'chapter'")
+
+
+def test_document_type_is_saved_per_user_and_checked(pg):
+    with as_user(pg, USER_A) as cur:
+        cur.execute("insert into public.user_settings (document_type) "
+                    "values ('commentary')")
+        assert my_config(cur)["document_type"] == "commentary"
+    with as_user(pg, USER_B) as cur:
+        assert my_config(cur)["document_type"] == "auto"
+    with pytest.raises(errors.CheckViolation):
+        with as_user(pg, USER_A) as cur:
+            cur.execute("update public.user_settings set document_type = 'poem'")

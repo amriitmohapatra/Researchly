@@ -275,7 +275,8 @@ def health(request: Request) -> HealthResponse:
             tags=["meta"])
 def rules() -> RulesResponse:
     """The rule registry with why/source — powers Explain and settings UIs."""
-    return RulesResponse(rules=engine_adapter.rule_infos())
+    return RulesResponse(rules=engine_adapter.rule_infos(),
+                         profiles=engine_adapter.profile_choices())
 
 
 @asynccontextmanager

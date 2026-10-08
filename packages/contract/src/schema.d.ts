@@ -143,6 +143,10 @@ export interface components {
              * @default revise
              */
             mode: components["schemas"]["Mode"];
+            /** @description The article-type profile this check ran under. */
+            profile?: components["schemas"]["ProfileInfo"];
+            /** @description Present when `options.review` was true. */
+            review?: components["schemas"]["ReviewReport"] | null;
             /**
              * Schema Version
              * @default 1
@@ -172,8 +176,16 @@ export interface components {
              * @description Rule ids to mute for this request, e.g. ["G101"]. For a signed-in caller these are added to the rules muted in their account settings.
              */
             disabled_rules?: string[];
+            /** @description The article type to check as. Omitted: the caller's saved setting, else auto. */
+            document_type?: components["schemas"]["DocumentType"] | null;
             /** @description Draft or Revise for this request. Omitted: the caller's saved setting, else revise. */
             mode?: components["schemas"]["Mode"] | null;
+            /**
+             * Review
+             * @description Also build the critical reader's brief (`review` in the response) from the same analysis.
+             * @default false
+             */
+            review: boolean;
             /**
              * Show Preferences
              * @description Include Preference-type suggestions (hidden by default).
@@ -226,6 +238,10 @@ export interface components {
              * @default revise
              */
             mode: components["schemas"]["Mode"];
+            /** @description The article-type profile this check ran under. */
+            profile?: components["schemas"]["ProfileInfo"];
+            /** @description Present when `options.review` was true. */
+            review?: components["schemas"]["ReviewReport"] | null;
             /**
              * Schema Version
              * @default 1
@@ -289,6 +305,10 @@ export interface components {
              * @default revise
              */
             mode: components["schemas"]["Mode"];
+            /** @description The article-type profile this check ran under. */
+            profile?: components["schemas"]["ProfileInfo"];
+            /** @description Present when `options.review` was true. */
+            review?: components["schemas"]["ReviewReport"] | null;
             /**
              * Schema Version
              * @default 1
@@ -333,6 +353,15 @@ export interface components {
             /** Table Paragraphs */
             table_paragraphs: number;
         };
+        /**
+         * DocumentType
+         * @description Article-type profile (S4). `auto` guesses from the headings and is
+         *     otherwise `general`; the others switch off the checks that do not
+         *     apply to that kind of document and say what section unheaded prose is
+         *     in (a commentary is argued like a Discussion).
+         * @enum {string}
+         */
+        DocumentType: "auto" | "general" | "manuscript" | "thesis-chapter" | "abstract" | "commentary" | "policy-brief" | "grant" | "response-to-reviewers";
         /** EngineInfo */
         EngineInfo: {
             /** Core Version */
@@ -428,6 +457,87 @@ export interface components {
          * @enum {string}
          */
         Mode: "draft" | "revise";
+        /** ProfileChoice */
+        ProfileChoice: {
+            id: components["schemas"]["DocumentType"];
+            /** Label */
+            label: string;
+            /** Summary */
+            summary: string;
+        };
+        /**
+         * ProfileInfo
+         * @description The article-type profile a check ran under.
+         */
+        ProfileInfo: {
+            /**
+             * Guessed
+             * @description True when the type was `auto` and guessed from the headings.
+             */
+            guessed: boolean;
+            id: components["schemas"]["DocumentType"];
+            /** Label */
+            label: string;
+            /**
+             * Note
+             * @description One line saying what the profile switched off, empty when nothing.
+             * @default
+             */
+            note: string;
+            /**
+             * Rules Off
+             * @description Rules not run for this type.
+             */
+            rules_off?: string[];
+        };
+        /** ReviewQuestion */
+        ReviewQuestion: {
+            /**
+             * Evidence
+             * @description Sentences of the document the verdict rests on (never logged).
+             */
+            evidence?: string[];
+            /**
+             * Id
+             * @description A to E.
+             */
+            id: string;
+            /** Points */
+            points?: string[];
+            /** Question */
+            question: string;
+            /**
+             * Verdict
+             * @description One line answering the question from the evidence.
+             */
+            verdict: string;
+        };
+        /**
+         * ReviewReport
+         * @description The critical reader's brief: five questions answered from the same
+         *     deterministic analysis as the suggestions.
+         */
+        ReviewReport: {
+            /** Questions */
+            questions: components["schemas"]["ReviewQuestion"][];
+            /** Sections */
+            sections: string[];
+            /** Source */
+            source: string;
+            /** Top Rules */
+            top_rules?: components["schemas"]["ReviewRuleCount"][];
+            /** Words */
+            words: number;
+        };
+        /** ReviewRuleCount */
+        ReviewRuleCount: {
+            /** Count */
+            count: number;
+            /** Id */
+            id: string;
+            /** Short */
+            short: string;
+        };
         /** RuleInfo */
         RuleInfo: {
             category: components["schemas"]["Category"];
@@ -461,6 +571,11 @@ export interface components {
         };
         /** RulesResponse */
         RulesResponse: {
+            /**
+             * Profiles
+             * @description Article types a caller can check as, in display order (S4).
+             */
+            profiles?: components["schemas"]["ProfileChoice"][];
             /** Rules */
             rules: components["schemas"]["RuleInfo"][];
         };

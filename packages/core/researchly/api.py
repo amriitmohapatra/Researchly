@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any, Optional, Sequence, Union
 
 from . import metrics as metrics_mod
+from . import profiles as profiles_mod
 from .config import Config
 from . import config as config_mod
 from .document import Document
@@ -78,6 +79,12 @@ class Analysis:
     # Document-level suggestions held back by Draft mode: counted, never
     # silently dropped (the hidden-preference pattern).
     hidden_by_mode: int = 0
+    # The article-type profile the check ran under (S4) and whether it was
+    # guessed from the headings ("auto") or chosen.
+    profile: profiles_mod.Profile = profiles_mod.DEFAULT
+    profile_guessed: bool = True
+    # The critical reader's brief (review.py), when asked for.
+    review: Optional[dict] = None
     metrics: Optional[metrics_mod.Metrics] = None
     sections_detected: list = field(default_factory=list)
     health: list = field(default_factory=list)
@@ -94,6 +101,11 @@ class Analysis:
             "counts": self.counts,
             "hidden_preferences": self.hidden_preferences,
             "hidden_by_mode": self.hidden_by_mode,
+            "profile": {"id": self.profile.id, "label": self.profile.label,
+                        "guessed": self.profile_guessed,
+                        "note": self.profile.note,
+                        "rules_off": sorted(self.profile.rules_off)},
+            "review": self.review,
             "metrics": self.metrics.to_dict() if self.metrics else None,
             "sections_detected": list(self.sections_detected),
             "health": [t.to_dict() for t in self.health],
@@ -140,6 +152,7 @@ def analyze(source: Union[str, Path, Sequence[dict], Document],
             cfg: Optional[Config] = None,
             near: Optional[Path] = None,
             with_metrics: bool = True,
+            with_review: bool = False,
             **overrides: Any) -> Analysis:
     """Check one document and return everything the surfaces render.
 
@@ -160,15 +173,22 @@ def analyze(source: Union[str, Path, Sequence[dict], Document],
     document.config = cfg
     document.extra_dictionary = list(cfg.dictionary)
 
+    # The article-type profile (S4): checks that do not apply to this kind
+    # of document are not run, and unheaded prose gets its section.
+    profile, guessed = profiles_mod.resolve(cfg.document_type, document)
+    document.default_section = profile.body_section
+    disabled = set(cfg.disabled) | set(profile.rules_off)
+
     nlp = nlp or get_nlp()
 
-    # THE single parse. Shared by the rules and by metrics.
+    # THE single parse. Shared by the rules, the metrics and the review.
     spacy_doc = nlp(document.masked)
 
     # Always check with preferences on so the hidden count is free; filter
     # afterwards. This is what made the second full run unnecessary.
-    found = check(document, nlp, disabled=cfg.disabled,
+    found = check(document, nlp, disabled=disabled,
                   show_preferences=True, spacy_doc=spacy_doc)
+    everything = found
     prefs = sum(1 for s in found if s.category is Category.PREFERENCE)
     if not cfg.show_preferences:
         found = [s for s in found if s.category is not Category.PREFERENCE]
@@ -181,14 +201,24 @@ def analyze(source: Union[str, Path, Sequence[dict], Document],
     for s in found:
         counts[s.category.value] = counts.get(s.category.value, 0) + 1
 
-    mets = metrics_mod.compute(spacy_doc, document) if with_metrics else None
+    mets = (metrics_mod.compute(spacy_doc, document)
+            if with_metrics or with_review else None)
+    review = None
+    if with_review:
+        from .review import build_review
+        review = build_review(document, nlp, suggestions=everything,
+                              spacy_doc=spacy_doc, metrics=mets,
+                              profile=profile)
 
     return Analysis(
         suggestions=found,
         counts=counts,
         hidden_preferences=0 if cfg.show_preferences else prefs,
         hidden_by_mode=by_mode,
-        metrics=mets,
+        profile=profile,
+        profile_guessed=guessed,
+        review=review,
+        metrics=mets if with_metrics else None,
         sections_detected=sorted({h.section for h in document.headings}),
         health=engine_status(cfg, nlp=nlp),
         config=cfg,

@@ -172,14 +172,17 @@ def missing_moves(text: str) -> list[str]:
       scope="document")
 def ab802_abstract_completeness(doc, document: Document):
     abstracts = [h for h in document.headings if h.section == "abstract"]
-    if not abstracts:
+    if abstracts:
+        start = abstracts[0].start
+        # The section runs to the next heading of another section; its
+        # own subsections ("Background", "Aims") are part of it.
+        ends = [h.start for h in document.headings
+                if h.start > start and h.section != "abstract"]
+        end = min(ends) if ends else len(document.masked)
+    elif document.default_section == "abstract" and not document.headings:
+        start, end = 0, len(document.masked)      # the "abstract" profile
+    else:
         return
-    start = abstracts[0].start
-    # The section runs to the next heading of another section; its own
-    # subsections ("Background", "Aims") are part of it.
-    ends = [h.start for h in document.headings
-            if h.start > start and h.section != "abstract"]
-    end = min(ends) if ends else len(document.masked)
     text = document.masked[start:end].strip()
     if len(text) < 300:                     # stubs can't be judged
         return

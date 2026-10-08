@@ -19,6 +19,7 @@ import re
 from bisect import bisect_right
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Optional
 
 
 # ---------------------------------------------------------------------------
@@ -40,6 +41,11 @@ _SECTION_PATTERNS: list[tuple[str, str]] = [
     (r"discussion", "discussion"),
     (r"conclusion", "conclusion"),
 ]
+
+
+# Sections that are "no section": no headings at all, before the first
+# heading, or under a topical heading the patterns do not know.
+_UNHEADED = frozenset({"unknown", "front", "other"})
 
 
 def classify_heading(text: str) -> str:
@@ -204,6 +210,10 @@ class Document:
     # cross-references, code, URLs, Word equations. Formatting (\emph{,
     # **, a heading) is masked too but stands for nothing, so it is not here.
     atoms: list[tuple[int, int]] = field(default_factory=list)
+    # The article-type profile's section for prose with no IMRaD heading
+    # over it (S4): a commentary's body is argued like a Discussion, a
+    # pasted abstract is an abstract. None keeps "unknown"/"front"/"other".
+    default_section: Optional[str] = None
     _line_starts: list[int] = field(default_factory=list, repr=False)
 
     # -- construction -------------------------------------------------------
@@ -434,14 +444,17 @@ class Document:
             i += step
 
     def section_at(self, offset: int) -> str:
-        """IMRaD section governing this offset ('unknown' if no headings)."""
-        if not self.headings:
-            return "unknown"
-        current = "front"
-        for h in self.headings:
-            if h.start > offset:
-                break
-            current = h.section
+        """IMRaD section governing this offset ('unknown' if no headings;
+        the profile's `default_section`, if set, for unheaded prose)."""
+        current = "unknown"
+        if self.headings:
+            current = "front"
+            for h in self.headings:
+                if h.start > offset:
+                    break
+                current = h.section
+        if self.default_section and current in _UNHEADED:
+            return self.default_section
         return current
 
 
