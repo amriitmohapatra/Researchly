@@ -182,3 +182,15 @@ def test_sync_replaces_the_public_tree_and_commits(tmp_path):
     assert ex.sync(out, clone, "Sync") is True
     assert not (clone / "old.txt").exists() and (clone / "pkg" / "new.py").exists()
     assert ex.sync(out, clone, "Sync") is False      # nothing changed, no empty commit
+
+
+def test_gitleaks_runs_on_the_export_when_installed(tmp_path, monkeypatch):
+    gl = shutil.which("gitleaks")
+    if not gl:
+        pytest.skip("gitleaks is not installed here (CI installs it)")
+    out = tmp_path / "out"
+    out.mkdir()
+    token = "ghp_" + "A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8"
+    (out / "leak.py").write_text("TOKEN = '%s'\n" % token)
+    found = ex._gitleaks(out)
+    assert found and all(f.kind == "secret" and f.path == "leak.py" for f in found)

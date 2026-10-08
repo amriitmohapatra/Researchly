@@ -261,7 +261,31 @@ def gate(out: Path, policy: Policy, repo: Path = REPO, symlinks=(),
 
     if third_party:
         findings.extend(_third_party(texts, repo))
+    findings.extend(_gitleaks(out))
     return findings, stats
+
+
+def _gitleaks(out: Path) -> list[Finding]:
+    """gitleaks over the exported tree, when it is installed (CI installs it):
+    the public CI runs it on every push, so the gate checks the same rules."""
+    exe = shutil.which("gitleaks")
+    if not exe:
+        return []
+    with tempfile.TemporaryDirectory() as tmp:
+        report = Path(tmp) / "gitleaks.json"
+        subprocess.run([exe, "dir", str(out), "--no-banner", "--exit-code", "0",
+                        "--report-format", "json", "--report-path", str(report)],
+                       capture_output=True, check=True)
+        rows = json.loads(report.read_text("utf-8") or "[]")
+    found = []
+    for r in rows:
+        path = Path(r.get("File", ""))
+        try:
+            rel = path.resolve().relative_to(out.resolve()).as_posix()
+        except ValueError:
+            rel = path.as_posix()
+        found.append(Finding("secret", rel, int(r.get("StartLine") or 0), "gitleaks: %s" % r.get("RuleID", "?")))
+    return found
 
 
 def _third_party(texts, repo: Path) -> list[Finding]:
