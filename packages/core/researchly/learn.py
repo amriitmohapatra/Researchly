@@ -480,3 +480,20 @@ def listing() -> list:
     order = {g: i for i, g in enumerate(GROUPS)}
     return [c.to_dict() for c in sorted(_CARDS,
                                         key=lambda c: order[c.group])]
+
+
+def export_json(path) -> None:
+    """Write the cards for the web's static Learn pages
+    (packages/contract/learn.json). tests/test_learn.py fails when the
+    committed file and the engine disagree: run
+    `python -m researchly.learn packages/contract/learn.json`."""
+    import json
+    from pathlib import Path
+    Path(path).write_text(json.dumps({"cards": listing()}, indent=2,
+                                     ensure_ascii=False) + "\n",
+                          encoding="utf-8")
+
+
+if __name__ == "__main__":
+    import sys
+    export_json(sys.argv[1])

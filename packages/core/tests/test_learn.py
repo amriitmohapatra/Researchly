@@ -70,3 +70,14 @@ def test_narrative_moves_and_links_carry_their_card():
     refs = {m["id"]: m["learn_ref"] for m in disc["moves"]}
     assert refs["interpretation"] == "warranting" and refs["summary"] == "discussion"
     assert all(link["learn_ref"] in learn.CARDS for link in n["missing_links"])
+
+
+def test_the_web_copy_of_the_cards_is_current():
+    import json
+    from pathlib import Path
+    path = Path(__file__).resolve().parents[2] / "contract" / "learn.json"
+    assert json.loads(path.read_text(encoding="utf-8")) == {
+        "cards": learn.listing()}, (
+        "packages/contract/learn.json is stale: run "
+        "`python -m researchly.learn packages/contract/learn.json` from "
+        "packages/core's parent")

@@ -178,8 +178,7 @@ def test_review_lens_carries_argument_summary():
     assert "argument" in r
     assert r["argument"]["missing_links"]
     report = render_review(r)
-    assert "Argument, discussion" in report
-    assert "warrant" in report.lower()
+    assert "could not be linked to a reason nearby" in report
 
 
 def test_review_lens_argument_block_absent_when_clean():
@@ -191,4 +190,37 @@ def test_review_lens_argument_block_absent_when_clean():
     r = build_review(text, NLP)
     report = render_review(r)
     if not r["argument"]["missing_links"]:
-        assert "Argument, " not in report
+        assert "Argument: " not in report
+
+
+# --- links are local, per section instance, on the shared parse (Codex review R5) ---
+
+def test_an_unrelated_because_elsewhere_does_not_warrant_a_claim():
+    text = ("Discussion\n\nWe argue that density drives transmission. The "
+            "districts were surveyed in 2021. The clinics opened in spring. "
+            "Reporting changed because the forms were revised.")
+    disc = next(o for o in _objects(text) if o.section == "discussion")
+    assert "claim_without_warrant" in {c for c, _ in disc.missing_links}
+    (span,) = disc.link_spans["claim_without_warrant"]
+    assert text[span[0]:span[1]].startswith("We argue")
+
+
+def test_two_discussions_are_not_pooled():
+    text = ("Discussion\n\nWe argue that density drives transmission, "
+            "because contact rises with density.\n\nResults\n\nCases rose "
+            "(Table 1).\n\nDiscussion\n\nWe argue that control must "
+            "change now.\n")
+    discs = [o for o in _objects(text) if o.section == "discussion"]
+    assert len(discs) == 2
+    assert "claim_without_warrant" not in {c for c, _ in discs[0].missing_links}
+    assert "claim_without_warrant" in {c for c, _ in discs[1].missing_links}
+
+
+def test_shared_parse_keeps_decimals_and_abbreviations_whole():
+    from researchly import api
+    text = ("Discussion\n\nWe argue that the rate of 1.8 per 100 drives "
+            "spread, e.g. in schools, because contact is dense there.\n")
+    doc = Document.from_text(text)
+    roles = argument.label_sentences(doc, api.get_nlp()(doc.masked))
+    assert len(roles) == 1 and "claim" in roles[0].all_roles
+    assert "warrant" in roles[0].all_roles

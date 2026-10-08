@@ -25,16 +25,16 @@ from typing import List, Optional, Union
 from . import _core  # noqa: F401  (import path + isolation first)
 from . import __version__ as SERVICE_VERSION
 from .schemas import (AnalyzeOptions, AnalyzeResponse, AnalyzeWordResponse,
-                      Category, Coverage, DocumentType, EngineInfo,
-                      FixSafety, HedgingPoint, Metrics, MissingLink, Mode,
+                      Category, ChecklistChoiceInfo, ChecklistReport,
+                      Coverage, DocumentType, EngineInfo, FixSafety,
+                      HedgingPoint, LearnCard, Metrics, MissingLink, Mode,
                       NarrativeMap, NarrativeMove, NarrativeSection,
-                      ProfileChoice, ProfileInfo,
-                      ReviewQuestion, ReviewReport, ReviewRuleCount,
-                      RuleInfo, Scope, Span, Suggestion, TierHealth,
-                      WordLocation, WordSuggestion)
+                      ProfileChoice, ProfileInfo, ReviewQuestion,
+                      ReviewReport, ReviewRuleCount, RuleInfo, Scope, Span,
+                      Suggestion, TierHealth, WordLocation, WordSuggestion)
 
 import researchly
-from researchly import api, profiles, wordloc
+from researchly import api, learn, packs, profiles, shapes, wordloc
 from researchly.config import Config, apply_remote
 from researchly.document import Document
 from researchly.engine import REGISTRY
@@ -95,38 +95,35 @@ def build_config(options: Optional[AnalyzeOptions],
     return cfg
 
 
+# Everything beyond the suggestions is shaped once, in the core
+# (researchly.shapes), and validated here; the local Word server sends the
+# same shapes (Codex review R1).
+
 def to_profile(a) -> ProfileInfo:
-    p = a.profile
-    return ProfileInfo(id=DocumentType(p.id), label=p.label,
-                       guessed=a.profile_guessed, note=p.note,
-                       rules_off=sorted(p.rules_off))
+    return ProfileInfo(**shapes.profile_info(a))
 
 
 def to_review(r: Optional[dict]) -> Optional[ReviewReport]:
-    if r is None:
-        return None
-    return ReviewReport(
-        source=r["source"], sections=list(r["sections"]),
-        words=int(r["metrics"]["words"]),
-        questions=[ReviewQuestion(**q) for q in r["questions"]],
-        top_rules=[ReviewRuleCount(**t) for t in r["top_rules"]])
+    shaped = shapes.review_report(r)
+    return None if shaped is None else ReviewReport(**shaped)
 
 
 def to_narrative(n: Optional[dict]) -> Optional[NarrativeMap]:
-    if n is None:
-        return None
-    return NarrativeMap(
-        sections=[NarrativeSection(
-            section=s["section"], label=s["label"], sentences=s["sentences"],
-            words=s["words"], present=s["present"], expected=s["expected"],
-            moves=[NarrativeMove(**m) for m in s["moves"]])
-            for s in n["sections"]],
-        unmapped=list(n["unmapped"]),
-        missing_links=[MissingLink(**link) for link in n["missing_links"]],
-        hedging=[HedgingPoint(**h) for h in n["hedging"]],
-        note=n["note"],
-        profile=DocumentType(n["profile"]) if n.get("profile") else None,
-        source=n["source"])
+    shaped = shapes.narrative_map(n)
+    return None if shaped is None else NarrativeMap(**shaped)
+
+
+def to_checklist(c: Optional[dict]) -> Optional[ChecklistReport]:
+    shaped = shapes.checklist_report(c)
+    return None if shaped is None else ChecklistReport(**shaped)
+
+
+def learn_cards() -> List[LearnCard]:
+    return [LearnCard(**c) for c in learn.listing()]
+
+
+def checklist_choices() -> list:
+    return [ChecklistChoiceInfo(**row) for row in packs.listing()]
 
 
 def profile_choices() -> list:
@@ -167,7 +164,7 @@ def to_suggestion(s) -> Suggestion:
         why=s.why,
         plain=s.plain,
         source=s.source,
-        learn_ref=None,
+        learn_ref=s.learn_ref,
         replacement=s.replacement,
         fix_safety=_fix_safety(s.fix_safety),
         confidence=min(1.0, max(0.0, conf)),
@@ -213,7 +210,9 @@ def run_analysis(source: Union[str, Document], fmt: str,
     with ENGINE_LOCK:
         a = api.analyze(source, kind=fmt, cfg=cfg,
                         with_review=bool(options and options.review),
-                        with_narrative=bool(options and options.narrative))
+                        with_narrative=bool(options and options.narrative),
+                        checklist=(options.checklist.value
+                                   if options and options.checklist else None))
     health = [to_tier(t) for t in a.health]
     if signed_in:
         health.append(account_tier(account_error))
@@ -234,6 +233,8 @@ def run_analysis(source: Union[str, Document], fmt: str,
         profile=to_profile(a),
         review=to_review(a.review),
         narrative=to_narrative(a.narrative),
+        checklist=to_checklist(a.checklist),
+        suggested_checklist=a.suggested_checklist,
         hidden_by_mode=a.hidden_by_mode,
         suggestions=suggestions,
         counts=dict(a.counts),
@@ -290,6 +291,7 @@ def rule_infos() -> List[RuleInfo]:
             sections_only=sorted(r.sections_only) if r.sections_only else None,
             sections_excluded=(sorted(r.sections_excluded)
                                if r.sections_excluded else None),
+            learn_ref=learn.card_for_rule(r.id),
         ))
     return out
 

@@ -202,7 +202,7 @@ def build_narrative(document: Document, spacy_doc=None,
                 and s not in ("front", "references")]
 
     links = []
-    for obj in argument_mod.build_argument(document):
+    for obj in argument_mod.build_argument(document, spacy_doc=spacy_doc):
         if obj.section not in _LINK_SECTIONS:
             continue
         for code, message in obj.missing_links:
@@ -212,6 +212,8 @@ def build_narrative(document: Document, spacy_doc=None,
                 "code": code,
                 "message": message,
                 "learn_ref": learn.card_for_link(code),
+                "evidence": [_quote(document.original[a:b])
+                             for a, b in obj.link_spans.get(code, [])[:3]],
                 "source": sources.cite("WW+Toulmin+§4"),
             })
 

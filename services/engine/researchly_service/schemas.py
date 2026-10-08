@@ -57,6 +57,15 @@ class DocumentType(str, Enum):
     response_to_reviewers = "response-to-reviewers"
 
 
+class ChecklistChoice(str, Enum):
+    """Reporting checklists of the discipline packs (S4, P3)."""
+    auto = "auto"
+    strobe = "strobe"
+    consort = "consort"
+    prisma = "prisma"
+    epiforge = "epiforge"
+
+
 class Scope(str, Enum):
     """What a rule needs to judge: the sentence, or the whole document
     (figure citations, abbreviations defined once). Draft hides `document`."""
@@ -104,6 +113,10 @@ class AnalyzeOptions(_Strict):
     narrative: bool = Field(
         False, description="Also build the narrative map (`narrative` in "
                            "the response) from the same analysis.")
+    checklist: Optional[ChecklistChoice] = Field(
+        None, description="Check the text against a reporting checklist "
+                          "(`checklist` in the response): a guideline's id, "
+                          "or `auto` for the one the text's words point to.")
 
 
 class AnalyzeRequest(_Strict):
@@ -220,11 +233,19 @@ class ProfileInfo(_Strict):
                       "switched off, empty when nothing.")
     rules_off: List[str] = Field(default_factory=list,
                                  description="Rules not run for this type.")
+    evidence: str = Field("", description="For a guessed type: the headings "
+                          "the guess rested on.")
 
 
 class ReviewQuestion(_Strict):
     id: str = Field(..., description="A to E.")
     question: str
+    status: Literal["yours", "detected", "not_detected", "not_assessed",
+                    "not_applicable"] = Field(
+        "detected", description="What the verdict rests on: detected "
+        "(with evidence), not detected (the signals found nothing, which is "
+        "not proof of absence), not assessed (the check was off) or not "
+        "applicable (that part of the document is not there).")
     verdict: str = Field(..., description="One line answering the question "
                          "from the evidence.")
     points: List[str] = Field(default_factory=list)
@@ -253,6 +274,8 @@ class NarrativeMove(_Strict):
                                     "rests on, when present (never logged).")
     note: str = Field("", description="For an out-of-order move: what it "
                       "appears before or after.")
+    learn_ref: Optional[str] = Field(None, description="The Learn card for "
+                                     "this move (GET /v1/learn/{id}).")
 
 
 class NarrativeSection(_Strict):
@@ -266,12 +289,16 @@ class NarrativeSection(_Strict):
 
 
 class MissingLink(_Strict):
-    """A gap in the argument's chain (claim, grounds, warrant) in one section."""
+    """A link in the argument's chain (claim, grounds, warrant) that could
+    not be found near a claim, in one section."""
     section: str
     label: str
     code: str
     message: str
     source: str
+    learn_ref: Optional[str] = None
+    evidence: List[str] = Field(default_factory=list, description="The "
+                                "sentences concerned (never logged).")
 
 
 class HedgingPoint(_Strict):
@@ -301,6 +328,62 @@ class NarrativeMap(_Strict):
     source: str
 
 
+class ChecklistItem(_Strict):
+    id: str
+    topic: str
+    question: str
+    plain: str
+    sections: List[str] = Field(default_factory=list,
+                                description="Where readers look for it.")
+    status: Literal["reported", "needs_check"] = Field(
+        ..., description="needs_check is a prompt, never a verdict: the item "
+        "may be in a table, a figure or the supplement, or not apply.")
+    evidence: Optional[str] = Field(None, description="The sentence that "
+                                    "reports it (never logged).")
+
+
+class ChecklistReport(_Strict):
+    """A reporting checklist checked against the text: reporting only,
+    never the science."""
+    id: str
+    label: str
+    design: str
+    source: str
+    suggested: bool = Field(..., description="True when the text's own words "
+                            "point to this checklist.")
+    items: List[ChecklistItem]
+    reported: int = Field(..., ge=0)
+    total: int = Field(..., ge=0)
+    note: str
+
+
+class LearnCard(_Strict):
+    """A short lesson behind a suggestion (S4): plain words, one invented
+    before-and-after, a habit to check your own draft, the sources."""
+    id: str
+    title: str
+    group: str
+    summary: str
+    lesson: str
+    before: str
+    after: str
+    habit: str
+    source: str
+    rules: List[str] = Field(default_factory=list)
+    moves: List[str] = Field(default_factory=list)
+
+
+class LearnResponse(_Strict):
+    cards: List[LearnCard]
+
+
+class ChecklistChoiceInfo(_Strict):
+    id: str
+    label: str
+    design: str
+    pack: str
+
+
 class ReviewRuleCount(_Strict):
     id: str
     short: str
@@ -315,6 +398,8 @@ class ReviewReport(_Strict):
     words: int = Field(..., ge=0)
     questions: List[ReviewQuestion]
     top_rules: List[ReviewRuleCount] = Field(default_factory=list)
+    disclaimer: str = Field("", description="What the brief cannot do: it "
+                            "does not establish scientific validity.")
 
 
 class AnalyzeResponse(_Strict):
@@ -328,6 +413,12 @@ class AnalyzeResponse(_Strict):
         None, description="Present when `options.review` was true.")
     narrative: Optional[NarrativeMap] = Field(
         None, description="Present when `options.narrative` was true.")
+    checklist: Optional[ChecklistReport] = Field(
+        None, description="Present when `options.checklist` was set and "
+                          "resolved to a checklist.")
+    suggested_checklist: Optional[str] = Field(
+        None, description="The reporting checklist the text's own words "
+                          "point to, if any (always computed; offer it).")
     hidden_by_mode: int = Field(0, ge=0, description="Document-level "
                                 "suggestions Draft mode held back (0 in Revise).")
     signed_in: bool = Field(False, description="True when a valid account token "
@@ -444,6 +535,7 @@ class RuleInfo(_Strict):
                          "sentence-level rules only.")
     sections_only: Optional[List[str]] = None
     sections_excluded: Optional[List[str]] = None
+    learn_ref: Optional[str] = None
 
 
 class ProfileChoice(_Strict):
@@ -457,6 +549,9 @@ class RulesResponse(_Strict):
     profiles: List[ProfileChoice] = Field(
         default_factory=list, description="Article types a caller can "
         "check as, in display order (S4).")
+    checklists: List[ChecklistChoiceInfo] = Field(
+        default_factory=list, description="Reporting checklists a caller "
+        "can check against (S4).")
 
 
 class ErrorBody(_Strict):

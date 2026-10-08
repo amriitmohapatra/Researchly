@@ -214,3 +214,101 @@ def test_build_review_alone_still_works():
     r = build_review(Document.from_text(IMRAD), NLP)
     assert r["questions"] and "REVIEWER'S BRIEF" in render_review(r)
     assert re.search(r"\d+ words", render_review(r))
+
+
+# --- Auto must not weaken a research article (Codex review R2) ---------------------
+
+RESEARCH_WITH_RECS = (
+    "Introduction\n\nLittle is known about the burden.\n\nMethods\n\nWe "
+    "fitted a model to weekly counts.\n\nResults\n\nVaccination reduced "
+    "transmission.\n\nDiscussion\n\nThe evidence proves that mandates reduce "
+    "transmission.\n\nRecommendations\n\nRestore the mandate.\n")
+
+
+def test_a_recommendations_heading_does_not_turn_an_article_into_a_brief():
+    a, found = ids(RESEARCH_WITH_RECS)
+    assert a.profile.id == "manuscript" and a.profile_guessed
+    assert {"C302", "C303"} <= set(found)
+    assert "Methods" in a.profile_evidence
+
+
+@pytest.mark.parametrize("make", ["plain", "markdown", "word"])
+def test_research_wins_in_every_format(make):
+    if make == "word":
+        doc = Document.from_word(
+            [{"text": h, "style": "Heading 1"} if i % 2 == 0 else {"text": h}
+             for i, h in enumerate(["Methods", "We fitted a model.",
+                                    "Results", "Cases fell.",
+                                    "Recommendations", "Restore it."])])
+    else:
+        text = RESEARCH_WITH_RECS if make == "plain" else (
+            "# Methods\n\nWe fitted a model.\n\n# Results\n\nCases fell.\n\n"
+            "# Recommendations\n\nRestore it.\n")
+        doc = Document.from_text(text, make)
+    assert profiles.guess(doc) == "manuscript"
+
+
+def test_a_real_policy_brief_is_still_guessed_with_its_evidence():
+    a, _ = ids("Key messages\n\nMandates work.\n\nRecommendations\n\n"
+               "Restore the mandate.\n")
+    assert a.profile.id == "policy-brief" and "Recommendations" in a.profile_evidence
+
+
+def test_the_chosen_type_is_never_second_guessed():
+    a, _ = ids(RESEARCH_WITH_RECS, document_type="policy-brief")
+    assert a.profile.id == "policy-brief" and a.profile_evidence == ""
+
+
+def test_policy_brief_does_not_expect_an_abstract():
+    assert "abstract" not in profiles.PROFILES["policy-brief"].expected
+
+
+# --- the brief says "not assessed" and abstains (Codex review R4) -----------------
+
+def brief(text, **kw):
+    r = api.analyze(text, nlp=NLP, with_review=True, **kw).review
+    return {q["id"]: q for q in r["questions"]}, r
+
+
+CAUSAL = ("Introduction\n\nLittle is known about the burden.\n\nResults\n\n"
+          "Vaccination reduced transmission.\n\nDiscussion\n\nWe argue "
+          "that mandates must return.\n")
+
+
+def test_a_muted_check_is_not_assessed_not_absent():
+    q, _ = brief(CAUSAL, disabled={"C303"})
+    assert q["C"]["status"] == "not_assessed"
+    assert "No unhedged" not in q["C"]["verdict"]
+    q, _ = brief(CAUSAL)
+    assert q["C"]["status"] == "detected" and q["C"]["evidence"]
+
+
+def test_a_profile_that_switches_the_check_off_is_not_assessed():
+    q, _ = brief(CAUSAL, document_type="commentary")
+    assert q["C"]["status"] == "not_assessed"
+
+
+def test_an_excerpt_without_an_introduction_makes_no_gap_claim():
+    q, _ = brief("Discussion\n\nThe fit was stable across the districts.\n")
+    assert not any("gap statement" in p for p in q["D"]["points"])
+    assert not q["D"]["evidence"]
+
+
+def test_no_claims_means_nothing_to_weigh():
+    q, _ = brief("The specimens arrived on Tuesday.\n")
+    assert q["D"]["status"] == "not_applicable"
+    assert "Nothing" not in q["D"]["verdict"]
+
+
+def test_absent_signals_are_worded_as_not_detected():
+    q, r = brief("Methods\n\nWe fitted a model.\n")
+    assert q["B"]["status"] == "not_detected" and "detected" in q["B"]["verdict"]
+    assert "does not establish" in r["disclaimer"]
+
+
+def test_every_detected_answer_has_evidence():
+    q, _ = brief(CAUSAL + "\nThese findings suggest that programmes "
+                 "should target adults.\n")
+    for k in ("B", "C", "E"):
+        if q[k]["status"] == "detected":
+            assert q[k]["evidence"], k

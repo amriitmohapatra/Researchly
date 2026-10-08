@@ -83,3 +83,43 @@ def test_rules_route_lists_the_profiles(client):
     ids = [p.id.value for p in body.profiles]
     assert ids[:2] == ["auto", "general"] and "commentary" in ids
     assert all(p.label and p.summary for p in body.profiles)
+
+
+def test_learn_routes(client):
+    from researchly_service.schemas import LearnCard, LearnResponse
+    body = LearnResponse.model_validate(client.get("/v1/learn").json())
+    ids = [c.id for c in body.cards]
+    assert "causal-language" in ids and len(ids) == len(set(ids))
+    one = LearnCard.model_validate(client.get("/v1/learn/causal-language").json())
+    assert one.before != one.after and "C303" in one.rules
+    r = client.get("/v1/learn/no-such-card")
+    assert r.status_code == 404 and r.json()["error"]["code"] == "not_found"
+
+
+def test_checklist_on_request_and_listed(client):
+    text = ("Methods\n\nWe report forecasts of weekly cases four weeks ahead, "
+            "with 95% prediction intervals.\n")
+    body = AnalyzeResponse.model_validate(post(client, content=text,
+                                               checklist="auto").json())
+    assert body.checklist is not None and body.checklist.id == "epiforge"
+    assert body.suggested_checklist == "epiforge"
+    st = {i.id: i.status for i in body.checklist.items}
+    assert st["horizon"] == "reported"
+    rules = RulesResponse.model_validate(client.get("/v1/rules").json())
+    assert [c.id for c in rules.checklists] == ["strobe", "consort", "prisma",
+                                                "epiforge"]
+
+
+def test_profile_evidence_is_returned(client):
+    text = ("Methods\n\nWe fitted a model.\n\nResults\n\nCases fell.\n\n"
+            "Recommendations\n\nRestore it.\n")
+    body = AnalyzeResponse.model_validate(post(client, content=text).json())
+    assert body.profile.id.value == "manuscript" and "Methods" in body.profile.evidence
+
+
+def test_brief_statuses_and_disclaimer(client):
+    body = AnalyzeResponse.model_validate(post(client, review=True,
+                                               disabled_rules=["C303"]).json())
+    q = {x.id: x for x in body.review.questions}
+    assert q["A"].status == "yours" and q["C"].status == "not_assessed"
+    assert "does not establish" in body.review.disclaimer

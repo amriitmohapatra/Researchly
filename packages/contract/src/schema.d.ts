@@ -87,6 +87,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/learn": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Learn Index
+         * @description Every Learn card, grouped in reading order (S4). No document text.
+         */
+        get: operations["listLearn"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/learn/{card_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Learn Card
+         * @description One Learn card, by the `learn_ref` a suggestion carries.
+         */
+        get: operations["getLearnCard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/rules": {
         parameters: {
             query?: never;
@@ -113,6 +153,8 @@ export interface components {
     schemas: {
         /** AnalyzeFileResponse */
         AnalyzeFileResponse: {
+            /** @description Present when `options.checklist` was set and resolved to a checklist. */
+            checklist?: components["schemas"]["ChecklistReport"] | null;
             /**
              * Counts
              * @description Shown suggestions per category.
@@ -163,6 +205,11 @@ export interface components {
              * @default false
              */
             signed_in: boolean;
+            /**
+             * Suggested Checklist
+             * @description The reporting checklist the text's own words point to, if any (always computed; offer it).
+             */
+            suggested_checklist?: string | null;
             /** Suggestions */
             suggestions: components["schemas"]["Suggestion"][];
             /**
@@ -173,6 +220,8 @@ export interface components {
         };
         /** AnalyzeOptions */
         AnalyzeOptions: {
+            /** @description Check the text against a reporting checklist (`checklist` in the response): a guideline's id, or `auto` for the one the text's words point to. */
+            checklist?: components["schemas"]["ChecklistChoice"] | null;
             /**
              * Disabled Rules
              * @description Rule ids to mute for this request, e.g. ["G101"]. For a signed-in caller these are added to the rules muted in their account settings.
@@ -217,6 +266,8 @@ export interface components {
         };
         /** AnalyzeResponse */
         AnalyzeResponse: {
+            /** @description Present when `options.checklist` was set and resolved to a checklist. */
+            checklist?: components["schemas"]["ChecklistReport"] | null;
             /**
              * Counts
              * @description Shown suggestions per category.
@@ -266,6 +317,11 @@ export interface components {
              * @default false
              */
             signed_in: boolean;
+            /**
+             * Suggested Checklist
+             * @description The reporting checklist the text's own words point to, if any (always computed; offer it).
+             */
+            suggested_checklist?: string | null;
             /** Suggestions */
             suggestions: components["schemas"]["Suggestion"][];
             /**
@@ -285,6 +341,8 @@ export interface components {
         };
         /** AnalyzeWordResponse */
         AnalyzeWordResponse: {
+            /** @description Present when `options.checklist` was set and resolved to a checklist. */
+            checklist?: components["schemas"]["ChecklistReport"] | null;
             /**
              * Counts
              * @description Shown suggestions per category.
@@ -335,6 +393,11 @@ export interface components {
              * @default false
              */
             signed_in: boolean;
+            /**
+             * Suggested Checklist
+             * @description The reporting checklist the text's own words point to, if any (always computed; offer it).
+             */
+            suggested_checklist?: string | null;
             /** Suggestions */
             suggestions: components["schemas"]["WordSuggestion"][];
             /**
@@ -350,6 +413,78 @@ export interface components {
          * @enum {string}
          */
         Category: "correction" | "improvement" | "convention" | "preference";
+        /**
+         * ChecklistChoice
+         * @description Reporting checklists of the discipline packs (S4, P3).
+         * @enum {string}
+         */
+        ChecklistChoice: "auto" | "strobe" | "consort" | "prisma" | "epiforge";
+        /** ChecklistChoiceInfo */
+        ChecklistChoiceInfo: {
+            /** Design */
+            design: string;
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Pack */
+            pack: string;
+        };
+        /** ChecklistItem */
+        ChecklistItem: {
+            /**
+             * Evidence
+             * @description The sentence that reports it (never logged).
+             */
+            evidence?: string | null;
+            /** Id */
+            id: string;
+            /** Plain */
+            plain: string;
+            /** Question */
+            question: string;
+            /**
+             * Sections
+             * @description Where readers look for it.
+             */
+            sections?: string[];
+            /**
+             * Status
+             * @description needs_check is a prompt, never a verdict: the item may be in a table, a figure or the supplement, or not apply.
+             * @enum {string}
+             */
+            status: "reported" | "needs_check";
+            /** Topic */
+            topic: string;
+        };
+        /**
+         * ChecklistReport
+         * @description A reporting checklist checked against the text: reporting only,
+         *     never the science.
+         */
+        ChecklistReport: {
+            /** Design */
+            design: string;
+            /** Id */
+            id: string;
+            /** Items */
+            items: components["schemas"]["ChecklistItem"][];
+            /** Label */
+            label: string;
+            /** Note */
+            note: string;
+            /** Reported */
+            reported: number;
+            /** Source */
+            source: string;
+            /**
+             * Suggested
+             * @description True when the text's own words point to this checklist.
+             */
+            suggested: boolean;
+            /** Total */
+            total: number;
+        };
         /**
          * Coverage
          * @description What was and was not read, stated plainly.
@@ -419,6 +554,11 @@ export interface components {
          * @enum {string}
          */
         Format: "plain" | "markdown" | "latex";
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
         /** HealthResponse */
         HealthResponse: {
             engine: components["schemas"]["EngineInfo"];
@@ -453,6 +593,40 @@ export interface components {
             words: number;
         };
         /**
+         * LearnCard
+         * @description A short lesson behind a suggestion (S4): plain words, one invented
+         *     before-and-after, a habit to check your own draft, the sources.
+         */
+        LearnCard: {
+            /** After */
+            after: string;
+            /** Before */
+            before: string;
+            /** Group */
+            group: string;
+            /** Habit */
+            habit: string;
+            /** Id */
+            id: string;
+            /** Lesson */
+            lesson: string;
+            /** Moves */
+            moves?: string[];
+            /** Rules */
+            rules?: string[];
+            /** Source */
+            source: string;
+            /** Summary */
+            summary: string;
+            /** Title */
+            title: string;
+        };
+        /** LearnResponse */
+        LearnResponse: {
+            /** Cards */
+            cards: components["schemas"]["LearnCard"][];
+        };
+        /**
          * Metrics
          * @description Read-outs, never a score (metrics.py).
          */
@@ -485,13 +659,21 @@ export interface components {
         };
         /**
          * MissingLink
-         * @description A gap in the argument's chain (claim, grounds, warrant) in one section.
+         * @description A link in the argument's chain (claim, grounds, warrant) that could
+         *     not be found near a claim, in one section.
          */
         MissingLink: {
             /** Code */
             code: string;
+            /**
+             * Evidence
+             * @description The sentences concerned (never logged).
+             */
+            evidence?: string[];
             /** Label */
             label: string;
+            /** Learn Ref */
+            learn_ref?: string | null;
             /** Message */
             message: string;
             /** Section */
@@ -558,6 +740,11 @@ export interface components {
             /** Label */
             label: string;
             /**
+             * Learn Ref
+             * @description The Learn card for this move (GET /v1/learn/{id}).
+             */
+            learn_ref?: string | null;
+            /**
              * Note
              * @description For an out-of-order move: what it appears before or after.
              * @default
@@ -605,6 +792,12 @@ export interface components {
          */
         ProfileInfo: {
             /**
+             * Evidence
+             * @description For a guessed type: the headings the guess rested on.
+             * @default
+             */
+            evidence: string;
+            /**
              * Guessed
              * @description True when the type was `auto` and guessed from the headings.
              */
@@ -641,6 +834,13 @@ export interface components {
             /** Question */
             question: string;
             /**
+             * Status
+             * @description What the verdict rests on: detected (with evidence), not detected (the signals found nothing, which is not proof of absence), not assessed (the check was off) or not applicable (that part of the document is not there).
+             * @default detected
+             * @enum {string}
+             */
+            status: "yours" | "detected" | "not_detected" | "not_assessed" | "not_applicable";
+            /**
              * Verdict
              * @description One line answering the question from the evidence.
              */
@@ -652,6 +852,12 @@ export interface components {
          *     deterministic analysis as the suggestions.
          */
         ReviewReport: {
+            /**
+             * Disclaimer
+             * @description What the brief cannot do: it does not establish scientific validity.
+             * @default
+             */
+            disclaimer: string;
             /** Questions */
             questions: components["schemas"]["ReviewQuestion"][];
             /** Sections */
@@ -678,6 +884,8 @@ export interface components {
             fix_safety: components["schemas"]["FixSafety"];
             /** Id */
             id: string;
+            /** Learn Ref */
+            learn_ref?: string | null;
             /** Name */
             name: string;
             /**
@@ -705,6 +913,11 @@ export interface components {
         };
         /** RulesResponse */
         RulesResponse: {
+            /**
+             * Checklists
+             * @description Reporting checklists a caller can check against (S4).
+             */
+            checklists?: components["schemas"]["ChecklistChoiceInfo"][];
             /**
              * Profiles
              * @description Article types a caller can check as, in display order (S4).
@@ -906,6 +1119,19 @@ export interface components {
              * @description parser | spelling | grammar | gec | files | account (files: the LaTeX/.docx readers, shown only when one is missing; account: whether a signed-in caller's settings could be loaded)
              */
             tier: string;
+        };
+        /** ValidationError */
+        ValidationError: {
+            /** Context */
+            ctx?: Record<string, never>;
+            /** Input */
+            input?: unknown;
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
         };
         /**
          * WordLocation
@@ -1338,6 +1564,66 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    listLearn: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LearnResponse"];
+                };
+            };
+        };
+    };
+    getLearnCard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LearnCard"];
+                };
+            };
+            /** @description No such card */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

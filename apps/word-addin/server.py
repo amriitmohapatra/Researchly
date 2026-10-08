@@ -40,6 +40,9 @@ from researchly import config as config_mod            # noqa: E402
 from researchly import telemetry                       # noqa: E402
 from researchly import transform                       # noqa: E402
 from researchly import wordloc                         # noqa: E402
+from researchly import packs as packs_mod              # noqa: E402
+from researchly import shapes                          # noqa: E402
+from researchly.profiles import DOCUMENT_TYPES         # noqa: E402
 
 _NLP_LOCK = threading.Lock()
 
@@ -137,6 +140,10 @@ MAX_STYLE_CHARS = 200
 MAX_DISABLED_RULES = 200
 MAX_BODY_BYTES = 64 * 1024 * 1024
 MODES = ("draft", "revise")
+# Every option of the contract's AnalyzeOptions (packages/contract).
+OPTION_KEYS = {"show_preferences", "disabled_rules", "mode",
+               "document_type", "review", "narrative", "checklist"}
+CHECKLISTS = {"auto"} | set(packs_mod.checklists())
 # Tiers whose being off never makes this engine "degraded" (as the hosted one).
 _OPTIONAL_STATES = {"gec": {"missing", "disabled"}}
 
@@ -172,7 +179,10 @@ def _engine_info() -> dict:
 
 def parse_word_request(payload) -> tuple:
     """Validate an AnalyzeWordRequest by hand (stdlib only, like the rest
-    of this server). Returns (paragraphs, show_preferences, disabled, mode)."""
+    of this server). Returns (paragraphs, show_preferences, disabled, mode,
+    extra), where extra holds document_type, review, narrative and
+    checklist. Every option of the contract is accepted: a service test
+    posts them all here (Codex review R1)."""
     bad = lambda msg: ContractError(422, "invalid_request", msg)  # noqa: E731
     if not isinstance(payload, dict):
         raise bad("the body must be a JSON object")
@@ -207,9 +217,8 @@ def parse_word_request(payload) -> tuple:
                             f"at most {MAX_CONTENT_CHARS:,} characters at a time")
 
     opts = payload.get("options") or {}
-    if not isinstance(opts, dict) or set(opts) - {"show_preferences",
-                                                   "disabled_rules", "mode"}:
-        raise bad("options must be {show_preferences, disabled_rules, mode}")
+    if not isinstance(opts, dict) or set(opts) - OPTION_KEYS:
+        raise bad("options must be {" + ", ".join(sorted(OPTION_KEYS)) + "}")
     prefs = opts.get("show_preferences", False)
     if not isinstance(prefs, bool):
         raise bad("show_preferences must be true or false")
@@ -220,7 +229,21 @@ def parse_word_request(payload) -> tuple:
     mode = opts.get("mode")
     if mode is not None and mode not in MODES:
         raise bad("mode must be draft or revise")
-    return clean, prefs, disabled, mode
+    extra = {}
+    doc_type = opts.get("document_type")
+    if doc_type is not None and doc_type not in DOCUMENT_TYPES:
+        raise bad("document_type must be one of " + ", ".join(DOCUMENT_TYPES))
+    extra["document_type"] = doc_type
+    for flag in ("review", "narrative"):
+        v = opts.get(flag, False)
+        if not isinstance(v, bool):
+            raise bad(f"{flag} must be true or false")
+        extra[flag] = v
+    checklist = opts.get("checklist")
+    if checklist is not None and checklist not in CHECKLISTS:
+        raise bad("checklist must be one of " + ", ".join(sorted(CHECKLISTS)))
+    extra["checklist"] = checklist
+    return clean, prefs, disabled, mode, extra
 
 
 def _word_suggestion(s, doc, paragraphs: list) -> dict:
@@ -239,8 +262,9 @@ def _word_suggestion(s, doc, paragraphs: list) -> dict:
         "section": s.section or "unknown",
         "message": s.message,
         "why": s.why,
+        "plain": s.plain,
         "source": s.source,
-        "learn_ref": None,
+        "learn_ref": s.learn_ref,
         "replacement": s.replacement,
         "fix_safety": "safe" if s.fix_safety == "safe" else "review",
         "confidence": min(1.0, max(0.0, conf)),
@@ -256,13 +280,18 @@ def analyze_word(payload) -> dict:
     only ADD mutes (as on the hosted engine); the request's mode wins.
     """
     t0 = time.perf_counter()
-    paragraphs, prefs, disabled, mode = parse_word_request(payload)
+    paragraphs, prefs, disabled, mode, extra = parse_word_request(payload)
     cfg = config_mod.load()
     cfg.show_preferences = bool(cfg.show_preferences or prefs)
     cfg.disabled = set(cfg.disabled) | set(disabled)
     if mode is not None:
         cfg.mode = mode
-    a = api.analyze(paragraphs, nlp=get_nlp(), cfg=cfg)
+    if extra["document_type"] is not None:
+        cfg.document_type = extra["document_type"]
+    a = api.analyze(paragraphs, nlp=get_nlp(), cfg=cfg,
+                    with_review=extra["review"],
+                    with_narrative=extra["narrative"],
+                    checklist=extra["checklist"])
     doc = a.document
     out = {
         "schema_version": SCHEMA_VERSION,
@@ -280,6 +309,7 @@ def analyze_word(payload) -> dict:
         "elapsed_ms": 0,
         "warnings": list(doc.warnings) if doc is not None else [],
         "coverage": wordloc.coverage(paragraphs, doc),
+        **shapes.extras(a),
     }
     out["elapsed_ms"] = int(round((time.perf_counter() - t0) * 1000))
     return out

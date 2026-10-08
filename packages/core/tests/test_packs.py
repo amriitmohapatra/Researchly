@@ -79,7 +79,7 @@ def test_an_item_not_reported_is_a_prompt_with_its_question():
     text = FORECAST.replace("Code is available on GitHub.", "")
     c = check(text, "epiforge")
     code = next(i for i in c["items"] if i["id"] == "code")
-    assert code["status"] == "not_found" and code["evidence"] is None
+    assert code["status"] == "needs_check" and code["evidence"] is None
     assert code["question"].endswith("?") and "supplement" in c["note"]
 
 
@@ -89,7 +89,7 @@ def test_items_are_looked_for_in_their_sections():
             "We assumed too much.\n")
     c = check(text, "epiforge")
     st = {i["id"]: i["status"] for i in c["items"]}
-    assert st["assumptions"] == "not_found"
+    assert st["assumptions"] == "needs_check"
 
 
 def test_auto_uses_the_suggestion_and_nothing_when_there_is_none():

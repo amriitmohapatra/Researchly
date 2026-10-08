@@ -32,6 +32,9 @@ SAMPLE = (
     "These results are proven by the model and was robust to priors.\n"
 )
 
+from researchly import learn as _learn  # noqa: E402
+LEARN_IDS = set(_learn.CARDS)
+
 
 def test_analyze_validates_against_the_contract(client):
     r = analyze(client, SAMPLE)
@@ -87,7 +90,8 @@ def test_suggestion_ids_spans_and_text_are_consistent(client):
         assert sp["line"] >= 1 and sp["col"] >= 1
         assert lines[sp["line"] - 1][sp["col"] - 1:].startswith(
             s["text"].split("\n")[0])
-        assert s["learn_ref"] is None
+        # Every suggestion leads to a Learn card (S4).
+        assert s["learn_ref"] in LEARN_IDS
         assert 0.0 <= s["confidence"] <= 1.0
 
 

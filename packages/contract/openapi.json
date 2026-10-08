@@ -4,6 +4,17 @@
       "AnalyzeFileResponse": {
         "additionalProperties": false,
         "properties": {
+          "checklist": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChecklistReport"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Present when `options.checklist` was set and resolved to a checklist."
+          },
           "counts": {
             "additionalProperties": {
               "type": "integer"
@@ -103,6 +114,18 @@
             "title": "Signed In",
             "type": "boolean"
           },
+          "suggested_checklist": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The reporting checklist the text's own words point to, if any (always computed; offer it).",
+            "title": "Suggested Checklist"
+          },
           "suggestions": {
             "items": {
               "$ref": "#/components/schemas/Suggestion"
@@ -135,6 +158,17 @@
       "AnalyzeOptions": {
         "additionalProperties": false,
         "properties": {
+          "checklist": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChecklistChoice"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Check the text against a reporting checklist (`checklist` in the response): a guideline's id, or `auto` for the one the text's words point to."
+          },
           "disabled_rules": {
             "description": "Rule ids to mute for this request, e.g. [\"G101\"]. For a signed-in caller these are added to the rules muted in their account settings.",
             "items": {
@@ -216,6 +250,17 @@
       "AnalyzeResponse": {
         "additionalProperties": false,
         "properties": {
+          "checklist": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChecklistReport"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Present when `options.checklist` was set and resolved to a checklist."
+          },
           "counts": {
             "additionalProperties": {
               "type": "integer"
@@ -312,6 +357,18 @@
             "title": "Signed In",
             "type": "boolean"
           },
+          "suggested_checklist": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The reporting checklist the text's own words point to, if any (always computed; offer it).",
+            "title": "Suggested Checklist"
+          },
           "suggestions": {
             "items": {
               "$ref": "#/components/schemas/Suggestion"
@@ -366,6 +423,17 @@
       "AnalyzeWordResponse": {
         "additionalProperties": false,
         "properties": {
+          "checklist": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChecklistReport"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Present when `options.checklist` was set and resolved to a checklist."
+          },
           "counts": {
             "additionalProperties": {
               "type": "integer"
@@ -465,6 +533,18 @@
             "title": "Signed In",
             "type": "boolean"
           },
+          "suggested_checklist": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The reporting checklist the text's own words point to, if any (always computed; offer it).",
+            "title": "Suggested Checklist"
+          },
           "suggestions": {
             "items": {
               "$ref": "#/components/schemas/WordSuggestion"
@@ -504,6 +584,167 @@
         ],
         "title": "Category",
         "type": "string"
+      },
+      "ChecklistChoice": {
+        "description": "Reporting checklists of the discipline packs (S4, P3).",
+        "enum": [
+          "auto",
+          "strobe",
+          "consort",
+          "prisma",
+          "epiforge"
+        ],
+        "title": "ChecklistChoice",
+        "type": "string"
+      },
+      "ChecklistChoiceInfo": {
+        "additionalProperties": false,
+        "properties": {
+          "design": {
+            "title": "Design",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "pack": {
+            "title": "Pack",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "design",
+          "pack"
+        ],
+        "title": "ChecklistChoiceInfo",
+        "type": "object"
+      },
+      "ChecklistItem": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The sentence that reports it (never logged).",
+            "title": "Evidence"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "plain": {
+            "title": "Plain",
+            "type": "string"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "sections": {
+            "description": "Where readers look for it.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Sections",
+            "type": "array"
+          },
+          "status": {
+            "description": "needs_check is a prompt, never a verdict: the item may be in a table, a figure or the supplement, or not apply.",
+            "enum": [
+              "reported",
+              "needs_check"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "topic": {
+            "title": "Topic",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "topic",
+          "question",
+          "plain",
+          "status"
+        ],
+        "title": "ChecklistItem",
+        "type": "object"
+      },
+      "ChecklistReport": {
+        "additionalProperties": false,
+        "description": "A reporting checklist checked against the text: reporting only,\nnever the science.",
+        "properties": {
+          "design": {
+            "title": "Design",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ChecklistItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "reported": {
+            "minimum": 0.0,
+            "title": "Reported",
+            "type": "integer"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "suggested": {
+            "description": "True when the text's own words point to this checklist.",
+            "title": "Suggested",
+            "type": "boolean"
+          },
+          "total": {
+            "minimum": 0.0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "design",
+          "source",
+          "suggested",
+          "items",
+          "reported",
+          "total",
+          "note"
+        ],
+        "title": "ChecklistReport",
+        "type": "object"
       },
       "Coverage": {
         "additionalProperties": false,
@@ -634,6 +875,19 @@
         "title": "Format",
         "type": "string"
       },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
       "HealthResponse": {
         "additionalProperties": false,
         "properties": {
@@ -709,6 +963,92 @@
         "title": "HedgingPoint",
         "type": "object"
       },
+      "LearnCard": {
+        "additionalProperties": false,
+        "description": "A short lesson behind a suggestion (S4): plain words, one invented\nbefore-and-after, a habit to check your own draft, the sources.",
+        "properties": {
+          "after": {
+            "title": "After",
+            "type": "string"
+          },
+          "before": {
+            "title": "Before",
+            "type": "string"
+          },
+          "group": {
+            "title": "Group",
+            "type": "string"
+          },
+          "habit": {
+            "title": "Habit",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "lesson": {
+            "title": "Lesson",
+            "type": "string"
+          },
+          "moves": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Moves",
+            "type": "array"
+          },
+          "rules": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Rules",
+            "type": "array"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "group",
+          "summary",
+          "lesson",
+          "before",
+          "after",
+          "habit",
+          "source"
+        ],
+        "title": "LearnCard",
+        "type": "object"
+      },
+      "LearnResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "cards": {
+            "items": {
+              "$ref": "#/components/schemas/LearnCard"
+            },
+            "title": "Cards",
+            "type": "array"
+          }
+        },
+        "required": [
+          "cards"
+        ],
+        "title": "LearnResponse",
+        "type": "object"
+      },
       "Metrics": {
         "additionalProperties": false,
         "description": "Read-outs, never a score (metrics.py).",
@@ -780,15 +1120,34 @@
       },
       "MissingLink": {
         "additionalProperties": false,
-        "description": "A gap in the argument's chain (claim, grounds, warrant) in one section.",
+        "description": "A link in the argument's chain (claim, grounds, warrant) that could\nnot be found near a claim, in one section.",
         "properties": {
           "code": {
             "title": "Code",
             "type": "string"
           },
+          "evidence": {
+            "description": "The sentences concerned (never logged).",
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
           "label": {
             "title": "Label",
             "type": "string"
+          },
+          "learn_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Learn Ref"
           },
           "message": {
             "title": "Message",
@@ -921,6 +1280,18 @@
             "title": "Label",
             "type": "string"
           },
+          "learn_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The Learn card for this move (GET /v1/learn/{id}).",
+            "title": "Learn Ref"
+          },
           "note": {
             "default": "",
             "description": "For an out-of-order move: what it appears before or after.",
@@ -1034,6 +1405,12 @@
         "additionalProperties": false,
         "description": "The article-type profile a check ran under.",
         "properties": {
+          "evidence": {
+            "default": "",
+            "description": "For a guessed type: the headings the guess rested on.",
+            "title": "Evidence",
+            "type": "string"
+          },
           "guessed": {
             "description": "True when the type was `auto` and guessed from the headings.",
             "title": "Guessed",
@@ -1096,6 +1473,19 @@
             "title": "Question",
             "type": "string"
           },
+          "status": {
+            "default": "detected",
+            "description": "What the verdict rests on: detected (with evidence), not detected (the signals found nothing, which is not proof of absence), not assessed (the check was off) or not applicable (that part of the document is not there).",
+            "enum": [
+              "yours",
+              "detected",
+              "not_detected",
+              "not_assessed",
+              "not_applicable"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
           "verdict": {
             "description": "One line answering the question from the evidence.",
             "title": "Verdict",
@@ -1114,6 +1504,12 @@
         "additionalProperties": false,
         "description": "The critical reader's brief: five questions answered from the same\ndeterministic analysis as the suggestions.",
         "properties": {
+          "disclaimer": {
+            "default": "",
+            "description": "What the brief cannot do: it does not establish scientific validity.",
+            "title": "Disclaimer",
+            "type": "string"
+          },
           "questions": {
             "items": {
               "$ref": "#/components/schemas/ReviewQuestion"
@@ -1192,6 +1588,17 @@
             "title": "Id",
             "type": "string"
           },
+          "learn_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Learn Ref"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -1267,6 +1674,14 @@
       "RulesResponse": {
         "additionalProperties": false,
         "properties": {
+          "checklists": {
+            "description": "Reporting checklists a caller can check against (S4).",
+            "items": {
+              "$ref": "#/components/schemas/ChecklistChoiceInfo"
+            },
+            "title": "Checklists",
+            "type": "array"
+          },
           "profiles": {
             "description": "Article types a caller can check as, in display order (S4).",
             "items": {
@@ -1625,6 +2040,46 @@
           "state"
         ],
         "title": "TierHealth",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
         "type": "object"
       },
       "WordLocation": {
@@ -2257,6 +2712,81 @@
           }
         },
         "summary": "Health",
+        "tags": [
+          "meta"
+        ]
+      }
+    },
+    "/v1/learn": {
+      "get": {
+        "description": "Every Learn card, grouped in reading order (S4). No document text.",
+        "operationId": "listLearn",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearnResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Learn Index",
+        "tags": [
+          "meta"
+        ]
+      }
+    },
+    "/v1/learn/{card_id}": {
+      "get": {
+        "description": "One Learn card, by the `learn_ref` a suggestion carries.",
+        "operationId": "getLearnCard",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "card_id",
+            "required": true,
+            "schema": {
+              "title": "Card Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearnCard"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No such card"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Learn Card",
         "tags": [
           "meta"
         ]

@@ -11,8 +11,9 @@ Format: a `Pack` holds `Checklist`s; a checklist holds `Item`s. Each item
 is an authored question in Researchly's own words (the guidelines are
 cited, never quoted), a plain reason, the sections where readers look for
 it, and the signals (regular expressions over one sentence) that find it.
-A "not found" is a prompt to check, not a verdict: the item may sit in a
-table, a figure or the supplement.
+An item the signals do not find is "needs your check", never "missing":
+it may sit in a table, a figure or the supplement, or not apply (the
+surfaces let the writer mark it so for the session; Codex review #6).
 
 The first pack is epidemiology (`epidemiology.py`), the owner's field.
 A new discipline is one more module listed in `PACKS`.
@@ -114,14 +115,15 @@ def check(document, checklist_id: str, spacy_doc=None,
         items.append({
             "id": it.id, "topic": it.topic, "question": it.question,
             "plain": it.plain, "sections": list(it.sections),
-            "status": "reported" if hit else "not_found",
+            "status": "reported" if hit else "needs_check",
             "evidence": _quote(hit) if hit else None,
         })
     reported = sum(1 for i in items if i["status"] == "reported")
     total = len(items)
-    note = (f"{reported} of {total} items were found in the text. "
-            "An item not found may be in a table, a figure or the "
-            "supplement; if it is reported there, nothing needs doing."
+    note = (f"{reported} of {total} items were found in the text. The "
+            "others need your check: they may be reported in a table, a "
+            "figure or the supplement, or not apply to this study. This "
+            "checks reporting only, never the science."
             if reported < total else
             f"All {total} items were found in the text.")
     return {"id": c.id, "label": c.label, "design": c.design,

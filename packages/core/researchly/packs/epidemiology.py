@@ -341,9 +341,9 @@ PRISMA = Checklist(
 EPIFORGE = Checklist(
     "epiforge", "EPIFORGE", "epidemic forecasts, projections and "
     "predictions", "EPIFORGE",
-    r"\b(forecast(s|ing)?|nowcast(s|ing)?|projection(s)?|predict(ed|ion|"
-    r"ions|ing)?) (of|for) (the )?(epidemic|outbreak|cases|incidence|"
-    r"hospitali[sz]ations|deaths|peak|transmission)\b|\bscenario model",
+    r"\b(forecast(s|ed|ing)?|nowcast(s|ed|ing)?|projections?)\b[^.]{0,50}"
+    r"\b(epidemic|outbreak|cases|incidence|hospitali[sz]ations|admissions|"
+    r"deaths|peak|transmission)\b|\bscenario model",
     (
         Item("design", "Identified as a forecast",
              "Does the abstract or the start of the paper say the study "
@@ -367,13 +367,13 @@ EPIFORGE = Checklist(
              "where, and per week or per day.",
              (r"\b(forecast|predict|project)(ed|s|ing)?\b[^.]{0,60}\b("
               r"cases|incidence|peak|deaths|hospitali[sz]ations|admissions|"
-              r"attack rate)\b", r"\btarget\b"), _METHODS),
+              r"attack rate)\b", r"\btarget\b"), _INTRO + _METHODS),
         Item("horizon", "Horizon",
              "Is the forecast horizon given (how far ahead)?",
              "Accuracy falls with the horizon; readers need it to weigh any "
              "number.",
              (r"\bhorizons?\b", r"\b(weeks?|days?|months?) ahead\b",
-              r"\b\d+-(week|day|month)[- ]ahead\b"), _METHODS),
+              r"\b\d+-(week|day|month)[- ]ahead\b"), _INTRO + _METHODS),
         Item("data", "Data sources",
              "Are the data sources described, with whether they are "
              "available to others?",

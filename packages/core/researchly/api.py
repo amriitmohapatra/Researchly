@@ -83,6 +83,8 @@ class Analysis:
     # guessed from the headings ("auto") or chosen.
     profile: profiles_mod.Profile = profiles_mod.DEFAULT
     profile_guessed: bool = True
+    # The headings an Auto guess rested on ("" when chosen or general).
+    profile_evidence: str = ""
     # The critical reader's brief (review.py), when asked for.
     review: Optional[dict] = None
     # The narrative map (discourse/narrative.py), when asked for.
@@ -109,6 +111,7 @@ class Analysis:
             "hidden_by_mode": self.hidden_by_mode,
             "profile": {"id": self.profile.id, "label": self.profile.label,
                         "guessed": self.profile_guessed,
+                        "evidence": self.profile_evidence,
                         "note": self.profile.note,
                         "rules_off": sorted(self.profile.rules_off)},
             "review": self.review,
@@ -187,6 +190,8 @@ def analyze(source: Union[str, Path, Sequence[dict], Document],
     # The article-type profile (S4): checks that do not apply to this kind
     # of document are not run, and unheaded prose gets its section.
     profile, guessed = profiles_mod.resolve(cfg.document_type, document)
+    evidence = (profiles_mod.guess_with_evidence(document)[1]
+                if guessed else "")
     document.default_section = profile.body_section
     disabled = set(cfg.disabled) | set(profile.rules_off)
 
@@ -219,7 +224,7 @@ def analyze(source: Union[str, Path, Sequence[dict], Document],
         from .review import build_review
         review = build_review(document, nlp, suggestions=everything,
                               spacy_doc=spacy_doc, metrics=mets,
-                              profile=profile)
+                              profile=profile, disabled=cfg.disabled)
     from . import packs
     suggested = packs.suggest(document.masked)
     checked = None
@@ -241,6 +246,7 @@ def analyze(source: Union[str, Path, Sequence[dict], Document],
         hidden_by_mode=by_mode,
         profile=profile,
         profile_guessed=guessed,
+        profile_evidence=evidence,
         review=review,
         narrative=narrative,
         checklist=checked,

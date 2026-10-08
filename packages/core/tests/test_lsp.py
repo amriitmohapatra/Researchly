@@ -120,3 +120,35 @@ def test_lsp_publishes_diagnostics_and_quickfix_data():
         assert w201["range"]["start"]["line"] == 2
     finally:
         proc.kill()
+
+
+# --- UTF-16 columns and stale results (Codex review R7) -----------------------------
+
+def test_positions_count_utf16_units_after_an_emoji():
+    from researchly.document import Document
+    from researchly.lsp import to_position
+    source = "\U0001F600 The the model was fitted."
+    doc = Document.from_text(source)
+    offset = source.index("the")
+    assert to_position(doc, offset).character == len(
+        source[:offset].encode("utf-16-le")) // 2 == 7
+
+
+def test_positions_on_later_lines_count_from_the_line_start():
+    from researchly.document import Document
+    from researchly.lsp import to_position
+    source = "First line.\n\U0001D445 is the rate and the the rest."
+    doc = Document.from_text(source)
+    p = to_position(doc, source.index("the the"))
+    assert p.line == 1 and p.character == source.split("\n")[1].index("the the") + 1
+
+
+def test_close_cancels_the_pending_check():
+    from researchly.lsp import ResearchlyServer
+    ls = ResearchlyServer()
+    ls.schedule("file:///x.md")
+    timer = ls._timers["file:///x.md"]
+    ls.cancel("file:///x.md")
+    ls.closed.add("file:///x.md")
+    assert not timer.is_alive() or timer.finished.is_set()
+    assert "file:///x.md" not in ls._timers

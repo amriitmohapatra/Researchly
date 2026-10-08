@@ -11,6 +11,8 @@
  */
 import "client-only";
 import type {
+  AnalyzeOptions,
+  ChecklistChoice,
   AnalyzeFileResponse,
   AnalyzeRequest,
   AnalyzeResponse,
@@ -56,6 +58,14 @@ export interface CheckParams {
   review?: boolean;
   /** Also ask for the narrative map (S4b): a whole-document read, sent exactly like the brief. */
   narrative?: boolean;
+  /** A reporting checklist to check against (S4): a guideline's id, or "auto". Omitted: none. */
+  checklist?: ChecklistChoice | null;
+  /**
+   * Draft or Revise. The website is the revision studio and always sends
+   * "revise", so a Draft choice saved from Word never silently hides the
+   * document-wide checks here (Codex review R6).
+   */
+  mode?: Mode;
   signal?: AbortSignal;
 }
 
@@ -65,13 +75,17 @@ export function analysisOptions(p: {
   documentType?: DocumentType | null;
   review?: boolean;
   narrative?: boolean;
-}) {
+  checklist?: ChecklistChoice | null;
+  mode?: Mode;
+}): AnalyzeOptions {
   return {
     show_preferences: p.showPreferences,
     document_type: p.documentType ?? "auto",
     review: p.review ?? false,
     narrative: p.narrative ?? false,
-  } as const;
+    ...(p.checklist ? { checklist: p.checklist } : {}),
+    ...(p.mode ? { mode: p.mode } : {}),
+  };
 }
 
 /**
@@ -118,7 +132,7 @@ export async function withBearer<T>(
 }
 
 export function buildRequest(
-  p: Pick<CheckParams, "content" | "format" | "showPreferences" | "documentType" | "review" | "narrative">,
+  p: Pick<CheckParams, "content" | "format" | "showPreferences" | "documentType" | "review" | "narrative" | "checklist" | "mode">,
 ): AnalyzeRequest {
   return {
     content: p.content,
@@ -249,6 +263,8 @@ export interface FileCheckParams {
   documentType?: DocumentType | null;
   review?: boolean;
   narrative?: boolean;
+  checklist?: ChecklistChoice | null;
+  mode?: Mode;
   signal?: AbortSignal;
 }
 
@@ -271,7 +287,7 @@ export function encodeFilename(name: string): string {
 /** Everything /v1/analyze-file needs except the transport: unit-tested. */
 export function buildFileRequest(
   file: Blob & { name: string },
-  opts: { showPreferences: boolean; documentType?: DocumentType | null; review?: boolean; narrative?: boolean },
+  opts: Parameters<typeof analysisOptions>[0],
   token: string | null,
 ): { method: "POST"; headers: Record<string, string>; body: Blob } {
   return {
@@ -300,7 +316,14 @@ export async function analyzeFile(
       `${engineUrl}/v1/analyze-file`,
       buildFileRequest(
         p.file,
-        { showPreferences: p.showPreferences, documentType: p.documentType, review: p.review, narrative: p.narrative },
+        {
+          showPreferences: p.showPreferences,
+          documentType: p.documentType,
+          review: p.review,
+          narrative: p.narrative,
+          checklist: p.checklist,
+          mode: p.mode,
+        },
         token,
       ),
       p.signal,
@@ -363,11 +386,13 @@ export interface WordCheckParams {
   review?: boolean;
   /** The narrative map (S4b): asked for in Revise only, like the brief. */
   narrative?: boolean;
+  /** A reporting checklist (S4): a guideline's id, or "auto"; omitted: none. */
+  checklist?: ChecklistChoice | null;
   signal?: AbortSignal;
 }
 
 export function buildWordRequest(
-  p: Pick<WordCheckParams, "paragraphs" | "showPreferences" | "mode" | "disabledRules" | "documentType" | "review" | "narrative">,
+  p: Pick<WordCheckParams, "paragraphs" | "showPreferences" | "mode" | "disabledRules" | "documentType" | "review" | "narrative" | "checklist">,
 ): AnalyzeWordRequest {
   return {
     paragraphs: p.paragraphs,

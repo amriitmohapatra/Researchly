@@ -95,8 +95,7 @@ PROFILES: dict = {p.id: p for p in (
     Profile("policy-brief", "Policy brief",
             "Evidence for decision-makers: context, evidence, options, "
             "recommendations.",
-            expected=("abstract", "introduction", "discussion",
-                      "conclusion"),
+            expected=("introduction", "discussion", "conclusion"),
             body_section="discussion",
             rules_off={"AB801": _NO_ABSTRACT, "AB802": _NO_ABSTRACT,
                        "D902": _NO_GAP, "C302": _ASSERTIVE,
@@ -133,28 +132,50 @@ _POLICY_LINE = re.compile(
     re.IGNORECASE | re.MULTILINE)
 
 
-def guess(document) -> str:
-    """The type the headings make plain, else "general". Never guesses
-    "abstract" or "commentary": a pasted paragraph must not be judged as
-    an abstract, and an opinion piece looks like any other prose."""
+def guess_with_evidence(document) -> tuple:
+    """(type, evidence): the type the headings make plain, and the headings
+    that decided it; ("general", "") when nothing is plain.
+
+    Never guesses "abstract" or "commentary": a pasted paragraph must not be
+    judged as an abstract, and an opinion piece looks like any other prose.
+    A research structure wins over a policy heading (Codex review R2): an
+    article with Methods and Results and a closing "Recommendations"
+    section is still a research article, and guessing a policy brief from
+    one ancillary heading would switch off checks it needs. A guess may
+    only weaken the checks when nothing points the other way.
+    """
     heads = document.headings
-    if any(_POLICY_HEADING.search(h.text) for h in heads):
-        return "policy-brief"
-    if document.kind == "plain" and _POLICY_LINE.search(document.original):
+    sections = {h.section for h in heads}
+    research = {"methods", "results"} <= sections
+
+    def named(*kinds):
+        return ", ".join(h.text.strip() for h in heads
+                         if h.section in kinds)[:120]
+
+    if any(h.level == 0 for h in heads) and "methods" in sections:
+        chapter = next(h.text.strip() for h in heads if h.level == 0)
+        return "thesis-chapter", f"{chapter}; {named('methods')}"[:160]
+    if research:
+        return "manuscript", named("methods", "results")
+    policy = [h.text.strip() for h in heads if _POLICY_HEADING.search(h.text)]
+    if not policy and document.kind == "plain":
         # Plain text records only IMRaD headings; a "Recommendations" line
         # of its own is the signal here.
-        return "policy-brief"
-    sections = {h.section for h in heads}
-    if any(h.level == 0 for h in heads) and "methods" in sections:
-        return "thesis-chapter"
-    if {"methods", "results"} <= sections:
-        return "manuscript"
-    return "general"
+        policy = [m.group().strip()
+                  for m in _POLICY_LINE.finditer(document.original)]
+    if policy and "methods" not in sections:
+        return "policy-brief", ", ".join(policy)[:120]
+    return "general", ""
+
+
+def guess(document) -> str:
+    return guess_with_evidence(document)[0]
 
 
 def resolve(document_type: Optional[str], document=None) -> tuple:
     """(profile, guessed): the profile for a configured type, guessing from
-    the document for "auto"; an unknown type is "general"."""
+    the document for "auto"; an unknown type is "general". The explicit
+    choice is authoritative."""
     key = document_type or "auto"
     if key == "auto":
         return PROFILES[guess(document)] if document is not None else DEFAULT, True

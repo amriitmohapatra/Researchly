@@ -29,6 +29,7 @@ fields carry its calibrated scores.
 from __future__ import annotations
 
 import re
+from bisect import bisect_right
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -178,6 +179,7 @@ class ArgumentObject:
     confidence: float = 0.6
     supporting_spans: list = field(default_factory=list)   # SentenceRole
     missing_links: list = field(default_factory=list)      # (code, message)
+    link_spans: dict = field(default_factory=dict)         # code -> spans
 
     def to_dict(self) -> dict:
         return {
@@ -214,14 +216,26 @@ def label_sentence(sentence: str) -> tuple[str, str, tuple]:
     return primary, matched[primary], ordered
 
 
-def label_sentences(document: Document) -> list[SentenceRole]:
+def label_sentences(document: Document, spacy_doc=None) -> list[SentenceRole]:
     """Role-label every sentence, with original-text offsets.
 
-    Sentences are found on the MASKED text (so offsets survive markup) but
-    labelled from the masked prose too — masked regions are spaces, which
-    the lexicons simply do not match. Heading lines are masked already.
+    With `spacy_doc` (the shared parse, api.analyze) the sentences are the
+    parser's, so abbreviations, decimals, equations and blank-line
+    boundaries split exactly as everywhere else (Codex review R5). Without
+    it, a punctuation split over the MASKED text (offsets survive markup;
+    masked regions are spaces the lexicons do not match).
     """
     out: list[SentenceRole] = []
+    if spacy_doc is not None:
+        for sent in spacy_doc.sents:
+            chunk = sent.text
+            if not chunk.strip() or document.in_table(sent.start_char):
+                continue
+            role, signal, all_roles = label_sentence(chunk)
+            out.append(SentenceRole(start=sent.start_char, end=sent.end_char,
+                                    role=role, signal=signal,
+                                    all_roles=all_roles))
+        return out
     text = document.masked
     pos = 0
     for chunk in _SENT_SPLIT.split(text):
@@ -234,6 +248,8 @@ def label_sentences(document: Document) -> list[SentenceRole]:
             continue
         end = start + len(chunk)
         pos = end
+        # A masked heading before the sentence is spaces: start at the words.
+        start += len(chunk) - len(chunk.lstrip())
         role, signal, all_roles = label_sentence(chunk)
         out.append(SentenceRole(start=start, end=end, role=role,
                                 signal=signal, all_roles=all_roles))
@@ -248,62 +264,86 @@ _ARGUMENTATIVE = {"discussion", "conclusion", "abstract", "introduction",
                   "limitations", "unknown", "front", "other"}
 
 
-def _diagnose(obj: ArgumentObject) -> list:
-    """Deterministic missing-link diagnostics for one section."""
-    links: list = []
-    n_claims = len(obj.claim)
-    argumentative = obj.section in _ARGUMENTATIVE
+def _near(spans: list, i: int, roles: tuple, k: int) -> bool:
+    lo, hi = max(0, i - k), min(len(spans), i + k + 1)
+    return any(set(roles) & set(spans[j].all_roles) for j in range(lo, hi))
 
-    if argumentative and n_claims and not obj.warrant:
-        links.append((
-            "claim_without_warrant",
-            f"{n_claims} claim-type sentence(s) in {obj.section} but no "
-            "warrant signal (because / this suggests that / consistent "
-            "with…). The reader is given the claim but not why the "
-            "evidence supports it (Toulmin: grounds need a warrant)."))
-    if argumentative and n_claims and not obj.evidence_or_grounds \
-            and not obj.supporting_spans_have("result"):
-        links.append((
-            "claim_without_grounds",
-            f"Claim-type sentence(s) in {obj.section} with no evidence "
-            "signal (numbers, citations, reported findings) in the same "
-            "section — what are these claims standing on?"))
+
+def _diagnose(obj: ArgumentObject) -> list:
+    """Missing-link diagnostics for one section instance.
+
+    A claim is linked to a warrant only by its own sentence or the next or
+    previous one, and to grounds within two sentences: an unrelated
+    "because" elsewhere in the section no longer satisfies it (Codex review
+    R5). The wording says what could not be linked, never that the
+    evidence does not exist: the signals are lexicons, not understanding.
+    """
+    links: list = []
+    spans = obj.supporting_spans
+    name = obj.section.capitalize()
+    argumentative = obj.section in _ARGUMENTATIVE
+    claims = [i for i, r in enumerate(spans) if "claim" in r.all_roles]
+    unwarranted = [i for i in claims if not _near(spans, i, ("warrant",), 1)]
+    ungrounded = [i for i in claims
+                  if not _near(spans, i, ("evidence", "result"), 2)]
+
+    def add(code, message, idx):
+        links.append((code, message))
+        obj.link_spans[code] = [(spans[i].start, spans[i].end) for i in idx]
+
+    if argumentative and unwarranted:
+        n = len(unwarranted)
+        add("claim_without_warrant",
+            f"{n} claim{'s' if n != 1 else ''} in the {name} could not be "
+            "linked to a reason nearby: no 'because', 'this suggests that' "
+            "or 'consistent with' in the same or the next sentence. Say why "
+            "the evidence supports the claim.", unwarranted)
+    if argumentative and ungrounded:
+        n = len(ungrounded)
+        add("claim_without_grounds",
+            f"{n} claim{'s' if n != 1 else ''} in the {name} could not be "
+            "linked to evidence nearby: no number, citation or reported "
+            "finding within two sentences. What does each claim stand on?",
+            ungrounded)
     if obj.section in ("results", "discussion") \
-            and obj.evidence_or_grounds and not obj.warrant \
-            and not n_claims:
-        links.append((
-            "evidence_without_interpretation",
-            f"Evidence/result sentences in {obj.section} but no "
-            "interpretation signal — data are shown, never read. What "
-            "should the reader conclude?"))
-    if obj.limitation_or_rebuttal and n_claims and not obj.qualifier:
-        links.append((
-            "limitation_not_reflected_in_claim_strength",
-            f"{obj.section} states limitations AND unqualified claims: "
-            "the limitation weakens the claim, but the claim's wording "
-            "does not carry that qualification (may / likely / "
-            "conditional on…)."))
+            and obj.evidence_or_grounds and not obj.warrant and not claims:
+        add("evidence_without_interpretation",
+            f"The {name} reports results, but no sentence was detected that "
+            "says what they mean. What should the reader conclude?",
+            [i for i, r in enumerate(spans)
+             if r.role in ("evidence", "result")][:3])
+    if obj.limitation_or_rebuttal and claims and not obj.qualifier:
+        add("limitation_not_reflected_in_claim_strength",
+            f"The {name} states a limitation, but its claims carry no "
+            "qualifier ('may', 'likely', 'under these assumptions'). Let the "
+            "limitation show in how strongly the claims are made.", claims)
     if obj.section in ("discussion", "conclusion") and not obj.contribution:
-        links.append((
-            "contribution_unclear",
-            f"No contribution signal in {obj.section} — where does the "
-            "reader learn what this work adds to the field?"))
+        links.append(("contribution_unclear",
+                      f"No sentence in the {name} was detected that says "
+                      "what this work adds to the field."))
+        obj.link_spans["contribution_unclear"] = []
     return links
 
 
-def build_argument(document: Document,
-                   roles: Optional[list] = None) -> list[ArgumentObject]:
+def build_argument(document: Document, roles: Optional[list] = None,
+                   spacy_doc=None) -> list[ArgumentObject]:
     """One ArgumentObject per detected section (sprint item 9).
 
     Pure analysis: no rules registered, no suggestions emitted, no text
     changed. Consumers (review lens; later the Reviewer mode) decide what
     to surface.
     """
-    roles = roles if roles is not None else label_sentences(document)
-    by_section: dict[str, ArgumentObject] = {}
+    roles = roles if roles is not None else label_sentences(document,
+                                                            spacy_doc)
+    # One object per section INSTANCE (the heading that governs it), so two
+    # Discussion chapters are never pooled into one bucket (review R5).
+    starts = [h.start for h in document.headings]
+    by_section: dict = {}
     for r in roles:
         section = document.section_at(r.start)
-        obj = by_section.setdefault(section, ArgumentObject(section=section))
+        k = bisect_right(starts, r.start) - 1
+        key = (section, starts[k] if k >= 0 else -1)
+        obj = by_section.setdefault(key, ArgumentObject(section=section))
         obj.supporting_spans.append(r)
         span = (r.start, r.end)
         if r.role == "claim":
@@ -343,8 +383,8 @@ ArgumentObject.supporting_spans_have = _supporting_spans_have
 
 def summarize(objects: list) -> dict:
     """Compact cross-section summary for the review lens (sprint item 10)."""
-    all_links = [(o.section, c, m) for o in objects
-                 for c, m in o.missing_links]
+    all_links = [(o.section, c, m, o.link_spans.get(c, []))
+                 for o in objects for c, m in o.missing_links]
     role_counts: dict[str, int] = {}
     for o in objects:
         for r in o.supporting_spans:
@@ -352,6 +392,7 @@ def summarize(objects: list) -> dict:
     return {
         "sections": [o.section for o in objects],
         "role_counts": role_counts,
-        "missing_links": [{"section": s, "code": c, "message": m}
-                          for s, c, m in all_links],
+        "missing_links": [{"section": s, "code": c, "message": m,
+                           "spans": [list(x) for x in sp]}
+                          for s, c, m, sp in all_links],
     }
