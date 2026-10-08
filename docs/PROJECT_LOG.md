@@ -1989,3 +1989,22 @@ publisher matched a course PDF's reference list in the third-party scan.
 floor 11.67 unchanged (gate OK); bench PASS 13.69 unchanged; third-party
 scan 0 hits; ruff clean.
 
+**Addendum 2 (same day): the map on the surfaces.** The surfaces
+sub-agent (its first run was cut off by a usage limit; resumed from its
+own worktree) delivered cf03573, re-run by the lead: lint, typecheck, 258
+unit and 109 e2e tests. A third tab, "Narrative map", on the website and
+in the Word pane: the engine's note first, then one strip per section
+with the expected moves in order, each marked present, missing or out of
+order by a dot's shape and the word itself; under the strip the missing
+and out-of-order moves open to their question, the lesson and the frame
+(set as a quoted template captioned "A frame to fill in; the words are
+yours"), and each present move keeps the writer's own sentence behind
+"Show the sentence". Then the argument's missing links, the hedging
+trajectory as a small table of labelled values (the agent chose a table
+over bars because the design contract bans anything that reads as a
+meter), the unmapped headings, and the source line. The Word pane shows
+the strip as a vertical list at its width; the printable report gains a
+map page with every sentence open. One style change outside the map: the
+tab strip now wraps, since three tabs overflowed a phone and the pane.
+Draft mode gets the same one-line "needs Revise" as the brief.
+
