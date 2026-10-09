@@ -2228,3 +2228,37 @@ is now the 65-second cut, narrated by Kokoro-82M (Apache-2.0, offline). The
 README caption says the narration is a synthetic voice, as ad and social
 platforms increasingly ask. The music-only cut remains in the public
 repository's history from its second commit.
+
+## 2026-10-09 — Codex follow-up codebase and feature review
+
+**Request.** Reassess Researchly after the 8 October updates and open a PR
+adding `Codex_Review_9Oct2026.md`.
+
+**Reviewed.** Latest `main` at `87fbec647c8ab1a9cc16d6d072ffe2440c9b0305`
+(PR #12 included), compared with the previous review. Reassessed all eight
+prior findings, then inspected the new narrative map, lessons, reporting
+checklists, progress, labelling/evaluation and public-export workflow.
+The report records six reproduced findings with priorities, source
+references, suggested changes and acceptance criteria, plus a feature
+roadmap. The findings concern checklist status overstatement, incompatible
+progress comparisons, duplicate labels after reload, same-sentence move
+ordering, profile-independent narrative expectations and archive scan
+coverage in the public-export gate. No production leak was observed or
+alleged; the gate reproduction used a harmless synthetic sentinel locally.
+
+**Validation.** Python 3.10: core 918 passed / 2 skipped; service 183 passed;
+OpenAPI current. Web lint, confidentiality-boundary check, TypeScript and
+345 unit tests passed; contract generation check passed. Production-build
+Playwright: 152 passed / 7 opt-in screenshot cases skipped, using system
+Chromium and mocked engine/Supabase/Office. Demo 25 and label evaluator 5
+passed. Export-tool suite: 8 passed with gitleaks 8.21.2. Targeted Python
+and TypeScript reproductions exercised the real relevant functions.
+Missing demo dependencies and gitleaks were installed only in external
+review tooling; no dependency manifest or lockfile changed.
+
+**Limits.** No PostgreSQL binaries were available, so the two-user/RLS
+suite was inspected but not rerun. Real Microsoft Word, live account,
+deployment/migration and corpus acceptance checks were not performed;
+the report distinguishes these from passing automated tests. No public
+export was published and no runtime fixes were made. This PR changes only
+the new review and this project-log entry.
