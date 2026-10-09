@@ -59,8 +59,9 @@ never pushes. Publishing is always a deliberate push.
 ## The launch video
 
 `media/` holds the launch video and its poster, shown at the top of the
-public README: the voiced cut (about 65 s; narration by Kokoro-82M,
-Apache-2.0, generated offline), chosen by the owner on 2026-10-08. The gate
+public README: the voiced cut (80 s, opening on a peer-review story since
+2026-10-09; narration by Kokoro-82M, Apache-2.0, generated offline), chosen
+by the owner. The gate
 admits video only from `media/`. To change it, replace
 `media/researchly-video.mp4` and publish.
 

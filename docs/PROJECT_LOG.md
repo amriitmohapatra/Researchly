@@ -2228,3 +2228,36 @@ is now the 65-second cut, narrated by Kokoro-82M (Apache-2.0, offline). The
 README caption says the narration is a synthetic voice, as ad and social
 platforms increasingly ask. The music-only cut remains in the public
 repository's history from its second commit.
+
+## P40 — 2026-10-09 — The story told as peer review; features in the READMEs; a QR code
+
+**Why.** The owner reframed the pitch around peer review. Researchly does
+not take the reviewer's place. It helps authors present the work clearly, so
+reviewers judge the science rather than point out grammar.
+
+**What.**
+- **The deck** (Slides artifact, version 5) has nine slides:
+  - a new editable title slide, with placeholders for name, affiliation,
+    date and city, and the event artwork;
+  - a new opening: "Months of work. Then the decision.", with a made-up
+    decision letter ("Major revision"; one reviewer on grammar, one on an
+    unclear Methods section);
+  - a new "Reviewers should judge your science, not your sentences." slide,
+    contrasting the reviewer's job with Researchly's (not a domain expert,
+    never writes for you);
+  - a new close, "Let reviewers spend their time on your science.", with a
+    QR code to researchly-chi.vercel.app, decoded back to verify it.
+  - The old "late, conflicting feedback" opener is gone.
+- **The video** was re-cut by the video sub-agent: 80 s, the same story as
+  the opening, the middle scenes unchanged, and the new closing line. Claims
+  stay bounded: nothing on acceptance, impact or revision outcomes, and no
+  statistics. Voiced cut in `media/researchly-video.mp4`.
+- **Event artwork.** The original could not be fetched: the environment's
+  network policy blocks the event and image hosts. The owner's 800 px copy
+  was upscaled to 1600 px for the title slide.
+- **READMEs.** Neither described the features. Both now carry the same
+  "What it does" section, checked against the code: checks, the whole-paper
+  views, learning, modes and files, where it runs. Both tell the
+  peer-review story. The private README's claims now match the site's
+  bounded wording, and its folder table lists every folder.
+- **The 15 October deck reminder** was cancelled; the deck exists.
