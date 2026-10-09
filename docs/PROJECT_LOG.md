@@ -2285,3 +2285,11 @@ accessible by integration.” The connection needs write access to
 local; the export overlays have been pushed to private PR #13. The two
 public documents passed the export policy's text/secret scans with zero
 findings, and all public review links resolve in the target checkout.
+
+Publication completed after the owner updated access: retry pushed
+`34a2dfe47fead8300fe096e7ef9dd4f2de02afde` to `researchly-public/main`.
+GitHub resolves the author to `chatgpt-codex-connector[bot]`; the README
+credits both Claude and Codex and links to the published review. Public
+CI run `37874571781` was queued at verification time. This supersedes the
+HTTP 403 publication blocker above; the export-overlay changes still need
+to reach the source used for future syncs.
