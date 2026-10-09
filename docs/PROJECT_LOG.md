@@ -2276,3 +2276,12 @@ claims. No application changes or private evaluation materials are copied.
 Mirrored the public review and contributor section in the export overlays
 so later publication can retain them after this change reaches the source
 branch used for export. The original private review remains unchanged.
+
+Publication status: the prepared public commit is `34a2dfe` (Codex author,
+GitHub's verified Codex connector bot email). Git push and the GitHub blob
+API both returned HTTP 403; the API explicitly said “Resource not
+accessible by integration.” The connection needs write access to
+`researchly-public` before publication can complete. Public files remain
+local; the export overlays have been pushed to private PR #13. The two
+public documents passed the export policy's text/secret scans with zero
+findings, and all public review links resolve in the target checkout.
