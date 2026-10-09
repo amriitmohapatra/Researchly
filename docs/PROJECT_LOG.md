@@ -2262,3 +2262,17 @@ deployment/migration and corpus acceptance checks were not performed;
 the report distinguishes these from passing automated tests. No public
 export was published and no runtime fixes were made. This PR changes only
 the new review and this project-log entry.
+
+## 2026-10-09 — Publish the Codex review and contributor credit
+
+At the owner's explicit request, prepared a public edition of
+`Codex_Review_9Oct2026.md` for `amriitmohapatra/researchly-public`, with
+Codex authorship and README credits for both Claude and Codex. The public
+application files at `47e4903` match the source assessed in the review.
+The public edition removes internal links and identifies release-tool
+observations and original validation separately from public-checkout
+claims. No application changes or private evaluation materials are copied.
+
+Mirrored the public review and contributor section in the export overlays
+so later publication can retain them after this change reaches the source
+branch used for export. The original private review remains unchanged.
