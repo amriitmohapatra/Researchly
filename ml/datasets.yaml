@@ -441,6 +441,37 @@ datasets:
     sha256: 37e6e3a01b8c967485b298d629be0bcfa079b268adf3d2b52020e8310a7b7f46
     notes: null
 
+  - id: nw-workshop-s2-gap
+    name: "Thesis-writing workshop, Session 2 — 'Earn the Right to Ask: Earning your Gap' (slides, 35 pp.)"
+    kind: knowledge_source
+    source: "third-party PDF (private; given to the owner, 2026-10-14)"
+    location: "Notes_On_Writing/Session 2 - Earn the Right to Ask.pdf"
+    in_git: false
+    licence: "unknown — verify (workshop slides; no licence statement in the PDF)"
+    licence_verified: false
+    licence_evidence: null
+    commercial_ok: unknown
+    permitted_use: [knowledge_derivation]
+    current_use: "D903 gap-without-stake, D904 fills-the-gap, D905 generic-future-research; the review's link to the Discussion (sources that carry it but were never cited before it) on the narrative map and in the brief; the thesis-only Methods and Conclusion moves; two Learn cards (knowledge-base.md §13)."
+    shipped_today: true
+    sha256: 270f0371ee3ea4410b23b27d3a86967dbdd751a56fec77c16838585d180ab94b
+    notes: >-
+      The slides state that their frameworks (three tests, four cracks, five
+      jobs, key noun, return addresses, the triad) are the presenters' own,
+      and that their examples are teaching fictions not to be cited. Nothing
+      of the slides' wording or examples ships: rule and card texts are
+      paraphrased, examples are written for Researchly, and users see the
+      source as the owner's learnings (code `workshop-S2`). shipped_today is
+      true only because short lists of weak-gap phrasings ("remains
+      underexplored", "has been overlooked", "fills the gap", "further
+      research is needed"), inline as regexes in
+      packages/core/researchly/lexicons.py (ABSENCE_GAP_RX, FILL_GAP_RX,
+      FUTURE_RESEARCH_RX), follow the slides' list of weak versions; they
+      are common academic phrases, not passages. Not committed: the owner
+      added the file to the main checkout untracked, so CI's third-party
+      scan covers it only once it is committed (the local scan was run with
+      it present).
+
   # ───────────────────────── Legacy experiment (P21-EXP) data ─────────────────────────
 
   - id: p21-paper-corpus

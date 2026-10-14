@@ -29,6 +29,7 @@ from typing import Optional
 
 from .discourse import abstract_lens
 from .discourse import argument as argument_mod
+from .discourse import citations as citations_mod
 from . import metrics as metrics_mod
 from . import profiles as profiles_mod
 from . import sources
@@ -101,6 +102,17 @@ def build_review(text, nlp, kind: str = "plain", *, suggestions=None,
         return [s for s in suggestions if s.rule_id == rule_id]
 
     causal = hits("C303")
+    # The review's link to the Discussion: sources that carry it but were
+    # never cited before it (shown, never flagged; abstains when the
+    # citations cannot be read reliably).
+    found = citations_mod.strangers(doc, spacy_doc)
+    strangers = {
+        "assessed": found["assessed"],
+        "count": len(found["items"]),
+        "message": citations_mod.message(found) if found["items"] else "",
+        "evidence": [" ".join(doc.original[a:b].split())[:180]
+                     for a, b in (e["evidence"] for e in found["items"][:2])],
+    }
     r = {
         "source": SOURCE,
         "profile": profile.id,
@@ -117,6 +129,8 @@ def build_review(text, nlp, kind: str = "plain", *, suggestions=None,
         "gap_evidence": moves["gap"]["evidence"],
         "gap_expected": profile.gap_expected,
         "gap_assessed": "D902" not in off,
+        "gap_without_stake": [s.message for s in hits("D903")],
+        "strangers": strangers,
         "causal_assessed": "C303" not in off,
         "consensus_assessed": "E704" not in off,
         "claims_seen": claims_seen or bool(causal) or bool(hits("C302")),
@@ -228,6 +242,11 @@ def brief(r: dict) -> list:
             points.append("A gap statement was detected: the reader is told "
                           "what was missing before this work.")
             evidence.append(r["gap_evidence"])
+            if r.get("gap_without_stake"):
+                gap_point = True
+                points.append("The gap says what is missing but not what "
+                              "goes wrong without the answer: say who pays, "
+                              "or what is decided blind, if it stays open.")
         else:
             gap_point = True
             points.append("No gap statement was detected in the "
@@ -259,6 +278,15 @@ def brief(r: dict) -> list:
             no_limits = True
             points.append("No limitations section was found: the reviewer "
                           "may supply the rebuttal instead.")
+    st = r.get("strangers") or {}
+    strangers = 0
+    if st.get("count"):
+        strangers = 1
+        points.append("Sources: " + st["message"])
+        evidence += st.get("evidence") or []
+    elif st.get("assessed"):
+        points.append("Sources: every source the Discussion leans on was "
+                      "cited before it.")
     links = (r.get("argument") or {}).get("missing_links") or []
     for link in links[:6]:
         points.append(f"Argument: {link['message']}")
@@ -272,7 +300,7 @@ def brief(r: dict) -> list:
         points.append("Not assessed (checks that are off): "
                       + ", ".join(_short(x) for x in r["not_assessed"]))
     worries = (r["overclaims"] + r["hedge_stacks"] + r["novelty_risks"]
-               + len(links) + int(gap_point) + int(no_limits))
+               + len(links) + int(gap_point) + int(no_limits) + strangers)
     if not r.get("claims_seen") and worries == 0:
         add("D", "not_applicable",
             "No claims were detected to weigh in this text.", points,

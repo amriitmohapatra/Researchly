@@ -10,3 +10,8 @@
 
 open access article distributed under the terms of the Creative Commons Attribution License  # the standard CC BY licence statement, quoted as licence evidence in ml/realdocs/manifest.yaml
 Short-term and long-term epidemiological impacts of sustained vector control in various dengue endemic settings: A modelling study  # a published article's title (PLoS Comput Biol 2022, CC BY), named in the bench manifest; a thesis cites the same paper
+Alvesson and Sandberg (2011), Generating research questions through problematization, Academy of Management Review 36(2)  # a published article's title, cited by name in researchly/sources.py; the workshop slides list the same reference
+Sandberg and Alvesson (2011), Ways of constructing research questions: gap-spotting or problematization?, Organization 18(1)  # a published article's title, cited by name in researchly/sources.py; the workshop slides list the same reference
+Bunton (2005), The structure of PhD conclusion chapters, Journal of English for Academic Purposes 4(3)  # a published article's title, cited by name in researchly/sources.py; the workshop slides list the same reference
+Kwan (2006), The schematic structure of literature reviews in doctoral theses of applied linguistics, English for Specific Purposes 25(1)  # a published article's title, cited by name in researchly/sources.py; the workshop slides list the same reference
+Lim (2006), Method sections of management research articles: a pedagogically motivated qualitative study, English for Specific Purposes 25(3)  # a published article's title, cited by name in researchly/sources.py; the workshop slides list the same reference

@@ -292,6 +292,134 @@ NOVELTY_RX = (
 KNOWLEDGE_SOFTENERS = ("to our knowledge", "to the best of our knowledge",
                        "as far as we are aware", "we are not aware")
 
+# D903: a gap stated as a bare absence ("remains underexplored", "has been
+# overlooked", "little is known about"). Question-raising wording ("it is
+# unclear whether") and disagreement are not absences and are left alone.
+ABSENCE_GAP_RX = (
+    r"\b(?:under-?explored|under-?studied|under-?researched|"
+    r"under-?investigated|under-?examined|unexplored|unstudied)\b",
+    r"\b(?:has|have)\s+(?:largely\s+|mostly\s+|often\s+|generally\s+)?"
+    r"(?:been\s+)?(?:largely\s+|mostly\s+|often\s+|generally\s+)?"
+    r"(?:overlooked|neglected)\b",
+    r"\b(?:has|have)\s+(?:not|never)\s+(?:yet\s+)?been\s+(?:\w+ly\s+)?"
+    r"(?:studied|investigated|explored|examined|assessed|quantified|"
+    r"evaluated|addressed|described|characteri[sz]ed|measured|estimated)\b",
+    r"\bno\s+(?:published\s+|previous\s+|prior\s+|existing\s+)?"
+    r"(?:study|studies|research|work)\s+(?:to\s+date\s+)?(?:has|have)\b",
+    r"\blittle\s+(?:is|was)\s+known\b",
+    r"\blittle\s+(?:research|attention|work)\s+(?:has|have)\b",
+    r"\bfew\s+(?:studies|researchers|authors)\s+have\b",
+    r"\bremains?\s+(?:largely\s+|relatively\s+|mostly\s+)?(?:unknown|"
+    r"unexplored|under-?explored|unstudied|understudied)\b",
+    r"\b(?:paucity|dearth|scarcity|lack)\s+of\s+(?:research|studies|"
+    r"literature|work|evidence)\b",
+)
+# D903: a sentence that states the stake: what goes wrong, who pays, what
+# is decided without the answer, or the untested assumption a decision
+# rests on. Deliberately broad: the rule stays quiet when any of these is
+# near the gap (precision first).
+STAKE_RX = (
+    r"\b(?:would|could|might|may|will|can)\s+(?:\w+\s+){0,2}(?:lead|result|"
+    r"cause|bias|mislead|misdirect|undermine|underestimate|overestimate|"
+    r"misallocate|miss|fail|delay|waste|cost|limit|hamper|hinder|prevent|"
+    r"leave|mean|matter|affect|compromise|distort|invalidate|weaken|"
+    r"jeopardi[sz]e)\w*\b",
+    r"\b(?:cannot|can ?not|unable to|impossible to|difficult to|hard to)\b",
+    r"\bwithout\s+(?:this|these|such|it|knowing|reliable|accurate|an?|the)\b",
+    r"\b(?:limits?|limiting|hampers?|hinders?|impedes?|prevents?|"
+    r"undermines?|constrains?|restricts?|compromises?|obscures?|biases|"
+    r"leaves?|leaving)\b",
+    r"\b(?:risks?|risking|consequences?|consequently|as a result|costly|"
+    r"costs?|harms?|harmful|misinformed|misguided|blind|guesswork)\b",
+    r"\b(?:depends?|depending|relies|rely|relying|rests?)\s+on\b",
+    r"\bassum(?:e|es|ed|ing|ption|ptions)\b",
+    r"\bif\b",
+    r"\b(?:matters?|important|crucial|critical|essential|vital)\s+"
+    r"(?:for|to|because|when|before)\b",
+    r"\b(?:inform|informs|informing|guide|guides|guiding|decisions?|"
+    r"decision-makers|policy|policies|policymakers|planners?|planning|"
+    r"clinicians?|practitioners?|programmes?|programs?|interventions?|"
+    r"allocation|resources?)\b",
+)
+
+# D904: "fills the gap" in a Discussion or Conclusion, a claim with no
+# ruling. The gap must be a knowledge gap: a "gap in the literature", a
+# "knowledge gap", or "this gap" pointing back at one. "Closes the gap" is
+# a ruling and is left alone, and so is a partial or negated claim
+# ("partly fills", "does not fill"), which is a ruling too.
+FILL_GAP_RX = (
+    r"\b(?:fill|fills|filled|filling|address|addresses|addressed|"
+    r"addressing|bridge|bridges|bridged|bridging|plug|plugs|plugged)"
+    r"(?:\s+in)?\s+(?:(?:this|that|these|those|such|an?|the|some\s+of\s+"
+    r"the|several|current|existing|important|key|critical|significant|"
+    r"major|identified)\s+){0,2}(?:(?:knowledge|research|evidence|"
+    r"literature|empirical|methodological|theoretical)\s+)gaps?\b",
+    r"\b(?:fill|fills|filled|filling|address|addresses|addressed|"
+    r"addressing|bridge|bridges|bridged|bridging|plug|plugs|plugged)"
+    r"(?:\s+in)?\s+(?:(?:this|that|these|those|such|an?|the|current|"
+    r"existing|important|key|critical|significant|major)\s+){1,2}gaps?\s+"
+    r"in\s+(?:the\s+|our\s+|current\s+|existing\s+)?(?:literature|"
+    r"knowledge|evidence|research|understanding|field)\b",
+    r"\b(?:fill|fills|filled|filling|address|addresses|addressed|"
+    r"addressing|bridge|bridges|bridged|bridging|plug|plugs|plugged)"
+    r"(?:\s+in)?\s+(?:this|that|these|those|such\s+a)\s+gaps?\b"
+    r"(?!\s+(?:between|in\s+(?:coverage|vaccination|immunity|care|"
+    r"treatment|access|services|provision|uptake|funding|supply)))",
+)
+# Words just before the verb that make the claim a ruling or an aim, not a
+# claim that the gap is filled: "partly fills", "does not fill", "to fill".
+FILL_GAP_RULING_RX = (r"\b(?:not|cannot|never|partly|partially|in part|"
+                      r"only|begins? to|began to|starts? to|to|aims? to|"
+                      r"aimed to|sought to|seeks? to|attempts? to|"
+                      r"attempted to)\s+(?:\w+\s+)?$")
+
+# D905: a generic call for future research ("Further research is needed.",
+# "Future work should explore this.") in a Discussion or Conclusion. The
+# rule fires only when nothing in the sentence names what is still open:
+# every word left after the call is generic.
+FUTURE_RESEARCH_RX = (
+    r"\b(?:further|future|more|additional)\s+(?:research|studies|study|"
+    r"work|investigations?|analys[ie]s)\s+(?:(?:is|are|will\s+be|would\s+be|"
+    r"may\s+be|might\s+be)\s+(?:\w+\s+)?(?:needed|required|warranted|"
+    r"necessary|called\s+for)|(?:should|could|may|might|can|will|would|"
+    r"must)\b)",
+    r"\b(?:warrants?|merits?|deserves?|requires?|needs?|calls?\s+for)\s+"
+    r"(?:further|more|additional)\s+(?:research|investigation|study|work|"
+    r"exploration|attention)\b",
+    r"\b(?:there\s+is\s+a\s+need\s+for|it\s+would\s+be\s+(?:interesting|"
+    r"useful|valuable|worthwhile)\s+(?:for|to))\s+(?:further|future|more)\s+"
+    r"(?:research|studies|work)\b",
+)
+GENERIC_FUTURE_WORDS = frozenset("""
+    further future more additional research studies study work works
+    investigation investigations analysis analyses exploration attention
+    is are be been being will would may might could should can must need
+    needs needed required warranted necessary called call calls for there it
+    interesting useful valuable worthwhile also still perhaps possibly clearly
+    definitely certainly therefore thus however hence finally lastly overall
+    this these that those such its their our the a an them they which what
+    in on of to and or with into across within from by at as about
+    findings finding results result issue issues area areas topic topics
+    question questions relationship relationships association associations
+    observation observations aspect aspects matter matters phenomenon
+    phenomena field subject direction directions avenue avenues line lines
+    knowledge gap gaps understanding picture light
+    other different various similar wider broader larger bigger longer new
+    settings setting contexts context populations population countries
+    regions places groups samples sample cohorts data datasets
+    explore investigate examine address assess clarify elucidate determine
+    confirm validate replicate extend fill understand study consider
+    look build focus conduct conducted carry carried out implement
+    implemented undertake undertaken pursue pursued shed done made
+    better fully deeper improve studied investigated explored examined
+    addressed assessed confirmed validated replicated extended
+    we us one researchers authors recommend recommends recommended suggest
+    suggests suggested propose proposes proposed encourage encouraged hope
+    addition additionally moreover furthermore finally lastly conclusion
+    summary nonetheless nevertheless importantly ultimately given
+    limitation limitations
+    """.split())
+
 # E707: display-first openers in Results (lead with the finding instead)
 FIGURE_OPENER_RX = (r"^\s*(?:Figure|Fig\.?|Table|Supplementary\s+"
                     r"(?:Figure|Table))\s+\S+\s+"
