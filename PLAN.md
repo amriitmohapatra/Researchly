@@ -220,6 +220,18 @@ Findings R1–R8 were fixed in S4c. Feature proposals 2, 6 and 9 were built. The
 - [ ] **#11 Local-mode parity**: one capability summary per surface (what a local check still contacts), an installation health check. *Done when* each local route demonstrates its promised checks and where the text goes
 - [ ] **#12 Account controls**: "Reset preferences" separate from "Delete account" (self-service, verified lifecycle); per-user rate limits with an IP fallback. Before the public beta (S6) **(Claude, owner configures Supabase)**
 
+### Codex review, 2026-10-09 (`Codex_Review_9Oct2026.md`, PR #13 merged here 2026-10-14; the owner: "go ahead in that order")
+
+Triaged 2026-10-14 against this branch: all six findings reproduced or confirmed in unchanged code. Order: N1, N6, N2, N3, N4, N5.
+
+- [ ] **N1 (P1) Checklist "reported" overstates keyword matches** — *done when* "The sample size is not reported…" and "We searched PubMed." stay unconfirmed/incomplete; genuine descriptions with the required details are found; legitimate negative reports, cited prior studies, table-only evidence and absent sections are tested; screen and print use the same cautious statuses
+- [ ] **N6 (P1) Export gate: archives and overlays** — *done when* a harmless forbidden sentinel inside a permitted ZIP/DOCX member is rejected; clean demo outputs pass; an uncommitted overlay edit cannot alter an export of an older ref; a missing required scanner gives an explicit incomplete result
+- [ ] **N2 (P2) Progress comparability** — *done when* muting a rule, hiding preferences, changing mode/profile or losing a tier never creates a downward trend, and two comparable checks with a real reduction still do
+- [ ] **N3 (P2) Labelling duplicates after reload** — *done when* a reload mid-paragraph, a changed verdict, an edited recheck, several flags of one rule and an interrupted request give the evaluator exactly the intended observations
+- [ ] **N4 (P2) Two moves in one sentence are not "out of order"** — *done when* the review's example has no ordering warning, reversed moves across sentences still get one, and every order warning explains itself
+- [ ] **N5 (P2) The narrative map follows the document type** — *done when* response / commentary / policy brief change the map's structural judgments consistently with the brief and rules, excerpts can abstain, repeated chapter sections stay separate, and an opening sentence is not shown as proof of a rationale
+- [ ] Labelling guide: say that checking sends the paragraph to the engine (the export holds no text)
+
 ## S5 — Critic bake-off (Laya vs ModernBERT)
 
 ### Real-document test bench (P29, owner request 2026-10-03; seeds S5a)
