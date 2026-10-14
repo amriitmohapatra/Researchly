@@ -41,7 +41,7 @@ def service_mode() -> bool:
 
 @dataclass
 class TierStatus:
-    tier: str          # parser | spelling | grammar | gec | files
+    tier: str          # parser | spelling | grammar | gec | prediction | files
     label: str         # human name for the UI
     ok: bool           # is this tier contributing suggestions right now?
     state: str         # ready | missing | disabled | error | unstarted
@@ -498,6 +498,26 @@ def _gec_status(cfg: Optional[Config]) -> TierStatus:
         f"local edit tagger ({gec.get_backend().version}) — {where}")
 
 
+def _prediction_status(cfg: Optional[Config]) -> TierStatus:
+    """Word prediction (2026-10-14): offers the end of a word or the next
+    word; never checks anything, never inserts by itself."""
+    from . import predict
+
+    if cfg is not None and cfg.prediction is False:
+        return TierStatus("prediction", "Word prediction", False, "disabled",
+                          "turned off in settings", "turn it on in settings")
+    if not predict.available():
+        return TierStatus(
+            "prediction", "Word prediction", False, "missing",
+            "the word-prediction model is missing from this build",
+            "reinstall Researchly")
+    where = ("runs inside the engine; text is never stored"
+             if service_mode() else "nothing leaves this machine")
+    return TierStatus("prediction", "Word prediction", True, "ready",
+                      f"offers words from published scientific prose — "
+                      f"{where}")
+
+
 def _files_status() -> Optional[TierStatus]:
     """The file readers (researchly.ingest). Reported only when degraded:
     every surface reads LaTeX, but most never read a file, so a "ready"
@@ -527,6 +547,7 @@ def engine_status(cfg: Optional[Config] = None, nlp=None,
                _spelling_status,
                lambda: _grammar_status(cfg, probe),
                lambda: _gec_status(cfg),
+               lambda: _prediction_status(cfg),
                _files_status):
         try:
             status = fn()

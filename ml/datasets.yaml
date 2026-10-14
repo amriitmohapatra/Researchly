@@ -1197,6 +1197,36 @@ datasets:
   # open-resource survey (research/06-open-resources.md). Licences opened first-hand
   # on 2026-10-14 by the survey sub-agent; URLs in each entry.
 
+  - id: europepmc-oa-prediction-corpus
+    name: "Europe PMC open-access research articles (CC BY / CC0) — word-prediction corpus"
+    kind: corpus
+    source: "https://www.ebi.ac.uk/europepmc/webservices/rest/search + /{PMCID}/fullTextXML"
+    location: null
+    in_git: false
+    licence: "per article: CC BY (any version) or CC0, read from each article's own <license>"
+    licence_verified: true
+    licence_evidence: >-
+      ml/tools/build_prediction_model.py reads every article's <permissions>
+      block and uses the article only if it names creativecommons.org/
+      licenses/by/<version> or publicdomain/zero (or PLOS's unversioned
+      "Creative Commons Attribution License" statement), with no
+      NonCommercial, NoDerivatives or ShareAlike term. The search's licence
+      filter is not trusted on its own. The licence seen is recorded per
+      article in packages/core/researchly/data/predict_sources.tsv.
+    commercial_ok: true
+    permitted_use: [train_experimental, ship_model]
+    current_use: "Word prediction (researchly/predict.py): data/predict.sqlite"
+    shipped_today: true
+    sha256: null
+    items: "packages/core/researchly/data/predict_sources.tsv (the articles used, with authors, title, DOI and licence)"
+    notes: >-
+      Owner decision 2026-10-14: text prediction is a core feature (CLAUDE.md
+      #1 as amended). Articles are fetched at build time into a cache outside
+      the repository; no article text is committed. The shipped model holds
+      counts of word sequences of up to four words, each kept only if it
+      occurs in at least three different articles, plus the attribution file
+      CC BY requires. Never trained on theses or owner documents (D6).
+
   - id: symspell-bigram-dictionary
     name: "SymSpell English bigram dictionary (frequency_bigramdictionary_en_243_342.txt)"
     kind: lexicon

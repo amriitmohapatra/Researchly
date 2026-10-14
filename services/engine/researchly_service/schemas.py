@@ -143,6 +143,54 @@ class AnalyzeRequest(_Strict):
     options: AnalyzeOptions = Field(default_factory=AnalyzeOptions)
 
 
+MAX_COMPLETE_CHARS = 100_000
+
+
+class CompleteOptions(_Strict):
+    spelling: Optional[Spelling] = Field(
+        None, description="The English spelling to offer words in. Omitted: "
+                          "the caller's saved setting, else the spelling the "
+                          "text already uses.")
+    limit: int = Field(3, ge=1, le=5,
+                       description="How many candidates to return at most.")
+
+
+class CompleteRequest(_Strict):
+    """Word prediction at a cursor (2026-10-14). Send the text around the
+    cursor, not necessarily the whole document: a few thousand characters
+    before it are plenty, plus the rest of its paragraph."""
+    format: Format = Field(Format.plain, description="How to read `text`.")
+    text: str = Field(..., max_length=MAX_COMPLETE_CHARS,
+                      description="Text around the cursor. Held in memory for "
+                                  "this request only; never stored or logged.")
+    cursor: Optional[int] = Field(
+        None, ge=0, description="Offset of the cursor in `text`, counted in "
+                                "Unicode code points (not UTF-16 units), like "
+                                "`start` and `end` in the reply. Omitted: the "
+                                "end of `text`.")
+    options: CompleteOptions = Field(default_factory=CompleteOptions)
+
+
+class CompletionCandidate(_Strict):
+    text: str = Field(..., description="What to put in place of "
+                                       "`text[start:end]` if the writer accepts.")
+    start: int = Field(..., ge=0, description="Where the typed part of the "
+                                              "word begins.")
+    end: int = Field(..., ge=0, description="The cursor.")
+    kind: Literal["word", "term"] = Field(
+        ..., description="word: one word; term: a fixed term of two or "
+                         "three words (\"confidence interval\").")
+
+
+class CompleteResponse(_Strict):
+    candidates: List[CompletionCandidate] = Field(default_factory=list)
+    status: Literal["ok", "off", "masked", "unavailable"] = Field(
+        "ok", description="Why there are no candidates, when there are none: "
+                          "off (the writer turned prediction off), masked "
+                          "(the cursor is in maths, code, a citation, a URL "
+                          "or a heading), unavailable (no model).")
+
+
 MAX_WORD_PARAGRAPHS = 50_000
 
 
@@ -418,6 +466,20 @@ class ReviewReport(_Strict):
                             "does not establish scientific validity.")
 
 
+class SetAside(_Strict):
+    kind: Literal["code", "maths_or_code", "layout", "marked_up",
+                  "other_language"]
+    count: int = Field(..., ge=0)
+    label: str = Field(..., description="What it is, in plain words.")
+
+
+class ReadingSummary(_Strict):
+    """What the checks read and what they set aside (2026-10-14): code,
+    maths, layout, paragraphs in another language. Counts only."""
+    words_checked: int = Field(..., ge=0)
+    set_aside: List[SetAside] = Field(default_factory=list)
+
+
 class AnalyzeResponse(_Strict):
     schema_version: Literal["1"] = SCHEMA_VERSION
     mode: Mode = Field(Mode.revise, description="The mode this check ran in.")
@@ -448,6 +510,8 @@ class AnalyzeResponse(_Strict):
                                      "degraded tier (CLAUDE.md: no silent tiers).")
     engine: EngineInfo
     elapsed_ms: int = Field(..., ge=0)
+    reading: Optional[ReadingSummary] = Field(
+        None, description="What was read and what was set aside.")
     warnings: List[str] = Field(
         default_factory=list,
         description="What was skipped or approximated while reading the text, "

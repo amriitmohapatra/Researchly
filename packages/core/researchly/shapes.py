@@ -74,9 +74,35 @@ def checklist_report(c: Optional[dict]) -> Optional[dict]:
                   for i in c["items"]]}
 
 
+_SET_ASIDE = (
+    ("code", "lines of code"),
+    ("maths_or_code", "bits of maths or code typed into the text"),
+    ("layout", "lines laid out as a table or an equation"),
+    ("marked_up", "bits of maths, citations or code in the markup"),
+    ("other_language", "paragraphs not in English"),
+)
+
+
+def reading_summary(document) -> Optional[dict]:
+    """What was read and what was set aside (Codex review #5): the words
+    the checks saw, and each kind of material they skipped, in plain words.
+    Counts only; no text."""
+    if document is None:
+        return None
+    read = dict(getattr(document, "read", {}) or {})
+    if document.kind in ("latex", "markdown") and document.atoms:
+        read["marked_up"] = len(document.atoms)
+    return {
+        "words_checked": len(document.masked.split()),
+        "set_aside": [{"kind": k, "count": int(read[k]), "label": label}
+                      for k, label in _SET_ASIDE if read.get(k)],
+    }
+
+
 def extras(a) -> dict:
     """Everything an analysis response carries beyond the suggestions."""
     return {
+        "reading": reading_summary(a.document),
         "profile": profile_info(a),
         "review": review_report(a.review),
         "narrative": narrative_map(a.narrative),

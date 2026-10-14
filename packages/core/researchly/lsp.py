@@ -206,6 +206,59 @@ def code_action(ls: ResearchlyServer, params: lsp.CodeActionParams):
     return actions
 
 
+def offset_at(text: str, line: int, character: int) -> int:
+    """The code-point offset of an LSP position (UTF-16 columns)."""
+    starts = [0]
+    for i, ch in enumerate(text):
+        if ch == "\n":
+            starts.append(i + 1)
+    if line >= len(starts):
+        return len(text)
+    i, units = starts[line], 0
+    while i < len(text) and text[i] != "\n" and units < character:
+        units += 2 if ord(text[i]) > 0xFFFF else 1
+        i += 1
+    return i
+
+
+def completion_items(text: str, offset: int, kind: str,
+                     near: Path | None = None) -> list[lsp.CompletionItem]:
+    """Word prediction as completion items (2026-10-14). The editor shows
+    them; nothing is inserted unless the writer accepts one."""
+    got = api.complete(text, offset, kind=kind, near=near)
+    if not got.candidates:
+        return []
+    probe = Document.from_text(text, "plain")
+    items = []
+    for rank, c in enumerate(got.candidates):
+        rng = lsp.Range(start=to_position(probe, c.start),
+                        end=to_position(probe, c.end))
+        items.append(lsp.CompletionItem(
+            label=c.text, kind=lsp.CompletionItemKind.Text,
+            detail="Researchly word prediction",
+            sort_text=f"{rank:02d}", filter_text=c.text,
+            text_edit=lsp.TextEdit(range=rng, new_text=c.text)))
+    return items
+
+
+@server.feature(lsp.TEXT_DOCUMENT_COMPLETION, lsp.CompletionOptions())
+def completion(ls: ResearchlyServer, params: lsp.CompletionParams):
+    try:
+        uri = params.text_document.uri
+        text_doc = ls.workspace.get_text_document(uri)
+        path = Path(unquote(urlparse(uri).path))
+        kind = KIND_BY_EXT.get(path.suffix.lower(), "plain")
+        offset = offset_at(text_doc.source, params.position.line,
+                           params.position.character)
+        return lsp.CompletionList(
+            is_incomplete=True,
+            items=completion_items(text_doc.source, offset, kind, path))
+    except Exception as e:  # never crash the editor session
+        ls.show_message_log(f"researchly prediction failed: {e}",
+                            lsp.MessageType.Warning)
+        return None
+
+
 @server.command("researchly.muteRule")
 def mute_rule(ls: ResearchlyServer, args):
     """Mute through the shared config so every surface honours it.

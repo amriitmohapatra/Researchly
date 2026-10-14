@@ -25,11 +25,13 @@ from typing import List, Optional, Union
 from . import _core  # noqa: F401  (import path + isolation first)
 from . import __version__ as SERVICE_VERSION
 from .schemas import (AnalyzeOptions, AnalyzeResponse, AnalyzeWordResponse,
-                      Category, ChecklistChoiceInfo, ChecklistReport,
+                      Category, CompleteOptions, CompleteResponse,
+                      CompletionCandidate, ChecklistChoiceInfo, ChecklistReport,
                       Coverage, DocumentType, EngineInfo, FixSafety,
                       HedgingPoint, LearnCard, Metrics, MissingLink, Mode,
                       NarrativeMap, NarrativeMove, NarrativeSection,
-                      ProfileChoice, ProfileInfo, ReviewQuestion,
+                      ProfileChoice, ProfileInfo, ReadingSummary,
+                      ReviewQuestion,
                       ReviewReport, ReviewRuleCount, RuleInfo, Scope, Span,
                       Suggestion, TierHealth, WordLocation, WordSuggestion)
 
@@ -95,6 +97,27 @@ def build_config(options: Optional[AnalyzeOptions],
         if options.spelling is not None:
             cfg.spelling = options.spelling.value
     return cfg
+
+
+def run_completion(text: str, cursor: Optional[int], fmt: str,
+                   options: Optional[CompleteOptions],
+                   account: Optional[dict] = None, **_who) -> CompleteResponse:
+    """Word prediction: one `api.complete()` call. No spaCy parse, so no
+    engine lock; the model is read-only SQLite opened per thread."""
+    cfg = Config()
+    if account is not None:
+        apply_remote(cfg, account)
+    limit = 3
+    if options is not None:
+        if options.spelling is not None:
+            cfg.spelling = options.spelling.value
+        limit = options.limit
+    got = api.complete(text, cursor, kind=fmt, cfg=cfg, limit=limit)
+    return CompleteResponse(
+        status=got.status,
+        candidates=[CompletionCandidate(text=c.text, start=c.start, end=c.end,
+                                        kind=c.kind)
+                    for c in got.candidates])
 
 
 # Everything beyond the suggestions is shaped once, in the core
@@ -247,10 +270,16 @@ def run_analysis(source: Union[str, Document], fmt: str,
         engine=engine_info(),
         elapsed_ms=0,
         warnings=list(a.document.warnings) if a.document is not None else [],
+        reading=_reading(a.document),
         **extra,
     )
     out.elapsed_ms = int(round((time.perf_counter() - t0) * 1000))
     return out
+
+
+def _reading(document) -> Optional[ReadingSummary]:
+    shaped = shapes.reading_summary(document)
+    return None if shaped is None else ReadingSummary(**shaped)
 
 
 # Tiers that never make the service "degraded" by being off: gec is opt-in

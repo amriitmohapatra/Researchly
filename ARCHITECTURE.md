@@ -621,6 +621,7 @@ Each record follows the ch. 23.1 format: context, options, decision, and consequ
 - **Context.** Hosting makes cloud LLM APIs one line away. Vercel AI Gateway even offers zero-retention routing.
 - **Decision.** Rule #1 is unchanged. No cloud model processes document text, and nothing generates prose for the user. This is the product's thesis, not a technical limitation. "Intelligent" here means *precise, explained, pedagogical judgement*, not fluent text.
 - **Consequences.** Some features competitors have (paraphrase, "improve this paragraph") are deliberately absent. The Learn cards and fill-in frames are the answer to "how do I fix it?".
+- **Amendment, 2026-10-14 (owner): word prediction.** The owner made text prediction a core feature after the experiment in `ml/experiments/prediction` (44.6% of keystrokes saved by a model of scientific prose, against 29.6% for an everyday-English one). It stays inside the rule's intent: it offers words, not prose. The limits are in CLAUDE.md #1: at most a three-word fixed term; never inserted without Tab or a click; n-gram counts (no neural model); trained only on CC BY / CC0 articles with attribution, each sequence kept only if at least three articles share it; nothing offered in masked spans; it can be switched off. Engine: `researchly/predict.py` and `api.complete()`. Service: `POST /v1/complete`, under the same confidentiality rules as `/v1/analyze` (in memory only, canary-tested).
 
 ### ADR-08 — Delivery: thin vertical slices, CI as the definition of done
 

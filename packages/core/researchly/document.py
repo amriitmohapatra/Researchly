@@ -214,6 +214,9 @@ class Document:
     # over it (S4): a commentary's body is argued like a Discussion, a
     # pasted abstract is an abstract. None keeps "unknown"/"front"/"other".
     default_section: Optional[str] = None
+    # What was set aside while reading, by kind: {"code": 3, ...}
+    # (reading.py; the coverage summary reports it).
+    read: dict = field(default_factory=dict)
     _line_starts: list[int] = field(default_factory=list, repr=False)
 
     # -- construction -------------------------------------------------------
@@ -263,13 +266,34 @@ class Document:
             masked, headings = text, _detect_plain_headings(text)
         atoms = (res.atoms if kind == "latex"
                  else inline_atoms(text, kind) if kind == "markdown" else [])
+        read: dict[str, int] = {}
         if kind == "plain":
+            from . import reading
             layout = layout_spans(text) + url_spans(text)
+            code = reading.code_spans(text)
+            inline = reading.inline_spans(text)
+            for name, spans in (("layout", layout), ("code", code),
+                                ("maths_or_code", inline)):
+                if spans:
+                    read[name] = len(spans)
+            layout = layout + code + inline
             if layout:
                 masked = list(masked)
                 _mask_spans(masked, layout)
                 masked = "".join(masked)
                 atoms = sorted(atoms + layout)
+        # Researchly checks English: a paragraph in another language is
+        # masked, and the writer is told (2026-10-14).
+        from . import reading
+        foreign = reading.foreign_spans(masked)
+        if foreign:
+            notice = reading.language_notice(masked, foreign)
+            masked = list(masked)
+            _mask_spans(masked, [(a, b) for a, b, _ in foreign])
+            masked = "".join(masked)
+            read["other_language"] = len(foreign)
+            if notice:
+                warnings.append(notice)
         # Mask heading TEXT as well (after recording it): headings are not
         # sentences, and without terminal punctuation the parser merges them
         # into the following paragraph's first sentence, corrupting
@@ -285,6 +309,7 @@ class Document:
         masked = "".join(chars)
         doc = cls(original=text, masked=masked, kind=kind, headings=headings,
                   structure=structure, warnings=warnings, atoms=atoms)
+        doc.read = read
         doc._line_starts = [0] + [m.end() for m in re.finditer(r"\n", text)]
         return doc
 

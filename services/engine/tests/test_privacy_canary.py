@@ -397,3 +397,35 @@ def test_upload_warnings_never_logged(client, capture):
     assert r.status_code == 200, r.text
     assert any(CANARY in w for w in r.json()["document"]["warnings"])
     assert_no_canary_anywhere(capture)
+
+
+# --- word prediction (2026-10-14) ---------------------------------------------
+
+def test_completion_keeps_text_out_of_logs(client, capture):
+    text = f"We estimated the {CANARY} basic rep"
+    r = client.post("/v1/complete", json={"text": text})
+    assert r.status_code == 200
+    rec = assert_logged_request(capture, 200)
+    assert rec.content_chars == len(text)
+    assert_no_canary_anywhere(capture, r)
+
+
+@pytest.mark.parametrize("payload", [
+    {"text": DOC, "cursor": len(DOC) + 5},                    # past the end
+    {"text": DOC, "options": {"spelling": CANARY}},           # bad enum
+    {"text": DOC, CANARY: 1},                                 # unknown key
+    {"text": DOC, "options": {"limit": 99}},
+])
+def test_completion_validation_errors(client, capture, payload):
+    r = client.post("/v1/complete", json=payload)
+    assert r.status_code == 422
+    assert_no_canary_anywhere(capture, r)
+
+
+def test_forced_internal_error_from_complete(client, capture, monkeypatch):
+    def boom(text, *a, **kw):
+        raise RuntimeError(f"prediction failed on: {text}")
+    monkeypatch.setattr(engine_adapter.api, "complete", boom)
+    r = client.post("/v1/complete", json={"text": DOC})
+    assert r.status_code == 500
+    assert_no_canary_anywhere(capture, r)

@@ -419,3 +419,40 @@ CONFUSIONS = (
     ("breathe", "breath"),
     ("quiet", "quite"),
 )
+
+
+# --- Language detection (2026-10-14; reading.py) --------------------------
+# Researchly checks English. A paragraph in another language (a thesis's
+# second abstract, a quotation) is masked rather than flagged word by word.
+# Each list holds a language's commonest function words, leaving out those
+# that are also English words ("a", "in", "do", "die", "me", "son").
+ENGLISH_FUNCTION_WORDS = frozenset("""
+the of and to in is that for are was were with as on by this be from at
+or an which have has been not their these it its we our also than can
+between but more such into other both may each when where while there
+""".split())
+OTHER_FUNCTION_WORDS = {
+    "Spanish": frozenset("""
+        el los las del por para una con que se lo como pero su sus muy
+        está están entre sobre también fue fueron según desde hasta este
+        esta estos estas ser son""".split()),
+    "French": frozenset("""
+        le les des du est une et dans pour avec que qui sur pas plus par
+        ont été sont cette ces aux leur leurs mais ou entre selon nous
+        être""".split()),
+    "German": frozenset("""
+        der das und ist nicht mit sich den dem des ein eine einer auf für
+        von zu wird werden wurde wurden auch bei aus oder nach über sind
+        zwischen""".split()),
+    "Portuguese": frozenset("""
+        os das dos uma com não para pelo pela como mais foi foram são
+        está estão entre sobre também seu sua seus suas pelos pelas
+        ao aos""".split()),
+    "Italian": frozenset("""
+        il gli della delle degli dei che è una con non per sono stato
+        stati nella nelle anche tra fra sul sulla questo questa
+        essere""".split()),
+    "Dutch": frozenset("""
+        het een van en zijn niet met voor op dat ook bij werd worden
+        wordt naar uit tussen deze dit onder""".split()),
+}

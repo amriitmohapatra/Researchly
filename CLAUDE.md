@@ -40,6 +40,25 @@ prototype trees into the monorepo layout below.
    - Rationale: Grammarly's pre-ChatGPT quality came from learned GEC, not
      regex. The compliance promise is *local-first*, which a bundled
      on-device tagger does not violate.
+   - **Word prediction is permitted** *(amended 2026-10-14, owner: "I want
+     to have it as a core feature of the app")*, within these limits, which
+     `researchly/predict.py` and its tests hold:
+     - it offers the end of the word being typed, or the next word, or a
+       fixed term of at most three words ("confidence interval"), and never
+       a clause or a sentence;
+     - it is never inserted by itself: the writer accepts it with Tab or a
+       click;
+     - it comes from counts of word sequences (n-grams), not a neural
+       language model, and it runs locally or in the pinned engine, never
+       through a cloud model;
+     - it is trained only on licence-clean text (CC BY / CC0 articles, each
+       licence read from the article and attributed in
+       `data/predict_sources.tsv`), never on theses or the owner's
+       documents. A sequence is kept only if it occurs in at least three
+       articles, so no one author's sentence can be reproduced;
+     - it offers nothing inside masked spans (maths, code, citations,
+       URLs, headings), and the writer can turn it off
+       (`[features] prediction`).
 2. **Confidential by design.** Document text is processed in memory in a
    pinned region and is never stored, logged, shared, or used for training
    unless the user explicitly opts in, per feature. No cloud LLM ever sees
