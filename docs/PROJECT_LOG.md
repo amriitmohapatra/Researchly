@@ -2512,6 +2512,7 @@ anything is relevant to be added to researchly's brain").
 | ml/eval | 19 passed; third-party scan 0 hits; ruff clean |
 | prediction, 20,002 held-out words (articles never trained on) | next word top-1 **20.2%**, top-3 30.9%, keystrokes saved **46.9%** (experiment: 14.3%, 22.9%, 44.6%; everyday English 11.4%, 19.1%, 29.6%) |
 | prediction latency | ~1 ms per request once loaded (first call ~0.2 s) |
+| noise floor (all tiers, 8 theses) | **11.74**/1000w, unchanged (gate OK); D904 +1, E703/G101/G106 −1 each (code and language masking); reading masks almost nothing in accepted theses, as it should |
 
 **Lessons.**
 - Count n-grams in shards: the first build counted 18.5M words at once and
