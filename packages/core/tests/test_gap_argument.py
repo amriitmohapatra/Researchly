@@ -359,8 +359,8 @@ def test_the_moves_are_missing_when_unsaid_and_absent_for_an_article():
         " Whether the effect holds in the dry season is still unknown.", "")
     n = api.analyze(bare, nlp=NLP, with_narrative=True,
                     document_type="thesis-chapter").narrative
-    assert _moves(n, "methods")["design_limit"]["status"] == "missing"
-    assert _moves(n, "conclusion")["still_open"]["status"] == "missing"
+    assert _moves(n, "methods")["design_limit"]["status"] == "not_detected"
+    assert _moves(n, "conclusion")["still_open"]["status"] == "not_detected"
     article = api.analyze(_THESIS, nlp=NLP, with_narrative=True,
                           document_type="manuscript").narrative
     assert "design_limit" not in _moves(article, "methods")

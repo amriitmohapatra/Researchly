@@ -94,9 +94,10 @@ own "Whole document" group so they are never lost. The chooser starts at
   of its expected moves are present ("2 of 5 moves present"), and the moves
   in order as small hairline cells. A move's status is shown by shape and
   word, never by colour: a filled dot for present, a hollow dot in a dashed
-  cell with the word "missing", a half dot with the words "out of order".
+  cell with the words "not detected" (the map reads wording, so it never says
+  "missing"; Codex review N5), a half dot with the words "out of order".
   The row wraps on a phone and is a vertical list in the Word pane.
-- **Under each strip** the missing and out-of-order moves open to their
+- **Under each strip** the not-detected and out-of-order moves open to their
   question (bold), the lesson in everyday words, a frame to fill in (serif,
   in a dashed box, captioned "A frame to fill in; the words are yours": a
   template, never a sentence written for the author) and the source set
@@ -110,6 +111,17 @@ own "Whole document" group so they are never lost. The chooser starts at
   the tab says the map needs Revise, with a switch in Word; an engine
   without a map is said in one line. On paper the map follows the brief on
   its own page, the strip as text rows and every sentence open.
+
+- **The document type decides what is expected** (Codex review N5,
+  2026-10-14): a commentary or policy brief is not asked for a research gap
+  and, where no limitations section is expected, not for a limitations
+  move; a response to reviewers is described, not judged (what was found is
+  listed, nothing is "not detected", and the note says so). A section that
+  comes back after another (a second chapter's Introduction) gets its own
+  strip, "Introduction (2)". A move taken from a section's first sentence
+  only because it names no other move says so under its sentence, quietly:
+  an assumption, never proof. Two moves in one sentence are in order, and
+  every out-of-order move explains itself.
 
 ## Lessons (S4)
 

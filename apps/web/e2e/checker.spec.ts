@@ -478,8 +478,8 @@ test.describe("the narrative map (S4b)", () => {
     }
     // The status is said in words, not colour alone: a missing cell says "missing", an out-of-order one says so.
     const intro = strips.nth(0);
-    await expect(intro.getByTestId("narrative-move").nth(1)).toContainText("missing");
-    await expect(intro.getByTestId("narrative-move").nth(0)).not.toContainText("missing");
+    await expect(intro.getByTestId("narrative-move").nth(1)).toContainText("not detected");
+    await expect(intro.getByTestId("narrative-move").nth(0)).not.toContainText("not detected");
     const discussion = strips.nth(2);
     await expect(discussion.getByTestId("narrative-move").nth(1)).toContainText("out of order");
     // A hollow dot for a missing move, a filled one for a present move: shape, not colour.

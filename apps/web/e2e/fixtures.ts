@@ -201,10 +201,10 @@ const LINK_SOURCE = "M. Wallace & A. Wray (2016), Critical Reading and Writing f
  * The narrative map for SAMPLE_TEXT. Synthetic: the questions, lessons and
  * frames are Researchly's own wording; the evidence sentences are the
  * sample's own. One move is out of order (the Discussion reads its meaning
- * after what should change), six are missing.
+ * after what should change), six were not detected.
  */
 export const NARRATIVE: NarrativeMap = {
-  note: "6 expected moves are missing; each one below has a question and a frame to fill in.",
+  note: "6 expected moves were not detected in the wording; each one below has a question and a frame to fill in. The map reads wording, so check before adding anything.",
   profile: "manuscript",
   source: NARRATIVE_SOURCE,
   unmapped: [],
@@ -233,7 +233,7 @@ export const NARRATIVE: NarrativeMap = {
           id: "intro.gap",
           learn_ref: "introduction",
           label: "What is missing",
-          status: "missing",
+          status: "not_detected",
           question: "Does the Introduction say what is still unknown?",
           plain: "The gap is the reason the work exists. Without it, the reader cannot tell whether the question was worth asking.",
           frame: "“Although [what is known], little is known about [the specific unknown], so [the consequence of not knowing].”",
@@ -245,7 +245,7 @@ export const NARRATIVE: NarrativeMap = {
           id: "intro.aim",
           learn_ref: "introduction",
           label: "What you set out to do",
-          status: "missing",
+          status: "not_detected",
           question: "Is there a sentence that says what this work set out to answer?",
           plain: "One sentence near the end of the Introduction tells the reader what to expect from the rest. Without it, every section has to be read to find out.",
           frame: "“We therefore set out to [determine / estimate / test] [the research question].”",
@@ -301,7 +301,7 @@ export const NARRATIVE: NarrativeMap = {
           id: "discussion.finding",
           learn_ref: "discussion",
           label: "The main finding, restated",
-          status: "missing",
+          status: "not_detected",
           question: "Does the Discussion open by restating the main finding?",
           plain: "The reader has just come through the Results. Open by saying, in one sentence, what they showed.",
           frame: "“In this study we found that [main finding].”",
@@ -325,7 +325,7 @@ export const NARRATIVE: NarrativeMap = {
           id: "discussion.prior",
           learn_ref: "discussion",
           label: "Against earlier work",
-          status: "missing",
+          status: "not_detected",
           question: "Does the Discussion compare the findings with earlier work?",
           plain: "A finding means more next to what was known before. Say whether it agrees, and if not, why.",
           frame: "“Our estimate is [consistent with / higher than] [earlier work], which [reason].”",
@@ -337,7 +337,7 @@ export const NARRATIVE: NarrativeMap = {
           id: "discussion.limits",
           learn_ref: "discussion",
           label: "What this cannot show",
-          status: "missing",
+          status: "not_detected",
           question: "Does the Discussion state the limitations?",
           plain: "A limitation stated by the author is a boundary; one found by the reviewer is a rebuttal. State them first.",
           frame: "“This study has limitations. First, [constraint], which means [bounded consequence].”",

@@ -70,23 +70,59 @@ def _move_entry(move_id: str, status: str, evidence: Optional[str] = None,
     }
 
 
-def _section_map(section: str, sents: list, profile_id=None) -> dict:
-    schema = schema_for(section, profile_id)
+# Notes the map gives in plain words (Codex review N5, 2026-10-14).
+_ASSUMED = ("Taken from the section's first sentence, which names no other "
+            "move; nothing in its wording marks it as this one.")
+_ORDER_FALLBACK = "Appears out of the usual order."
+
+
+def expected_moves(section: str, profile=None) -> tuple:
+    """The moves this kind of document is expected to make in a section:
+    the same applicability the brief and the rules use (profiles.py), so a
+    commentary is never told its research gap is missing."""
+    schema = schema_for(section, getattr(profile, "id", profile))
+    if profile is None or isinstance(profile, str):
+        return schema
+    if not getattr(profile, "gap_expected", True):
+        schema = tuple(m for m in schema if m != "gap")
+    if not getattr(profile, "limitations_expected", True):
+        schema = tuple(m for m in schema if m != "limitations")
+    return schema
+
+
+def describes_only(profile) -> bool:
+    """A kind of document with no research-paper structure to expect (a
+    response to reviewers): the map lists what it finds and marks nothing
+    as not detected."""
+    return profile is not None and not isinstance(profile, str) and \
+        getattr(profile, "id", "") == "response-to-reviewers"
+
+
+def _section_map(section: str, sents: list, profile=None,
+                 instance: int = 1) -> dict:
+    schema = expected_moves(section, profile)
+    describe = describes_only(profile)
     first: dict = {}          # move -> index of its first sentence
     evidence: dict = {}
+    assumed: set = set()
     for i, (_, _, text) in enumerate(sents):
         for mid in label_moves(text, section, first=(i == 0),
                                schema=schema):
             if mid not in first:
                 first[mid] = i
                 evidence[mid] = _quote(text)
+                if MOVES[mid].opening and not MOVES[mid].matches(text):
+                    assumed.add(mid)
     out = []
     misplaced = _misplaced(schema, first) if section in ORDERED else set()
     for j, mid in enumerate(schema):
         if mid not in first:
-            out.append(_move_entry(mid, "missing", section=section))
+            if not describe:
+                out.append(_move_entry(mid, "not_detected", section=section))
             continue
-        status, note = "present", ""
+        if describe and mid in assumed:
+            continue            # nothing expected: an assumption shows nothing
+        status, note = "present", _ASSUMED if mid in assumed else ""
         if mid in misplaced:
             status = "out_of_order"
             after = [schema[i] for i in range(j + 1, len(schema))
@@ -97,11 +133,14 @@ def _section_map(section: str, sents: list, profile_id=None) -> dict:
                 note = "Appears after " + MOVES[after[-1]].label.lower() + "."
             elif before:
                 note = "Appears before " + MOVES[before[0]].label.lower() + "."
+            else:
+                note = _ORDER_FALLBACK      # every order warning explains itself
         out.append(_move_entry(mid, status, evidence[mid], note, section))
-    present = sum(1 for e in out if e["status"] != "missing")
+    present = sum(1 for e in out if e["status"] != "not_detected")
+    label = SECTION_LABELS.get(section, section.capitalize())
     return {
         "section": section,
-        "label": SECTION_LABELS.get(section, section.capitalize()),
+        "label": label if instance == 1 else f"{label} ({instance})",
         "sentences": len(sents),
         "words": sum(len(_WORD.findall(t)) for _, _, t in sents),
         "moves": out,
@@ -123,7 +162,9 @@ def _misplaced(schema: tuple, first: dict) -> set:
     prev = [-1] * n
     for i in range(n):
         for j in range(i):
-            if idx[j] < idx[i] and best[j] + 1 > best[i]:
+            # "<=": two moves in one sentence ("Although little is known
+            # about X, we aimed to ...") are in order (Codex review N4).
+            if idx[j] <= idx[i] and best[j] + 1 > best[i]:
                 best[i], prev[i] = best[j] + 1, j
     end = max(range(n), key=lambda i: best[i])
     keep = set()
@@ -192,16 +233,24 @@ def build_narrative(document: Document, spacy_doc=None,
     sents = _sentences(document, spacy_doc)
     by_section: dict = {}
     order: list = []
+    # One map per section *instance* (Codex review N5): a section that comes
+    # back after another one (a second chapter's Introduction) is mapped on
+    # its own, so one chapter's moves never complete another's.
+    runs: list = []           # (section, instance, sentences)
+    seen: dict = {}
     for start, end, text in sents:
         section = document.section_at(start)
         if section not in by_section:
             by_section[section] = []
             order.append(section)
         by_section[section].append((start, end, text))
+        if not runs or runs[-1][0] != section:
+            seen[section] = seen.get(section, 0) + 1
+            runs.append((section, seen[section], []))
+        runs[-1][2].append((start, end, text))
 
-    profile_id = getattr(profile, "id", None)
-    sections = [_section_map(s, by_section[s], profile_id) for s in order
-                if s in SCHEMAS]
+    sections = [_section_map(s, run, profile, instance=k)
+                for s, k, run in runs if s in SCHEMAS]
     unmapped = [s for s in order if s not in SCHEMAS
                 and s not in ("front", "references")]
 
@@ -232,13 +281,18 @@ def build_narrative(document: Document, spacy_doc=None,
             note = ("The headings found are not the usual sections "
                     "(Introduction, Methods, Results, Discussion), so "
                     "there is no map to draw for them.")
+    elif describes_only(profile):
+        note = ("This kind of document is not expected to follow a research "
+                "paper's moves: what was found is listed, and nothing is "
+                "marked as not detected.")
     else:
         missing = sum(1 for s in sections for m in s["moves"]
-                      if m["status"] == "missing")
-        note = ("Every expected move is present." if missing == 0 else
-                f"{missing} expected move{'s are' if missing != 1 else ' is'}"
-                " missing; each one below has a question and a frame to "
-                "fill in.")
+                      if m["status"] == "not_detected")
+        note = ("Every expected move was found." if missing == 0 else
+                f"{missing} expected move{'s were' if missing != 1 else ' was'}"
+                " not detected in the wording; each one below has a question "
+                "and a frame to fill in. The map reads wording, so check "
+                "before adding anything.")
     return {
         "sections": sections,
         "unmapped": unmapped,
@@ -272,7 +326,7 @@ def _review_links(document: Document, spacy_doc=None) -> list:
 
 def render_narrative(n: dict) -> str:
     """Plain-text map for the CLI."""
-    marks = {"present": "present", "missing": "MISSING",
+    marks = {"present": "present", "not_detected": "not detected",
              "out_of_order": "out of order"}
     L: list[str] = []
     add = L.append
@@ -287,7 +341,7 @@ def render_narrative(n: dict) -> str:
             if m["note"]:
                 line += f" ({m['note'].rstrip('.')})"
             add(line)
-            if m["status"] == "missing":
+            if m["status"] == "not_detected":
                 add(f"      {m['question']}")
                 add(f"      frame: {m['frame']}")
             elif m["evidence"]:

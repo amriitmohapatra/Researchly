@@ -867,9 +867,12 @@ export interface components {
         Mode: "draft" | "revise";
         /**
          * MoveStatus
+         * @description present / not_detected / out_of_order. "not_detected", not "missing":
+         *     the map reads wording, so it can only say a move was not found in it
+         *     (Codex review N5, 2026-10-14).
          * @enum {string}
          */
-        MoveStatus: "present" | "missing" | "out_of_order";
+        MoveStatus: "present" | "not_detected" | "out_of_order";
         /**
          * NarrativeMap
          * @description Per section, which moves are present, missing or out of order; the

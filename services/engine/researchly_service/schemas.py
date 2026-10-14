@@ -363,8 +363,11 @@ class ReviewQuestion(_Strict):
 
 
 class MoveStatus(str, Enum):
+    """present / not_detected / out_of_order. "not_detected", not "missing":
+    the map reads wording, so it can only say a move was not found in it
+    (Codex review N5, 2026-10-14)."""
     present = "present"
-    missing = "missing"
+    not_detected = "not_detected"
     out_of_order = "out_of_order"
 
 

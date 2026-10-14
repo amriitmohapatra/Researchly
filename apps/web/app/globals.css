@@ -2352,7 +2352,7 @@ main:focus {
 
 /* ---------- S4b: the narrative map ----------
  * The third view of a check. One strip per section: the expected moves in
- * order as small cells, each saying present, missing or out of order by
+ * order as small cells, each saying present, not detected or out of order by
  * the dot's shape (filled, hollow, half) and by the word, never by colour.
  * Under the strip the missing and out-of-order moves open to a question,
  * the lesson and a frame to fill in (serif, in a dashed box: a template,
@@ -2411,7 +2411,7 @@ main:focus {
   font-size: 0.875rem;
   line-height: 1.3;
 }
-.nmap-cell-missing {
+.nmap-cell-not-detected {
   border-style: dashed;
   color: var(--ink-2);
 }
@@ -2428,7 +2428,7 @@ main:focus {
   border: 1.5px solid var(--ink);
   background: var(--ink);
 }
-.nmap-cell-missing .nmap-dot {
+.nmap-cell-not-detected .nmap-dot {
   background: transparent;
   border-color: var(--line-strong);
 }
@@ -2801,7 +2801,7 @@ main:focus {
     border: 4pt solid #000;
     background: none;
   }
-  .print-narrative .nmap-cell-missing .nmap-dot {
+  .print-narrative .nmap-cell-not-detected .nmap-dot {
     border-width: 1pt;
   }
   .print-narrative .nmap-cell-out-of-order .nmap-dot {

@@ -239,7 +239,7 @@ test.describe("Word taskpane", () => {
     await expect(strips).toHaveCount(2);
     const methodsCells = strips.nth(0).getByTestId("narrative-move");
     await expect(methodsCells).toHaveCount(2);
-    await expect(methodsCells.nth(0)).toContainText("missing");
+    await expect(methodsCells.nth(0)).toContainText("not detected");
     const [a, b] = await methodsCells.evaluateAll((els) => els.map((e) => e.getBoundingClientRect().top));
     expect(b).toBeGreaterThan(a!);
     const detail = strips.nth(0).getByTestId("narrative-detail").first();

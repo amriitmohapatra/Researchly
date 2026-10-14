@@ -1494,9 +1494,10 @@
         "type": "string"
       },
       "MoveStatus": {
+        "description": "present / not_detected / out_of_order. \"not_detected\", not \"missing\":\nthe map reads wording, so it can only say a move was not found in it\n(Codex review N5, 2026-10-14).",
         "enum": [
           "present",
-          "missing",
+          "not_detected",
           "out_of_order"
         ],
         "title": "MoveStatus",
