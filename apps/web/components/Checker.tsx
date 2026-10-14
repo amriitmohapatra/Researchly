@@ -26,11 +26,13 @@ import {
 import { addWord, loadDocumentType, loadSettings, muteRule, saveDocumentType } from "@/lib/account";
 import { getEngineAuth, openSignIn, useAuth } from "@/lib/auth";
 import { checklistOffer, checklistOption, type ChecklistSetting } from "@/lib/checklists";
+import { createCheckSession, type CheckTask } from "@/lib/check-session";
 import { analyze, analyzeFile, fetchDemoManuscript } from "@/lib/engine";
+import { QUEUE_START, type QueueState } from "@/lib/queue";
 import { loadKeepProgress } from "@/lib/progress";
 import { recordCheck } from "@/lib/record-progress";
 import { loadChecklistSetting, saveChecklistSetting, subscribeChecklistSetting } from "@/lib/results-prefs";
-import { clientError, UPLOAD_TYPES_SENTENCE, type CheckError } from "@/lib/errors";
+import { UPLOAD_TYPES_SENTENCE } from "@/lib/errors";
 import { ENGINE_URL } from "@/lib/config";
 import {
   loadDocumentTypeChoice,
@@ -46,15 +48,15 @@ import { codePointLength } from "@/lib/segments";
 import { ACCEPT_ATTR, checkFile } from "@/lib/source";
 import { FORMATS, isFormat, validateContent, type InputProblem } from "@/lib/validate";
 import { revealNeedsRecheck, shownSuggestions, summarySentence } from "@/lib/view";
+import { CheckProgress } from "./CheckProgress";
 import { ChecklistSelect } from "./ChecklistSelect";
 import { FilePanel, type DropHandlers } from "./FilePanel";
 import { ProfileSelect } from "./ProfileSelect";
 import { ReadingKey } from "./ReadingKey";
-import { Results } from "./Results";
+import { Results, type PreviousMark } from "./Results";
 import type { CardActions } from "./SuggestionCard";
 import type { ResultsView } from "./ViewTabs";
 
-type Phase = "idle" | "loading" | "done" | "error";
 /** Pasting into the editor (S1), or reading an uploaded file (S2, signed in). */
 type Mode = "paste" | "file";
 type Target = { kind: "paste" } | { kind: "file"; file: File };
@@ -128,8 +130,13 @@ export function Checker() {
   const keepProgressRef = useRef(false);
   const [view, setView] = useState<ResultsView>("suggestions");
   const [showPreferences, setShowPreferences] = useState(false);
+  // The revision queue's pass and place (Codex review #1): held here so a re-check keeps it; never stored.
+  const [queue, setQueue] = useState<QueueState>(QUEUE_START);
   const [problem, setProblem] = useState<InputProblem | null>(null);
-  const [phase, setPhase] = useState<Phase>("idle");
+  // One check at a time (Codex review #8): a cancelled or superseded check's late reply is dropped.
+  const [session] = useState(() => createCheckSession<AnalyzeResponse>());
+  const run = useSyncExternalStore(session.subscribe, session.getState, session.getState);
+  const error = run.error;
   const [mode, setMode] = useState<Mode>("paste");
   const [checked, setChecked] = useState<Checked | null>(null);
   const [fileChecked, setFileChecked] = useState<FileChecked | null>(null);
@@ -138,10 +145,7 @@ export function Checker() {
   const [dragging, setDragging] = useState(false);
   const [accountNote, setAccountNote] = useState<AccountNote | null>(null);
   const [actionBusy, setActionBusy] = useState(false);
-  const [error, setError] = useState<CheckError | null>(null);
   const [announcement, setAnnouncement] = useState("");
-  const abortRef = useRef<AbortController | null>(null);
-  const loadingRef = useRef(false);
   const prefsTouched = useRef(false);
   /** The file whose results are on screen, read synchronously (state may lag inside a running check). */
   const shownFileRef = useRef<File | null>(null);
@@ -164,7 +168,7 @@ export function Checker() {
     upload: useId(),
   };
 
-  useEffect(() => () => abortRef.current?.abort(), []);
+  useEffect(() => () => session.dispose(), [session]);
 
   // Move focus to a new error (or sign-in prompt) once it is on screen, so
   // keyboard and screen-reader users land on it.
@@ -243,13 +247,20 @@ export function Checker() {
     textareaRef.current?.focus();
   };
 
+  /**
+   * Check the editor's text or a file. A check already running is
+   * superseded (a changed type or checklist, a mute): it is aborted and its
+   * reply, if it still comes, is dropped by the session, so an older answer
+   * is never shown as the current one. The results on screen stay, marked as
+   * previous, until the new answer arrives.
+   */
   const runCheck = useCallback(
     async (target: Target = { kind: "paste" }, opts?: CheckOptions) => {
-      if (loadingRef.current) return;
       const prefs = opts?.showPreferences ?? showPreferences;
       const type = opts?.documentType ?? documentType;
       const list = checklistOption(opts?.checklist ?? checklist);
       const submitted = text;
+      const submittedFormat = format;
       if (target.kind === "paste") {
         const invalid = validateContent(text);
         setProblem(invalid);
@@ -258,97 +269,61 @@ export function Checker() {
           return;
         }
       }
-      const ctrl = new AbortController();
-      abortRef.current = ctrl;
-      loadingRef.current = true;
-      setPhase("loading");
-      setError(null);
-      setAnnouncement(target.kind === "file" ? `Checking ${target.file.name}…` : "Checking your text…");
-      // The bearer token (signed in) is fetched at call time; null signed out or without accounts.
-      const auth = getEngineAuth();
-      const fail = (e: CheckError) => {
-        setError(e);
-        setPhase("error");
-        setAnnouncement("");
-      };
       // A signed-in writer who keeps their progress: counts only, fire and forget, never in the way.
       // `signed_in` is the engine's word that the account's token came with this check.
       const record = (data: AnalyzeResponse) => recordCheck(data, { signedIn: data.signed_in === true, keep: keepProgressRef.current });
-      try {
+      // Retry runs this same task again: the same text or file, the same options.
+      const task: CheckTask<AnalyzeResponse> = (signal) => {
+        setAnnouncement(target.kind === "file" ? `Checking ${target.file.name}…` : "Checking your text…");
+        // The bearer token (signed in) is fetched at call time; null signed out or without accounts.
+        const auth = getEngineAuth();
         // The website is the revision studio: every check asks for Revise
         // (Codex review R6), so a Draft choice saved from Word never hides
         // the document-wide checks here, and the brief and the narrative map
         // are always asked for.
-        if (target.kind === "paste") {
-          const r = await analyze(
-            {
-              content: submitted,
-              format,
-              showPreferences: prefs,
-              documentType: type,
-              review: true,
-              narrative: true,
-              checklist: list,
-              mode: "revise",
-              signal: ctrl.signal,
-            },
-            undefined,
-            auth,
-          );
-          if (r.ok) {
-            setChecked((prev) => ({ seq: (prev?.seq ?? 0) + 1, data: r.data, text: submitted, format, at: new Date() }));
-            setMuted(null);
-            setPhase("done");
-            setAnnouncement(summarySentence(shownSuggestions(r.data, prefs)));
-            record(r.data);
-          } else fail(r.error);
-        } else {
-          const r = await analyzeFile(
-            {
-              file: target.file,
-              showPreferences: prefs,
-              documentType: type,
-              review: true,
-              narrative: true,
-              checklist: list,
-              mode: "revise",
-              signal: ctrl.signal,
-            },
-            undefined,
-            auth,
-          );
-          if (r.ok) {
+        const options = { showPreferences: prefs, documentType: type, review: true, narrative: true, checklist: list, mode: "revise" as const, signal };
+        return target.kind === "paste"
+          ? analyze({ ...options, content: submitted, format: submittedFormat }, undefined, auth)
+          : analyzeFile({ ...options, file: target.file }, undefined, auth);
+      };
+      await session.start(task, {
+        onResult: (data) => {
+          if (target.kind === "paste") {
+            setChecked((prev) => ({ seq: (prev?.seq ?? 0) + 1, data, text: submitted, format: submittedFormat, at: new Date() }));
+          } else {
             shownFileRef.current = target.file;
-            setFileChecked((prev) => ({ seq: (prev?.seq ?? 0) + 1, data: r.data, file: target.file, at: new Date() }));
-            setMuted(null);
-            setPhase("done");
-            setAnnouncement(summarySentence(shownSuggestions(r.data, prefs)));
-            record(r.data);
-          } else fail(r.error);
-        }
-      } catch {
-        if (!ctrl.signal.aborted) {
-          // Not a cancel: something failed before the request went out.
-          fail(clientError());
-          return;
-        }
-        // Cancelled by the user. Nothing to report beyond that.
-        if (target.kind === "file" && shownFileRef.current !== target.file) {
-          // A new file was cancelled before any result: back to the editor.
-          setMode("paste");
-          setPendingFile(null);
-          setPhase(checked ? "done" : "idle");
-        } else {
-          setPhase((target.kind === "file" ? shownFileRef.current : checked) ? "done" : "idle");
-        }
-        setAnnouncement(target.kind === "file" ? "Check cancelled." : "Check cancelled. Your text is unchanged.");
-      } finally {
-        loadingRef.current = false;
-        abortRef.current = null;
-      }
+            const fileData = data as AnalyzeFileResponse;
+            setFileChecked((prev) => ({ seq: (prev?.seq ?? 0) + 1, data: fileData, file: target.file, at: new Date() }));
+          }
+          setMuted(null);
+          setAnnouncement(summarySentence(shownSuggestions(data, prefs)));
+          record(data);
+        },
+        onError: () => setAnnouncement(""),
+      });
     },
-    [text, format, showPreferences, documentType, checklist, checked],
+    [session, text, format, showPreferences, documentType, checklist],
   );
+
+  /** Cancel the running check: the screen goes back to what it showed before, with a note. */
+  const cancelCheck = () => {
+    const newFile = mode === "file" && shownFileRef.current === null;
+    if (!session.cancel()) return;
+    if (newFile) {
+      // A new file was cancelled before any result: back to the editor, as if it had not been chosen.
+      setMode("paste");
+      setPendingFile(null);
+      session.settle();
+      setAnnouncement("Check cancelled.");
+      return;
+    }
+    setAnnouncement(mode === "file" ? "Check cancelled." : "Check cancelled. Your text is unchanged.");
+  };
+
+  /** Try again: the same check as the one that failed or was cancelled. */
+  const retryCheck = () => {
+    void session.retry();
+  };
 
   /** Check again whatever is on screen: the file, or the editor's text. */
   const recheck = useCallback(
@@ -361,14 +336,17 @@ export function Checker() {
     [mode, fileChecked, pendingFile, runCheck],
   );
 
+  // Check (and Ctrl/Cmd+Enter) does nothing while a check runs: the button says so, and Cancel is beside it.
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
+    if (session.getState().phase === "running") return;
     void runCheck();
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLFormElement>) => {
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
+      if (session.getState().phase === "running") return;
       void runCheck();
     }
   };
@@ -388,7 +366,7 @@ export function Checker() {
   /* ---------- files (S2) ---------- */
 
   const startFile = (file: File | undefined) => {
-    if (!file || loadingRef.current) return;
+    if (!file || session.getState().phase === "running") return;
     setFileProblem(null);
     if (!signedIn) {
       openSignIn(FILE_NEEDS_ACCOUNT);
@@ -422,15 +400,13 @@ export function Checker() {
   };
 
   const backToEditor = () => {
-    abortRef.current?.abort();
+    session.settle(); // aborts a running check (its reply is dropped) and clears its error
     setMode("paste");
     setFileChecked(null);
     shownFileRef.current = null;
     setPendingFile(null);
     setFileProblem(null);
-    setError(null);
     setAccountNote(null);
-    setPhase(checked ? "done" : "idle");
     requestAnimationFrame(() => textareaRef.current?.focus());
   };
 
@@ -513,7 +489,7 @@ export function Checker() {
     [recheck],
   );
 
-  const loading = phase === "loading";
+  const loading = run.phase === "running";
   const cardActions = useMemo<CardActions | null>(
     () => (signedIn ? { onMute, onAddWord, busy: actionBusy || loading } : null),
     [signedIn, onMute, onAddWord, actionBusy, loading],
@@ -524,6 +500,16 @@ export function Checker() {
   const describedBy = [ids.hint, problem ? ids.problem : null].filter(Boolean).join(" ");
   const current = mode === "file" ? fileChecked : checked;
   const signInPrompt = accounts && error?.kind === "sign_in_required";
+  // Results on screen while a newer check runs, failed or was cancelled are the previous check's (Codex review #8).
+  const previous: PreviousMark | null = !current
+    ? null
+    : run.phase === "running"
+      ? "running"
+      : run.phase === "error"
+        ? "failed"
+        : run.note === "cancelled"
+          ? "cancelled"
+          : null;
 
   // A changed type checks again whatever is on screen, exactly as a stage change does in Word.
   const onTypeChange = (next: DocumentType) => {
@@ -585,7 +571,7 @@ export function Checker() {
             typeControl={typeControl}
             checklistControl={checklistControl}
             onChooseFile={chooseFile}
-            onCancel={() => abortRef.current?.abort()}
+            onCancel={cancelCheck}
             onBack={backToEditor}
             dropHandlers={dropHandlers}
             dropOverlay={dropOverlay}
@@ -760,7 +746,7 @@ export function Checker() {
                   )}
                 </button>
                 {loading ? (
-                  <button type="button" className="btn btn-quiet" onClick={() => abortRef.current?.abort()}>
+                  <button type="button" className="btn btn-quiet" onClick={cancelCheck} data-testid="cancel-check">
                     Cancel
                   </button>
                 ) : (
@@ -871,7 +857,7 @@ export function Checker() {
             </p>
           ) : null}
           {error.retryable ? (
-            <button type="button" className="btn btn-secondary" onClick={() => void recheck()} data-testid="retry">
+            <button type="button" className="btn btn-secondary" onClick={retryCheck} data-testid="retry">
               Try again
             </button>
           ) : null}
@@ -880,6 +866,27 @@ export function Checker() {
               Sign in
             </button>
           ) : null}
+        </div>
+      ) : null}
+
+      {loading && run.startedAt !== null ? (
+        <CheckProgress
+          key={run.requestId}
+          startedAt={run.startedAt}
+          what={mode === "file" ? "your file" : "your text"}
+          hasPrevious={current !== null && !signInPrompt}
+        />
+      ) : null}
+
+      {!loading && run.note === "cancelled" ? (
+        <div className="notice notice-quiet cancel-note" data-testid="cancelled-note">
+          <p className="notice-text">
+            Check cancelled.{" "}
+            {current ? "The results below are from your previous check." : mode === "paste" ? "Nothing was checked; your text is unchanged." : "Nothing was checked."}{" "}
+            <button type="button" className="btn-link" onClick={retryCheck} data-testid="retry-cancelled">
+              Check again
+            </button>
+          </p>
         </div>
       ) : null}
 
@@ -910,6 +917,9 @@ export function Checker() {
           onRunRevise={onRunRevise}
           checklistOffer={offer}
           onUseChecklist={onUseChecklist}
+          queue={queue}
+          onQueue={setQueue}
+          previous={previous}
         />
       ) : mode === "paste" && checked ? (
         <Results
@@ -929,6 +939,9 @@ export function Checker() {
           onRunRevise={onRunRevise}
           checklistOffer={offer}
           onUseChecklist={onUseChecklist}
+          queue={queue}
+          onQueue={setQueue}
+          previous={previous}
         />
       ) : null}
     </>
