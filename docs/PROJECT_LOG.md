@@ -2819,3 +2819,75 @@ app. Word: restart and fully quit Word (Cmd-Q) after the deploy.
   rules ran.
 - A gate that reads its policy from the working tree can be fooled by an
   uncommitted edit; read everything from the ref being exported.
+
+## P45 — 2026-10-14 — A design pass and a performance pass, with the owner's skills
+
+**Why.** Owner: "Do the UI/UX and performance pass first" (before the single
+PR and the deployment steps), and earlier "use my existing skill(s) to
+improve the app's performance, UI/UX if needed, look and feel". Two helpers
+ran in parallel: design with the owner's `web-design-guidelines` (the
+current Vercel Web Interface Guidelines) and `ui-ux-pro-max`; performance by
+measurement first. `DESIGN.md` stayed the contract and won every conflict.
+
+**What, design.**
+- Axe was already clean everywhere (0 violations, light and dark) and nothing
+  scrolled sideways at 320/375/1366, so the findings were visual. The real
+  bug: the card's "The lesson" disclosure and the /learn page shared class
+  names, so each picked up the other's sizes (a 2rem title inside a card).
+  Now scoped (`.lesson-body`, `.lesson-page`), pinned by e2e size checks.
+- The composer: selects first with labels on one line, then the two switches
+  and Check on their own row; on a phone the selects stack at one width.
+- Disclosure triangles restored where `display:flex` had removed them (Word
+  Settings, the queue's "Every issue in this pass"); a visible focus ring on
+  the selected Draft/Revise segment; pressed (`:active`) and hover states;
+  dark-mode values for the overlay shadow and the tap highlight; focus never
+  hidden under the "Dismissed. Undo" note.
+- Typography: curly apostrophes in every user-visible string, and no em
+  dashes ("Found: please confirm"; DESIGN.md's Reject list), enforced by
+  `tests/unit/typography.test.ts` over app/, components/ and lib/.
+- Screenshot specs for every page and the new surfaces (behind
+  `SCREENSHOTS=1`; `npm run screenshots`).
+
+**What, performance** (before → after; 30k synthetic words; Chromium, 40k
+words and 1,212 cards).
+- Engine: `analyze` 17.6–18.2 s → 9.1–10.3 s. The entity recogniser, which
+  nothing reads, is no longer loaded (about 45% of the parse); the
+  LanguageTool request now runs while spaCy parses (PLAN Q2, deferred on
+  3 October, done now the owner asked for a performance pass). `/v1/analyze`
+  20.6–21.1 s → 10.6–11.5 s; `/v1/complete` p50 7.1–7.6 → 5.5–5.6 ms.
+- Web: first-load JS on `/` 253 → 177 kB gz (supabase-js only loads when
+  there is a session or a sign-in; the results code loads at idle), `/word`
+  307 → 245. Check → cards 1.4–1.6 s → 0.6–0.8 s; first frame after a
+  filter 98–389 → 18–45 ms (`useDeferredValue`); typing with results p95
+  58–78 → 25–33 ms; off-screen cards skip layout (`content-visibility`),
+  with a scroll correction so "Show in text" still lands on its card
+  (`e2e/long-results.spec.ts`). Word: check → cards 1.15 → 0.31–0.41 s.
+- Proof the engine's output did not change: `analyze().to_dict()`
+  byte-identical on 30 synthetic documents (every ingest path, 4,883
+  suggestions), service responses and 900 prediction requests identical,
+  noise-floor `corpus_stats.json` byte-identical (gate OK, 11.74).
+
+**Evidence (merged branch).** Core 1283 passed / 2 skipped (8 new in
+`test_performance.py`); service 239; web lint (no warnings) and typecheck
+clean, 505 unit tests; e2e chromium + accounts 175 passed / 37 skipped
+(screenshot and perf specs run only on request); third-party scan 0 hits;
+ruff clean.
+
+**Left, with reasons.** LanguageTool is now the critical path (about 9 s on
+200k characters); splitting its request could change findings, since some
+of its rules read across paragraphs. LaTeX prediction spends its time in
+the parser (pylatexenc). Not changed, for the owner: rule codes show in
+Settings beside rule names (DESIGN.md asks for them); the header "Lessons"
+link replaces the page and drops a pasted draft; the Word pane names
+`python3 server.py` for the local mode (a setup step); Word cards have no
+"The lesson" disclosure.
+
+**Lessons.**
+- A helper's worktree can start from `main` rather than the working branch:
+  check the base before reading its test counts (349 unit tests instead of
+  498 gave it away), and merge the working branch into it before anything
+  else.
+- Playwright's trace recording inflates timings several-fold; `perf.spec.ts`
+  turns it off.
+- Two pages sharing class names is a bug that no accessibility scan sees;
+  only looking at the screenshots found it.
