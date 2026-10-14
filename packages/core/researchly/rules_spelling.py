@@ -139,6 +139,10 @@ def s001_spelling(doc, document: Document):
             continue
         if w.isupper():                       # acronyms → F601's business
             continue
+        # "mDh", "nIter", "logLik": a lower-case start with a capital inside
+        # is a code name, not a word ("THe", a shift slip, is still checked)
+        if w[0].islower() and any(c.isupper() for c in w[1:]):
+            continue
         lower = w.lower()
         if lower in lx.APOSTROPHELESS_CONTRACTIONS:
             continue                          # "dont": W208 owns it

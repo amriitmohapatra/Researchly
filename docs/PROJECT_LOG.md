@@ -2347,3 +2347,79 @@ notice and where the original was published (URL, package or commit), so
 the data can be matched to it. With those, MIT would allow use and shipping
 with the notice, and the friend's request not to publish his improved files
 can still be honoured (the public export never includes them).
+
+## P41 — 2026-10-14 — Head to head with the shared engine; a biomedical lexicon
+
+**Why.** The original source of the bundle no longer exists, so the owner
+chose: test the bundle privately beside Researchly, improve Researchly
+where the bundle wins, then discard the bundle. The friend then shared the
+bundle's runtime (`engine.py` and helpers), which made it possible to run
+the real engine rather than its data alone. The owner also shared five of
+their own documents (a manuscript plan, a Chapter 1 framework, a TAC
+summary, a paper draft and a `.tex` example) to test both.
+
+**Private harness** (`ml/private_eval/`, not on the export allow-list, to
+be deleted when done): `bundle_engine.py` loads the runtime and assets from
+the scratch folder (never committed) and runs the bundle's whole path:
+replace list, letter-bag candidate search, context-dependent error table,
+5-gram counts through its perfect hash, and the MLP with its 0.95
+autocorrect threshold. Its "touch" features turned out to be QWERTY
+positions of the typed letters, so it runs on typed text. `compare.py`
+(public lists, planted slips, false flags inside the same S001 rule) and
+`docs_compare.py` (the owner's documents; flags written outside the repo
+only). The runtime was read before use: it only reads local files.
+
+**What the bundle did better, and the fixes (open data, own methods).**
+- *Vocabulary.* It knew biomedical words Researchly did not (spectrin,
+  biofilm, rifampin, epitopes). Fix: the NLM **SPECIALIST Lexicon** (2026
+  release; registry `specialist-lexicon`; redistributed with its conditions,
+  attribution and a description of the modifications in the header of
+  `data/specialist_words.txt`, built by `ml/tools/build_specialist_words.py`):
+  278k single-word forms, minus literature misspellings it records as
+  variants ("accessable", "millenium") and forms our inflection rules reject.
+- *Detection.* Researchly's ending shortcut let "adviced", "awared",
+  "spreaded", "acquited" and "surprizingly" through. Fixes: when the lexicon
+  holds the base word, only the inflections it lists are accepted; "qu"
+  counts as a consonant for doubling; -ise-only words (surprise, advise,
+  revise...) never take -ize. Cost on ~1M words of genuine prose: 13
+  tokens, several of them real errors; the genuine terms (differenced,
+  infecteds, rogued...) went into the scientific lexicon.
+- *Far misspellings.* Its letter-bag search reaches spellings by ear that
+  are three or four edits away. Fix: our own letter-bag candidates over the
+  commoner dictionary words (numpy), used only when nothing is one edit
+  away, ranked by the noisy channel. Tuned on the training split only.
+
+**What Researchly did better, unchanged.** Context with the word on both
+sides; precision on scientific prose; it never blocks topic words (the
+bundle refuses "obesity", "suicide", "gender", "elderly", "diabetes",
+"migrant" by design); it never silently rewrites (the bundle would change
+"poisson" to "poison" in the owner's TAC summary).
+
+**Owner's documents** (counts only here; the drafts stay confidential).
+Spelling-tier flags across the five: Researchly 18 before → 6 after (two
+real fixes found on them: W208 no longer reads "WHO's" as "who is", ×5;
+S001 skips code names like "mDh" and knows bdf/rng/eigen); the bundle 22,
+mostly core epidemiology vocabulary, and it would have silently
+autocorrected 3 words, 2 of them wrongly.
+
+**Evidence.**
+
+| Check | Result |
+|---|---|
+| core | 1034 passed, 2 skipped |
+| ml/eval spelling tools | 13 |
+| ruff, third-party scan | clean, 0 hits |
+| S001 false flags inside the same rule, 115 PMC articles | Researchly 2.64 → 0.85 /1000w; bundle 2.45 |
+| same, 8 theses | Researchly 1.40 → 1.21; bundle 2.02 |
+| planted slips in CC BY sentences (1,000, both engines' dictionaries) | Researchly 95.9% first suggestion right (95.5% with the left word only); bundle 89.1%; its autocorrect: 72.7% right, 1.9% wrong |
+| public lists, held-out 20% (old → now) | caught unchanged (85.0, 92.8, 96.4%); top-1 Birkbeck 38.4 → 44.0%, Aspell 62.2 → 63.3%, Wikipedia 86.9 → 87.0%, Holbrook 37.5 → 34.4% (184 words); top-3 up on all |
+
+**Lessons.**
+- Run the competitor for real before concluding: on its data alone the
+  bundle looked better on vocabulary; with its own runtime it also showed
+  what a keyboard's policies do to research text (blocked topic words,
+  silent wrong fixes).
+- A bigger dictionary lowers false flags and recall together; the lexicon's
+  own inflection table is what recovers the recall.
+- Test on the owner's real documents: five files found two bugs (acronym
+  possessives, code names) that a million words of corpus had not.

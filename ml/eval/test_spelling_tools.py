@@ -150,3 +150,40 @@ def test_no_learned_error_table_ships_until_the_owner_decides():
     assert not (ROOT / "packages" / "core" / "researchly" / "data"
                 / "spell_errors.json").exists()
 
+
+
+# --- build_specialist_words --------------------------------------------------
+
+LRAGR = """\
+E1|spectrin|noun|count(thr_sing)|spectrin|spectrin|
+E1|spectrins|noun|count(thr_plur)|spectrins|spectrin|
+E2|accessible|adj|positive|accessible|accessible|
+E2|accessable|adj|positive|accessable|accessible|
+E3|crosssectional|adj|positive|crosssectional|crosssectional|
+E4|ad|noun|count(thr_sing)|ad|ad|
+E5|controled|verb|past|controled|control|
+E6|Spectrin Repeat|noun|count(thr_sing)|Spectrin Repeat|x|
+"""
+LRSPL = "E2|accessible|accessable|\n"
+
+
+def test_specialist_filtering(tmp_path):
+    bsw = _tool("build_specialist_words")
+    a, s = tmp_path / "LRAGR", tmp_path / "LRSPL"
+    a.write_text(LRAGR, encoding="utf-8")
+    s.write_text(LRSPL, encoding="utf-8")
+    keep, stats = bsw.build(bsw.forms(a), bsw.variant_groups(s))
+    assert "spectrin" in keep and "spectrins" in keep
+    assert "accessable" not in keep        # literature misspelling
+    assert "crosssectional" not in keep    # tripled letter
+    assert "ad" not in keep                # shorter than 5 letters
+    assert "controled" not in keep         # misinflected
+    assert stats["dropped_variants"] == 1
+
+
+def test_shipped_specialist_list_carries_its_conditions():
+    path = (ROOT / "packages" / "core" / "researchly" / "data"
+            / "specialist_words.txt")
+    head = "".join(path.open(encoding="utf-8").readlines()[:60])
+    assert "SPECIALIST NLP Tools" in head and "release 2026" in head
+    assert "Modifications" in head and "4. Use of the SPECIALIST" in head

@@ -181,6 +181,9 @@ def w208_contractions(doc, document: Document):
     text = document.masked
     for word in lx.CONTRACTIONS:
         for m in _finditer(rf"\b{re.escape(word)}\b", text):
+            stem = m.group(0).split("'")[0]
+            if len(stem) > 1 and stem.isupper():
+                continue                  # "WHO's": an acronym's possessive
             full = lx.CONTRACTION_EXPANSIONS.get(word)
             # "it's been" is "it has been": leave the 's forms to the writer
             # when a participle follows.

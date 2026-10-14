@@ -342,6 +342,17 @@ BOOSTER_TOKENS = {
 }
 SELF_MENTION_TOKENS = {"we", "our", "us", "i", "my"}
 
+# --- -ise in every English -------------------------------------------------
+# Words spelt -ise in American and British alike, so an -ize form is a
+# misspelling, never a variant ("surprize", "advize"). Stems, as prefixes of
+# every inflection. The standard list of Oxford and Merriam-Webster style.
+ISE_ONLY = (
+    "advertis", "advis", "appris", "chastis", "circumcis", "compris",
+    "compromis", "despis", "devis", "disguis", "enterpris", "excis",
+    "exercis", "franchis", "improvis", "incis", "merchandis", "premis",
+    "revis", "supervis", "surmis", "surpris", "televis",
+)
+
 # --- W210: variant consistency ("one term, one meaning") --------------------
 # Curated exact pairs only — algorithmic UK/US transforms create false pairs
 # (four/for, filling/filing). Extend freely.

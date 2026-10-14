@@ -126,8 +126,17 @@ def _variants(word: str) -> list[str]:
         if a in word:
             out.append(word.replace(a, b))
         if b in word:
-            out.append(word.replace(b, a))
+            v = word.replace(b, a)
+            # "surprize" is no variant: surprise, advise, revise... are
+            # spelt -ise in every English (lexicons.ISE_ONLY)
+            if not (b.startswith("iz") and v.startswith(lx_ise_only())):
+                out.append(v)
     return out
+
+
+def lx_ise_only() -> tuple[str, ...]:
+    from .lexicons import ISE_ONLY
+    return ISE_ONLY
 
 
 _VARIANT_WORDS: dict[str, tuple[str, str]] | None = None
@@ -164,6 +173,27 @@ def _load_variants() -> None:
             elif len(parts) == 3:
                 words[parts[0]] = (parts[1], parts[2])
     _VARIANT_WORDS, _VARIANT_PAIRS, _PARTNERS = words, pairs, partners
+
+
+_SPECIALIST: frozenset[str] | None = None
+
+
+def specialist_words() -> frozenset[str]:
+    """Biomedical and general English word forms from the NLM SPECIALIST
+    Lexicon (data/specialist_words.txt, built and filtered by
+    ml/tools/build_specialist_words.py; its notice is in the file's
+    header): "spectrin", "biofilm", "rifampin", "epitopes"."""
+    global _SPECIALIST
+    if _SPECIALIST is None:
+        path = Path(__file__).parent / "data" / "specialist_words.txt"
+        words: set[str] = set()
+        if path.exists():
+            with open(path, encoding="utf-8") as f:
+                for line in f:
+                    if line and not line.startswith("#"):
+                        words.add(line.strip())
+        _SPECIALIST = frozenset(words)
+    return _SPECIALIST
 
 
 def variant_words() -> dict[str, tuple[str, str]]:
@@ -238,6 +268,7 @@ def _known_stem(word: str) -> bool:
     UK/US twin). No suffix-stripping here: "mis" + "peled" would pass as
     "pele" + "d", and "mispeled" is the classic typo this tier exists for."""
     return is_known(word) or word in variant_words() \
+        or word in specialist_words() \
         or any(is_known(v) for v in _variants(word))
 
 
@@ -250,8 +281,11 @@ def _doubles_final_consonant(stem: str) -> bool:
     English doubles that consonant before -ed/-ing/-er/-est when the last
     syllable is stressed. Stress is not visible in the spelling, so the
     dictionary decides whether the doubled form is the one in use."""
+    # "qu" is one consonant sound: acquit → acquitted, equip → equipped
+    third = stem[-3] if len(stem) >= 3 else ""
+    qu = third == "u" and len(stem) >= 4 and stem[-4] == "q"
     return (len(stem) >= 3 and stem[-1] not in "aeiouwxy"
-            and stem[-2] in _VOWELS and stem[-3] not in _VOWELS)
+            and stem[-2] in _VOWELS and (third not in _VOWELS or qu))
 
 
 def _misinflected(base: str, suf: str) -> bool:
@@ -360,10 +394,19 @@ def reinflect(word: str) -> str | None:
     return None
 
 
+def _lexicon_refuses(base: str, word: str) -> bool:
+    """The SPECIALIST Lexicon lists every inflection of each word it holds,
+    so when it holds the base and not this form, the form is not English:
+    "spreaded" (spread), "adviced" (advice is a noun), "awared" (an
+    adjective). Forms under 5 letters are outside the shipped list."""
+    return len(word) >= 5 and base in specialist_words()
+
+
 def known_with_fallbacks(word: str) -> bool:
     """Known directly, morphologically, as a UK/US variant, or as a known
     word behind a common prefix."""
-    if is_known(word) or word in variant_words():
+    if is_known(word) or word in variant_words() \
+            or word in specialist_words():
         return True
     # "crosssectional": a tripled letter is a lost hyphen or a slip, not a
     # prefixed word, however real the stem.
@@ -378,7 +421,8 @@ def known_with_fallbacks(word: str) -> bool:
             base = word[: -len(suf)]
             if base not in FUNCTION_WORDS \
                     and (is_known(base) or base in variant_words()) \
-                    and not _misinflected(base, suf):
+                    and not _misinflected(base, suf) \
+                    and not _lexicon_refuses(base, word):
                 return True
             # A doubled final consonant before the ending (repel → repeller)
             # is right only where the undoubled form is not the word in use:

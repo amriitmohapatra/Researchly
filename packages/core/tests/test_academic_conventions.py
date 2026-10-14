@@ -80,3 +80,24 @@ def test_correct_mass_nouns_and_verbs_are_not_flagged():
             "evidences a delay, and climate feedbacks were modelled. "
             "She researches transmission.")
     assert cards(text, "W212") == []
+
+
+# --- found on the owner's own drafts (2026-10-14) ----------------------------
+
+def test_acronym_possessive_is_not_a_contraction():
+    # "WHO's" is the World Health Organization's, not "who is"
+    assert cards("The WHO's guidance was followed in every district.",
+                 "W208") == []
+    assert len(cards("Who's responsible for the data is unclear.",
+                     "W208")) == 1
+
+
+def test_code_names_are_not_spelling_errors():
+    # a lower-case start with a capital inside is an identifier
+    assert cards("We set nIter and logLik before fitting mDh again.",
+                 "S001") == []
+
+
+def test_stan_and_numerics_terms_are_known():
+    assert cards("The bdf solver, the rng calls and the eigen decomposition "
+                 "were stable.", "S001") == []

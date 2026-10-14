@@ -222,14 +222,82 @@ def split_candidates(word: str) -> list[str]:
     return out
 
 
+# --- letter-bag candidates -----------------------------------------------------
+# SymSpell searches two edits; a misspelling by ear ("foren", "comitee",
+# "acommodation") is often further. Comparing the multiset of letters reaches
+# it cheaply (anagram hashing; cf. Reynaert 2004): candidates whose letter
+# counts differ by at most BAG_DISTANCE, ranked by the noisy channel like
+# any other. Only the commoner words are indexed, so a far-fetched rare word
+# never wins on letters alone.
+
+_BAG: dict | None = None
+BAG_MIN_COUNT = 50_000
+BAG_TOP = 20
+
+
+def _bag_distance(n: int) -> int:
+    return 2 if n <= 5 else 3 if n <= 9 else 4
+
+
+def _bag_index():
+    global _BAG
+    with _LOCK:
+        if _BAG is None:
+            import numpy as np
+            by_len: dict[int, list[tuple[str, int]]] = {}
+            for w, n in spelling.get_sym().words.items():
+                if n >= BAG_MIN_COUNT and w.isalpha() and w.isascii():
+                    by_len.setdefault(len(w), []).append((w, n))
+            index = {}
+            for n, rows in by_len.items():
+                rows.sort(key=lambda r: -r[1])
+                vecs = np.zeros((len(rows), 26), dtype=np.int16)
+                for i, (w, _c) in enumerate(rows):
+                    for ch in w:
+                        vecs[i, ord(ch) - 97] += 1
+                index[n] = ([w for w, _c in rows], vecs)
+            _BAG = index
+    return _BAG
+
+
+def bag_candidates(word: str) -> list[str]:
+    """Common words whose letters nearly match the typed word's, most
+    frequent first."""
+    import numpy as np
+    if not (word.isalpha() and word.isascii() and len(word) >= 6):
+        return []
+    target = np.zeros(26, dtype=np.int16)
+    for ch in word.lower():
+        target[ord(ch) - 97] += 1
+    limit = _bag_distance(len(word))
+    found: list[tuple[int, str]] = []
+    for n in range(len(word) - 2, len(word) + 3):
+        entry = _bag_index().get(n)
+        if entry is None:
+            continue
+        words, vecs = entry
+        dist = np.abs(vecs - target).sum(axis=1)
+        for i in np.nonzero(dist <= limit)[0][:BAG_TOP]:
+            found.append((int(i), words[i]))
+    found.sort()
+    return [w for _i, w in found[:BAG_TOP]]
+
+
 def candidates(word: str) -> list[str]:
     out: list[str] = []
     fixed = spelling.reinflect(word)
     if fixed:
         out.append(fixed)
-    for cand, _dist in spelling.suggest_with_distance(word, top_n=8):
+    near = spelling.suggest_with_distance(word, top_n=8)
+    for cand, _dist in near:
         if cand not in out:
             out.append(cand)
+    # Reach further only when nothing is one edit away: a one-edit slip
+    # ("recieve") is a typing error, and far candidates only compete with it.
+    if not any(dist <= 1 for _c, dist in near):
+        for cand in bag_candidates(word):
+            if cand not in out and cand != word:
+                out.append(cand)
     for phrase in split_candidates(word):
         if phrase not in out:
             out.append(phrase)

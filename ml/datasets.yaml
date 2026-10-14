@@ -1239,6 +1239,30 @@ datasets:
       variants.tsv, as they require. Canadian (C) and Australian (D) codes
       are partial in VarCon, so W213 is quiet rather than wrong for them.
 
+  - id: specialist-lexicon
+    name: "SPECIALIST Lexicon (NLM SPECIALIST NLP Tools), release 2026: LRAGR + LRSPL"
+    kind: lexicon
+    source: "https://data.lhncbc.nlm.nih.gov/public/lsg/lexicon/2026/release/LEX_DOC/ (LRAGR, LRSPL)"
+    location: "packages/core/researchly/data/specialist_words.txt (derived; built by ml/tools/build_specialist_words.py)"
+    in_git: true
+    licence: "Terms and Conditions for Use of the SPECIALIST NLP Tools (U.S. Government product; free; redistribution with the conditions, attribution with release number and date, and a description of modifications; no endorsement)"
+    licence_verified: true
+    licence_evidence: "https://lhncbc.nlm.nih.gov/LSG/Projects/lexicon/current/web/termsAndConditions.html, read 2026-10-14; section 4 is reproduced in the header of specialist_words.txt"
+    commercial_ok: true
+    permitted_use: [private_eval, ci_eval, train_experimental, knowledge_derivation, ship_model, ship_text]
+    current_use: "S001 accepts its single-word forms (278k after filtering): biomedical vocabulary a general dictionary lacks (spectrin, biofilm, rifampin, epitopes, norovirus)."
+    shipped_today: true
+    sha256: 52e1ee1557f1fe7daada168a51e9fa2aa4cd12a086cba51af806fd813a026c5b
+    notes: >-
+      sha256 is LRAGR's. Filtering (stated in the file header as condition
+      4b(2) requires): forms of 5+ letters, no tripled letters; LRSPL
+      variants 1–2 edits from a dictionary spelling dropped (SPECIALIST
+      records literature misspellings such as "accessable"); forms
+      Researchly's inflection rules reject dropped. Measured 2026-10-14: 56%
+      of the correct PMC words S001 used to reject are now accepted; 0.4–2.6%
+      of detected misspellings on the public lists are lost, several of them
+      real words (algebraical, binominal).
+
   - id: mitton-misspelling-corpora
     name: "Birkbeck, Holbrook, Aspell and Wikipedia misspelling corpora (Roger Mitton)"
     kind: eval_set
@@ -1307,7 +1331,7 @@ datasets:
       model that someone later decoded. research/05-keyboard-engine-anatomy.md.
     commercial_ok: unknown
     permitted_use: [private_eval]
-    current_use: "Private parity benchmark on the owner's machine or in a scratch folder (ml/eval/spelling_bench.py --pairs); never committed, never trained on for a shipped artefact."
+    current_use: "Private head-to-head benchmark (ml/private_eval/: compare.py, docs_compare.py, bundle_engine.py), run from files kept outside the repository; never committed, never trained on for a shipped artefact. To be discarded once the comparison is done (owner, 2026-10-14)."
     shipped_today: false
     sha256: null
     notes: >-
@@ -1315,4 +1339,8 @@ datasets:
       original MIT source and its copyright notice are found, MIT would allow
       ship_model/ship_text (with the notice) and the friend's changes are
       covered by his permission; until then, private evaluation only. A
-      synthetic look-alike for tests is fine; a sample of it is not.
+      synthetic look-alike for tests is fine; a sample of it is not. The
+      friend also shared its runtime (engine.py, onnx_dump.py, demo.py,
+      extract_tables.py, probe_ngrams.py; licence unknown): read, found to
+      only read local files, used from the scratch folder by
+      bundle_engine.py, never copied into the repository.

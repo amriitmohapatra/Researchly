@@ -117,7 +117,8 @@ Researchly/
 ├── ml/
 │   ├── datasets.yaml             ← licence registry: nothing ships unless permitted here
 │   ├── dogfood/                  ← noise-floor corpus run + gate (baseline.json)
-│   ├── eval/                     ← AESW precision/recall harness
+│   ├── eval/                     ← AESW precision/recall harness; spelling benchmarks (P40)
+│   ├── private_eval/             ← PRIVATE, temporary: keyboard-bundle comparison (P41; never exported; delete when done)
 │   └── tools/                    ← check_third_party.py (CI)
 └── legacy/                       ← read-only: prototype-v0.8, updated-p20, experiment-p21
 ```

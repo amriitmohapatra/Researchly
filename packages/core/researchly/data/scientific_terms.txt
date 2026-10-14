@@ -3,6 +3,10 @@
 # infectious disease modelling. One word per line, lowercase.
 # Extend freely; `researchly dict add <word>` adds to your personal list.
 # --- epidemiology / infectious disease ---
+infecteds
+resurgences
+rogued
+outbreaker
 seroprevalence
 seropositivity
 seronegativity
@@ -81,6 +85,8 @@ index-case
 subclinical
 oligosymptomatic
 # --- statistics / modelling ---
+differenced
+differencing
 covariate
 covariates
 covariance
@@ -194,6 +200,9 @@ ergodicity
 markovian
 semimarkov
 # --- software / workflow ---
+rng
+bdf
+eigen
 cmdstan
 cmdstanr
 rstan
@@ -471,3 +480,4 @@ winsorise
 winsorised
 winsorisation
 winsorization
+photovoltaics

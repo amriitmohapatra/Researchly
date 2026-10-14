@@ -65,8 +65,9 @@ def test_misinflected_words_are_flagged_with_the_right_fix():
 # --- don't fire: real words the same fallbacks must keep accepting ----------
 
 @pytest.mark.parametrize("word", [
-    # regular inflections of known bases
-    "differenced", "forecasted", "resampled", "confounders",
+    # regular inflections of known bases ("differenced" is in the
+    # scientific lexicon: SPECIALIST lists "difference" as a noun only)
+    "forecasted", "resampled", "confounders",
     "recalibrated", "stressors", "immunoassays", "subsamples",
     # prefixed words whose stem is the real word
     "reinfections", "preinfection", "preintervention", "postvaccination",
@@ -85,3 +86,35 @@ def test_real_inflected_words_are_not_flagged_in_prose():
     assert s001("The series was differenced, the samples were resampled, "
                 "and reinfections were recalibrated against the "
                 "postvaccination data.") == {}
+
+
+# --- 2026-10-14 (P41): the lexicon knows the real inflections ----------------
+
+@pytest.mark.parametrize("typo", [
+    "adviced", "awared", "spreaded",       # the base takes no such ending
+    "acquited",                            # "qu" is a consonant: acquitted
+    "surprizingly",                        # surprise is -ise in every English
+])
+def test_forms_the_lexicon_and_spelling_rules_refuse(typo):
+    assert not spelling.known_with_fallbacks(typo)
+
+
+@pytest.mark.parametrize("word", [
+    "acquitted", "equipped", "operationalise", "dichotomised",
+    "hospitalised", "organized",
+])
+def test_real_forms_stay_known(word):
+    assert spelling.known_with_fallbacks(word)
+
+
+def test_letter_bag_reaches_a_misspelling_beyond_two_edits():
+    # "sucesfull" is three edits from "successful": SymSpell finds nothing,
+    # the letter-bag search does (2026-10-14, P41)
+    from researchly import spellrank
+    assert spelling.suggest_with_distance("sucesfull", 3) == []
+    assert spellrank.rank("sucesfull")[0][0] == "successful"
+
+
+def test_letter_bag_stays_out_of_one_edit_slips():
+    from researchly import spellrank
+    assert [c for c, _ in spellrank.rank("recieve")][:1] == ["receive"]

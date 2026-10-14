@@ -178,6 +178,7 @@ Named in `researchly/sources.py`; cited by name only, never quoted.
 | AMA Manual of Style (11th ed.) | Do not begin a sentence with a numeral | **N102** |
 | Swan, *Practical English Usage* (4th ed., 2016) | Uncountable nouns take no plural; count them with a unit noun | **W212** (2026-10-14) |
 | Mays, Damerau & Mercer (1991), *Context based spelling correction* | A real word can be a misspelling of another; the surrounding words decide | **S002** (2026-10-14) |
+| NLM SPECIALIST Lexicon, release 2026 (SPECIALIST NLP Tools; U.S. Government product, redistributed with its conditions) | Biomedical English is ordinary vocabulary in a paper, not a spelling error | S001's word check (P41, 2026-10-14) |
 | Atkinson, VarCon (data, MIT-like + Ispell BSD notices) | One spelling per document; which spellings belong to which English | **W210, W213**, S001's variant acceptance (2026-10-14) |
 | Guide §9.1 (owner's) | Define a term once, at first use, then use it consistently | **F612, F613, W211** (Endo's "different terms = different things" corroborates W211) |
 | Guide §9.2 | Introduce, display, interpret every equation; an equation is a clause of its sentence | **X301**, **X302** (the owner's professor made the same correction, 2026-10-08) |
