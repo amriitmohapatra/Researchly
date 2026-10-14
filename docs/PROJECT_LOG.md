@@ -2800,7 +2800,9 @@ order N1, N6, N2, N3, N4, N5 (PLAN, "Codex review (9 Oct)").
 tests 122 on PostgreSQL 16; web lint, typecheck and 498 unit tests; e2e
 chromium 119 passed / 7 skipped, accounts 51 passed; ml/eval 24; export
 tests 16 passed / 1 skipped and the real gate (gitleaks 8.21.2) CLEAN;
-ruff clean; third-party scan 0 hits. Noise floor: below.
+ruff clean; third-party scan 0 hits. Noise floor 11.74 flags/1000w,
+unchanged from the P41 baseline (gate OK; four rules moved by one flag
+each); the ≤ 11 target is still open.
 
 **Deploy order (unchanged in spirit).** Supabase migrations S4c first, then
 `20261014120000_spelling_prediction.sql`, then
