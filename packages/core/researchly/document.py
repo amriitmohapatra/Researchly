@@ -188,6 +188,24 @@ class StructureItem:
     label: str | None = None
 
 
+MAX_CELL_INDEX = 100_000
+
+
+def cell_place(cell) -> tuple[int, int, int, int] | None:
+    """(table, row, col, colspan) from a Word paragraph's `cell`, or None
+    when it is missing or malformed."""
+    if not isinstance(cell, (list, tuple)) or len(cell) not in (3, 4):
+        return None
+    if not all(isinstance(x, int) and not isinstance(x, bool)
+               and 0 <= x <= MAX_CELL_INDEX for x in cell):
+        return None
+    table, row, col = cell[:3]
+    span = cell[3] if len(cell) == 4 else 1
+    if span < 1:
+        return None
+    return table, row, col, span
+
+
 @dataclass
 class Document:
     original: str
@@ -202,6 +220,13 @@ class Document:
     # (start, end) spans that are table cells, not prose. Metrics exclude
     # them: a table of parameter values is not a set of long sentences.
     table_spans: list[tuple[int, int]] = field(default_factory=list)
+    # Where each table cell's paragraph sits in its table, when the source
+    # says so (a .docx file, or the Word add-in on WordApi 1.3):
+    # (start, end, table, row, col, colspan), 0-based, col counted in grid
+    # columns. Read by researchly.tables to match a quoted number against
+    # the row and column a sentence names (Codex review #7).
+    table_cells: list[tuple[int, int, int, int, int, int]] = field(
+        default_factory=list)
     # Set by the file adapters (researchly.ingest); empty for pasted text.
     segments: list[Segment] = field(default_factory=list)
     structure: list[StructureItem] = field(default_factory=list)
@@ -304,6 +329,10 @@ class Document:
         sentence-length and passive-voice metrics, and a cell reading
         "Methods" could re-section the rest of the document. They are
         recorded in `table_spans` so metrics can exclude them.
+
+        A table paragraph may also carry `cell`: [table, row, col] or
+        [table, row, col, colspan], 0-based, col in grid columns. Kept in
+        `table_cells`; anything malformed is ignored, never guessed at.
         """
         texts = [p.get("text") or "" for p in paragraphs]
         combined = "\n\n".join(texts)
@@ -319,12 +348,17 @@ class Document:
         chars = list(doc.masked)
         style_headings: list[Heading] = []
         table_spans: list[tuple[int, int]] = []
+        table_cells: list[tuple[int, int, int, int, int, int]] = []
         captions: list[StructureItem] = []
         for i, p in enumerate(paragraphs):
             style = (p.get("style") or "").lower().replace(" ", "")
             title = texts[i].strip()
             if p.get("kind") == "table" and title:
                 table_spans.append((offsets[i], offsets[i] + len(texts[i])))
+                place = cell_place(p.get("cell"))
+                if place is not None:
+                    table_cells.append((offsets[i], offsets[i] + len(texts[i]))
+                                       + place)
                 continue          # never a heading, never prose
             if not title:
                 continue
@@ -373,6 +407,7 @@ class Document:
                             end=end, level=level))
                 _mask_spans(chars, [(start, end)])
         doc.table_spans = table_spans
+        doc.table_cells = table_cells
         doc.structure = captions
         if table_spans:
             # from_text() already ran keyword heading detection over the

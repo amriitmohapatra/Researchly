@@ -31,7 +31,8 @@ from .schemas import (AnalyzeOptions, AnalyzeResponse, AnalyzeWordResponse,
                       NarrativeMap, NarrativeMove, NarrativeSection,
                       ProfileChoice, ProfileInfo, ReviewQuestion,
                       ReviewReport, ReviewRuleCount, RuleInfo, Scope, Span,
-                      Suggestion, TierHealth, WordLocation, WordSuggestion)
+                      Suggestion, TableEvidence, TierHealth, WordLocation,
+                      WordSuggestion)
 
 import researchly
 from researchly import api, learn, packs, profiles, shapes, wordloc
@@ -168,6 +169,8 @@ def to_suggestion(s) -> Suggestion:
         replacement=s.replacement,
         fix_safety=_fix_safety(s.fix_safety),
         confidence=min(1.0, max(0.0, conf)),
+        table_evidence=(TableEvidence(**s.table_evidence)
+                        if getattr(s, "table_evidence", None) else None),
     )
 
 

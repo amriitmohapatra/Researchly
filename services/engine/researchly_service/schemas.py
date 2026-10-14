@@ -13,9 +13,10 @@ inside pydantic field annotations evaluated at runtime.
 from __future__ import annotations
 
 from enum import Enum
-from typing import Dict, List, Literal, Optional
+from typing import Annotated, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import (BaseModel, ConfigDict, Field, StrictInt,
+                      model_validator)
 
 SCHEMA_VERSION = "1"
 
@@ -130,6 +131,12 @@ class AnalyzeRequest(_Strict):
 MAX_WORD_PARAGRAPHS = 50_000
 
 
+# A table, row or column number in a cell place (Document.table_cells);
+# the same bound as researchly.document.MAX_CELL_INDEX (a test pins it).
+MAX_CELL_INDEX = 100_000
+CellIndex = Annotated[StrictInt, Field(ge=0, le=MAX_CELL_INDEX)]
+
+
 class WordParagraph(_Strict):
     """One paragraph as Office JS reports it (`body.paragraphs`)."""
     text: str = Field("", max_length=MAX_CONTENT_CHARS)
@@ -137,6 +144,20 @@ class WordParagraph(_Strict):
                        "e.g. \"Heading 1\", \"Caption\", \"Normal\".")
     kind: Literal["body", "table"] = Field(
         "body", description="table: a table cell's paragraph (not prose).")
+    cell: Optional[List[CellIndex]] = Field(
+        None, min_length=3, max_length=4,
+        description="Where a table paragraph sits: [table, row, col] or "
+                    "[table, row, col, colspan], 0-based, col counted in "
+                    "grid columns. Optional; sent only when the client can "
+                    "place the cell reliably (WordApi 1.3, no merged cells). "
+                    "Lets X401 compare a quoted number with the row and "
+                    "column a sentence names. Ignored on body paragraphs.")
+
+    @model_validator(mode="after")
+    def _colspan(self) -> "WordParagraph":
+        if self.cell is not None and len(self.cell) == 4 and self.cell[3] < 1:
+            raise ValueError("a cell's colspan is at least 1")
+        return self
 
 
 class AnalyzeWordRequest(_Strict):
@@ -165,6 +186,25 @@ class Span(_Strict):
     col: int = Field(..., ge=0, description="1-based column of `start`; 0 if unknown.")
 
 
+class TableEvidence(_Strict):
+    """The cell a sentence names by its row and column, and what it holds
+    (X401, Codex review #7). Document text: never logged."""
+    table: str = Field(..., description='The table as cited, e.g. "Table 1".')
+    row: int = Field(..., ge=0, description="0-based row of the cell.")
+    column: int = Field(..., ge=0, description="0-based grid column of the cell.")
+    row_header: str = Field(..., description="The row's header, without its unit.")
+    column_header: str = Field(..., description="The column's header, without its unit.")
+    cell_start: int = Field(..., ge=0, description="Offset of the cell's text in "
+                                                   "`content`, like Span.start.")
+    cell_end: int = Field(..., ge=0, description="End offset of the cell's text.")
+    cell_text: str = Field(..., description="The cell as the table writes it.")
+    expected: str = Field(..., description='The cell\'s value as the text would '
+                                           'quote it, e.g. "8.2%".')
+    quoted: str = Field(..., description="The number the sentence quotes.")
+    rounding: str = Field("", description='The rounding allowed, e.g. "rounded '
+                                          'to 1 decimal place"; "" for none.')
+
+
 class Suggestion(_Strict):
     id: str = Field(..., description="Stable fingerprint of (rule_id, start, end, text); "
                                      "used by /v1/feedback in S2.")
@@ -187,6 +227,10 @@ class Suggestion(_Strict):
                           "≤40-char learned edit. Never generated prose.")
     fix_safety: FixSafety
     confidence: float = Field(..., ge=0.0, le=1.0)
+    table_evidence: Optional[TableEvidence] = Field(
+        None, description="X401 only: the table cell the quoted number was "
+                          "compared with. Absent when the check fell back to "
+                          "the whole table.")
 
 
 class Metrics(_Strict):

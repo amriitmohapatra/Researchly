@@ -65,6 +65,21 @@ def _child(el, name: str):
     return None
 
 
+_WRAPPERS = {"sdt", "sdtContent", "customXml"}
+
+
+def _within(el, name: str, depth: int):
+    """Children named `name`, looking through content controls and custom
+    XML wrappers (a row or cell may sit inside one)."""
+    _check_depth(depth)
+    for c in el:
+        ln = _local(c.tag)
+        if ln == name:
+            yield c
+        elif ln in _WRAPPERS:
+            yield from _within(c, name, depth + 1)
+
+
 def _parse(data: bytes):
     try:
         import defusedxml.ElementTree as DET
@@ -162,6 +177,13 @@ class _Reader:
         self.equations: list[tuple[int, int, int]] = []
         self.figures: list[int] = []
         self.tables: list[tuple[int, int]] = []
+        # Table cell places (Codex review #7): the cell being read as
+        # [table, row, col(, colspan)], the tables open around it, and the
+        # tables whose cells cannot be placed on a plain grid.
+        self.cell: list[int] | None = None
+        self.table_count = 0
+        self.open_tables: list[int] = []
+        self.irregular: set[int] = set()
         # The paragraph being read.
         self.parts: list[str] = []
         self.length = 0
@@ -177,11 +199,49 @@ class _Reader:
                 self.paragraph(c, kind)
             elif ln == "tbl":
                 first = len(self.paras)
-                self.block(c, "table", depth + 1)
+                self.table(c, depth + 1)
                 if len(self.paras) > first:
                     self.tables.append((first, len(self.paras) - 1))
             elif ln in _BLOCK_CONTAINERS:
                 self.block(c, kind, depth + 1)
+
+    def table(self, tbl, depth: int) -> None:
+        """A table's cells, each paragraph placed at its row and grid
+        column. A table inside another, a vertically merged cell, or a row
+        that skips grid columns cannot be placed reliably: its cells keep
+        no place at all, and X401 falls back to the whole table."""
+        _check_depth(depth)
+        t = self.table_count
+        self.table_count += 1
+        if self.open_tables:
+            self.irregular.update((t, self.open_tables[-1]))
+        self.open_tables.append(t)
+        outer = self.cell
+        row = 0
+        for tr in _within(tbl, "tr", depth):
+            trpr = _child(tr, "trPr")
+            col = 0
+            if trpr is not None and (_child(trpr, "gridBefore") is not None
+                                     or _child(trpr, "gridAfter") is not None):
+                self.irregular.add(t)
+            for tc in _within(tr, "tc", depth):
+                tcpr = _child(tc, "tcPr")
+                span = 1
+                if tcpr is not None:
+                    gs = _child(tcpr, "gridSpan")
+                    try:
+                        span = max(1, int(_attr(gs, "val") or 1)) \
+                            if gs is not None else 1
+                    except ValueError:
+                        self.irregular.add(t)
+                    if _child(tcpr, "vMerge") is not None:
+                        self.irregular.add(t)
+                self.cell = [t, row, col] + ([span] if span > 1 else [])
+                self.block(tc, "table", depth + 1)
+                col += span
+            row += 1
+        self.cell = outer
+        self.open_tables.pop()
 
     def paragraph(self, p, kind: str) -> None:
         self.parts, self.length, self.has_figure = [], 0, False
@@ -202,7 +262,10 @@ class _Reader:
                               f"This document has more than "
                               f"{MAX_TEXT_CHARS:,} characters. Check one "
                               "chapter at a time.")
-        self.paras.append({"text": text, "style": style, "kind": kind})
+        para = {"text": text, "style": style, "kind": kind}
+        if kind == "table" and self.cell is not None:
+            para["cell"] = list(self.cell)
+        self.paras.append(para)
 
     def style_of(self, p) -> tuple[str, int | None]:
         ppr = _child(p, "pPr")
@@ -257,6 +320,9 @@ class _Reader:
     # -- result -------------------------------------------------------------
 
     def document(self, filename: str) -> Document:
+        for p in self.paras:
+            if "cell" in p and p["cell"][0] in self.irregular:
+                del p["cell"]
         doc = Document.from_word(self.paras)
         offs = doc.para_offsets
         masked = list(doc.masked)

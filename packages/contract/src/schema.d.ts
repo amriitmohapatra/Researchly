@@ -1074,6 +1074,8 @@ export interface components {
              */
             source: string;
             span: components["schemas"]["Span"];
+            /** @description X401 only: the table cell the quoted number was compared with. Absent when the check fell back to the whole table. */
+            table_evidence?: components["schemas"]["TableEvidence"] | null;
             /**
              * Text
              * @description The flagged source text, content[start:end].
@@ -1089,6 +1091,69 @@ export interface components {
              * @description The teachable explanation.
              */
             why: string;
+        };
+        /**
+         * TableEvidence
+         * @description The cell a sentence names by its row and column, and what it holds
+         *     (X401, Codex review #7). Document text: never logged.
+         */
+        TableEvidence: {
+            /**
+             * Cell End
+             * @description End offset of the cell's text.
+             */
+            cell_end: number;
+            /**
+             * Cell Start
+             * @description Offset of the cell's text in `content`, like Span.start.
+             */
+            cell_start: number;
+            /**
+             * Cell Text
+             * @description The cell as the table writes it.
+             */
+            cell_text: string;
+            /**
+             * Column
+             * @description 0-based grid column of the cell.
+             */
+            column: number;
+            /**
+             * Column Header
+             * @description The column's header, without its unit.
+             */
+            column_header: string;
+            /**
+             * Expected
+             * @description The cell's value as the text would quote it, e.g. "8.2%".
+             */
+            expected: string;
+            /**
+             * Quoted
+             * @description The number the sentence quotes.
+             */
+            quoted: string;
+            /**
+             * Rounding
+             * @description The rounding allowed, e.g. "rounded to 1 decimal place"; "" for none.
+             * @default
+             */
+            rounding: string;
+            /**
+             * Row
+             * @description 0-based row of the cell.
+             */
+            row: number;
+            /**
+             * Row Header
+             * @description The row's header, without its unit.
+             */
+            row_header: string;
+            /**
+             * Table
+             * @description The table as cited, e.g. "Table 1".
+             */
+            table: string;
         };
         /** TierHealth */
         TierHealth: {
@@ -1173,6 +1238,11 @@ export interface components {
          */
         WordParagraph: {
             /**
+             * Cell
+             * @description Where a table paragraph sits: [table, row, col] or [table, row, col, colspan], 0-based, col counted in grid columns. Optional; sent only when the client can place the cell reliably (WordApi 1.3, no merged cells). Lets X401 compare a quoted number with the row and column a sentence names. Ignored on body paragraphs.
+             */
+            cell?: number[] | null;
+            /**
              * Kind
              * @description table: a table cell's paragraph (not prose).
              * @default body
@@ -1239,6 +1309,8 @@ export interface components {
              */
             source: string;
             span: components["schemas"]["Span"];
+            /** @description X401 only: the table cell the quoted number was compared with. Absent when the check fell back to the whole table. */
+            table_evidence?: components["schemas"]["TableEvidence"] | null;
             /**
              * Text
              * @description The flagged source text, content[start:end].
