@@ -246,6 +246,8 @@ export async function mockEngineAuth(page: Page, handler: EngineHandler, rules: 
     const path = new URL(req.url()).pathname;
     if (path === "/v1/rules") return reply(route, 200, { rules, profiles: PROFILES });
     if (path === "/v1/health") return reply(route, 200, { status: "ok", tiers: [], engine: { service_version: "0", core_version: "0", rules_loaded: 0 } });
+    // Word prediction asks while the writer types; not a check, so not recorded.
+    if (path === "/v1/complete") return reply(route, 200, { status: "ok", candidates: [] });
     const buf = req.postDataBuffer();
     const headers = req.headers();
     const call: EngineCall = {

@@ -30,6 +30,7 @@ import { HealthBanner } from "./HealthBanner";
 import { MetricsPanel } from "./MetricsPanel";
 import { NarrativeMap } from "./NarrativeMap";
 import { PrintReport } from "./PrintReport";
+import { ReadingSummary } from "./ReadingSummary";
 import { ReviewBrief } from "./ReviewBrief";
 import { PassChooser, RevisionQueue } from "./RevisionQueue";
 import { SuggestionCard, type CardActions } from "./SuggestionCard";
@@ -399,6 +400,7 @@ export function Results({
           {profileText}
         </p>
       ) : null}
+      <ReadingSummary reading={data.reading} />
       {heldBack ? (
         <p className="results-line" data-testid="held-back">
           <span>{heldBack}</span>

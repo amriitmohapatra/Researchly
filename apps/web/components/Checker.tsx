@@ -53,9 +53,11 @@ import { resolveSpelling } from "@/lib/spelling";
 import { ACCEPT_ATTR, checkFile } from "@/lib/source";
 import { FORMATS, isFormat, validateContent, type InputProblem } from "@/lib/validate";
 import { revealNeedsRecheck, shownSuggestions, summarySentence } from "@/lib/view";
+import { usePredictionSetting, useTextPrediction } from "@/lib/use-prediction";
 import { CheckProgress } from "./CheckProgress";
 import { ChecklistSelect } from "./ChecklistSelect";
 import { FilePanel, type DropHandlers } from "./FilePanel";
+import { PredictionStrip, PredictionToggle } from "./PredictionStrip";
 import { ProfileSelect } from "./ProfileSelect";
 import { ReadingKey } from "./ReadingKey";
 import { Results } from "./Results";
@@ -182,6 +184,10 @@ export function Checker() {
     privacy: useId(),
     upload: useId(),
   };
+
+  // Word prediction (2026-10-14): candidates after a pause in typing, inserted only on Tab or a click.
+  const predictionSetting = usePredictionSetting(signedIn);
+  const prediction = useTextPrediction({ ref: textareaRef, text, setText, format, enabled: predictionSetting.on });
 
   useEffect(() => () => session.dispose(), [session]);
 
@@ -640,7 +646,11 @@ export function Checker() {
                 onChange={(e) => {
                   setText(e.target.value);
                   if (problem) setProblem(null);
+                  prediction.onInput(e);
                 }}
+                onKeyDown={prediction.onKeyDown}
+                onSelect={prediction.onSelect}
+                onBlur={prediction.dismiss}
                 aria-describedby={describedBy}
                 aria-invalid={problem ? true : undefined}
                 spellCheck={false}
@@ -651,6 +661,7 @@ export function Checker() {
                 placeholder="In order to estimate the effective reproduction number, a renewal model was fitted…"
                 data-testid="editor"
               />
+              <PredictionStrip candidates={prediction.shown?.candidates ?? null} onAccept={prediction.accept} />
               <div className="field-foot">
                 {problem ? (
                   <p id={ids.problem} className="field-problem" role="alert" data-testid="input-problem">
@@ -770,6 +781,8 @@ export function Checker() {
                 />
                 <span>Show preferences</span>
               </label>
+
+              <PredictionToggle setting={predictionSetting} />
 
               <div className="control control-actions">
                 <button

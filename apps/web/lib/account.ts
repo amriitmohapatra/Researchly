@@ -218,3 +218,33 @@ export function saveSpelling(spelling: Spelling): Promise<AccountResult<null>> {
     return error ? { ok: false, message: accountErrorMessage(error) } : { ok: true, data: null };
   });
 }
+
+/* ---------- word prediction (2026-10-14), shared by the web app and the Word add-in ---------- */
+
+/** The account's prediction switch (user_settings.prediction) from a settings row: null when absent or never saved. */
+export function predictionFromRow(row: unknown): boolean | null {
+  const v = (row as { prediction?: unknown } | null)?.prediction;
+  return typeof v === "boolean" ? v : null;
+}
+
+/**
+ * The account's prediction switch (the column comes with migration
+ * 20261014120000_spelling_prediction, default on), or null when there is no
+ * row. Read on its own, like the spelling, so an account database without
+ * the migration fails only this (prediction then follows this browser's
+ * switch, on by default).
+ */
+export function loadPrediction(): Promise<AccountResult<boolean | null>> {
+  return run(async (sb) => {
+    const { data, error } = await sb.from("user_settings").select("prediction").maybeSingle();
+    if (error) return { ok: false, message: accountErrorMessage(error) };
+    return { ok: true, data: predictionFromRow(data) };
+  });
+}
+
+export function savePrediction(prediction: boolean): Promise<AccountResult<null>> {
+  return run(async (sb) => {
+    const { error } = await sb.from("user_settings").upsert({ prediction }, { onConflict: "user_id" });
+    return error ? { ok: false, message: accountErrorMessage(error) } : { ok: true, data: null };
+  });
+}
