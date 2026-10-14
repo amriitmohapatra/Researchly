@@ -446,7 +446,7 @@ datasets:
     kind: knowledge_source
     source: "third-party PDF (private; given to the owner, 2026-10-14)"
     location: "Notes_On_Writing/Session 2 - Earn the Right to Ask.pdf"
-    in_git: false
+    in_git: true
     licence: "unknown — verify (workshop slides; no licence statement in the PDF)"
     licence_verified: false
     licence_evidence: null
