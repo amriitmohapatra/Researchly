@@ -169,16 +169,43 @@ own "Whole document" group so they are never lost. The chooser starts at
   checks again and opens the Checklist tab.
 - **The Checklist tab** (a fourth tab, only when a checklist ran) reads as
   a document at the reading measure with the brief's dividers: the label
-  and design, the engine's note, then every item in the guideline's order:
-  its topic (a heading), its question, and the status in italic words:
-  "reported" with the writer's sentence quoted in the serif, or "needs
-  your check" with the reason in everyday words and where readers look.
-  "Needs your check" is a prompt, never a verdict. Each item has a
-  "Not applicable" toggle (a pressed link-style button) that says "not
-  applicable (your call)" in place of the status; it lasts for this check
-  in this tab and is never stored or sent. Then the source and "This checks
-  reporting only, never the science." No colour by status, no meters.
-  Four tabs wrap to two lines on a phone, never a scrollbar.
+  and design; "Selected themes of PRISMA 2020 — not a full compliance
+  check." (the engine's edition); the tally in words, semibold with
+  tabular figures ("4 of 16 with possible evidence · 2 partly there ·
+  confirmed by you: 1", then "not applicable (your call): N" when there
+  are any); the engine's note; then every item in the guideline's order:
+  its topic (a heading), the guideline's own item numbers in small grey
+  type ("PRISMA 2020 item 6", "items 13a and 13b", or "Good practice, not
+  a numbered item"), its question, and the status in italic words.
+- **Cautious statuses (Codex review N1).** A matching sentence is possible
+  evidence, never proof, so nothing is ever "reported" and nothing is a
+  score. "Found — please confirm": the writer's sentence quoted in the
+  serif, with "Possible evidence:" for screen readers. "Partly there": a
+  compound question part by part, each "Found:" (semibold, its sentence
+  quoted under it) or "Needs your check:" (italic), then the reason in
+  everyday words. "Needs your check": the reason and where readers look; a
+  prompt, never a verdict. Under any of them, quietly in small grey type:
+  a sentence the engine did not count, in its own words ("A sentence
+  mentions this but says this is not reported: “…”", the sentence in the
+  serif), and a section the document lacks ("No Methods section was found
+  to look in.", replacing "readers look in").
+- **The writer's calls.** Two link-style toggle buttons under each item,
+  wrapping, never a scrollbar: "Confirmed by me" (only where there is
+  possible evidence) and "Not applicable" (every item). `aria-pressed`,
+  described by the topic; the label never changes, a pressed one gains a
+  tick and weight (never colour alone). Pressing one releases the other.
+  The status then reads "Confirmed by you" (the evidence stays, so a
+  confirmation is inspectable) or "Not applicable (your call)" (evidence
+  and reason hidden). A polite live region says what changed ("Setting:
+  confirmed by you.", "… confirmation undone."). The calls last for this
+  check, are never stored or sent, and are gone with the next check. Then
+  the source and "This checks reporting only, never the science." No
+  colour by status, no meters. Four tabs wrap to two lines on a phone,
+  never a scrollbar.
+- **Words in one place.** Every status, tally, item-number, part,
+  set-aside and absent-section line comes from `lib/checklists.ts`, and the
+  item detail and the two toggles from `components/ChecklistParts.tsx`, so
+  the website, Word and the printed report say the same thing.
 
 ## Dismissal (review proposal 2)
 
@@ -320,8 +347,13 @@ jump.
   numbers on the right (for a multi-file upload each with its file and
   line), whole-document checks after them, then the reviewer's brief on a
   new page, the narrative map on the page after it, the reporting checklist
-  on its own page when one ran (statuses as words, the writer's "not
-  applicable" kept, no controls), and a footer saying nothing was stored.
+  on its own page when one ran, and a footer saying nothing was stored.
+  The checklist on paper uses the screen's cautious statuses, with the
+  edition line and the tally, and no controls; it keeps four states apart
+  in words for whoever the page is handed to: "Found — please confirm"
+  (not confirmed), "Confirmed by the writer", "Not applicable (the
+  writer's call)" and "Needs your check" (the tally says "confirmed by the
+  writer: N").
 - **The context block** under the header lines, one plain line each and
   only when it applies: "This report describes the version that was
   checked, not the text now in the editor." (bold) when the editor changed
@@ -431,10 +463,17 @@ column, the site's tokens, cards and notices; nothing new to learn.
 - **Reporting checklist (S4c)**: a full-width select under "Check as"
   (None, Auto, STROBE, CONSORT, PRISMA, EPIFORGE), sent in Revise only,
   with its help line. A fourth tab, "Checklist", appears only when one
-  was asked for: each item its topic, the question, a status word
-  ("Reported", or "Needs your check" in italic) and the writer's own
-  sentence in the serif or the plain reason. No colour by status, no
-  meters. In Draft the tab offers "Switch to Revise", like the brief.
+  was asked for, in the website's words (Codex review N1): the edition
+  line and the tally, then per item its topic with the status beside it
+  ("Found — please confirm", "Partly there", or "Needs your check" in
+  italic; the writer's call upright), the guideline's item numbers, the
+  question, and the same detail as the site (parts, the quoted sentence or
+  the plain reason, a sentence not counted, an absent section). "Confirmed
+  by me" and "Not applicable" (added for parity with the site) are the
+  same toggles, kept in the pane's memory for this check (across tab
+  switches), never stored or sent, announced politely. Everything wraps at
+  320px. No colour by status, no meters. In Draft the tab offers "Switch
+  to Revise", like the brief.
 - **Revision queue (review proposal 1)**: the "Work through" choices sit
   under the quiet notes as a two-by-two grid; a pass replaces the cards
   with the same queue as on the site (one column), and each step selects
@@ -479,8 +518,10 @@ warnings, card action saved or failed; settings signed out, loading, load
 failed, nothing muted, empty dictionary, saved, save failed, delete
 confirm.
 
-S4c adds: a lesson open on a card or a move, a checklist with reported,
-needs-your-check and not-applicable items, the checklist offer, a card
+S4c adds: a lesson open on a card or a move, a checklist with found,
+partly-there, needs-your-check, confirmed and not-applicable items (N1:
+also a sentence not counted, an absent section, an unnumbered item; on
+the website, in Word and on paper), the checklist offer, a card
 dismissed (with Undo) and every card dismissed, what Draft held back (an
 older engine), a muted rule's cards gone before the re-check, the demo
 loaded or not loadable.

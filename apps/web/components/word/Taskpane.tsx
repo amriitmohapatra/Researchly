@@ -71,6 +71,7 @@ import {
   checklistState,
   useChecklistChoices,
 } from "@/lib/word/checklist";
+import { NO_MARKS, toggleMark, type ChecklistMarks } from "@/lib/checklists";
 import {
   coverageSentences,
   heldBackSentence,
@@ -198,6 +199,8 @@ export function Taskpane() {
   const [applied, setApplied] = useState<ReadonlySet<string>>(new Set());
   /** Cards an edit has made out of date (their paragraph changed, or an Apply ended unknown): no Apply until a re-check. */
   const [stale, setStale] = useState<ReadonlySet<string>>(new Set());
+  /** The writer's calls on checklist items (Codex review N1): confirmed or not applicable, this check only, never stored or sent. */
+  const [checklistMarks, setChecklistMarks] = useState<ChecklistMarks>(NO_MARKS);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [wordBusy, setWordBusy] = useState(false);
   const [accountNote, setAccountNote] = useState<AccountNote | null>(null);
@@ -413,6 +416,7 @@ export function Taskpane() {
           setNotes({});
           setApplied(new Set());
           setStale(new Set());
+          setChecklistMarks(NO_MARKS);
           setActiveId(null);
           const listed = shownWordSuggestions(c.data, prefs);
           setAnnouncement(c.focus ? sectionSummary(sectionView(listed, c.focus, scopes), c.focus) : wordSummary(listed.length));
@@ -944,7 +948,12 @@ export function Taskpane() {
                     className="view-panel"
                     data-testid="checklist-panel"
                   >
-                    <WordChecklist state={checklistState(checked.data, checked.checklist)} onSwitchToRevise={() => onModeChange("revise")} />
+                    <WordChecklist
+                      state={checklistState(checked.data, checked.checklist)}
+                      onSwitchToRevise={() => onModeChange("revise")}
+                      marks={checklistMarks}
+                      onMark={(id, m) => setChecklistMarks((prev) => toggleMark(prev, id, m))}
+                    />
                   </div>
                 ) : shownView === "brief" ? (
                   <div

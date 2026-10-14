@@ -4,7 +4,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { createPortal, flushSync } from "react-dom";
 import type { AnalyzeResponse, ChecklistChoice, SourceInfo, Suggestion } from "@researchly/contract";
 import { CATEGORIES, CATEGORY_ORDER, countByCategory, sectionLabel } from "@/lib/categories";
-import type { ChecklistOffer } from "@/lib/checklists";
+import { toggleMark, type ChecklistMark, type ChecklistMarks, type ChecklistOffer } from "@/lib/checklists";
 import { briefState, narrativeState, profileLine } from "@/lib/profiles";
 import type { ScopeMap } from "@/lib/scope";
 import { resolveSpans, segment, type ResolvedSpan } from "@/lib/segments";
@@ -123,8 +123,8 @@ export function Results({
   // "Not an issue here" (review proposal 2): this check only, in memory, never stored or sent.
   const [dismissed, setDismissed] = useState<ReadonlySet<string>>(() => new Set());
   const [dismissNote, setDismissNote] = useState<DismissNote>(null);
-  // "Not applicable" on checklist items (review proposal 6): this check only, never stored.
-  const [notApplicable, setNotApplicable] = useState<ReadonlySet<string>>(() => new Set());
+  // The writer's calls on checklist items (review proposal 6, N1): confirmed or not applicable, this check only, never stored or sent.
+  const [checklistMarks, setChecklistMarks] = useState<ChecklistMarks>(() => new Map());
   const sectionId = useId();
   const tabsId = useId();
   const profileText = profileLine(data.profile);
@@ -338,13 +338,8 @@ export function Results({
     setDismissNote({ kind: "restored", n });
   };
 
-  const onToggleNotApplicable = useCallback((id: string) => {
-    setNotApplicable((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const onChecklistMark = useCallback((id: string, mark: ChecklistMark) => {
+    setChecklistMarks((prev) => toggleMark(prev, id, mark));
   }, []);
 
   const sections = detected.map(sectionLabel).filter((s): s is string => s !== null);
@@ -482,7 +477,7 @@ export function Results({
         </div>
       ) : effectiveView === "checklist" && data.checklist ? (
         <div role="tabpanel" {...panelIds("checklist")} className="view-panel" data-testid="checklist-panel">
-          <ChecklistView report={data.checklist} notApplicable={notApplicable} onToggle={onToggleNotApplicable} />
+          <ChecklistView report={data.checklist} marks={checklistMarks} onMark={onChecklistMark} />
         </div>
       ) : shown.length === 0 ? (
         <div role="tabpanel" {...panelIds("suggestions")}>
@@ -680,7 +675,7 @@ export function Results({
               dismissed={dismissed}
               mutedRules={mutedRules}
               locations={locations}
-              notApplicable={notApplicable}
+              checklistMarks={checklistMarks}
             />,
             document.body,
           )
