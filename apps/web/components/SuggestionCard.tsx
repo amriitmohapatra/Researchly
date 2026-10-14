@@ -6,6 +6,7 @@ import { categoryMeta, sectionLabel } from "@/lib/categories";
 import { dictionaryCandidate, isRuleId } from "@/lib/settings";
 import { CategoryBadge } from "./CategoryIcon";
 import { LessonDisclosure } from "./LessonDisclosure";
+import { TableEvidence } from "./TableEvidence";
 
 interface Props {
   suggestion: Suggestion;
@@ -13,6 +14,8 @@ interface Props {
   /** False when the span could not be placed in the text (out of range). */
   placeable: boolean;
   onShowInText: (id: string) => void;
+  /** X401 with a table cell that can be placed in the text: outline that cell. */
+  onShowCell?: ((id: string) => void) | null;
   /** For a multi-file upload: the file and line the suggestion is in. */
   location?: string | null;
   /** Signed in only: account actions. Absent signed out, so the card is exactly as in S1. */
@@ -53,6 +56,7 @@ export const SuggestionCard = memo(function SuggestionCard({
   active,
   placeable,
   onShowInText,
+  onShowCell,
   location,
   actions,
   onDismiss,
@@ -116,6 +120,9 @@ export const SuggestionCard = memo(function SuggestionCard({
           <span className="sr-only">Flagged text: </span>
           <q>{quote(s.text)}</q>
         </p>
+      ) : null}
+      {s.table_evidence ? (
+        <TableEvidence evidence={s.table_evidence} onShowCell={onShowCell ? () => onShowCell(s.id) : null} />
       ) : null}
       {s.replacement !== null && s.replacement !== undefined ? (
         <p className="card-repl">

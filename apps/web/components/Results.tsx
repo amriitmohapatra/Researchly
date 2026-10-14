@@ -7,7 +7,8 @@ import { CATEGORIES, CATEGORY_ORDER, countByCategory, sectionLabel } from "@/lib
 import type { ChecklistOffer } from "@/lib/checklists";
 import { briefState, narrativeState, profileLine } from "@/lib/profiles";
 import type { ScopeMap } from "@/lib/scope";
-import { resolveSpans, segment } from "@/lib/segments";
+import { resolveSpans, segment, type ResolvedSpan } from "@/lib/segments";
+import { baseId, cellHighlight, cellId } from "@/lib/table-evidence";
 import { PREVIOUS_NOTE, type PreviousMark } from "@/lib/check-session";
 import { buildLocator, isMultiFile } from "@/lib/source";
 import { buildQueue, passCounts, posAt, QUEUE_START, resolveSpot, spotOf, type QueuePos, type QueueState } from "@/lib/queue";
@@ -129,6 +130,8 @@ export function Results({
   const profileText = profileLine(data.profile);
   const heldBack = heldBackSentence(data.hidden_by_mode ?? 0);
   const [activeId, setActiveId] = useState<string | null>(null);
+  // X401: the card whose table cell is outlined in the text ("Show the cell"), if any.
+  const [cellFor, setCellFor] = useState<string | null>(null);
   const [focusReq, setFocusReq] = useState<FocusRequest | null>(null);
   const [revealReq, setRevealReq] = useState<RevealRequest | null>(null);
   const docColRef = useRef<HTMLDivElement>(null);
@@ -184,7 +187,18 @@ export function Results({
     [queue, split],
   );
   const resolved = useMemo(() => resolveSpans(submittedText, visible), [submittedText, visible]);
-  const segments = useMemo(() => segment(submittedText, resolved), [submittedText, resolved]);
+  // X401 cells that can be placed in the text, by the card they belong to.
+  const cells = useMemo(() => {
+    const out = new Map<string, ResolvedSpan>();
+    const stand = visible.map(cellHighlight).filter((x): x is Suggestion => x !== null);
+    for (const r of resolveSpans(submittedText, stand)) if (r.inRange) out.set(baseId(r.id), r);
+    return out;
+  }, [submittedText, visible]);
+  const shownCell = cellFor ? cells.get(cellFor) : undefined;
+  const segments = useMemo(
+    () => segment(submittedText, shownCell ? [...resolved, shownCell] : resolved),
+    [submittedText, resolved, shownCell],
+  );
   const placeable = useMemo(() => new Set(resolved.map((r) => r.id)), [resolved]);
   const hidden = hiddenPreferenceCount(data, showPreferences);
   // A multi-file upload (an Overleaf project): each card says which file and line it is in.
@@ -248,7 +262,9 @@ export function Results({
   );
 
   const onSelectFromText = useCallback(
-    (ids: readonly string[]) => {
+    (marked: readonly string[]) => {
+      // A table cell's highlight stands for its card.
+      const ids = [...new Set(marked.map(baseId))];
       if (ids.length === 0) return;
       if (queue) {
         // In a pass, a highlight moves the queue to that finding (repeated clicks cycle overlapping ones).
@@ -270,8 +286,16 @@ export function Results({
   );
 
   const onShowInText = useCallback((id: string) => {
+    setCellFor(null);
     setActiveId(id);
     setFocusReq((r) => ({ id, target: "mark", seq: (r?.seq ?? 0) + 1 }));
+  }, []);
+
+  /** X401: outline the table cell the card compared, and bring it into view. */
+  const onShowCell = useCallback((id: string) => {
+    setCellFor(id);
+    setActiveId(id);
+    setFocusReq((r) => ({ id: cellId(id), target: "mark", seq: (r?.seq ?? 0) + 1 }));
   }, []);
 
   const onDismiss = useCallback((s: Suggestion) => {
@@ -330,6 +354,7 @@ export function Results({
       active={current || s.id === activeId}
       placeable={placeable.has(s.id)}
       onShowInText={onShowInText}
+      onShowCell={cells.has(s.id) ? onShowCell : null}
       location={locations?.get(s.id) ?? null}
       actions={actions}
       onDismiss={onDismiss}

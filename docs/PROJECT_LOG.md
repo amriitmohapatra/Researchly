@@ -2676,3 +2676,14 @@ tests). Final: core 1250 passed / 2 skipped; service 239; web 465 unit;
 contract up to date; ruff clean; third-party scan 0 hits. Owner: one table
 in real Word on the Mac (wrong row → X401 names the cell; merged cells →
 whole-table check).
+
+**Addendum (P43, same day): the cell on the card.** Owner: "Show the X401
+cell on the card too." `apps/web/components/TableEvidence.tsx` renders
+`table_evidence` on the website card and the Word card: the cell's place,
+what it holds, what the sentence says, the rounding allowed. On the website
+"Show the cell" outlines the cell in the text (a dashed outline, so it
+never reads as a second finding); the outlined cell maps back to its card
+(`lib/table-evidence.ts`: `cellId`/`baseId`). Word shows the box without a
+jump, since the reply has no Word location for the cell. Evidence: 7 unit
+tests, 1 e2e; web 472 unit; checker, word, queue and table e2e 95 passed;
+lint, typecheck and the confidentiality boundary clean.

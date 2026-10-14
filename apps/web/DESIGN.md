@@ -286,6 +286,20 @@ own "Whole document" group so they are never lost. The chooser starts at
   older text is dropped. Nothing shows unless the engine says "ok"; after
   "too many requests" the strip stays quiet for a minute. Not on paper.
 
+## The table cell on an X401 card (2026-10-14)
+
+When a sentence names a row and a column of a table and quotes a number
+that is not in that cell, the card carries a small quiet box under the
+quoted words: where the cell is ("Table 1, row “Mortality”, column
+“Treatment”"), **The table holds** and **This sentence says** side by side,
+and the rounding the comparison allowed. Numbers in the serif, tabular
+figures; the box itself is the page background, not a category colour. On
+the website **Show the cell** outlines the cell in the text with a dashed
+line (outlined, not tinted: it is evidence, not a second finding) and moves
+focus there; choosing the outlined cell returns to the card; **Show in
+text** drops the outline. The Word card shows the same box without the
+jump.
+
 ## What was read (2026-10-14)
 
 - One quiet line under the results heading, after the profile line:

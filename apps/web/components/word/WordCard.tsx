@@ -6,6 +6,7 @@ import { categoryMeta, sectionLabel } from "@/lib/categories";
 import { dictionaryCandidate, isRuleId } from "@/lib/settings";
 import { CategoryBadge } from "../CategoryIcon";
 import { REASONING_LABEL } from "../SuggestionCard";
+import { TableEvidence } from "../TableEvidence";
 
 export interface CardNote {
   tone: "ok" | "info" | "problem";
@@ -97,6 +98,7 @@ export const WordCard = memo(function WordCard({ suggestion: s, active, applied,
           <q>{quote(s.text)}</q>
         </p>
       ) : null}
+      {s.table_evidence ? <TableEvidence evidence={s.table_evidence} /> : null}
       {hasFix ? (
         <p className="card-repl">
           <span className="card-repl-label">Suggested revision (your call):</span>{" "}

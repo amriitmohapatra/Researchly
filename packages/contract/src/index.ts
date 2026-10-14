@@ -61,6 +61,7 @@ export type CompleteOptions = S["CompleteOptions"];
 export type CompleteResponse = S["CompleteResponse"];
 export type CompletionCandidate = S["CompletionCandidate"];
 export type ReadingSummary = S["ReadingSummary"];
+export type TableEvidence = S["TableEvidence"];
 export type SetAside = S["SetAside"];
 
 /** Mirrors schemas.MAX_CONTENT_CHARS; checked client-side for usability only. */

@@ -1162,6 +1162,53 @@ main:focus {
   quotes: "\201C" "\201D";
 }
 
+/* X401: the table cell the sentence names, beside the number it quotes (Codex #7). */
+.card-table {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  font-size: 0.9375rem;
+}
+.card-table-place {
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.card-table-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  margin: 4px 0 0;
+}
+.card-table-values dt {
+  color: var(--ink-2);
+  font-size: 0.875rem;
+}
+.card-table-values dd {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.card-table-note {
+  margin-top: 4px;
+  color: var(--ink-2);
+  font-size: 0.875rem;
+}
+.card-table-show {
+  margin-top: 4px;
+  font-size: 0.875rem;
+}
+/* The cell itself, in the text: outlined rather than tinted, so it never reads as a second finding. */
+.hl.hl-cell {
+  background: transparent;
+  text-decoration-line: none;
+  outline: 2px dashed var(--line-strong);
+  outline-offset: 1px;
+}
+
 .card-repl {
   margin-top: 4px;
   font-size: 0.9375rem;
