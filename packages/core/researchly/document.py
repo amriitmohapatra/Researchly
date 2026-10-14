@@ -177,6 +177,18 @@ def _typed_caption(text: str, style: str) -> bool:
     return bool(_TYPED_CAPTION.match(text)) and not _TOC_ENTRY.search(text)
 
 
+def _cell_place(cell) -> Optional[tuple[int, int, int, int]]:
+    """A table cell's `[table, row, col]` or `[table, row, col, colspan]`
+    (0-based), as the .docx reader gives it; None for anything else."""
+    if not isinstance(cell, (list, tuple)) or len(cell) not in (3, 4):
+        return None
+    if not all(isinstance(x, int) and not isinstance(x, bool) and x >= 0
+               for x in cell):
+        return None
+    span = cell[3] if len(cell) == 4 else 1
+    return (cell[0], cell[1], cell[2], span) if span >= 1 else None
+
+
 @dataclass
 class StructureItem:
     """A figure, table, equation, caption or citation (kept for S2b)."""
@@ -202,6 +214,11 @@ class Document:
     # (start, end) spans that are table cells, not prose. Metrics exclude
     # them: a table of parameter values is not a set of long sentences.
     table_spans: list[tuple[int, int]] = field(default_factory=list)
+    # (start, end, table, row, col, colspan) for the table cells whose place
+    # in their table is known (an uploaded .docx gives it; the add-in does
+    # not): X401 reads rows and columns from them (Codex review #7).
+    table_cells: list[tuple[int, int, int, int, int, int]] = field(
+        default_factory=list)
     # Set by the file adapters (researchly.ingest); empty for pasted text.
     segments: list[Segment] = field(default_factory=list)
     structure: list[StructureItem] = field(default_factory=list)
@@ -344,12 +361,17 @@ class Document:
         chars = list(doc.masked)
         style_headings: list[Heading] = []
         table_spans: list[tuple[int, int]] = []
+        table_cells: list[tuple[int, int, int, int, int, int]] = []
         captions: list[StructureItem] = []
         for i, p in enumerate(paragraphs):
             style = (p.get("style") or "").lower().replace(" ", "")
             title = texts[i].strip()
             if p.get("kind") == "table" and title:
                 table_spans.append((offsets[i], offsets[i] + len(texts[i])))
+                place = _cell_place(p.get("cell"))
+                if place is not None:
+                    table_cells.append(
+                        (offsets[i], offsets[i] + len(texts[i])) + place)
                 continue          # never a heading, never prose
             if not title:
                 continue
@@ -398,6 +420,7 @@ class Document:
                             end=end, level=level))
                 _mask_spans(chars, [(start, end)])
         doc.table_spans = table_spans
+        doc.table_cells = table_cells
         doc.structure = captions
         if table_spans:
             # from_text() already ran keyword heading detection over the
