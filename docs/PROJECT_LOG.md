@@ -2664,3 +2664,15 @@ anything is relevant to be added to researchly's brain").
 - Three helpers on one website conflict in the same composer; merging one
   branch and asking the next helper to merge onto it worked better than
   resolving eight files by hand.
+
+**Addendum (P43, same day): the two X401s reconciled.** After the merge
+with P42, the kept engine fills `Suggestion.table_evidence` (exactly the
+contract's TableEvidence fields) when a named row × column comes down to one
+numeric cell, and None otherwise; `MAX_CELL_INDEX` (100,000) bounds cell
+places in the engine and the schema alike. The hosted taskpane
+(`apps/web/lib/word/office.ts`) now sends cell places on WordApi 1.3, none
+for merged or nested tables, older Word or any error (15 unit, 4 e2e
+tests). Final: core 1250 passed / 2 skipped; service 239; web 465 unit;
+contract up to date; ruff clean; third-party scan 0 hits. Owner: one table
+in real Word on the Mac (wrong row → X401 names the cell; merged cells →
+whole-table check).
