@@ -46,11 +46,28 @@ export interface OfficeRangeCollection {
   load(props?: string): void;
 }
 
+/** WordApi 1.3+ only. */
+export interface OfficeTableRow {
+  cellCount: number;
+  load(props?: string): void;
+}
+
+/** WordApi 1.3+ only. `rowIndex` and `cellIndex` count cells along the row, 0-based. */
+export interface OfficeTableCell {
+  isNullObject?: boolean;
+  rowIndex: number;
+  cellIndex: number;
+  parentRow: OfficeTableRow;
+  load(props?: string): void;
+}
+
 export interface OfficeParagraph {
   text: string;
   style: string;
   styleBuiltIn?: string;
   tableNestingLevel?: number;
+  /** WordApi 1.3+ only: the table cell this paragraph is in (a null object outside tables). */
+  parentTableCellOrNullObject?: OfficeTableCell;
   search(searchText: string, options: { matchCase: boolean }): OfficeRangeCollection;
   /** WordApi 1.3+ only (word prediction reads the paragraph up to the cursor with it). */
   getRange?(rangeLocation?: string): OfficeRange;
@@ -140,12 +157,17 @@ export type HostStatus =
   /** office.js never arrived (blocked, offline) or never became ready. */
   | { status: "unavailable" };
 
-export function canTrackChanges(api: OfficeApi): boolean {
+/** Whether this Word supports WordApi `version`; false when it cannot say. */
+function wordApiAtLeast(api: OfficeApi, version: string): boolean {
   try {
-    return api.Office.context.requirements.isSetSupported("WordApi", "1.4");
+    return api.Office.context.requirements.isSetSupported("WordApi", version);
   } catch {
     return false;
   }
+}
+
+export function canTrackChanges(api: OfficeApi): boolean {
+  return wordApiAtLeast(api, "1.4");
 }
 
 /**
@@ -218,14 +240,135 @@ export function toWordParagraph(p: {
 
 /* ---------- reading ---------- */
 
-/** The document body's paragraphs, in order (footnotes, headers and text boxes are not included). */
+/**
+ * The document body's paragraphs, in order (footnotes, headers and text
+ * boxes are not included). A table paragraph also carries its `cell` place
+ * where Word can report it reliably (readCellPlaces).
+ */
 export function readParagraphs(api: OfficeApi): Promise<WordParagraph[]> {
   return api.Word.run(async (ctx) => {
     const paras = ctx.document.body.paragraphs;
     paras.load("items/text,items/style,items/styleBuiltIn,items/tableNestingLevel");
     await ctx.sync();
-    return paras.items.map(toWordParagraph);
+    const out = paras.items.map((p) => toWordParagraph(p));
+    const places = await readCellPlaces(api, ctx, paras.items);
+    places.forEach((cell, i) => {
+      if (cell && out[i]) out[i].cell = cell;
+    });
+    return out;
   });
+}
+
+/* ---------- table cell places (X401, Codex review #7) ---------- */
+
+/** The contract's bound on a table, row or column number (`WordParagraph.cell`; the service's MAX_CELL_INDEX). */
+export const MAX_CELL_INDEX = 100_000;
+
+/** `[table, row, col]`, 0-based: where a table paragraph sits. */
+export type CellPlace = [number, number, number];
+
+/**
+ * What Word reports for one paragraph: `level` (tableNestingLevel), `row`
+ * and `cell` (its cell's rowIndex and cellIndex) and `cells` (its row's
+ * cellCount). The last three are missing where Word could not place it.
+ */
+export interface CellReport {
+  level: number;
+  row?: number;
+  cell?: number;
+  cells?: number;
+}
+
+/** Cell places need `Paragraph.parentTableCellOrNullObject`, `TableCell.parentRow` and `TableRow.cellCount`: WordApi 1.3. */
+export function canPlaceCells(api: OfficeApi): boolean {
+  return wordApiAtLeast(api, "1.3");
+}
+
+/**
+ * Cell places from what Word reports per paragraph: `[table, row, col]` or
+ * null for each.
+ *
+ * Tables are numbered in order. Word joins two tables with nothing between
+ * them into one, so a run of consecutive table paragraphs is one table.
+ * cellIndex counts cells along the row, not grid columns: a horizontally
+ * merged cell shifts every later column. So a table whose rows report
+ * different cell counts (merged cells) gets no places at all, as does a
+ * table inside a table, or any table with a paragraph Word could not place.
+ * Without places the engine checks the whole table: nothing is guessed.
+ */
+export function tablePlaces(paras: readonly CellReport[]): (CellPlace | null)[] {
+  const out: (CellPlace | null)[] = paras.map(() => null);
+  let table = -1;
+  let i = 0;
+  while (i < paras.length) {
+    if (!(paras[i]!.level > 0)) {
+      i += 1;
+      continue;
+    }
+    let j = i;
+    while (j < paras.length && paras[j]!.level > 0) j += 1;
+    table += 1;
+    const run = paras.slice(i, j);
+    if (table <= MAX_CELL_INDEX && placeable(run)) {
+      run.forEach((p, k) => {
+        out[i + k] = [table, p.row!, p.cell!];
+      });
+    }
+    i = j;
+  }
+  return out;
+}
+
+function placeable(run: readonly CellReport[]): boolean {
+  const whole = (n: number | undefined): n is number => Number.isInteger(n) && n! >= 0 && n! <= MAX_CELL_INDEX;
+  let count: number | null = null;
+  let lastRow = 0;
+  for (const p of run) {
+    if (p.level !== 1) return false; // a table inside a table
+    if (!whole(p.row) || !whole(p.cell) || !whole(p.cells)) return false;
+    if (p.cell >= p.cells || p.row < lastRow) return false;
+    if (count === null) count = p.cells;
+    else if (p.cells !== count) return false; // merged cells
+    lastRow = p.row;
+  }
+  return true;
+}
+
+/**
+ * Ask Word where each table paragraph sits, inside the reading batch. Never
+ * throws: an older Word, a document without tables or any error gives no
+ * places (the check goes ahead without them). Reads only cell numbers, no
+ * text.
+ */
+export async function readCellPlaces(
+  api: OfficeApi,
+  ctx: WordRequestContext,
+  items: readonly OfficeParagraph[],
+): Promise<(CellPlace | null)[]> {
+  const none = items.map(() => null);
+  if (!canPlaceCells(api)) return none;
+  if (!items.some((p) => (p.tableNestingLevel ?? 0) > 0)) return none;
+  try {
+    const cells = items.map((p) => ((p.tableNestingLevel ?? 0) > 0 ? (p.parentTableCellOrNullObject ?? null) : null));
+    cells.forEach((c) => c?.load("rowIndex,cellIndex"));
+    await ctx.sync();
+    const rows = cells.map((c) => (c && !c.isNullObject ? c.parentRow : null));
+    rows.forEach((r) => r?.load("cellCount"));
+    await ctx.sync();
+    return tablePlaces(
+      items.map((p, i) => {
+        const c = rows[i] ? cells[i] : null;
+        return {
+          level: p.tableNestingLevel ?? 0,
+          row: c?.rowIndex,
+          cell: c?.cellIndex,
+          cells: rows[i]?.cellCount,
+        };
+      }),
+    );
+  } catch {
+    return none; // a host that cannot report cells loses nothing else
+  }
 }
 
 /**
@@ -467,11 +610,7 @@ async function restoreTracking(ctx: WordRequestContext, track: boolean, prior: s
  * panel rather than a guess.
  */
 export function canPredict(api: OfficeApi): boolean {
-  try {
-    return api.Office.context.requirements.isSetSupported("WordApi", "1.3");
-  } catch {
-    return false;
-  }
+  return wordApiAtLeast(api, "1.3");
 }
 
 /** The text of the cursor's paragraph up to the cursor, or why there is none to read. */
