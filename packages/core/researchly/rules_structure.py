@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import re
 
+from . import tables
 from .document import _RELATION, Document
 from .engine import Category, Suggestion, rule
 from .structure import Structure, analyse, number_text
@@ -445,6 +446,12 @@ def _word_display_equations(document: Document):
 
 
 # --- X401: does the number quoted from a table appear in it? ------------------------
+#
+# Where the sentence names a row or a column of the table ("the incidence
+# in the 18–29 age group was 4.1"), the number nearest that name must be
+# in that row and column (Codex review #7). Everything else in the
+# sentence, and every sentence whose row or column cannot be found with
+# confidence, is looked for anywhere in the table, as before.
 
 _VALUE = re.compile(
     r"(?<![\w.])(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?(?![.\d])(\s*\\?%)?")
@@ -474,20 +481,218 @@ def _in_table(value: float, decimals: int, table_text: str) -> bool:
     return False
 
 
-@rule("X401", "number-not-in-table", Category.CORRECTION,
-      "A number quoted with 'Table N' that Table N does not contain.",
-      'When a sentence cites a table and quotes a figure from it, the '
-      'reader will look for that number in the table. A mismatch is '
-      'usually a typo, a value from an older run, or a number from '
-      'another table. Derived numbers (differences, ratios) are worth a '
-      'word saying so.',
-      plain=('This sentence cites a table and quotes a number, but that number '
-             'is not in the table. It may be a typo, an old value, or a number '
-             'from a different table. If you calculated it from the table, say '
-             'so.'),
-      source="§6",
-      scope="document")
-def x401_number_not_in_table(doc, document: Document):
+def _table_model(document: Document, t) -> "tables.Table | None":
+    """The table as rows and columns, read once per document; None when
+    it has no grid this engine can read (the add-in's Word cells, a
+    \\captionof table, two tabulars in one float)."""
+    cache = document.__dict__.setdefault("_x401_tables", {})
+    key = (t.start, t.end)
+    if key not in cache:
+        try:
+            cache[key] = _read_table(document, t)
+        except Exception:            # an unreadable table: whole-table check
+            cache[key] = None
+    return cache[key]
+
+
+def _read_table(document: Document, t):
+    if document.kind == "latex":
+        grid = tables.latex_grid(document.original[t.start:t.end])
+    elif document.kind == "word":
+        cells = [c for c in document.table_cells if t.start <= c[0] < t.end]
+        spans = [s for s in document.table_spans if t.start <= s[0] < t.end]
+        # Every cell must know its place, or the grid has holes.
+        if not cells or len(cells) != len(spans):
+            return None
+        grid = tables.word_grid([c + (document.original[c[0]:c[1]],)
+                                 for c in cells])
+    else:
+        return None
+    return tables.read(grid) if grid is not None else None
+
+
+# "Table 2" names no row: blanked before the sentence is matched.
+_FLOAT_NAME = re.compile(
+    r"\b(?:Tables?|Tab\.|Fig(?:ure)?s?\.?)~?\s*(?:[A-Z]\.?)?\d+[a-z]?")
+# A comparison, a derived number or a paired list: the number next to a
+# row's name may belong to another row, so no cell is assumed.
+_CONTRAST = re.compile(
+    r"\b(?:than|unlike|compared|comparison|whereas|while|versus|vs|"
+    r"relative|against|except|respectively|between|differ\w*|ratio|"
+    r"times|fold|increase[sd]?|decrease[sd]?|reduction|reduced|change[sd]?|"
+    r"rose|fell|risen|fallen|higher|lower)\b", re.IGNORECASE)
+_BIND_DISTANCE = 60
+
+
+def _nearest(found: list, spans: list, text: str):
+    """The quoted number closest to where the sentence names the row (or
+    column): only that one is held to the cell. None on a tie or when the
+    closest is far away or across a semicolon."""
+    best = []
+    for item in found:
+        m = item[0]
+        d = min(m.start() - b if m.start() >= b else
+                a - m.end() if m.end() <= a else 0 for a, b in spans)
+        lo = min(m.start(), min(a for a, _ in spans))
+        hi = max(m.end(), max(b for _, b in spans))
+        if ";" in text[lo:hi] and d > 0:
+            continue
+        best.append((d, item))
+    best.sort(key=lambda x: x[0])
+    if not best or best[0][0] > _BIND_DISTANCE:
+        return None
+    if len(best) > 1 and best[1][0] == best[0][0]:
+        return None
+    return best[0][1]
+
+
+_CLAUSE_BREAK = re.compile(
+    r"[;:,()]|\b(?:and|but|or|where|which|while|whereas|with|who|whom)\b",
+    re.IGNORECASE)
+
+
+def _attached(text: str, spans: list, m) -> bool:
+    """Does a column's name belong to this number: "the incidence was
+    4.1", not "incidence was highest in the north, where 45.2% ..."? Only
+    then does the number have to be in that column."""
+    for a, b in spans:
+        lo, hi = (b, m.start()) if b <= m.start() else (m.end(), a)
+        if lo <= hi and not _CLAUSE_BREAK.search(text, lo, hi):
+            return True
+    return False
+
+
+def _quote(s: str, limit: int = 40) -> str:
+    s = " ".join(s.split())
+    return "'" + (s if len(s) <= limit else s[:limit - 1].rstrip() + "…") + "'"
+
+
+def _place(t, model, rows, cols) -> str:
+    out = t.name
+    if rows is not None:
+        if len(rows.cover) == 1:
+            label = model.row_name[next(iter(rows.cover))]
+        else:
+            label = " / ".join(lab.text for lab in rows.labels)
+        out += f", row {_quote(label)}"
+    if cols is not None:
+        if len(cols.cover) == 1:
+            label = model.col_name[next(iter(cols.cover))]
+        else:
+            label = " / ".join(lab.text for lab in cols.labels)
+        out += f", column {_quote(label)}"
+    return out
+
+
+def _listing(nums: list) -> str:
+    shown = []
+    for n in nums:
+        if n.written not in shown:
+            shown.append(n.written)
+    if len(shown) <= 3:
+        return (shown[0] if len(shown) == 1 else
+                ", ".join(shown[:-1]) + " and " + shown[-1])
+    return ", ".join(shown[:3]) + f" and {len(shown) - 3} more"
+
+
+def _decimal_places(d: int) -> str:
+    return "a whole number" if d == 0 else (
+        "1 decimal place" if d == 1 else f"{d} decimal places")
+
+
+def _judge(t, model, rows, cols, written: str, text: str, end: int):
+    """("pass" | "flag" | "abstain", evidence) for the number the sentence
+    gives for a named row or column."""
+    quoted = tables.numbers(written)[0]
+    row_set = sorted(rows.cover) if rows else model.data_rows
+    col_set = sorted(cols.cover) if cols else model.value_cols
+    expected = model.values(row_set, col_set)
+    # The named row or column must hold numbers of the kind quoted, or the
+    # sentence did not mean it ("in most cases" is not the Cases column).
+    if quoted.decimals > 0:
+        if not any(n.decimals > 0 for _, _, n in expected):
+            return "abstain", ""
+    elif not any(n.percent or "%" in model.unit_text(r, c)
+                 for r, c, n in expected):
+        return "abstain", ""
+    place = _place(t, model, rows, cols)
+    main = []                     # each expected cell's first number
+    seen = set()
+    for r, c, n in expected:
+        if (r, c) not in seen:
+            seen.add((r, c))
+            main.append((r, c, n))
+    hits = [(r, c, n) for r, c, n in expected if tables.rounds_to(n, quoted)]
+    after = text[end:end + 48]
+    m = re.match(r"\s*(?:[A-Za-z-]+\s+){0,3}?(?:per\b|/)\s*[\d ,]+", after)
+    text_base = tables.per_base(m.group(0)) if m else None
+    if hits:
+        conflicts = []
+        for r, c, n in hits:
+            unit = model.unit_text(r, c)
+            base = tables.per_base(unit)
+            percent_cell = n.percent or "%" in unit
+            if text_base and base and text_base != base:
+                conflicts.append(
+                    f"{place} holds {n.written} per {base:,}, but the text "
+                    f"gives {written} per {text_base:,} — check the units.")
+            elif quoted.percent and base and not percent_cell:
+                conflicts.append(
+                    f"{place} holds {n.written} per {base:,}, but the text "
+                    f"gives {written} — a rate, not a percentage?")
+            else:
+                how = ("" if n.value == quoted.value else
+                       ", which matches when rounded to "
+                       + _decimal_places(quoted.decimals))
+                return "pass", (f"{place}: {n.written} — the text says "
+                                f"{written}{how}")
+        return "flag", conflicts[0]
+    # Not in the named cell. A proportion is not a percentage.
+    for r, c, n in main:
+        percent_cell = n.percent or "%" in model.unit_text(r, c)
+        if quoted.percent and not percent_cell and tables.rounds_to(
+                tables.Number(n.written, n.value * 100, max(0, n.decimals - 2),
+                              True), quoted):
+            return "flag", (f"{place} holds {n.written}, a proportion; the "
+                            f"text gives {written}, a percentage — use one "
+                            "form so they match.")
+        if not quoted.percent and percent_cell and tables.rounds_to(
+                tables.Number(n.written, n.value / 100, n.decimals + 2,
+                              False), quoted):
+            return "flag", (f"{place} holds {n.written}, a percentage; the "
+                            f"text gives {written}, a proportion — use one "
+                            "form so they match.")
+    holds = _listing([n for _, _, n in main])
+    if len(main) == 1 and main[0][2].decimals > quoted.decimals:
+        holds += (f" ({tables.rounded(main[0][2], quoted.decimals)} when "
+                  f"rounded to {_decimal_places(quoted.decimals)})")
+    elsewhere = [(r, c) for r, c, n in model.values(model.data_rows,
+                                                     model.value_cols)
+                 if tables.rounds_to(n, quoted)]
+    if elsewhere:
+        r, c = elsewhere[0]
+        where, why = [], "cell"
+        if r not in row_set:
+            where.append(f"row {_quote(model.row_name[r])}")
+            groups = {model.group_of.get(x, "") for x in row_set}
+            why = ("group" if model.group_of.get(r, "") not in groups
+                   else "row")
+        if c not in col_set:
+            where.append(f"column {_quote(model.col_name[c])}")
+            why = "column" if r in row_set else "cell"
+        return "flag", (f"{place} holds {holds}, not {written}; {written} "
+                        f"is in {', '.join(where)} — a value from the wrong "
+                        f"{why}?")
+    return "flag", (f"{place} holds {holds}, not {written} — a typo, an "
+                    "older value, or a number from elsewhere?")
+
+
+def table_evidence(doc, document: Document):
+    """For each number a sentence quotes from one table: (start, end,
+    verdict, evidence). The verdict is "pass" or "flag" for the number held
+    to a named row and column (its evidence names the cell and any
+    rounding), "missing" for any other number that is nowhere in the
+    table. X401 reports the flags and the missing."""
     st = structure_of(document)
     floats_cited: dict = {}
     for m, fs in _text_mentions(st):
@@ -501,11 +706,11 @@ def x401_number_not_in_table(doc, document: Document):
         if not cited:
             continue
         kinds = {f.kind for f in cited}
-        tables = {id(f): f for f in cited if f.kind == "table"}
+        tabs = {id(f): f for f in cited if f.kind == "table"}
         # One table and nothing else: then the number must come from it.
-        if kinds != {"table"} or len(tables) != 1:
+        if kinds != {"table"} or len(tabs) != 1:
             continue
-        (t,) = tables.values()
+        (t,) = tabs.values()
         table_text = document.original[t.start:t.end]
         # A percentage quoted from a table of counts is derived, not
         # copied: only judge the kinds of number the table itself holds.
@@ -514,6 +719,7 @@ def x401_number_not_in_table(doc, document: Document):
         text = document.masked[a:b]
         if _AGGREGATE.search(text):
             continue                 # "altogether 99.9%": summed, not quoted
+        found = []
         for m in _VALUE.finditer(text):
             vals = _values(m.group(0))
             if not vals:
@@ -526,13 +732,60 @@ def x401_number_not_in_table(doc, document: Document):
                     or _LEVEL_BEFORE.search(text[max(0, m.start() - 12):
                                                  m.start()])):
                 continue
-            if _in_table(value, decimals, table_text):
-                continue
-            shown = written.replace("\\%", "%")
-            yield Suggestion(
-                message=f"{shown} is not in {t.name} — a typo, an older "
-                        "value, or a number from elsewhere?",
-                start=a + m.start(), end=a + m.start() + len(written))
+            found.append((m, written.replace("\\%", "%"), value, decimals))
+        if not found:
+            continue
+        bound, rows, cols = None, None, None
+        model = _table_model(document, t)
+        if model is not None and not _CONTRAST.search(text):
+            probe = _FLOAT_NAME.sub(lambda x: " " * len(x.group(0)), text)
+            rows, cols = tables.locate(model, probe)
+            if rows is not None:
+                # The number nearest the row's name is that row's.
+                bound = _nearest(found, rows.spans, text)
+            elif cols is not None:
+                bound = _nearest(found, cols.spans, text)
+            if (bound is not None and cols is not None
+                    and not _attached(text, cols.spans, bound[0])):
+                cols = None              # the column is named for another
+                if rows is None:         # number, or in another clause
+                    bound = None
+        for item in found:
+            m, written, value, decimals = item
+            start, end = a + m.start(), a + m.start() + len(m.group(0).strip())
+            if item is bound:
+                verdict, evidence = _judge(t, model, rows, cols, written,
+                                           text, m.end())
+                if verdict != "abstain":
+                    yield start, end, verdict, evidence
+                    continue
+            if not _in_table(value, decimals, table_text):
+                yield start, end, "missing", (
+                    f"{written} is not in {t.name} — a typo, an older "
+                    "value, or a number from elsewhere?")
+
+
+@rule("X401", "number-not-in-table", Category.CORRECTION,
+      "A number quoted with 'Table N' that Table N does not contain, or "
+      "that sits in another row or column than the one the sentence names.",
+      'When a sentence cites a table and quotes a figure from it, the '
+      'reader will look for that number in the table, in the row and '
+      'column the sentence names. A mismatch is usually a typo, a value '
+      'from an older run, a number from another row or group, or a number '
+      'from another table. A rounded value matches; a proportion does not '
+      'match a percentage. Derived numbers (differences, ratios) are worth '
+      'a word saying so.',
+      plain=('This sentence cites a table and quotes a number, but that number '
+             'is not where the sentence says it is: not in the table, or not '
+             'in the row or column the sentence names. It may be a typo, an '
+             'old value, or a number from a different row or table. If you '
+             'calculated it from the table, say so.'),
+      source="§6",
+      scope="document")
+def x401_number_not_in_table(doc, document: Document):
+    for start, end, verdict, evidence in table_evidence(doc, document):
+        if verdict != "pass":
+            yield Suggestion(message=evidence, start=start, end=end)
 
 
 _AGGREGATE = re.compile(
