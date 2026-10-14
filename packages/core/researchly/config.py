@@ -40,6 +40,12 @@ AGGRESSIVENESS = ("light", "standard", "thorough")
 
 LOCALES = ("en-US", "en-GB")
 
+# Which English spelling the writer keeps to (2026-10-14). "auto" follows
+# the document's own majority and flags only mixtures (W210); a choice also
+# flags any spelling of another dialect (W213: "color" in a British paper).
+# Indian English is spelled as British English (owner, 2026-10-14).
+SPELLINGS = ("auto", "us", "uk", "uk-oxford", "ca", "au", "in")
+
 # Draft / Revise (P1, S3). Draft shows sentence-level checks only; Revise
 # shows everything. A writing stage, not a quality dial: Corrections at
 # sentence level are shown in both.
@@ -55,11 +61,15 @@ class Config:
     document_type: str = "auto"
     aggressiveness: str = "standard"
     mode: str = "revise"
+    spelling: str = "auto"
     # Tier switches. `None` means "use it if it is available" — an explicit
     # False is the user turning it off, which health.py reports differently
     # from "missing".
     grammar_tier: Optional[bool] = None
     gec_tier: Optional[bool] = None
+    # Word prediction (2026-10-14, a core feature): on unless the writer
+    # turns it off. It only ever offers; a surface inserts on Tab or click.
+    prediction: bool = True
     # Extra dictionary words from config. spelling.py has documented this
     # since v0.5 but nothing ever populated it.
     dictionary: list[str] = field(default_factory=list)
@@ -80,8 +90,10 @@ class Config:
             "document_type": self.document_type,
             "aggressiveness": self.aggressiveness,
             "mode": self.mode,
+            "spelling": self.spelling,
             "grammar_tier": self.grammar_tier,
             "gec_tier": self.gec_tier,
+            "prediction": self.prediction,
             "dictionary": list(self.dictionary),
         }
 
@@ -156,12 +168,20 @@ def _apply(cfg: Config, data: dict) -> Config:
         val = str(doc["locale"])
         if val in LOCALES:
             cfg.locale = val
+    if "spelling" in doc:
+        val = str(doc["spelling"])
+        if val in SPELLINGS:
+            cfg.spelling = val
 
     tiers = data.get("tiers") or {}
     if "grammar" in tiers:
         cfg.grammar_tier = bool(tiers["grammar"])
     if "gec" in tiers:
         cfg.gec_tier = bool(tiers["gec"])
+
+    features = data.get("features") or {}
+    if "prediction" in features:
+        cfg.prediction = bool(features["prediction"])
 
     dictionary = data.get("dictionary") or {}
     words = dictionary.get("words") or []
@@ -182,7 +202,9 @@ def apply_remote(cfg: Config, data: dict) -> Config:
 
     `data` is the shape `my_config()` returns in Supabase:
     {"disabled_rules": [...], "show_preferences": bool, "locale": str,
-     "mode": "draft" | "revise", "dictionary": [...]}. It came over the network, so every value is
+     "mode": "draft" | "revise", "document_type": str, "spelling": str,
+     "prediction": bool,
+     "dictionary": [...]}. It came over the network, so every value is
     checked and anything malformed is dropped rather than trusted; the same
     limits are enforced by the database, so dropping only bites on a bug.
     """
@@ -201,6 +223,10 @@ def apply_remote(cfg: Config, data: dict) -> Config:
         cfg.mode = data["mode"]
     if data.get("document_type") in DOCUMENT_TYPES:
         cfg.document_type = data["document_type"]
+    if data.get("spelling") in SPELLINGS:
+        cfg.spelling = data["spelling"]
+    if isinstance(data.get("prediction"), bool):
+        cfg.prediction = data["prediction"]
     words = data.get("dictionary")
     if isinstance(words, list):
         good = [w for w in words[:MAX_REMOTE_WORDS]
@@ -265,6 +291,7 @@ def dumps(cfg: Config) -> str:
         "[document]",
         f"type = {_toml_str(cfg.document_type)}",
         f"locale = {_toml_str(cfg.locale)}",
+        f"spelling = {_toml_str(cfg.spelling)}",
         "",
         "[tiers]",
     ]
@@ -272,6 +299,8 @@ def dumps(cfg: Config) -> str:
         lines.append(f"grammar = {'true' if cfg.grammar_tier else 'false'}")
     if cfg.gec_tier is not None:
         lines.append(f"gec = {'true' if cfg.gec_tier else 'false'}")
+    lines += ["", "[features]",
+              f"prediction = {'true' if cfg.prediction else 'false'}"]
     if cfg.dictionary:
         lines += ["", "[dictionary]",
                   f"words = {_toml_list(cfg.dictionary)}"]

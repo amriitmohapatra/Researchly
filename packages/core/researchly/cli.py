@@ -27,12 +27,9 @@ import json
 import sys
 from pathlib import Path
 
-from .document import Document
-from .engine import REGISTRY, Category, check
+from .engine import REGISTRY, Category
 from . import api
 from . import config as config_mod
-from . import metrics as metrics_mod
-from .health import summary_line
 from .ingest import IngestError, source_position
 
 # --- ANSI ----------------------------------------------------------------
@@ -343,7 +340,7 @@ def cmd_abstract(args) -> int:
 
     result = analyze(text)
     print(f"\n{_c(BOLD, 'Abstract lens — six-part completeness')} "
-          f"{_c(DIM, '(Belcher 2021 / Pallas 2022)')}\n")
+          f"{_c(DIM, '(Belcher 2021 / Pallas 2023)')}\n")
     missing = []
     for move in MOVES:
         r = result[move]
@@ -433,6 +430,18 @@ def cmd_explain(args) -> int:
     return 0
 
 
+def cmd_complete(args) -> int:
+    """Word prediction at the end of the text: what an editor would offer."""
+    from . import api
+    got = api.complete(args.text, kind=args.kind)
+    if got.status != "ok":
+        print(f"(no prediction: {got.status})")
+        return 0
+    for c in got.candidates:
+        print(c.text)
+    return 0
+
+
 # --- entry -----------------------------------------------------------------
 
 def main(argv=None) -> int:
@@ -503,6 +512,13 @@ def main(argv=None) -> int:
     p_polish.add_argument("--kind", default="plain",
                           choices=["plain", "markdown", "latex"])
     p_polish.set_defaults(func=cmd_polish)
+
+    p_complete = sub.add_parser(
+        "complete", help="word prediction: how the text might go on")
+    p_complete.add_argument("text")
+    p_complete.add_argument("--kind", default="plain",
+                            choices=["plain", "markdown", "latex"])
+    p_complete.set_defaults(func=cmd_complete)
 
     args = parser.parse_args(argv)
     return args.func(args)

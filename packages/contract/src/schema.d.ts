@@ -67,6 +67,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Complete
+         * @description Word prediction at a cursor: the end of the word being typed, or the
+         *     next word or short fixed term. Candidates only; nothing is inserted
+         *     unless the writer accepts one. Nothing is offered in maths, code,
+         *     citations, URLs or headings, or when the writer has turned it off.
+         */
+        post: operations["complete"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/health": {
         parameters: {
             query?: never;
@@ -153,6 +176,11 @@ export interface components {
     schemas: {
         /** AnalyzeFileResponse */
         AnalyzeFileResponse: {
+            /**
+             * Assessed Rules
+             * @description The rules whose findings this check could show (not muted, not off for the article type, not held back by Draft, not hidden preferences, not on a tier that is down). A rule outside this list was not assessed: not the same as zero.
+             */
+            assessed_rules?: string[];
             /** @description Present when `options.checklist` was set and resolved to a checklist. */
             checklist?: components["schemas"]["ChecklistReport"] | null;
             /**
@@ -189,8 +217,15 @@ export interface components {
             narrative?: components["schemas"]["NarrativeMap"] | null;
             /** @description The article-type profile this check ran under. */
             profile?: components["schemas"]["ProfileInfo"];
+            /** @description What was read and what was set aside. */
+            reading?: components["schemas"]["ReadingSummary"] | null;
             /** @description Present when `options.review` was true. */
             review?: components["schemas"]["ReviewReport"] | null;
+            /**
+             * Ruleset
+             * @description Engine version and a fingerprint of its rules; checks compare only under the same.
+             */
+            ruleset?: string | null;
             /**
              * Schema Version
              * @default 1
@@ -249,6 +284,8 @@ export interface components {
              * @default false
              */
             show_preferences: boolean;
+            /** @description The English spelling to keep to. Omitted: the caller's saved setting, else auto. */
+            spelling?: components["schemas"]["Spelling"] | null;
         };
         /** AnalyzeRequest */
         AnalyzeRequest: {
@@ -266,6 +303,11 @@ export interface components {
         };
         /** AnalyzeResponse */
         AnalyzeResponse: {
+            /**
+             * Assessed Rules
+             * @description The rules whose findings this check could show (not muted, not off for the article type, not held back by Draft, not hidden preferences, not on a tier that is down). A rule outside this list was not assessed: not the same as zero.
+             */
+            assessed_rules?: string[];
             /** @description Present when `options.checklist` was set and resolved to a checklist. */
             checklist?: components["schemas"]["ChecklistReport"] | null;
             /**
@@ -301,8 +343,15 @@ export interface components {
             narrative?: components["schemas"]["NarrativeMap"] | null;
             /** @description The article-type profile this check ran under. */
             profile?: components["schemas"]["ProfileInfo"];
+            /** @description What was read and what was set aside. */
+            reading?: components["schemas"]["ReadingSummary"] | null;
             /** @description Present when `options.review` was true. */
             review?: components["schemas"]["ReviewReport"] | null;
+            /**
+             * Ruleset
+             * @description Engine version and a fingerprint of its rules; checks compare only under the same.
+             */
+            ruleset?: string | null;
             /**
              * Schema Version
              * @default 1
@@ -341,6 +390,11 @@ export interface components {
         };
         /** AnalyzeWordResponse */
         AnalyzeWordResponse: {
+            /**
+             * Assessed Rules
+             * @description The rules whose findings this check could show (not muted, not off for the article type, not held back by Draft, not hidden preferences, not on a tier that is down). A rule outside this list was not assessed: not the same as zero.
+             */
+            assessed_rules?: string[];
             /** @description Present when `options.checklist` was set and resolved to a checklist. */
             checklist?: components["schemas"]["ChecklistReport"] | null;
             /**
@@ -377,8 +431,15 @@ export interface components {
             narrative?: components["schemas"]["NarrativeMap"] | null;
             /** @description The article-type profile this check ran under. */
             profile?: components["schemas"]["ProfileInfo"];
+            /** @description What was read and what was set aside. */
+            reading?: components["schemas"]["ReadingSummary"] | null;
             /** @description Present when `options.review` was true. */
             review?: components["schemas"]["ReviewReport"] | null;
+            /**
+             * Ruleset
+             * @description Engine version and a fingerprint of its rules; checks compare only under the same.
+             */
+            ruleset?: string | null;
             /**
              * Schema Version
              * @default 1
@@ -434,15 +495,32 @@ export interface components {
         ChecklistItem: {
             /**
              * Evidence
-             * @description The sentence that reports it (never logged).
+             * @description The sentence that may report it (never logged).
              */
             evidence?: string | null;
             /** Id */
             id: string;
+            not_counted?: components["schemas"]["NotCounted"] | null;
+            /**
+             * Parts
+             * @description For a compound question, each part.
+             */
+            parts?: components["schemas"]["ChecklistPart"][];
             /** Plain */
             plain: string;
             /** Question */
             question: string;
+            /**
+             * Refs
+             * @description The guideline's own item numbers this question covers; empty = good practice the guideline does not list.
+             */
+            refs?: string[];
+            /**
+             * Section Absent
+             * @description The document has sections, but none of those where readers look for this item.
+             * @default false
+             */
+            section_absent: boolean;
             /**
              * Sections
              * @description Where readers look for it.
@@ -450,12 +528,30 @@ export interface components {
             sections?: string[];
             /**
              * Status
-             * @description needs_check is a prompt, never a verdict: the item may be in a table, a figure or the supplement, or not apply.
+             * @description found: possible evidence for every part, for the writer to confirm (a matching sentence is not proof); partial: some parts found; needs_check: a prompt, never a verdict (the item may be in a table, a figure or the supplement, or not apply).
              * @enum {string}
              */
-            status: "reported" | "needs_check";
+            status: "found" | "partial" | "needs_check";
             /** Topic */
             topic: string;
+        };
+        /**
+         * ChecklistPart
+         * @description One thing a compound question asks for (Codex review N1).
+         */
+        ChecklistPart: {
+            /**
+             * Evidence
+             * @description The sentence that may report it (never logged).
+             */
+            evidence?: string | null;
+            /** Found */
+            found: boolean;
+            /**
+             * Label
+             * @description e.g. "the date of the last search".
+             */
+            label: string;
         };
         /**
          * ChecklistReport
@@ -465,6 +561,16 @@ export interface components {
         ChecklistReport: {
             /** Design */
             design: string;
+            /**
+             * Edition
+             * @description The guideline version mapped, e.g. "PRISMA 2020".
+             */
+            edition: string;
+            /**
+             * Found
+             * @description Items with possible evidence for every part (to be confirmed by the writer).
+             */
+            found: number;
             /** Id */
             id: string;
             /** Items */
@@ -473,8 +579,8 @@ export interface components {
             label: string;
             /** Note */
             note: string;
-            /** Reported */
-            reported: number;
+            /** Partial */
+            partial: number;
             /** Source */
             source: string;
             /**
@@ -484,6 +590,77 @@ export interface components {
             suggested: boolean;
             /** Total */
             total: number;
+        };
+        /** CompleteOptions */
+        CompleteOptions: {
+            /**
+             * Limit
+             * @description How many candidates to return at most.
+             * @default 3
+             */
+            limit: number;
+            /** @description The English spelling to offer words in. Omitted: the caller's saved setting, else the spelling the text already uses. */
+            spelling?: components["schemas"]["Spelling"] | null;
+        };
+        /**
+         * CompleteRequest
+         * @description Word prediction at a cursor (2026-10-14). Send the text around the
+         *     cursor, not necessarily the whole document: a few thousand characters
+         *     before it are plenty, plus the rest of its paragraph.
+         */
+        CompleteRequest: {
+            /**
+             * Cursor
+             * @description Offset of the cursor in `text`, counted in Unicode code points (not UTF-16 units), like `start` and `end` in the reply. Omitted: the end of `text`.
+             */
+            cursor?: number | null;
+            /**
+             * @description How to read `text`.
+             * @default plain
+             */
+            format: components["schemas"]["Format"];
+            options?: components["schemas"]["CompleteOptions"];
+            /**
+             * Text
+             * @description Text around the cursor. Held in memory for this request only; never stored or logged.
+             */
+            text: string;
+        };
+        /** CompleteResponse */
+        CompleteResponse: {
+            /** Candidates */
+            candidates?: components["schemas"]["CompletionCandidate"][];
+            /**
+             * Status
+             * @description Why there are no candidates, when there are none: off (the writer turned prediction off), masked (the cursor is in maths, code, a citation, a URL or a heading), unavailable (no model).
+             * @default ok
+             * @enum {string}
+             */
+            status: "ok" | "off" | "masked" | "unavailable";
+        };
+        /** CompletionCandidate */
+        CompletionCandidate: {
+            /**
+             * End
+             * @description The cursor.
+             */
+            end: number;
+            /**
+             * Kind
+             * @description word: one word; term: a fixed term of two or three words ("confidence interval").
+             * @enum {string}
+             */
+            kind: "word" | "term";
+            /**
+             * Start
+             * @description Where the typed part of the word begins.
+             */
+            start: number;
+            /**
+             * Text
+             * @description What to put in place of `text[start:end]` if the writer accepts.
+             */
+            text: string;
         };
         /**
          * Coverage
@@ -690,9 +867,12 @@ export interface components {
         Mode: "draft" | "revise";
         /**
          * MoveStatus
+         * @description present / not_detected / out_of_order. "not_detected", not "missing":
+         *     the map reads wording, so it can only say a move was not found in it
+         *     (Codex review N5, 2026-10-14).
          * @enum {string}
          */
-        MoveStatus: "present" | "missing" | "out_of_order";
+        MoveStatus: "present" | "not_detected" | "out_of_order";
         /**
          * NarrativeMap
          * @description Per section, which moves are present, missing or out of order; the
@@ -778,6 +958,28 @@ export interface components {
             /** Words */
             words: number;
         };
+        /**
+         * NotCounted
+         * @description A sentence the signals matched that was not counted as reporting.
+         */
+        NotCounted: {
+            /**
+             * Label
+             * @description The reason in plain words.
+             */
+            label: string;
+            /**
+             * Quote
+             * @description The sentence (never logged).
+             */
+            quote: string;
+            /**
+             * Reason
+             * @description absent: it says the thing is not reported; future: it promises it for later; prior: it is about earlier studies.
+             * @enum {string}
+             */
+            reason: "absent" | "future" | "prior";
+        };
         /** ProfileChoice */
         ProfileChoice: {
             id: components["schemas"]["DocumentType"];
@@ -816,6 +1018,17 @@ export interface components {
              * @description Rules not run for this type.
              */
             rules_off?: string[];
+        };
+        /**
+         * ReadingSummary
+         * @description What the checks read and what they set aside (2026-10-14): code,
+         *     maths, layout, paragraphs in another language. Counts only.
+         */
+        ReadingSummary: {
+            /** Set Aside */
+            set_aside?: components["schemas"]["SetAside"][];
+            /** Words Checked */
+            words_checked: number;
         };
         /** ReviewQuestion */
         ReviewQuestion: {
@@ -954,6 +1167,21 @@ export interface components {
             /** Start */
             start: number;
         };
+        /** SetAside */
+        SetAside: {
+            /** Count */
+            count: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "code" | "maths_or_code" | "layout" | "marked_up" | "other_language";
+            /**
+             * Label
+             * @description What it is, in plain words.
+             */
+            label: string;
+        };
         /**
          * SourceFormat
          * @description How an uploaded file was read.
@@ -1006,6 +1234,14 @@ export interface components {
              */
             start: number;
         };
+        /**
+         * Spelling
+         * @description Which English spelling to keep to (2026-10-14). `auto` follows the
+         *     document's own majority and flags only mixtures; a choice also flags
+         *     spellings of other dialects ("color" in a British paper).
+         * @enum {string}
+         */
+        Spelling: "auto" | "us" | "uk" | "uk-oxford" | "ca" | "au" | "in";
         /**
          * StructureItem
          * @description A figure, table, equation, caption or citation found in the source.
@@ -1074,6 +1310,8 @@ export interface components {
              */
             source: string;
             span: components["schemas"]["Span"];
+            /** @description X401 only: the table cell the quoted number was compared with. Absent when the check fell back to the whole table. */
+            table_evidence?: components["schemas"]["TableEvidence"] | null;
             /**
              * Text
              * @description The flagged source text, content[start:end].
@@ -1089,6 +1327,69 @@ export interface components {
              * @description The teachable explanation.
              */
             why: string;
+        };
+        /**
+         * TableEvidence
+         * @description The cell a sentence names by its row and column, and what it holds
+         *     (X401, Codex review #7). Document text: never logged.
+         */
+        TableEvidence: {
+            /**
+             * Cell End
+             * @description End offset of the cell's text.
+             */
+            cell_end: number;
+            /**
+             * Cell Start
+             * @description Offset of the cell's text in `content`, like Span.start.
+             */
+            cell_start: number;
+            /**
+             * Cell Text
+             * @description The cell as the table writes it.
+             */
+            cell_text: string;
+            /**
+             * Column
+             * @description 0-based grid column of the cell.
+             */
+            column: number;
+            /**
+             * Column Header
+             * @description The column's header, without its unit.
+             */
+            column_header: string;
+            /**
+             * Expected
+             * @description The cell's value as the text would quote it, e.g. "8.2%".
+             */
+            expected: string;
+            /**
+             * Quoted
+             * @description The number the sentence quotes.
+             */
+            quoted: string;
+            /**
+             * Rounding
+             * @description The rounding allowed, e.g. "rounded to 1 decimal place"; "" for none.
+             * @default
+             */
+            rounding: string;
+            /**
+             * Row
+             * @description 0-based row of the cell.
+             */
+            row: number;
+            /**
+             * Row Header
+             * @description The row's header, without its unit.
+             */
+            row_header: string;
+            /**
+             * Table
+             * @description The table as cited, e.g. "Table 1".
+             */
+            table: string;
         };
         /** TierHealth */
         TierHealth: {
@@ -1173,6 +1474,11 @@ export interface components {
          */
         WordParagraph: {
             /**
+             * Cell
+             * @description Where a table paragraph sits: [table, row, col] or [table, row, col, colspan], 0-based, col counted in grid columns. Optional; sent only when the client can place the cell reliably (WordApi 1.3, no merged cells). Lets X401 compare a quoted number with the row and column a sentence names. Ignored on body paragraphs.
+             */
+            cell?: number[] | null;
+            /**
              * Kind
              * @description table: a table cell's paragraph (not prose).
              * @default body
@@ -1239,6 +1545,8 @@ export interface components {
              */
             source: string;
             span: components["schemas"]["Span"];
+            /** @description X401 only: the table cell the quoted number was compared with. Absent when the check fell back to the whole table. */
+            table_evidence?: components["schemas"]["TableEvidence"] | null;
             /**
              * Text
              * @description The flagged source text, content[start:end].
@@ -1481,6 +1789,96 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnalyzeWordResponse"];
+                };
+            };
+            /** @description Malformed request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Sign-in invalid or expired (unauthorized), or this needs an account (sign_in_required) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Document too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Engine error (no document text in the body) */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Sign-in could not be checked (auth_unavailable) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    complete: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description `Bearer <Supabase access token>` when signed in. Omit for anonymous use. */
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompleteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompleteResponse"];
                 };
             };
             /** @description Malformed request */

@@ -441,6 +441,37 @@ datasets:
     sha256: 37e6e3a01b8c967485b298d629be0bcfa079b268adf3d2b52020e8310a7b7f46
     notes: null
 
+  - id: nw-workshop-s2-gap
+    name: "Thesis-writing workshop, Session 2 — 'Earn the Right to Ask: Earning your Gap' (slides, 35 pp.)"
+    kind: knowledge_source
+    source: "third-party PDF (private; given to the owner, 2026-10-14)"
+    location: "Notes_On_Writing/Session 2 - Earn the Right to Ask.pdf"
+    in_git: true
+    licence: "unknown — verify (workshop slides; no licence statement in the PDF)"
+    licence_verified: false
+    licence_evidence: null
+    commercial_ok: unknown
+    permitted_use: [knowledge_derivation]
+    current_use: "D903 gap-without-stake, D904 fills-the-gap, D905 generic-future-research; the review's link to the Discussion (sources that carry it but were never cited before it) on the narrative map and in the brief; the thesis-only Methods and Conclusion moves; two Learn cards (knowledge-base.md §13)."
+    shipped_today: true
+    sha256: 270f0371ee3ea4410b23b27d3a86967dbdd751a56fec77c16838585d180ab94b
+    notes: >-
+      The slides state that their frameworks (three tests, four cracks, five
+      jobs, key noun, return addresses, the triad) are the presenters' own,
+      and that their examples are teaching fictions not to be cited. Nothing
+      of the slides' wording or examples ships: rule and card texts are
+      paraphrased, examples are written for Researchly, and users see the
+      source as the owner's learnings (code `workshop-S2`). shipped_today is
+      true only because short lists of weak-gap phrasings ("remains
+      underexplored", "has been overlooked", "fills the gap", "further
+      research is needed"), inline as regexes in
+      packages/core/researchly/lexicons.py (ABSENCE_GAP_RX, FILL_GAP_RX,
+      FUTURE_RESEARCH_RX), follow the slides' list of weak versions; they
+      are common academic phrases, not passages. Not committed: the owner
+      added the file to the main checkout untracked, so CI's third-party
+      scan covers it only once it is committed (the local scan was run with
+      it present).
+
   # ───────────────────────── Legacy experiment (P21-EXP) data ─────────────────────────
 
   - id: p21-paper-corpus
@@ -1191,3 +1222,195 @@ datasets:
       only if every dataset it was fine-tuned on also has ship_model here,
       and it passes the ADR-06 promotion gate (model card, held-out
       precision, noise floor, ONNX SHA-256 pin, health.py entry).
+
+  # ───────────────────────── Spelling engine rebuild (2026-10-14) ─────────────────────────
+  # The keyboard-engine study (research/05-keyboard-engine-anatomy.md) and the
+  # open-resource survey (research/06-open-resources.md). Licences opened first-hand
+  # on 2026-10-14 by the survey sub-agent; URLs in each entry.
+
+  - id: europepmc-oa-prediction-corpus
+    name: "Europe PMC open-access research articles (CC BY / CC0) — word-prediction corpus"
+    kind: corpus
+    source: "https://www.ebi.ac.uk/europepmc/webservices/rest/search + /{PMCID}/fullTextXML"
+    location: null
+    in_git: false
+    licence: "per article: CC BY (any version) or CC0, read from each article's own <license>"
+    licence_verified: true
+    licence_evidence: >-
+      ml/tools/build_prediction_model.py reads every article's <permissions>
+      block and uses the article only if it names creativecommons.org/
+      licenses/by/<version> or publicdomain/zero (or PLOS's unversioned
+      "Creative Commons Attribution License" statement), with no
+      NonCommercial, NoDerivatives or ShareAlike term. The search's licence
+      filter is not trusted on its own. The licence seen is recorded per
+      article in packages/core/researchly/data/predict_sources.tsv.
+    commercial_ok: true
+    permitted_use: [train_experimental, ship_model]
+    current_use: "Word prediction (researchly/predict.py): data/predict.sqlite"
+    shipped_today: true
+    sha256: null
+    items: "packages/core/researchly/data/predict_sources.tsv (the articles used, with authors, title, DOI and licence)"
+    notes: >-
+      Owner decision 2026-10-14: text prediction is a core feature (CLAUDE.md
+      #1 as amended). Articles are fetched at build time into a cache outside
+      the repository; no article text is committed. The shipped model holds
+      counts of word sequences of up to four words, each kept only if it
+      occurs in at least three different articles, plus the attribution file
+      CC BY requires. Never trained on theses or owner documents (D6).
+
+  - id: symspell-bigram-dictionary
+    name: "SymSpell English bigram dictionary (frequency_bigramdictionary_en_243_342.txt)"
+    kind: lexicon
+    source: "https://github.com/mammothb/symspellpy (bundled in the symspellpy wheel)"
+    location: null
+    in_git: false
+    licence: "MIT (symspellpy wheel); where the counts come from is not documented"
+    licence_verified: true
+    licence_evidence: "symspellpy 6.10.0 wheel METADATA 'License: MIT License' + https://raw.githubusercontent.com/mammothb/symspellpy/master/LICENSE. SymSpell's README documents the unigram file's source (Google Books Ngram ∩ SCOWL) but not this one."
+    commercial_ok: unknown
+    permitted_use: [private_eval, ci_eval, train_experimental, ship_model]
+    current_use: "Context term of the S001 ranker (researchly/spellrank.py), S002 real-word confusions, and the general-English baseline of the prediction experiment. Loaded from the installed package, never vendored."
+    shipped_today: false
+    sha256: fd892a160184101dd7ae807ac5a302d01fcea1c47304181a8ed7ed9c94545bcd
+    notes: >-
+      Same footing as symspell-frequency-dictionary: it arrives as part of
+      an MIT-licensed pip dependency, distributed by its maintainer. The
+      survey flagged that its provenance is undocumented (the counts look
+      like Google Books bigrams). ship_model granted on the package licence;
+      CONFIRMED by the owner on 2026-10-14 ("The two-word frequency list.
+      Add it."). Google Books Ngram v3 (CC BY 3.0, documented) remains the
+      fallback if the provenance question is ever raised.
+
+  - id: varcon
+    name: "VarCon — variant spellings of American, British, Canadian and Australian English"
+    kind: lexicon
+    source: "http://wordlist.aspell.net/varcon/ (copy used: https://raw.githubusercontent.com/crate-ci/typos/master/crates/varcon/assets/varcon.txt); now part of ESDB, https://github.com/en-wl/wordlist"
+    location: "packages/core/researchly/data/variants.tsv (derived; built by ml/tools/build_variants.py)"
+    in_git: true
+    licence: "MIT-like permission notices: Kevin Atkinson (2000–2019), Benjamin Titze (2016, Australian data); Ispell BSD-style notice (Geoff Kuenning, 1993, clause 4 removed)"
+    licence_verified: true
+    licence_evidence: "Copyright section of VarCon's README (same copy as above), and https://raw.githubusercontent.com/en-wl/wordlist/HEAD/Copyright (ESDB), both read 2026-10-14"
+    commercial_ok: true
+    permitted_use: [private_eval, ci_eval, train_experimental, knowledge_derivation, ship_model, ship_text]
+    current_use: "S001 accepts any spelling VarCon lists; W210 consistency pairs; W213 spelling of the chosen dialect; detection of a document's dialect."
+    shipped_today: true
+    sha256: c1e234817b526a809fa745d742fec84db88b65c429e22faf8a556b3d5a224085
+    notes: >-
+      Only entries of size level <= 80 are used, which keeps ESDB's UKACD
+      notice out of scope. The notices are reproduced in the header of
+      variants.tsv, as they require. Canadian (C) and Australian (D) codes
+      are partial in VarCon, so W213 is quiet rather than wrong for them.
+
+  - id: specialist-lexicon
+    name: "SPECIALIST Lexicon (NLM SPECIALIST NLP Tools), release 2026: LRAGR + LRSPL"
+    kind: lexicon
+    source: "https://data.lhncbc.nlm.nih.gov/public/lsg/lexicon/2026/release/LEX_DOC/ (LRAGR, LRSPL)"
+    location: "packages/core/researchly/data/specialist_words.txt (derived; built by ml/tools/build_specialist_words.py)"
+    in_git: true
+    licence: "Terms and Conditions for Use of the SPECIALIST NLP Tools (U.S. Government product; free; redistribution with the conditions, attribution with release number and date, and a description of modifications; no endorsement)"
+    licence_verified: true
+    licence_evidence: "https://lhncbc.nlm.nih.gov/LSG/Projects/lexicon/current/web/termsAndConditions.html, read 2026-10-14; section 4 is reproduced in the header of specialist_words.txt"
+    commercial_ok: true
+    permitted_use: [private_eval, ci_eval, train_experimental, knowledge_derivation, ship_model, ship_text]
+    current_use: "S001 accepts its single-word forms (278k after filtering): biomedical vocabulary a general dictionary lacks (spectrin, biofilm, rifampin, epitopes, norovirus)."
+    shipped_today: true
+    sha256: 52e1ee1557f1fe7daada168a51e9fa2aa4cd12a086cba51af806fd813a026c5b
+    notes: >-
+      sha256 is LRAGR's. Filtering (stated in the file header as condition
+      4b(2) requires): forms of 5+ letters, no tripled letters; LRSPL
+      variants 1–2 edits from a dictionary spelling dropped (SPECIALIST
+      records literature misspellings such as "accessable"); forms
+      Researchly's inflection rules reject dropped. Measured 2026-10-14: 56%
+      of the correct PMC words S001 used to reject are now accepted; 0.4–2.6%
+      of detected misspellings on the public lists are lost, several of them
+      real words (algebraical, binominal).
+
+  - id: mitton-misspelling-corpora
+    name: "Birkbeck, Holbrook, Aspell and Wikipedia misspelling corpora (Roger Mitton)"
+    kind: eval_set
+    source: "https://titan.dcs.bbk.ac.uk/~ROGER/corpora.html (missp.dat, holbrook-missp.dat, aspell.dat, wikipedia.dat); original at the Oxford Text Archive (ota:0643)"
+    location: null
+    in_git: false
+    licence: "none stated; the Wikipedia file is derived from Wikipedia (CC BY-SA)"
+    licence_verified: false
+    licence_evidence: "No rights text on Mitton's page (2026-10-14); the OTA record was behind a bot wall"
+    commercial_ok: unknown
+    permitted_use: [private_eval, ci_eval, train_experimental]
+    current_use: "ml/eval/spelling_bench.py (fetched at run time into ~/.cache, never committed)"
+    shipped_today: false
+    sha256: null
+    notes: "Mostly handwritten, cognitive misspellings (schoolchildren, students); a poor match for typing slips, a good one for spelling knowledge."
+
+  - id: norvig-spell-testsets
+    name: "Norvig's spell-testset1/2"
+    kind: eval_set
+    source: "https://norvig.com/spell-testset1.txt, https://norvig.com/spell-testset2.txt"
+    location: null
+    in_git: false
+    licence: "none stated; drawn from the Birkbeck corpus"
+    licence_verified: false
+    licence_evidence: "norvig.com/spell-correct.html (2026-10-14)"
+    commercial_ok: unknown
+    permitted_use: [private_eval, ci_eval, train_experimental]
+    current_use: "ml/eval/spelling_bench.py"
+    shipped_today: false
+    sha256: null
+
+  - id: wikipedia-misspellings-for-machines
+    name: "Wikipedia: Lists of common misspellings/For machines"
+    kind: eval_set
+    source: "https://en.wikipedia.org/wiki/Wikipedia:Lists_of_common_misspellings/For_machines"
+    location: null
+    in_git: false
+    licence: "CC-BY-SA-4.0"
+    licence_verified: true
+    licence_evidence: "page footer, read 2026-10-14"
+    commercial_ok: true
+    permitted_use: [private_eval, ci_eval, train_experimental, ship_model]
+    current_use: "ml/eval/spelling_bench.py; the train split (80%) trains S001's error model, packages/core/researchly/data/spell_errors.json"
+    shipped_today: true
+    sha256: null
+    notes: >-
+      Every common typo list found (codespell, misspell, crate-ci/typos
+      words.csv) descends from this one, so none is shipped as a list.
+      ShareAlike decision (owner, 2026-10-14: "The learned typo model. Sure,
+      no worries there."): the edit-probability table learned from its train
+      split ships as an adaptation under CC BY-SA 4.0, with the attribution
+      and licence inside the file and in NOTICE. Only this list trains it:
+      Mitton's corpora state no licence, and measured on the held-out split
+      they add little the Wikipedia list does not (PROJECT_LOG P42).
+
+  - id: keyboard-engine-bundle
+    name: "Keyboard autocorrect engine bundle from the owner's friend (22 files)"
+    kind: model
+    source: "owner-provided, 2026-10-14; the friend says it came from an MIT-licensed source he cannot name, then improved by him"
+    location: null
+    in_git: false
+    licence: "MIT text received, copyright holder redacted — verify (claimed MIT; source unnamed)"
+    licence_verified: false
+    licence_evidence: >-
+      The friend's statement relayed by the owner (2026-10-14), then a
+      license.md from the friend (2026-10-14): the standard MIT text
+      (retyped with single quotes), "Copyright (c) 2018-2026" with the
+      holder's name and email redacted, and no project name or source. MIT's
+      one condition is to include that notice in every copy, which cannot be
+      met while it is redacted, and nothing ties the file to these data or
+      shows the signer owns them. The files' form (n-grams 'probed' from a
+      hash that cannot be listed, an ONNX ranker with touch-geometry
+      features) fits an app's data; it would also fit an MIT-released binary
+      model that someone later decoded. research/05-keyboard-engine-anatomy.md.
+    commercial_ok: unknown
+    permitted_use: [private_eval]
+    current_use: "Private head-to-head benchmark (ml/private_eval/: compare.py, docs_compare.py, bundle_engine.py), run from files kept outside the repository; never committed, never trained on for a shipped artefact. To be discarded once the comparison is done (owner, 2026-10-14)."
+    shipped_today: false
+    sha256: null
+    notes: >-
+      The friend allows use in Researchly but not publishing the files. If the
+      original MIT source and its copyright notice are found, MIT would allow
+      ship_model/ship_text (with the notice) and the friend's changes are
+      covered by his permission; until then, private evaluation only. A
+      synthetic look-alike for tests is fine; a sample of it is not. The
+      friend also shared its runtime (engine.py, onnx_dump.py, demo.py,
+      extract_tables.py, probe_ngrams.py; licence unknown): read, found to
+      only read local files, used from the scratch folder by
+      bundle_engine.py, never copied into the repository.

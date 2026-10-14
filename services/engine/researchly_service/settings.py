@@ -12,6 +12,7 @@ read from a file.
 | RESEARCHLY_GRAMMAR               | on               | `off`: the deployment does not run grammar |
 | RESEARCHLY_MAX_BODY_BYTES        | 8388608 (8 MiB)  | request bodies above this get 413 unread |
 | RESEARCHLY_RATE_LIMIT_PER_MIN    | 30               | per client IP, per instance; 0 disables |
+| RESEARCHLY_COMPLETE_RATE_LIMIT_PER_MIN | 240        | the same, for /v1/complete (word prediction) |
 | RESEARCHLY_TRUSTED_PROXY_HOPS    | 0                | X-Forwarded-For entries appended by trusted proxies (Cloud Run: 1) |
 | RESEARCHLY_WARMUP                | on               | warm spaCy/rules/LanguageTool before serving |
 | RESEARCHLY_SUPABASE_URL          | (unset)          | Supabase project URL; unset = no accounts (S1 behaviour) |
@@ -93,6 +94,7 @@ class Settings:
     grammar_enabled: bool = True
     max_body_bytes: int = DEFAULT_MAX_BODY_BYTES
     rate_limit_per_min: int = 30
+    complete_rate_limit_per_min: int = 240
     trusted_proxy_hops: int = 0
     warmup: bool = True
     supabase_url: str = ""
@@ -128,6 +130,8 @@ def load() -> Settings:
         max_body_bytes=max(1024, _int("RESEARCHLY_MAX_BODY_BYTES",
                                       DEFAULT_MAX_BODY_BYTES)),
         rate_limit_per_min=max(0, _int("RESEARCHLY_RATE_LIMIT_PER_MIN", 30)),
+        complete_rate_limit_per_min=max(
+            0, _int("RESEARCHLY_COMPLETE_RATE_LIMIT_PER_MIN", 240)),
         trusted_proxy_hops=max(0, _int("RESEARCHLY_TRUSTED_PROXY_HOPS", 0)),
         warmup=_flag("RESEARCHLY_WARMUP", True),
         supabase_url=_supabase_url(),

@@ -104,7 +104,7 @@ def test_checklist_on_request_and_listed(client):
     assert body.checklist is not None and body.checklist.id == "epiforge"
     assert body.suggested_checklist == "epiforge"
     st = {i.id: i.status for i in body.checklist.items}
-    assert st["horizon"] == "reported"
+    assert st["horizon"] == "found"
     rules = RulesResponse.model_validate(client.get("/v1/rules").json())
     assert [c.id for c in rules.checklists] == ["strobe", "consort", "prisma",
                                                 "epiforge"]

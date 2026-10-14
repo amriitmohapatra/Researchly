@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import type { ChecklistReport, ProfileInfo, WordSuggestion } from "@researchly/contract";
+import type { ChecklistItem, ChecklistReport, ProfileInfo, WordSuggestion } from "@researchly/contract";
 import { WordChecklist } from "@/components/word/WordChecklist";
 import {
   clearLabelStore,
@@ -27,13 +27,51 @@ const REPORT: ChecklistReport = {
   label: "STROBE",
   design: "observational studies",
   source: "A named reporting guideline",
+  edition: "STROBE (2007)",
   suggested: true,
-  reported: 1,
-  total: 2,
-  note: "1 of 2 items were found in the text.",
+  found: 1,
+  partial: 1,
+  total: 3,
+  note: "1 of 3 items has possible evidence in the text; 1 more is partly there.",
   items: [
-    { id: "a", topic: "Setting", question: "Are the dates given?", plain: "When decides to whom.", sections: [], status: "reported", evidence: "Data were collected <weekly> in 2024." },
-    { id: "b", topic: "Bias", question: "Is bias discussed?", plain: "Say which way it leans.", sections: [], status: "needs_check", evidence: null },
+    {
+      id: "a",
+      topic: "Setting",
+      question: "Are the dates given?",
+      plain: "When decides to whom.",
+      sections: [],
+      refs: ["5"],
+      status: "found",
+      evidence: "Data were collected <weekly> in 2024.",
+      section_absent: false,
+    },
+    {
+      id: "b",
+      topic: "Bias",
+      question: "Is bias discussed?",
+      plain: "Say which way it leans.",
+      sections: ["methods"],
+      refs: [],
+      status: "needs_check",
+      evidence: null,
+      not_counted: { reason: "absent", label: "says this is not reported", quote: "Bias is not described." },
+      section_absent: false,
+    },
+    {
+      id: "c",
+      topic: "Participants",
+      question: "Are eligibility and selection described?",
+      plain: "Who was in decides whom it applies to.",
+      sections: ["methods"],
+      refs: ["6a"],
+      status: "partial",
+      evidence: "Adults were eligible.",
+      parts: [
+        { label: "the eligibility criteria", found: true, evidence: "Adults were eligible." },
+        { label: "how participants were selected", found: false, evidence: null },
+      ],
+      section_absent: false,
+    },
   ],
 };
 
@@ -57,16 +95,43 @@ describe("the reporting checklist in Word (S4c)", () => {
     expect(checklistState({ mode: "revise" }, "consort")).toEqual({ kind: "missing" });
   });
 
-  it("renders a minimal list: topic, question, a status word, the quoted sentence or the plain reason, and the source", () => {
+  it("renders the website's cautious list in a narrow column: edition, tally, topic and status, item numbers, question, what it rests on, the source", () => {
     const html = renderToStaticMarkup(<WordChecklist state={{ kind: "ready", report: REPORT }} />);
-    expect(itemStatusWord(REPORT.items[0]!)).toBe("Reported");
+    expect(itemStatusWord(REPORT.items[0]!)).toBe("Found: please confirm");
     expect(itemStatusWord(REPORT.items[1]!)).toBe("Needs your check");
+    expect(itemStatusWord(REPORT.items[2]!)).toBe("Partly there");
+    expect(itemStatusWord(REPORT.items[0]!, "confirmed")).toBe("Confirmed by you");
+    expect(itemStatusWord(REPORT.items[1]!, "confirmed")).toBe("Needs your check"); // nothing found, nothing to confirm
+    expect(itemStatusWord(REPORT.items[1]!, "not_applicable")).toBe("Not applicable (your call)");
+    // An older engine's "reported" is still only possible evidence.
+    expect(itemStatusWord({ status: "reported" } as unknown as Pick<ChecklistItem, "status">)).toBe("Found: please confirm");
+    expect(html).not.toMatch(/>Reported</);
+    expect(html).toContain('data-testid="checklist-edition">Selected themes of STROBE (2007), not a full compliance check.</p>');
+    expect(html).toContain('data-testid="checklist-tally">1 of 3 with possible evidence · 1 partly there · confirmed by you: 0</p>');
+    expect(html).toContain("STROBE (2007) item 5");
+    expect(html).toContain("Good practice, not a numbered item");
+    expect(html).toContain("STROBE (2007) item 6a");
     expect(html).toContain("Setting");
     expect(html).toContain("<q>Data were collected &lt;weekly&gt; in 2024.</q>");
     expect(html).toContain("Say which way it leans.");
-    expect(html).not.toContain("When decides to whom."); // a reported item shows its sentence, not the reason
+    expect(html).not.toContain("When decides to whom."); // a found item shows its sentence, not the reason
+    expect(html).toContain("A sentence mentions this but says this is not reported:</span> <q>Bias is not described.</q>");
+    expect(html).toContain('<span class="checklist-part-state">Found:</span> the eligibility criteria');
+    expect(html).toContain('<span class="checklist-part-state">Needs your check:</span> how participants were selected');
     expect(html).toContain("<cite>A named reporting guideline</cite>");
     expect(html).not.toMatch(/<meter|<progress/);
+    // Without a handler there are no controls; with one, both calls, as toggles named by the topic.
+    expect(html).not.toContain("<button");
+    const live = renderToStaticMarkup(<WordChecklist state={{ kind: "ready", report: REPORT }} marks={new Map([["b", "not_applicable"]])} onMark={() => {}} />);
+    expect(live.match(/data-testid="checklist-na"/g)).toHaveLength(3);
+    expect(live.match(/data-testid="checklist-confirm"/g)).toHaveLength(2);
+    expect(live).toMatch(/aria-pressed="true"[^>]*data-testid="checklist-na"/);
+    expect(live).toContain("Not applicable (your call)");
+    expect(live).toContain("confirmed by you: 0 · not applicable (your call): 1");
+    expect(live).not.toContain("Say which way it leans."); // the writer's call replaces the reason
+    expect(live).toContain('role="status" aria-live="polite" aria-atomic="true" data-testid="checklist-live"');
+    const topicId = /<span class="wchecklist-topic-name" id="([^"]+)">Setting<\/span>/.exec(live)![1]!;
+    expect(live).toContain(`aria-describedby="${topicId}"`);
     const draft = renderToStaticMarkup(<WordChecklist state={{ kind: "needs_revise" }} onSwitchToRevise={() => {}} />);
     expect(draft).toContain("needs Revise mode");
     expect(draft).toContain("Switch to Revise");

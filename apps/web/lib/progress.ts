@@ -19,15 +19,33 @@ export interface ProgressEvent {
   words: number;
   document_type: DocumentType;
   counts: Record<string, number>;
+  /**
+   * The rules the check could show (Codex review N2): a rule outside it was
+   * not assessed, which is not zero. null on rows recorded before
+   * 2026-10-14, or when the database has not had the migration.
+   */
+  assessed?: string[] | null;
+  mode?: "draft" | "revise" | null;
+  /** Engine version + rule-set fingerprint; checks compare only within one. */
+  ruleset?: string | null;
 }
+
+type RowSource = Pick<AnalyzeResponse, "suggestions" | "metrics" | "profile"> &
+  Partial<Pick<AnalyzeResponse, "assessed_rules" | "mode" | "ruleset">>;
+
+const MAX_ASSESSED = 400;
+const RULESET = /^[0-9A-Za-z.+_-]{1,40}$/;
 
 const RULE_ID = /^[A-Z]{1,4}[0-9]{2,4}$/;
 
 /** The row a check would record: rule counts, words, article type. Pure, unit-tested. */
-export function progressRow(data: Pick<AnalyzeResponse, "suggestions" | "metrics" | "profile">): {
+export function progressRow(data: RowSource): {
   words: number;
   document_type: DocumentType;
   counts: Record<string, number>;
+  assessed: string[] | null;
+  mode: "draft" | "revise" | null;
+  ruleset: string | null;
 } {
   const counts: Record<string, number> = {};
   for (const s of data.suggestions) {
@@ -37,7 +55,18 @@ export function progressRow(data: Pick<AnalyzeResponse, "suggestions" | "metrics
     words: Math.max(0, Math.min(2_000_000, Math.round(data.metrics?.words ?? 0))),
     document_type: data.profile?.id ?? "auto",
     counts,
+    // Metadata only (rule ids, a word, a version): never text.
+    assessed: data.assessed_rules?.length
+      ? [...new Set(data.assessed_rules.filter((id) => RULE_ID.test(id)))].sort().slice(0, MAX_ASSESSED)
+      : null,
+    mode: data.mode === "draft" || data.mode === "revise" ? data.mode : null,
+    ruleset: data.ruleset && RULESET.test(data.ruleset) ? data.ruleset : null,
   };
+}
+
+/** Postgres "undefined column": the database has not had the 2026-10-14 migration. */
+function missingColumn(error: { code?: string } | null): boolean {
+  return error?.code === "42703" || error?.code === "PGRST204";
 }
 
 async function run<T>(fn: (sb: SupabaseClient) => Promise<AccountResult<T>>): Promise<AccountResult<T>> {
@@ -70,13 +99,19 @@ export function saveKeepProgress(on: boolean): Promise<AccountResult<null>> {
  * Record one check, only when `keep` is true (the caller's loaded opt-in).
  * Fire-and-forget from the surfaces: a failure never affects the check.
  */
-export async function recordProgress(
-  data: Pick<AnalyzeResponse, "suggestions" | "metrics" | "profile">,
-  keep: boolean,
-): Promise<AccountResult<null>> {
+export async function recordProgress(data: RowSource, keep: boolean): Promise<AccountResult<null>> {
   if (!keep) return { ok: true, data: null };
   return run(async (sb) => {
-    const { error } = await sb.from("progress_events").insert(progressRow(data));
+    const row = progressRow(data);
+    let { error } = await sb.from("progress_events").insert(row);
+    if (missingColumn(error)) {
+      // A database without the comparability columns: record the counts as before.
+      const legacy: Partial<typeof row> = { ...row };
+      delete legacy.assessed;
+      delete legacy.mode;
+      delete legacy.ruleset;
+      ({ error } = await sb.from("progress_events").insert(legacy));
+    }
     return error ? { ok: false, message: accountErrorMessage(error) } : { ok: true, data: null };
   });
 }
@@ -84,13 +119,12 @@ export async function recordProgress(
 /** The newest checks first, at most `limit` (the table keeps 1,000). */
 export function loadProgress(limit = 200): Promise<AccountResult<ProgressEvent[]>> {
   return run(async (sb) => {
-    const { data, error } = await sb
-      .from("progress_events")
-      .select("created_at, words, document_type, counts")
-      .order("created_at", { ascending: false })
-      .limit(limit);
+    const query = (cols: string) =>
+      sb.from("progress_events").select(cols).order("created_at", { ascending: false }).limit(limit);
+    let { data, error } = await query("created_at, words, document_type, counts, assessed, mode, ruleset");
+    if (missingColumn(error)) ({ data, error } = await query("created_at, words, document_type, counts"));
     if (error) return { ok: false, message: accountErrorMessage(error) };
-    return { ok: true, data: (data ?? []) as ProgressEvent[] };
+    return { ok: true, data: (data ?? []) as unknown as ProgressEvent[] };
   });
 }
 

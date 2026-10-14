@@ -5,7 +5,6 @@ import pytest
 from researchly import api
 from researchly import config as config_mod
 from researchly.config import Config
-from researchly.document import Document
 from researchly.engine import Category
 
 NLP = api.get_nlp()
@@ -39,7 +38,8 @@ def test_analyze_returns_a_complete_payload(isolated):
     assert set(d) == {"suggestions", "counts", "hidden_preferences",
                       "hidden_by_mode", "profile", "review", "narrative",
                       "checklist", "suggested_checklist",
-                      "metrics", "sections_detected", "health", "config"}
+                      "metrics", "sections_detected", "health", "config",
+                      "assessed_rules", "ruleset"}
 
 
 def test_hidden_preferences_counted_without_a_second_run(isolated):

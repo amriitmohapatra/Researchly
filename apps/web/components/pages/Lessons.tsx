@@ -38,7 +38,7 @@ export function LessonIndex({ groups }: { groups: { group: string; cards: LearnC
 
 export function Lesson({ card, prev, next }: { card: LearnCard; prev: LearnCard | null; next: LearnCard | null }) {
   return (
-    <article className="lesson" aria-labelledby="lesson-title" data-testid="lesson">
+    <article className="lesson-page" aria-labelledby="lesson-title" data-testid="lesson">
       <p className="lesson-kicker muted">{card.group}</p>
       <h1 id="lesson-title" className="lesson-title">
         {card.title}

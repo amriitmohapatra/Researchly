@@ -13,7 +13,9 @@ Checks reporting, never the science (P3).
 
 from __future__ import annotations
 
-from . import Checklist, Item, Pack
+from dataclasses import replace
+
+from . import Checklist, Item, Pack, Part
 
 _INTRO = ("introduction", "abstract")
 _METHODS = ("methods",)
@@ -437,11 +439,200 @@ EPIFORGE = Checklist(
              "Forecasts are reused and rerun; others need the code.",
              (r"\bcode\b[^.]{0,40}\bavailable\b", r"\bgithub\b",
               r"\bzenodo\b", r"\brepository\b", r"\bopen[- ]source\b")),
+        Item("timing", "Prospective or retrospective",
+             "Is it said whether the forecasts were made prospectively (in "
+             "real time) or retrospectively?",
+             "A forecast made before the data arrived is a different test "
+             "from one fitted afterwards.",
+             (r"\bprospective(ly)?\b", r"\breal[- ]time\b",
+              r"\bretrospective(ly)?\b", r"\bin hindsight\b"), _METHODS),
         Item("limitations", "Limitations",
              "Does the Discussion state the forecast's limitations?",
              "Say where and why the forecast may fail.", _LIMITS, _DISC),
+        Item("implications", "Public health implications",
+             "If the forecast is for a specific epidemic, does the "
+             "Discussion say what it means for public health action?",
+             "A forecast is made for a decision; say what the decision "
+             "should take from it.",
+             (r"\bimplications? (for|of)\b", r"\bpublic health (action|"
+              r"decisions?|response|planning|policy)\b",
+              r"\b(decision[- ]makers|policymakers|planners)\b"), _DISC),
+        Item("generalisability", "Generalisability",
+             "If the forecast is for a specific epidemic, does the "
+             "Discussion say how far it carries to other populations?",
+             "Readers need to know whether the model would work where they "
+             "are.",
+             (r"\bgenerali[sz]", r"\b(apply|applicable|transferable) to\b",
+              r"\bother (settings|populations|countries|regions|"
+              r"epidemics|pathogens)\b"), _DISC),
         Item("funding", "Funding", "Are the sources of funding stated?",
              "Readers weigh results knowing who paid for them.", _FUNDING),
     ))
+
+# --- editions, item numbers and compound questions (Codex review N1) -----------
+# Item numbers follow each guideline's own checklist: STROBE (von Elm et
+# al. 2007), CONSORT 2010 (Schulz et al.), PRISMA 2020 (Page et al. 2021),
+# EPIFORGE 2020 (Pollett et al. 2021, PLoS Med, Table 1). An item with no
+# number is good practice the guideline itself does not list.
+
+_SETTING = (r"\b(conducted|carried out|took place|recruited|based|enrolled) "
+            r"(in|at|from)\b",
+            r"\b(hospitals?|clinics?|districts?|provinces?|countries|country|"
+            r"regions?|cit(y|ies)|count(y|ies)|communit(y|ies)|schools?|"
+            r"wards?|practices?|sites?|centres?|centers?)\b")
+_SELECTED = (r"\brecruit", r"\bselected\b", r"\benrolled\b",
+             r"\bsampled\b", r"\bidentified (from|through|via|using)\b",
+             r"\binvited\b", r"\bconsecutive\b")
+_DROPOUT = (r"\blost to follow[- ]up\b", r"\bwithdr[ae]w", r"\bdrop(ped)? ?out",
+            r"\bdeclined\b", r"\bexcluded (because|due to|for|as)\b",
+            r"\breasons? for\b", r"\bdiscontinued\b")
+_NUMBERS = (r"\b\d[\d,]*\s+(participants|patients|individuals|people|"
+            r"children|adults|cases|households)\b[^.]{0,60}\b(were )?"
+            r"(included|excluded|eligible|enrolled|analysed|analyzed|followed|"
+            r"randomi[sz]ed|allocated|assigned)\b", r"\bflow (diagram|chart)\b")
+_LAST_SEARCH = (r"\b(searched|search(es)? (was|were) (run|conducted|"
+                r"performed|updated|done))\b[^.]{0,80}\b(19|20)\d\d\b",
+                r"\b(up to|until|through|to|from (their )?inception to)\s+"
+                r"(\d{1,2}\s+)?(January|February|March|April|May|June|July|"
+                r"August|September|October|November|December)?\s*(19|20)\d\d\b",
+                r"\blast search(ed)?\b")
+_HETEROGENEITY = (r"\bheterogeneity\b", r"\bi\s?(\^)?2\b", r"\btau\b")
+
+EDITIONS = {"strobe": "STROBE (2007)", "consort": "CONSORT 2010",
+            "prisma": "PRISMA 2020", "epiforge": "EPIFORGE 2020"}
+
+REFS = {
+    "strobe": {"design": ("1a", "4"), "objectives": ("3",), "setting": ("5",),
+               "participants": ("6a",), "variables": ("7",),
+               "measurement": ("8",), "bias": ("9",), "study-size": ("10",),
+               "statistics": ("12a",), "missing-data": ("12c",),
+               "flow": ("13",), "descriptive": ("14",),
+               "estimates": ("16",), "limitations": ("19",),
+               "generalisability": ("21",), "funding": ("22",)},
+    "consort": {"design": ("1a",), "objectives": ("2b",),
+                "trial-design": ("3a",), "participants": ("4a", "4b"),
+                "interventions": ("5",), "outcomes": ("6a",),
+                "sample-size": ("7a",), "sequence": ("8a",),
+                "concealment": ("9",), "blinding": ("11a",),
+                "statistics": ("12a",), "flow": ("13a", "13b"),
+                "recruitment": ("14a",), "estimates": ("17a",),
+                "harms": ("19",), "limitations": ("20",),
+                "registration": ("23", "24"), "funding": ("25",)},
+    "prisma": {"design": ("1",), "objectives": ("4",), "eligibility": ("5",),
+               "sources": ("6",), "search": ("7",), "selection": ("8",),
+               "extraction": ("9",), "risk-of-bias": ("11",),
+               "synthesis": ("13d",), "certainty": ("15",), "flow": ("16a",),
+               "results": ("20b",), "limitations": ("23b", "23c"),
+               "registration": ("24a",), "funding": ("25",)},
+    "epiforge": {"design": ("1",), "purpose": ("2",), "target": ("2",),
+                 "horizon": ("13",), "data": ("5", "6"),
+                 "data-issues": ("7",), "model": ("8",),
+                 "assumptions": ("8",), "parameters": ("3",),
+                 "uncertainty": ("14",), "evaluation": ("10", "11"),
+                 "baseline": ("12",), "code": ("9",), "timing": ("4",),
+                 "limitations": ("17",), "implications": ("18",),
+                 "generalisability": ("19",)},
+    # EPIFORGE lists no funding item: kept as good practice, unnumbered.
+}
+
+PARTS = {
+    "strobe": {
+        "setting": (Part("the setting or places", _SETTING),
+                    Part("the dates", _DATES)),
+        "participants": (Part("the eligibility criteria", _ELIGIBILITY),
+                         Part("how participants were selected", _SELECTED)),
+        "variables": (Part("the outcomes", (r"\boutcomes?\b",
+                                            r"\bend ?points?\b")),
+                      Part("the exposures", (r"\bexposures?\b",
+                                             r"\bexposed\b")),
+                      Part("the confounders", (r"\bconfound",
+                                               r"\bcovariates?\b"))),
+        "statistics": (Part("the statistical methods",
+                            (r"\bregression\b", r"\bstatistical analys",
+                             r"\bmodels?\b", r"\btests?\b",
+                             r"\bestimated\b")),
+                       Part("how confounding was handled",
+                            (r"\badjust(ed|ing|ment) for\b", r"\bconfound",
+                             r"\bstratif", r"\bpropensity\b",
+                             r"\bmatched\b"))),
+        "flow": (Part("the numbers at each stage", _NUMBERS),
+                 Part("why participants dropped out", _DROPOUT)),
+    },
+    "consort": {
+        "trial-design": (Part("the design", (
+                             r"\b(parallel|crossover|cross-over|cluster|"
+                             r"factorial|stepped[- ]wedge)\b",)),
+                         Part("the allocation ratio", (
+                             r"\ballocation ratio\b", r"\b\d:\d\b",
+                             r"\bequal(ly)? (allocation|numbers)\b"))),
+        "participants": (Part("the eligibility criteria", _ELIGIBILITY),
+                         Part("the settings", _SETTING)),
+        "outcomes": (Part("the primary outcome", (
+                         r"\bprimary (outcome|end ?point)\b",)),
+                     Part("when outcomes were measured", (
+                         r"\b(at|after) \d+ (days?|weeks?|months?|years?)\b",
+                         r"\b(measured|assessed|recorded) (at|after|every|"
+                         r"weekly|monthly|daily)\b", r"\btime ?points?\b",
+                         r"\bfollow[- ]up (visits?|at)\b"))),
+        "flow": (Part("the numbers at each stage", _NUMBERS),
+                 Part("losses and their reasons", _DROPOUT)),
+        "registration": (Part("the registration", (
+                             r"\bregist(ered|ration|ry)\b", r"\bNCT\d{6,}\b",
+                             r"\bISRCTN\d+\b")),
+                         Part("where to find the protocol", (
+                             r"\bprotocol\b",))),
+    },
+    "prisma": {
+        "sources": (Part("the databases or sources", (
+                        r"\b(pubmed|medline|embase|scopus|web of science|"
+                        r"cochrane|cinahl|psycinfo|google scholar|lilacs)\b",
+                        r"\bdatabases?\b[^.]{0,40}\bsearched\b")),
+                    Part("the date of the last search", _LAST_SEARCH)),
+        "selection": (Part("how studies were selected", (
+                          r"\bscreened\b", r"\btitles? and abstracts?\b",
+                          r"\bselected\b", r"\bfull[- ]texts?\b")),
+                      Part("how many reviewers, working independently", (
+                          r"\bindependently\b", r"\bin duplicate\b",
+                          r"\btwo (reviewers|authors|investigators)\b"))),
+        "synthesis": (Part("the pooling model", (
+                          r"\brandom[- ]effects?\b", r"\bfixed[- ]effects?\b",
+                          r"\bpooled\b", r"\bnarrative synthesis\b",
+                          r"\bmeta-analy")),
+                      Part("how heterogeneity was assessed", _HETEROGENEITY)),
+        "results": (Part("the summary estimates with precision", _CI),
+                    Part("the heterogeneity", _HETEROGENEITY)),
+    },
+    "epiforge": {
+        "purpose": (Part("what the forecast is for", (
+                        r"\binform(ing|s)? (the )?(response|decisions?|"
+                        r"planning|policy|public health)",
+                        r"\b(to|will) (support|guide|inform)\b")),
+                    Part("who will use it", (
+                        r"\bdecision[- ]makers?\b", r"\bpolicymakers\b",
+                        r"\b(public health|health) (authorities|"
+                        r"departments?|agenc(y|ies)|officials)\b",
+                        r"\bministr(y|ies)\b", r"\bplanners\b"))),
+        "data": (Part("the data sources", (
+                     r"\bsurveillance\b", r"\bdata (were|was) (obtained|"
+                     r"collected|drawn|downloaded)\b", r"\bregist(er|ry)\b",
+                     r"\bdata (came|come) from\b")),
+                 Part("whether the data are available", (
+                     r"\bdata\b[^.]{0,60}\b(publicly available|available "
+                     r"(at|from|on|upon|to)|cannot be shared|not (publicly )?"
+                     r"available|can(not)? be (accessed|obtained|requested))\b",
+                     r"\bdata availability\b"))),
+    },
+}
+
+
+def _finish(c: Checklist) -> Checklist:
+    refs, parts = REFS.get(c.id, {}), PARTS.get(c.id, {})
+    items = tuple(replace(it, refs=refs.get(it.id, ()),
+                          parts=parts.get(it.id, ())) for it in c.items)
+    return replace(c, items=items, edition=EDITIONS[c.id])
+
+
+STROBE, CONSORT, PRISMA, EPIFORGE = (
+    _finish(c) for c in (STROBE, CONSORT, PRISMA, EPIFORGE))
 
 PACK = Pack("epidemiology", "Epidemiology", (STROBE, CONSORT, PRISMA, EPIFORGE))

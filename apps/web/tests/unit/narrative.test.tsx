@@ -44,7 +44,7 @@ const map: Map = {
       expected: 3,
       moves: [
         move("in.why", "Why it matters", "present"),
-        move("in.gap", "What is missing", "missing"),
+        move("in.gap", "What is missing", "not_detected"),
         move("in.aim", "What you set out to do", "present"),
       ],
     },
@@ -108,15 +108,15 @@ describe("the narrative map", () => {
   it("marks every move by its status word, never by colour alone: present cells carry no word, missing and out-of-order ones do", () => {
     const intro = section(html, "introduction");
     expect(texts(intro, /data-testid="narrative-move" data-move="([a-z.]+)"/g)).toEqual(["in.why", "in.gap", "in.aim"]);
-    expect(intro).toContain('data-move="in.gap" data-status="missing"');
-    expect(intro).toContain('<span class="nmap-cell-status">missing</span>');
+    expect(intro).toContain('data-move="in.gap" data-status="not_detected"');
+    expect(intro).toContain('<span class="nmap-cell-status">not detected</span>');
     const disc = section(html, "discussion");
     expect(disc).toContain('data-move="di.meaning" data-status="out_of_order"');
     expect(disc).toContain('<span class="nmap-cell-status">out of order</span>');
     expect(disc).toContain("nmap-cell-out-of-order");
     // On screen a present cell is the filled dot and the label alone.
     expect(intro).toMatch(/data-move="in\.why" data-status="present"><span class="nmap-dot" aria-hidden="true"><\/span><span class="nmap-cell-label">Why it matters<\/span><\/li>/);
-    expect(STATUS_WORD).toEqual({ present: "present", missing: "missing", out_of_order: "out of order" });
+    expect(STATUS_WORD).toEqual({ present: "present", not_detected: "not detected", out_of_order: "out of order" });
   });
 
   it("opens a missing move to its question, the lesson, the frame with its caption, and the source", () => {

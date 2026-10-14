@@ -478,8 +478,8 @@ test.describe("the narrative map (S4b)", () => {
     }
     // The status is said in words, not colour alone: a missing cell says "missing", an out-of-order one says so.
     const intro = strips.nth(0);
-    await expect(intro.getByTestId("narrative-move").nth(1)).toContainText("missing");
-    await expect(intro.getByTestId("narrative-move").nth(0)).not.toContainText("missing");
+    await expect(intro.getByTestId("narrative-move").nth(1)).toContainText("not detected");
+    await expect(intro.getByTestId("narrative-move").nth(0)).not.toContainText("not detected");
     const discussion = strips.nth(2);
     await expect(discussion.getByTestId("narrative-move").nth(1)).toContainText("out of order");
     // A hollow dot for a missing move, a filled one for a present move: shape, not colour.
@@ -776,9 +776,13 @@ test.describe("accessibility", () => {
     await page.keyboard.press("Tab");
     await expect(page.getByLabel("Check as")).toBeFocused();
     await page.keyboard.press("Tab");
+    await expect(page.getByLabel("Spelling", { exact: true })).toBeFocused();
+    await page.keyboard.press("Tab");
     await expect(page.getByLabel("Reporting checklist")).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(page.getByLabel("Show preferences")).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.getByLabel("Word prediction")).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(page.getByTestId("check")).toBeFocused();
     await page.keyboard.press("Enter");
@@ -1043,6 +1047,13 @@ test.describe("the lesson on every card (S4)", () => {
     expect(await lesson.locator(".lesson-quote").first().evaluate((el) => getComputedStyle(el).fontFamily)).toMatch(/Charter|Georgia/);
     await expect(lesson.locator(".lesson-habit")).toContainText(want.habit);
     await expect(lesson.locator(".lesson-source cite")).toHaveText(want.source);
+    // Set at card scale: the lesson page's 2rem title and ruled habit section never leak into a card.
+    const cardScale = await lesson.evaluate((el) => {
+      const px = (sel: string, prop: "fontSize" | "borderTopWidth") => parseFloat(getComputedStyle(el.querySelector(sel)!)[prop]);
+      return { title: px(".lesson-title", "fontSize"), habitRule: px(".lesson-habit", "borderTopWidth") };
+    });
+    expect(cardScale.title).toBeLessThanOrEqual(17);
+    expect(cardScale.habitRule).toBe(0);
     const all = lesson.getByRole("link", { name: /All lessons/ });
     await expect(all).toHaveAttribute("href", "/learn");
     await expect(all).toHaveAttribute("target", "_blank");
@@ -1106,22 +1117,61 @@ test.describe("reporting checklists (S4)", () => {
       await expect(items.nth(i).locator("h3")).toHaveText(it.topic);
       await expect(items.nth(i).locator(".checklist-question")).toHaveText(it.question);
     }
-    await expect(items.nth(0).getByTestId("checklist-status")).toContainText("reported");
+    // Cautious statuses (Codex review N1): possible evidence to confirm, partly there, a prompt. Never "reported".
+    await expect(view.getByTestId("checklist-edition")).toHaveText("Selected themes of EPIFORGE 2020, not a full compliance check.");
+    const tally = view.getByTestId("checklist-tally");
+    await expect(tally).toHaveText("1 of 6 with possible evidence · 1 partly there · confirmed by you: 0");
+    await expect(view.getByTestId("checklist-status")).toHaveText([
+      "Found: please confirm",
+      "Needs your check · readers look in Introduction, Methods",
+      "Needs your check · readers look in Results, Methods",
+      "Partly there",
+      "Needs your check",
+      "Needs your check",
+    ]);
+    await expect(view).not.toContainText(/\breported\b(?! elsewhere)/i);
+    await expect(items.nth(0).getByTestId("checklist-refs")).toHaveText("EPIFORGE 2020 item 8");
+    await expect(items.nth(5).getByTestId("checklist-refs")).toHaveText("Good practice, not a numbered item");
     await expect(items.nth(0).locator(".checklist-evidence q")).toHaveText(CHECKLIST.items[0]!.evidence!);
-    await expect(items.nth(1).getByTestId("checklist-status")).toContainText("needs your check");
     await expect(items.nth(1).locator(".checklist-plain")).toHaveText(CHECKLIST.items[1]!.plain);
+    await expect(items.nth(1).getByTestId("checklist-not-counted")).toHaveText(
+      `A sentence mentions this but promises it for later: ${CHECKLIST.items[1]!.not_counted!.quote}`,
+    );
+    const parts = items.nth(3).getByTestId("checklist-part");
+    await expect(parts.locator(".checklist-part-line")).toHaveText(["Found: the data sources", "Needs your check: whether the data are available"]);
+    await expect(parts.nth(0).locator("q")).toHaveText(CHECKLIST.items[3]!.parts![0]!.evidence!);
+    await expect(parts.nth(1).locator("q")).toHaveCount(0);
+    await expect(items.nth(4).getByTestId("checklist-absent")).toHaveText("No Results section was found to look in.");
     // Statuses are words: the same ink whatever the status.
     const inks = await view.locator(".checklist-status-word").evaluateAll((els) => els.map((e) => getComputedStyle(e).color));
     expect(new Set(inks).size).toBe(1);
     await expect(view.locator(".checklist-source cite")).toHaveText(CHECKLIST.source);
     await expect(view.getByTestId("checklist-scope")).toHaveText("This checks reporting only, never the science.");
 
+    // "Confirmed by me": only where there is possible evidence; the writer's call, this session only, said politely.
+    await expect(view.getByTestId("checklist-confirm")).toHaveCount(2);
+    await expect(items.nth(1).getByTestId("checklist-confirm")).toHaveCount(0);
+    const confirm = items.nth(0).getByTestId("checklist-confirm");
+    await expect(confirm).toHaveAttribute("aria-pressed", "false");
+    await confirm.focus();
+    await page.keyboard.press("Enter");
+    await expect(confirm).toHaveAttribute("aria-pressed", "true");
+    await expect(items.nth(0).getByTestId("checklist-status")).toHaveText("Confirmed by you");
+    await expect(items.nth(0).locator(".checklist-evidence q")).toHaveText(CHECKLIST.items[0]!.evidence!);
+    await expect(tally).toHaveText("1 of 6 with possible evidence · 1 partly there · confirmed by you: 1");
+    await expect(view.getByTestId("checklist-live")).toHaveText("Model description: confirmed by you.");
+    await page.keyboard.press("Space");
+    await expect(confirm).toHaveAttribute("aria-pressed", "false");
+    await expect(items.nth(0).getByTestId("checklist-status")).toHaveText("Found: please confirm");
+    await expect(view.getByTestId("checklist-live")).toHaveText("Model description: confirmation undone.");
+
     // "Not applicable": the writer's call, this session only.
     const na = items.nth(1).getByTestId("checklist-na");
     await expect(na).toHaveAttribute("aria-pressed", "false");
     await na.click();
     await expect(na).toHaveAttribute("aria-pressed", "true");
-    await expect(items.nth(1).getByTestId("checklist-status")).toHaveText("not applicable (your call)");
+    await expect(items.nth(1).getByTestId("checklist-status")).toHaveText("Not applicable (your call)");
+    await expect(tally).toHaveText("1 of 6 with possible evidence · 1 partly there · confirmed by you: 0 · not applicable (your call): 1");
     expect(sent).toHaveLength(2);
 
     // Remembered in this browser: the checklist's id, nothing else of the check.
@@ -1162,6 +1212,7 @@ test.describe("reporting checklists (S4)", () => {
       await page.getByTestId("view-checklist").click();
       await expect(page.getByTestId("checklist-item")).toHaveCount(CHECKLIST.items.length);
       await page.getByTestId("checklist-item").nth(2).getByTestId("checklist-na").click();
+      await page.getByTestId("checklist-item").nth(3).getByTestId("checklist-confirm").click();
       const tops = await page.getByRole("tab").evaluateAll((els) => els.map((e) => e.getBoundingClientRect().top));
       expect(new Set(tops).size).toBeGreaterThan(1);
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
@@ -1254,6 +1305,7 @@ test.describe("the printed report's context (review R8)", () => {
     await expect(page.getByTestId("stale-note")).toBeVisible();
     await page.getByTestId("view-checklist").click();
     await page.getByTestId("checklist-item").nth(1).getByTestId("checklist-na").click();
+    await page.getByTestId("checklist-item").nth(3).getByTestId("checklist-confirm").click();
     await page.getByTestId("print-report-button").click();
     await page.emulateMedia({ media: "print" });
     const report = page.getByTestId("print-report");
@@ -1272,8 +1324,19 @@ test.describe("the printed report's context (review R8)", () => {
     await expect(list).toBeVisible();
     expect(await list.evaluate((el) => getComputedStyle(el).breakBefore)).toBe("page");
     await expect(list.getByTestId("checklist-item")).toHaveCount(CHECKLIST.items.length);
-    await expect(list.getByTestId("checklist-status").nth(0)).toContainText("reported");
-    await expect(list.getByTestId("checklist-status").nth(1)).toHaveText("not applicable (your call)");
+    // Found but unconfirmed, not applicable, needs check, confirmed by the writer: kept apart on paper.
+    await expect(list.locator(".checklist-status-word")).toHaveText([
+      "Found: please confirm",
+      "Not applicable (the writer’s call)",
+      "Needs your check",
+      "Confirmed by the writer",
+      "Needs your check",
+      "Needs your check",
+    ]);
+    await expect(list.getByTestId("checklist-tally")).toHaveText(
+      "1 of 6 with possible evidence · 1 partly there · confirmed by the writer: 1 · not applicable (the writer’s call): 1",
+    );
+    await expect(list.getByTestId("checklist-edition")).toHaveText("Selected themes of EPIFORGE 2020, not a full compliance check.");
     await expect(list.getByRole("button")).toHaveCount(0);
     await expect(list).toContainText("This checks reporting only, never the science.");
     await page.emulateMedia({ media: "screen" });

@@ -120,14 +120,15 @@ test.describe("Label flags", () => {
     const file = await download;
     expect(file.suggestedFilename()).toBe("researchly-labels.json");
     const data = JSON.parse(readFileSync((await file.path())!, "utf8"));
-    expect(data).toEqual({
-      version: 1,
-      labels: [
-        { paragraph: 1, rule_id: "C201", category: "convention", section: "discussion", verdict: "useful" },
-        { paragraph: 1, rule_id: "S010", category: "correction", section: "discussion", verdict: "unsure" },
-        { paragraph: 2, rule_id: "S010", category: "correction", section: "methods", verdict: "wrong" },
-      ],
-    });
+    // Each label names its check (an opaque random id) and its flag's position in it (Codex review N3).
+    for (const l of data.labels) expect(l.attempt).toMatch(/^[a-z0-9]{10}$/);
+    expect(data.labels[0].attempt).toBe(data.labels[1].attempt);
+    expect(data.labels[2].attempt).not.toBe(data.labels[0].attempt);
+    expect(data.labels.map((l: Record<string, unknown>) => Object.fromEntries(Object.entries(l).filter(([k]) => k !== "attempt")))).toEqual([
+      { paragraph: 1, rule_id: "C201", category: "convention", section: "discussion", verdict: "useful", flag: 0 },
+      { paragraph: 1, rule_id: "S010", category: "correction", section: "discussion", verdict: "unsure", flag: 1 },
+      { paragraph: 2, rule_id: "S010", category: "correction", section: "methods", verdict: "wrong", flag: 1 },
+    ]);
     expect(JSON.stringify(data)).not.toContain("the the");
 
     // Start over, after a confirmation that focuses the safe choice.
@@ -136,6 +137,45 @@ test.describe("Label flags", () => {
     await page.getByTestId("label-clear-confirm").click();
     await expect(page.getByTestId("label-count")).toHaveText("Paragraph 1. 0 of 50 paragraphs, 0 flags labelled.");
     expect(await page.evaluate(() => Object.keys(localStorage))).toEqual([]);
+  });
+
+  test("a reload halfway through a paragraph, then a recheck: labels are replaced, never doubled; a failed check changes nothing (N3)", async ({ page }) => {
+    let fail = false;
+    await page.route(`${ENGINE}/v1/analyze`, async (route) => {
+      if (route.request().method() === "OPTIONS") return route.fulfill({ status: 204, headers: { "access-control-allow-origin": "*", "access-control-allow-headers": "content-type" } });
+      if (fail) return json(route, 500, { error: { code: "internal", message: "Engine unavailable", request_id: "r" } });
+      return json(route, 200, { ...happyResponse, suggestions: CARDS, counts: { convention: 1, correction: 1 }, hidden_preferences: 0 });
+    });
+    await page.goto("/label");
+    await page.getByTestId("label-paragraph").fill(PARAGRAPH);
+    await page.getByTestId("label-check").click();
+    await page.getByTestId("label-card").nth(0).getByTestId("verdict-wrong").click();
+    await expect(page.getByTestId("label-count")).toHaveText("Paragraph 1. 1 of 50 paragraphs, 1 flag labelled.");
+
+    // The reload: the label stays, the text and the flags do not, and the page says what a recheck will do.
+    await page.reload();
+    await expect(page.getByTestId("label-card")).toHaveCount(0);
+    await expect(page.getByTestId("label-replace-note")).toContainText("already has one label");
+
+    // An interrupted check changes nothing.
+    fail = true;
+    await page.getByTestId("label-paragraph").fill(PARAGRAPH);
+    await page.getByTestId("label-check").click();
+    await expect(page.getByTestId("label-error")).toBeVisible();
+    await expect(page.getByTestId("label-count")).toHaveText("Paragraph 1. 1 of 50 paragraphs, 1 flag labelled.");
+
+    // The recheck replaces the earlier label; the changed verdict is the only one counted.
+    fail = false;
+    await page.getByTestId("label-check").click();
+    await expect(page.getByTestId("label-card")).toHaveCount(2);
+    await expect(page.getByTestId("label-replace-note")).toHaveCount(0);
+    await expect(page.getByTestId("label-count")).toHaveText("Paragraph 1. 0 of 50 paragraphs, 0 flags labelled.");
+    await page.getByTestId("label-card").nth(0).getByTestId("verdict-useful").click();
+    const download = page.waitForEvent("download");
+    await page.getByTestId("label-export").click();
+    const data = JSON.parse(readFileSync((await (await download).path())!, "utf8"));
+    expect(data.labels).toHaveLength(1);
+    expect(data.labels[0]).toMatchObject({ paragraph: 1, rule_id: "C201", verdict: "useful", flag: 0 });
   });
 
   test("a paragraph with no flags says to skip it", async ({ page }) => {

@@ -27,7 +27,7 @@ checking engine" state.
 | `npm run typecheck` | `tsc --noEmit` (strict, includes the contract package) |
 | `npm test` | Vitest unit tests (`tests/unit`) |
 | `npm run test:e2e` | Playwright against two production builds, engine and Supabase mocked: project `chromium` (S1 build, no Supabase, :3100) and project `accounts` (with Supabase, :3101, `e2e/accounts*.spec.ts`) |
-| `npm run screenshots` | Design screenshots (`SHOTS_DIR=…` to choose where) |
+| `npm run screenshots` | Design screenshots of every page, light and dark, phone and desktop, Word pane at 320px, with axe logged (`SHOTS_DIR=…` to choose where, `SHOT_PREFIX=…` to name a set) |
 
 Playwright is pinned to 1.56.1 to match the pre-installed Chromium; set
 `PLAYWRIGHT_BROWSERS_PATH` if your browsers live elsewhere.
@@ -63,10 +63,30 @@ the contract compiles as first-party source.
 - **Health**: a degraded grammar tier (or any tier in `error`/`unstarted`)
   gets a calm banner with the engine's detail and remedy. The learned `gec`
   tier being absent is normal and not shown.
+- **One check at a time** (`lib/check-session.ts`, review proposal 8): every
+  check has a sequence number and an AbortController. Cancel aborts it and
+  puts the previous results back as current; a newer check supersedes an
+  older one; a reply that arrives for a cancelled or superseded check is
+  dropped, even when the network ignored the abort. Retry reruns the same
+  check (the website resends the same snapshot; Word reads the document
+  afresh). `tests/unit/check-session.test.ts` proves it with a mocked fetch
+  and a ~120,000-word synthetic document.
 - **Rule scopes**: after the first results the page asks `GET /v1/rules`
   once (no text) so the section view knows which rules read the whole
   document (`lib/scope.ts`); without a registry the engine's known
   document-wide ids stand in.
+- **Word prediction** (2026-10-14): after a 250 ms pause in typing the
+  editor asks `POST /v1/complete` (also from `lib/engine.ts`) with a window
+  around the cursor (up to 4,000 characters before it plus the rest of its
+  paragraph) and the cursor in code points; `lib/prediction.ts` builds the
+  window, maps the answer back, and drops replies to older text (sequence
+  number + AbortController). Candidates show under the editor; Tab or a
+  click accepts, nothing is inserted otherwise. The Word pane's "Next
+  words" panel asks the chosen engine the same way (the local `server.py`
+  answers `/v1/complete` too). A 5 s timeout; signed in, the bearer token
+  goes with it but is never refreshed for a prediction.
+- **Reading summary**: `AnalyzeResponse.reading` is one line under the
+  results heading (`lib/reading.ts`).
 - **CORS**: the engine must allow this site's origin, and should expose
   `Retry-After` and `X-Request-ID` (`Access-Control-Expose-Headers`).
 
@@ -129,7 +149,8 @@ Word loads `https://<site>/word` in its sidebar (manifests in
   rely on the `user_id` default (`auth.uid()`); the only id the client ever
   sends is its own, as a filter on "delete my settings and dictionary".
 - **Storage**: besides the format preference (and, in the Word taskpane,
-  the engine choice and Draft/Revise), the only stored item is
+  the engine choice and Draft/Revise; and the word prediction switch, once
+  touched, as on/off), the only stored item is
   supabase-js's session (`sb-<ref>-auth-token`, plus its PKCE verifier while
   a link is pending). Never document text.
 
@@ -188,11 +209,17 @@ app/            layout (dynamic, for CSP nonces), page (static chrome), globals.
                 word/ (the Word add-in's taskpane, S3)
 components/     Checker (form + state), ReadingKey (idle "how to read the
                 feedback" key), Results, DocumentView, SuggestionCard,
-                HealthBanner, MetricsPanel, CategoryIcon
-components/word/ Taskpane, WordCard, CodeSignIn
+                HealthBanner, MetricsPanel, CategoryIcon, RevisionQueue
+                (pass chooser + queue, shared with Word), CheckProgress
+                (running-check line, shared with Word), PredictionStrip
+                (word prediction + its switch), PredictionSettings, ReadingSummary
+components/word/ Taskpane, WordCard, CodeSignIn, NextWords (word prediction)
 lib/word/       office (every Office.js call), view (taskpane helpers)
 lib/            engine (fetch), segments (offsets + highlight segmentation),
-                categories, health, errors, validate, view, prefs, config, security
+                categories, health, errors, validate, view, prefs, config, security,
+                queue (the revision queue's passes and positions),
+                check-session (one check at a time; late replies dropped),
+                prediction (window, offsets, scheduler), use-prediction, reading
 proxy.ts        CSP nonce
 scripts/        check-boundary.mjs (confidentiality lint)
 tests/unit/     Vitest

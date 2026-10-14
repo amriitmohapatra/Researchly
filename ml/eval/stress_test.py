@@ -35,7 +35,7 @@ from eval.aesw import iter_sentences                      # noqa: E402
 from researchly import api                                # noqa: E402
 from researchly.config import Config                      # noqa: E402
 from researchly.document import Document                  # noqa: E402
-from researchly.engine import Category, check             # noqa: E402
+from researchly.engine import check             # noqa: E402
 
 DATA = HERE / "data" / "aesw_dev.xml"
 
@@ -107,7 +107,7 @@ def main() -> int:
     print("=" * 72)
     print("AESW 2016 dev — professionally edited scientific prose")
     print("=" * 72)
-    print(f"\n1. FALSE POSITIVES on editor-approved text")
+    print("\n1. FALSE POSITIVES on editor-approved text")
     print(f"   sentences               {clean_sents:>8,}")
     print(f"   words                   {clean_words:>8,}")
     print(f"   flags                   {clean_flags:>8,}")
@@ -120,7 +120,7 @@ def main() -> int:
     for rid, n in clean_by_rule.most_common(12):
         print(f"     {rid:8s} {n:6,}  ({n / clean_flags * 100:4.1f}%)")
 
-    print(f"\n2. DETECTION on text an expert did change")
+    print("\n2. DETECTION on text an expert did change")
     print(f"   edited sentences        {bad_sents:>8,}")
     hp = bad_hit / bad_sents * 100 if bad_sents else 0
     sp = bad_at_site / bad_sents * 100 if bad_sents else 0

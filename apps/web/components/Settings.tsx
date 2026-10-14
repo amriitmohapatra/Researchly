@@ -2,20 +2,23 @@
 
 import Link from "next/link";
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from "react";
-import type { RuleInfo } from "@researchly/contract";
+import type { RuleInfo, Spelling } from "@researchly/contract";
 import {
   addWord,
   deleteMyData,
   listWords,
   loadSettings,
+  loadSpelling,
   removeWord,
   saveSettings,
+  saveSpelling,
   unmuteRule,
 } from "@/lib/account";
 import { openSignIn, useAuth } from "@/lib/auth";
 import { deleteProgress, loadKeepProgress, saveKeepProgress } from "@/lib/progress";
 import { CATEGORIES, categoryMeta } from "@/lib/categories";
 import { listRules } from "@/lib/engine";
+import { saveSpellingChoice } from "@/lib/prefs";
 import {
   DEFAULT_SETTINGS,
   LOCALES,
@@ -24,8 +27,11 @@ import {
   type Locale,
   type UserSettings,
 } from "@/lib/settings";
+import { SPELLING_LABELS } from "@/lib/spelling";
 import { CategoryIcon } from "./CategoryIcon";
 import { ConfirmDelete } from "./pages/ConfirmDelete";
+import { PredictionSettings } from "./PredictionSettings";
+import { SpellingSelect } from "./SpellingSelect";
 
 const nf = new Intl.NumberFormat("en-GB");
 /** Above this many words the list gets a filter box. */
@@ -79,6 +85,26 @@ function SignedInSettings() {
   /** "Keep my progress" (S4c): null while loading; loaded on its own, so a database without the column fails only this. */
   const [keep, setKeep] = useState<boolean | null>(null);
   const [keepError, setKeepError] = useState<string | null>(null);
+  /**
+   * The English spelling to keep to (task #15): Auto until loaded; loaded on
+   * its own, so a database without the spelling migration fails only this.
+   */
+  const [spelling, setSpelling] = useState<Spelling>("auto");
+  const [spellingError, setSpellingError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    void loadSpelling().then((r) => {
+      if (!live) return;
+      if (r.ok) {
+        setSpelling(r.data ?? "auto");
+        setSpellingError(null);
+      } else setSpellingError(r.message);
+    });
+    return () => {
+      live = false;
+    };
+  }, [reload]);
 
   useEffect(() => {
     let live = true;
@@ -185,6 +211,24 @@ function SignedInSettings() {
       <Display
         settings={settings}
         busy={busy}
+        spelling={spelling}
+        spellingError={spellingError}
+        onSpelling={(next) => {
+          // The control moves at once; if the save fails it moves back and says why.
+          const before = spelling;
+          setSpelling(next);
+          void act(
+            () => saveSpelling(next),
+            () => {
+              // This browser follows too, so the checker and the taskpane agree before their next sign-in load.
+              saveSpellingChoice(next);
+              setSpellingError(null);
+              return `Spelling set to ${SPELLING_LABELS[next]}.`;
+            },
+          ).then((saved) => {
+            if (!saved) setSpelling(before);
+          });
+        }}
         onChange={(patch, message) => {
           // The control moves at once; if the save fails it moves back and says why.
           const before = settings;
@@ -200,6 +244,8 @@ function SignedInSettings() {
           });
         }}
       />
+
+      <PredictionSettings />
 
       <Dictionary
         words={words}
@@ -258,6 +304,7 @@ function SignedInSettings() {
               setSettings({ ...DEFAULT_SETTINGS, disabled_rules: [] });
               setWords([]);
               setKeep(false);
+              setSpelling("auto"); // the row is gone, so the column's default applies
               return "Your settings, dictionary and progress were deleted.";
             },
           )
@@ -340,13 +387,19 @@ function MutedRules({
 function Display({
   settings,
   busy,
+  spelling,
+  spellingError,
+  onSpelling,
   onChange,
 }: {
   settings: UserSettings;
   busy: boolean;
+  spelling: Spelling;
+  spellingError: string | null;
+  onSpelling: (next: Spelling) => void;
   onChange: (patch: Partial<UserSettings>, message: string) => void;
 }) {
-  const ids = { prefs: useId(), prefsHelp: useId() };
+  const ids = { prefs: useId(), prefsHelp: useId(), spelling: useId(), localeHelp: useId() };
   return (
     <section className="panel settings-section" aria-labelledby="display-title">
       <h2 id="display-title" className="panel-title">
@@ -375,8 +428,22 @@ function Display({
           Preferences are matters of taste, so they are hidden unless you switch this on.
         </p>
       </div>
-      <fieldset className="setting-row locale-set">
-        <legend className="field-label">Spelling</legend>
+      <div className="setting-row" data-testid="settings-spelling">
+        <SpellingSelect
+          id={ids.spelling}
+          value={spelling}
+          busy={busy}
+          onChange={(next) => {
+            if (next !== spelling) onSpelling(next);
+          }}
+          note={spellingError ? `Your spelling choice could not be loaded, so Auto applies. ${spellingError}` : null}
+        />
+      </div>
+      <fieldset className="setting-row locale-set" aria-describedby={ids.localeHelp}>
+        <legend className="field-label">Grammar checks</legend>
+        <p id={ids.localeHelp} className="help">
+          Which English the grammar checker reads your text as. Spelling is chosen above.
+        </p>
         {LOCALES.map((l) => (
           <label key={l.value} className="radio">
             <input
@@ -386,7 +453,7 @@ function Display({
               checked={settings.locale === l.value}
               onChange={() => {
                 if (busy) return;
-                onChange({ locale: l.value as Locale }, `Spelling set to ${l.label}.`);
+                onChange({ locale: l.value as Locale }, `Grammar checks set to ${l.label}.`);
               }}
               data-testid={`locale-${l.value}`}
             />
@@ -532,7 +599,7 @@ function Dictionary({
 
 /** The exact help text under the switch (pinned by tests). */
 export const KEEP_PROGRESS_HELP =
-  "Records how many times each check fired and how many words were checked, after each check. Never your text. Off by default; switching it off stops recording.";
+  "Records how many times each check fired, how many words were checked, which checks ran, Draft or Revise and the checker’s version, after each check. Never your text. Off by default; switching it off stops recording.";
 
 function KeepProgress({
   keep,
@@ -589,7 +656,7 @@ function KeepProgress({
         <ConfirmDelete
           label="Delete my progress…"
           title="Delete your recorded progress?"
-          body="Every recorded check (rule counts and word counts) will be removed from your account. Your settings and dictionary stay. This can’t be undone."
+          body="Every recorded check (rule counts, word counts and which checks ran) will be removed from your account. Your settings and dictionary stay. This can’t be undone."
           keepLabel="Keep it"
           confirmLabel="Delete it"
           busy={busy}

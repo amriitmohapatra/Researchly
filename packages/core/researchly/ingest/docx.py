@@ -21,6 +21,9 @@ style it is based on) has an outline level.
 Structure: drawings and pictures -> figure (their paragraph); equations
 (`m:oMath`) -> equation, replaced by a masked "[equation]" placeholder;
 Caption-styled paragraphs -> caption; tables -> table over their cells.
+Each cell paragraph also carries its place, `"cell": [table, row, col,
+colspan]`, which the add-in does not send: X401 uses it to find the row and
+column a sentence quotes (Codex review #7).
 
 Ignored in S2, silently: comments, footnotes and endnotes, headers and
 footers, and text inside text boxes (it sits inside drawings).
@@ -63,6 +66,17 @@ def _child(el, name: str):
         if _local(c.tag) == name:
             return c
     return None
+
+
+def _grid_value(el, props: str, name: str) -> int:
+    """`w:tcPr/w:gridSpan` or `w:trPr/w:gridBefore` as a number (0 if
+    absent or unreadable)."""
+    pr = _child(el, props)
+    v = _child(pr, name) if pr is not None else None
+    try:
+        return int(_attr(v, "val")) if v is not None else 0
+    except (TypeError, ValueError):
+        return 0
 
 
 def _parse(data: bytes):
@@ -162,6 +176,11 @@ class _Reader:
         self.equations: list[tuple[int, int, int]] = []
         self.figures: list[int] = []
         self.tables: list[tuple[int, int]] = []
+        # [table, row, col, colspan] of the cell being read (X401 reads
+        # rows and columns from them); None outside a table, or in a row
+        # whose columns cannot be counted.
+        self.cell: list[int] | None = None
+        self.table_count = 0
         # The paragraph being read.
         self.parts: list[str] = []
         self.length = 0
@@ -177,11 +196,46 @@ class _Reader:
                 self.paragraph(c, kind)
             elif ln == "tbl":
                 first = len(self.paras)
-                self.block(c, "table", depth + 1)
+                self.table(c, depth + 1)
                 if len(self.paras) > first:
                     self.tables.append((first, len(self.paras) - 1))
             elif ln in _BLOCK_CONTAINERS:
                 self.block(c, kind, depth + 1)
+
+    def table(self, tbl, depth: int) -> None:
+        """A table's cells, each paragraph told its row and column. A row
+        wrapped in a content control, or a cell that is, leaves the table
+        without coordinates: a guessed column is worse than none."""
+        _check_depth(depth)
+        number, self.table_count = self.table_count, self.table_count + 1
+        outer, first, regular, row = self.cell, len(self.paras), True, 0
+        for tr in tbl:
+            ln = _local(tr.tag)
+            if ln != "tr":
+                if ln in _BLOCK_CONTAINERS:
+                    regular = False
+                    self.cell = None
+                    self.block(tr, "table", depth + 1)
+                continue
+            _check_depth(depth + 1)
+            col = _grid_value(tr, "trPr", "gridBefore")
+            for tc in tr:
+                ln = _local(tc.tag)
+                if ln == "tc":
+                    span = max(1, _grid_value(tc, "tcPr", "gridSpan"))
+                    self.cell = [number, row, col, span]
+                    self.block(tc, "table", depth + 2)
+                    col += span
+                elif ln in _BLOCK_CONTAINERS:
+                    regular = False
+                    self.cell = None
+                    self.block(tc, "table", depth + 2)
+            row += 1
+        self.cell = outer
+        if not regular:
+            for p in self.paras[first:]:
+                if p.get("cell", [None])[0] == number:
+                    del p["cell"]
 
     def paragraph(self, p, kind: str) -> None:
         self.parts, self.length, self.has_figure = [], 0, False
@@ -202,7 +256,10 @@ class _Reader:
                               f"This document has more than "
                               f"{MAX_TEXT_CHARS:,} characters. Check one "
                               "chapter at a time.")
-        self.paras.append({"text": text, "style": style, "kind": kind})
+        entry = {"text": text, "style": style, "kind": kind}
+        if kind == "table" and self.cell is not None:
+            entry["cell"] = list(self.cell)
+        self.paras.append(entry)
 
     def style_of(self, p) -> tuple[str, int | None]:
         ppr = _child(p, "pPr")

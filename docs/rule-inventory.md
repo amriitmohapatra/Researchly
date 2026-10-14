@@ -19,9 +19,9 @@ Every actionable heuristic in the writing guide, converted into a typed rule ent
 
 **Plain explanations (P35, 2026-10-08):** every rule carries a `plain=` text beside its `why=`: the same advice in everyday words, for a writer who knows their science but not the grammar vocabulary (owner feedback from the first real use). The cards show the plain text first and the technical why behind it. Neither may mention this repository's internals: `tests/test_explanations.py` fails on a section number, a course code, a lecturer's name, a book citation or a command-line instruction in any user-visible text. Citations live on the Source line only.
 
-**Scope and Draft mode (S3, 2026-10-04):** every rule declares a scope. *Sentence* rules judge the sentence in front of the writer; *document* rules need the whole document. Draft mode (P1) shows sentence-level rules only and says how many document-level suggestions it held back; Revise shows everything. Document-level today: X101–X104, X202, X301, X401, X501, F601, F612, F613, N101, W211, D902, AB802 (`GET /v1/rules` reports each rule's `scope`).
+**Scope and Draft mode (S3, 2026-10-04):** every rule declares a scope. *Sentence* rules judge the sentence in front of the writer; *document* rules need the whole document. Draft mode (P1) shows sentence-level rules only and says how many document-level suggestions it held back; Revise shows everything. Document-level today: X101–X104, X202, X301, X401, X501, F601, F612, F613, N101, W211, D902, D903, AB802 (`GET /v1/rules` reports each rule's `scope`).
 
-**Article-type profiles (S4, 2026-10-08; owner request):** `researchly/profiles.py`. A profile says what kind of document the sections belong to: which checks do not apply (each with a plain reason the cards show), what section unheaded prose is in, and what a reader of that kind expects (the review lens). Types: auto, general, manuscript, thesis-chapter, abstract, commentary, policy-brief, grant, response-to-reviewers. Commentary and policy brief (the owner's field first) switch off the abstract moves (AB801, AB802), the gap statement (D902) and the hedging prompts (C302, C303), and read their body as argued like a Discussion; "abstract" judges a pasted abstract whole; response-to-reviewers drops the float checks (X101–X104). "auto" guesses only from strong signals (IMRaD headings, a chapter, a recommendations heading) and is otherwise "general", the engine as before. `GET /v1/rules` lists the profiles; `options.document_type` chooses one per request and the account saves it.
+**Article-type profiles (S4, 2026-10-08; owner request):** `researchly/profiles.py`. A profile says what kind of document the sections belong to: which checks do not apply (each with a plain reason the cards show), what section unheaded prose is in, and what a reader of that kind expects (the review lens). Types: auto, general, manuscript, thesis-chapter, abstract, commentary, policy-brief, grant, response-to-reviewers. Commentary and policy brief (the owner's field first) switch off the abstract moves (AB801, AB802), the gap statement (D902, and D903 since 2026-10-14) and the hedging prompts (C302, C303), and read their body as argued like a Discussion; "abstract" judges a pasted abstract whole; response-to-reviewers drops the float checks (X101–X104). "auto" guesses only from strong signals (IMRaD headings, a chapter, a recommendations heading) and is otherwise "general", the engine as before. `GET /v1/rules` lists the profiles; `options.document_type` chooses one per request and the account saves it.
 
 **Learn cards and reporting checklists (S4c, 2026-10-08):** every rule's suggestion carries a `learn_ref` to one of 26 Learn cards (`researchly/learn.py`; provenance in `knowledge-base.md` §12). The epidemiology pack (`researchly/packs/`) adds STROBE, CONSORT, PRISMA and EPIFORGE checklists, requested with `options.checklist` or suggested from the text. They are not rules: each item says "reported" with its sentence or "needs your check", never "missing", and none enters the flag counts or the noise floor.
 
@@ -71,12 +71,14 @@ Every actionable heuristic in the writing guide, converted into a typed rule ent
 | W205 | Filler throat-clearing ("It should be noted that…") | Improvement | all | MVP |
 | W206 | Redundant pairs ("each and every", "completely eliminate") | Improvement | all | MVP |
 | W207 | Doubled word ("the the") | Correction | all | MVP |
-| W208 | Contractions in formal prose | Convention | all | MVP |
+| W208 | Contractions in formal prose; offers the full form ("do not"), and catches contractions typed without the apostrophe ("dont") | Convention | all | MVP; full forms 2026-10-14 |
 | W209 | "In terms of" | Preference | all | MVP |
 | W210 | One term, one meaning (elegant-variation detection) | Convention | all | LLM |
 | W211 | 10% condensing pass | Improvement | all | LLM |
+| W212 | Uncountable noun given a plural ("softwares", "informations"; "criterias") | Correction | all | 2026-10-14 (Swan, *Practical English Usage*) |
+| W213 | A spelling of another English than the one chosen in the settings ("color" in a British paper); runs only when `spelling` is not `auto` | Convention | all | 2026-10-14 (VarCon) |
 
-**W203 — Hype.** Buzzwords signal thin substance; "let the numbers carry the weight." Convention, not error — "novel" survives review in some venues; flag, explain, let the author decide. **W205 — Filler.** "It is important to note that X" = "Note that X" = usually just "X." **W208 — Contractions.** Convention of register, not grammar.
+**W203 — Hype.** Buzzwords signal thin substance; "let the numbers carry the weight." Convention, not error — "novel" survives review in some venues; flag, explain, let the author decide. **W205 — Filler.** "It is important to note that X" = "Note that X" = usually just "X." **W208 — Contractions.** Convention of register, not grammar. An acronym's possessive ("WHO's") is never a contraction (found on the owner's own .tex, P41). Since 2026-10-14 the card offers the full form when it has one reading ("it's been" is "it has been", so the 's forms get no fix before "been"/"got"), and catches the apostrophe-less forms an everyday keyboard would "fix" to the contraction ("dont" → "do not"); words that are also real words (cant, wont, lets, its, were, well, ill, im) are left out, and S001 leaves these to W208 so the writer sees one card. **W213 — Chosen spelling.** With `spelling = "uk" | "uk-oxford" | "us" | "ca" | "au"` (TOML `[document] spelling`, request `options.spelling`), every spelling VarCon assigns only to other dialects is flagged, once per occurrence, with its spelling in the chosen one; names (a capital mid-sentence, "Centers for Disease Control") are left alone, and words both dialects use in some sense ("meter" the device, "program" software, "tire" to fatigue) never fire. W210 steps aside when a spelling is chosen. VarCon's Canadian and Australian codes are partial, so those choices are quiet rather than wrong. **W210, 2026-10-14:** pairs now come from VarCon (9,281, sense-aware) as well as the curated list, a curated pair VarCon contradicts is dropped (analyses/analyzes: "analyses" is also the US plural), and a mixture is resolved towards the dialect the whole document mostly uses ("The document mostly uses British spelling (5 of 7 words that differ)"). **S002 — Real-word confusions.** Both spellings are words, so S001 passes them; S002 compares log P(word | neighbours) for the typed word and its listed confusion and speaks only when the other is about 150 times likelier and attested on both sides. Pairs are one-way (principle → principal, never principals → principles). than/then and from/form were tried and left to LanguageTool: word pairs misjudged "rather than consider" and "samples form the posterior". On 1.03 M words (8 theses + 115 PMC articles): 3 flags, all genuine slips. Known limit: a literal "the trail was" can be questioned. **W212 — Uncountable plurals.** Mass nouns (information, software, hardware, equipment, advice) take no -s; Latin plurals (data, criteria, phenomena, bacteria, stimuli) take no second one. Words with a correct countable or verb reading stay out ("researches", "evidences", "progresses", "climate feedbacks", "knowledges"). In the eight theses it would flag "softwares" twice.
 
 ## Layer 3 — Calibration, claims, statistics (guide §4, §9.3, §9.4; Toulmin)
 
@@ -141,7 +143,7 @@ F607–F610 are the thesis-aligned, nobody-else-has-this rules. F601 is the one 
 
 ---
 
-## Layer 7 — Course-corpus rules (v0.2; sources: Endo lecture, NG5001, Shehzad 2008, Pallas 2022)
+## Layer 7 — Course-corpus rules (v0.2; sources: Endo lecture, NG5001, Shehzad 2008, Pallas 2023)
 
 | ID | Rule | Type | Sections | Status |
 |---|---|---|---|---|
@@ -155,6 +157,9 @@ F607–F610 are the thesis-aligned, nobody-else-has-this rules. F601 is the one 
 | AB801 | "Results will be discussed" — vague abstract forward reference | Convention | Abstract | MVP |
 | L901 | "There are many studies on…" — serial-summary lit-review opener | Improvement | all | MVP |
 | D902 | Introduction lacks a detectable gap statement (Shehzad niche signals) | Improvement | doc-level | MVP |
+| D903 | Gap stated as a bare absence ("remains underexplored", "has been overlooked", "little is known") with no stake in it, the sentence before or the two after (what fails, who pays, what is decided without the answer, an untested assumption) | Improvement | Introduction (doc-level) | 2026-10-14 |
+| D904 | "Fills / addresses / bridges the gap" (a knowledge gap) with no ruling: say closed, narrowed, reframed or reopened | Improvement | Discussion, Conclusion | 2026-10-14 |
+| D905 | Generic call for future research ("Further research is needed", "Future work should explore this") naming nothing that is still open | Improvement | Discussion, Limitations, Conclusion | 2026-10-14 |
 
 All aggregate per section where repetition would nag (E701, E704–E707,
 AB801, L901). E703 fires only when the preceding sentence is ≥18 words
@@ -162,6 +167,29 @@ AB801, L901). E703 fires only when the preceding sentence is ≥18 words
 in-sentence citation; E705 by a "to our knowledge" softener; D902 requires
 an Introduction section of substance and searches for Shehzad's three
 signal classes (contrastives; limited/few/little; none-of/not-been/no-study).
+
+**The gap as an argument (2026-10-14; a thesis-writing workshop, shown to
+users as the owner's learnings, with Alvesson & Sandberg 2011, Sandberg &
+Alvesson 2011, Bunton 2005, Kwan 2006 and Lim 2006 by name; provenance in
+`knowledge-base.md` §13).** D903–D905 aggregate per section and offer no
+replacement (nothing is drafted for the writer). D903 runs on an
+Introduction heading only, stays quiet when any stake signal is near the
+gap (`lexicons.STAKE_RX`, deliberately broad), leaves question-raising
+gaps ("it is unclear whether") alone, defers to E705 on an unsoftened "has
+not been studied" (one card per span), and is off for commentary, policy
+brief and response to reviewers. D904 skips a partial or negated claim
+("partly fills", "does not fill"), an aim ("to fill this gap"), "closes the
+gap" (a ruling) and literal gaps ("the immunity gap", "the gap between
+modelling and policy", "this gap in coverage"). D905 fires only when every
+word of the sentence other than the call itself is generic
+(`lexicons.GENERIC_FUTURE_WORDS`). Not rules, and not counted in the noise
+floor: **strangers**, sources cited in two or more sentences of the
+Discussion and nowhere before it, shown as the narrative map's
+`stranger_sources` link and in the brief's question D
+(`discourse/citations.py`; abstains without a review section or with fewer
+than three readable citations in it); and two thesis-chapter moves on the
+map, Methods "what the design cannot show" and Conclusion "what is still
+open".
 
 ## Layer 8 — Structure and consistency (S2b, 2026-10-04; owner decisions P2, P4)
 
@@ -176,7 +204,7 @@ Structural checks read `researchly/structure.py`: floats (figures and tables wit
 | X202 | Caption under five words | Improvement | LaTeX, Word | §9.7 | S2b |
 | X301 | Numbered equation never referred to | Preference | LaTeX | §9.2 | S2b |
 | X302 | A displayed equation that is not part of a sentence: the text before it ends with a full stop (abbreviations such as "e.g." and "Eq." excepted). LaTeX: equation environments. Word: an equation object alone in its paragraph (an uploaded .docx; its number may follow), or a paragraph of maths written as text with no ordinary word (the add-in reads text only, so an equation object arrives in its linear form; a PDF conversion flattens one the same way). Equations inside a sentence's paragraph are inline and not judged. 5 of 102 equations on the 17 real LaTeX projects, all genuine; none on the 36 real Word files (their equations are led in or follow a colon) | Convention | LaTeX, Word | §9.2 (the owner's professor made the same correction) | P35 |
-| X401 | Decimal or percentage quoted with "Table N" that Table N does not hold (rounding allowed; levels, versions and totals skipped) | Correction | LaTeX, Word | §6 | S2b |
+| X401 | Decimal or percentage quoted with "Table N" that Table N does not hold (rounding allowed; levels, versions and totals skipped). **Row and column (Codex #7, 2026-10-14):** `researchly/tables.py` reads the table as a grid (LaTeX: the float's one `tabular`/`tabularx`/`longtable`, with `\multicolumn` spans, `\multirow` labels filled down, rules and footnote marks dropped; Word: an uploaded .docx gives each cell `[table, row, col, colspan]`). Header rows are the leading rows with no results; label columns the leading columns with no results; a label row with nothing else in it heads a group of rows. When the sentence names one row (or one group, or a group and a row) and/or one column (or a column group and a leaf header), the number nearest the row's name must be in that cell, or in that row or column when only one is named. The message names the cell and what it holds, the rounding ("holds 4.13 (4.1 when rounded to 1 decimal place), not 4.2"), and where the number is instead ("6.2 is in row '30–44' — a value from the wrong row / group / column?"). A proportion never matches a percentage (said as such), and a rate base that differs from the column's ("per 10,000" against "per 1,000"), or a percentage against a rate column, is flagged. **Abstains** (back to "anywhere in the table") when two rows or two columns are named at the same level, the sentence compares or derives (than, versus, respectively, ratio, fold, increase…), the column is named in another clause than the number, the named cells hold no number of the quoted kind ("in most cases" is not the Cases column), the float has no single readable grid (two tabulars, `\captionof`, nested Word tables, a cell in a content control), or the cells come from the Word add-in, which sends no row or column. Plain text and Markdown have no tables here. A flag compared with one cell (the row and column named, or a row or column that holds only one number) carries `table_evidence` (table, 0-based row and column, headers without units, the cell's offsets and text, its value as the text would quote it, the number quoted, the rounding allowed); a row or column with several numbers, or a number nowhere in the table, carries none. Tests: `tests/test_table_cells.py`, `services/engine/tests/test_table_cells_service.py` | Correction | LaTeX, Word | §6 | S2b; rows and columns 2026-10-14 The local Word add-in sends each table paragraph's cell place (P42), so in Word the cell rules apply too. |
 | F612 | Abbreviation defined twice (abstract, a new chapter, captions and definitions 3,000+ words apart exempt) | Convention | all | §9.1 | S2b |
 | F613 | Abbreviation defined but then used once or not at all | Preference | all | §9.1 | S2b |
 | N101 | Number–unit spacing mixed ("5 %" and "5%"; °C, mg, km…) | Convention | all | SI Brochure | S2b |
@@ -192,12 +220,17 @@ Tried and dropped: **X203** abbreviation in a caption not defined there (79 flag
 
 | ID | Rule | Type | Backend | Status |
 |---|---|---|---|---|
-| S001 | Spelling (unknown words, top-3 suggestions) | Correction | symspellpy (MIT), always on | MVP |
+| S001 | Spelling (unknown words, top-3 suggestions ranked by a noisy-channel model with the neighbouring words) | Correction | symspellpy (MIT) + `spellrank.py`, always on | MVP; ranker 2026-10-14 |
+| S002 | Real-word confusion: a real word the neighbouring words say was meant as its usual confusion ("principle component", "a casual relationship", "were effected by") | Correction | SymSpell bigram counts, one-way pairs in `lexicons.CONFUSIONS`, margin ≈150× | 2026-10-14 (Mays, Damerau & Mercer 1991) |
 | LT001 | Grammar: agreement, verb forms, a/an, confusions | Correction | LanguageTool via language_tool_python (local server, Java), optional | MVP |
 | GEC001 | Learned corrections: minimal token-level edits (GECToR-style), opt-in `[tiers] gec = true`, abstains without a local model | Correction | local edit tagger scaffold (`gec.py` + `rules_gec.py`), tier="gec", never auto-applied, confidence-gated, masked-span-safe (test_gec.py) | 2026-08-14 scaffold |
 
 Phase-1 deliberately deferred this tier ("integrate, don't rebuild");
-added after desktop dogfooding exposed the gap. S001 precision guards:
+added after desktop dogfooding exposed the gap. **2026-10-14 (P41):** S001
+also accepts the NLM SPECIALIST Lexicon's single-word forms (278k after
+filtering; `data/specialist_words.txt`, notice in its header), which removed
+more than half of its false flags on biomedical prose; and skips code names
+(a lower-case start with a capital inside: "mDh", "logLik"). S001 precision guards:
 shipped scientific lexicon (`researchly/data/scientific_terms.txt`),
 personal dictionary (`researchly dict add`), UK/US variant mapping,
 morphological fallback (closed-class words exempt — "thiss" ≠ "this+s"),

@@ -1,5 +1,5 @@
 """Fire / don't-fire tests for the rules mined from the owner's course and
-lecture notes, Shehzad 2008 and Pallas 2022 (provenance in the private
+lecture notes, Shehzad 2008 and Pallas 2023 (provenance in the private
 knowledge base)."""
 
 import spacy

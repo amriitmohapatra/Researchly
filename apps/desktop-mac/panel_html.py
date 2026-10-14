@@ -207,7 +207,7 @@ def render_check(suggestions, metrics=None, hidden_prefs: int = 0,
             btns = []
             if s.get("replacement"):
                 btns.append(
-                    f"<button class='good' onclick=\""
+                    "<button class='good' onclick=\""
                     + _js({"action": "copy_fix", "idx": idx})
                     + "\">Copy fix</button>")
             if s.get("rule_id") == "S001" and s.get("text"):

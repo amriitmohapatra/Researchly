@@ -55,6 +55,8 @@ jobs:
           python -m pytest ml/realdocs -q
       - name: Precision-from-labels report (S4 exit check tooling)
         run: python -m pytest ml/eval/test_label_precision.py -q
+      - name: Spelling benchmark and data builders (synthetic inputs; nothing fetched)
+        run: python -m pytest ml/eval/test_spelling_tools.py -q
       - name: Demo manuscript (every planted error fires, nothing else)
         run: |
           python -m pip install -q -r demo/requirements.txt

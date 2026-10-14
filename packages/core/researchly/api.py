@@ -14,6 +14,7 @@ detected sections, engine health, and the resolved config.
 
 from __future__ import annotations
 
+import re
 import threading
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -34,6 +35,9 @@ MAX_LENGTH = 1_200_000
 
 _NLP = None
 _NLP_LOCK = threading.Lock()
+# Pipeline components nothing in the engine reads. A rule that needs one
+# (doc.ents, token.ent_type_) must take it out of this list.
+NOT_USED_PIPES = ("ner",)
 
 
 def get_nlp(model: str = "en_core_web_sm"):
@@ -46,7 +50,12 @@ def get_nlp(model: str = "en_core_web_sm"):
             if not Language.has_factory("researchly_paragraphs"):
                 Language.component("researchly_paragraphs",
                                    func=paragraph_breaks)
-            nlp = spacy.load(model)
+            # No rule, read-out or report reads named entities, and the
+            # entity recogniser (its own tok2vec, run last) was about 45%
+            # of the parse: 5 s of an 11 s parse on a 30,000-word document.
+            # Leaving it out changes no tag, lemma, dependency or sentence
+            # (2026-10-14 performance pass; tests/test_performance.py).
+            nlp = spacy.load(model, exclude=NOT_USED_PIPES)
             nlp.add_pipe("researchly_paragraphs", before="parser")
             nlp.max_length = MAX_LENGTH
             _NLP = nlp
@@ -98,6 +107,14 @@ class Analysis:
     health: list = field(default_factory=list)
     config: Config = field(default_factory=Config)
     document: Optional[Document] = None
+    # The rules whose findings this check could show (Codex review N2):
+    # not muted, not off for the article type, not held back by Draft, not
+    # hidden preferences, not on a tier that is down. A rule outside this
+    # list was not assessed, which is not the same as zero findings.
+    assessed_rules: list = field(default_factory=list)
+    # A fingerprint of the engine version and its rule set: two checks are
+    # comparable only under the same one.
+    ruleset: str = ""
 
     @property
     def grammar_ok(self) -> bool:
@@ -122,6 +139,8 @@ class Analysis:
             "sections_detected": list(self.sections_detected),
             "health": [t.to_dict() for t in self.health],
             "config": self.config.to_dict(),
+            "assessed_rules": list(self.assessed_rules),
+            "ruleset": self.ruleset,
         }
 
 
@@ -195,6 +214,14 @@ def analyze(source: Union[str, Path, Sequence[dict], Document],
     document.default_section = profile.body_section
     disabled = set(cfg.disabled) | set(profile.rules_off)
 
+    # The grammar tier (LT001) reads the masked text, not the parse: start
+    # its LanguageTool request now so it runs while spaCy parses. The rule
+    # collects it in its usual turn, so nothing about the output changes.
+    ensure_rules_loaded()
+    if "LT001" in REGISTRY and "LT001" not in disabled:
+        from .rules_grammar import start_check
+        start_check(document)
+
     nlp = nlp or get_nlp()
 
     # THE single parse. Shared by the rules, the metrics and the review.
@@ -239,7 +266,10 @@ def analyze(source: Union[str, Path, Sequence[dict], Document],
         narrative = build_narrative(document, spacy_doc=spacy_doc,
                                     profile=profile)
 
+    health = engine_status(cfg, nlp=nlp)
     return Analysis(
+        assessed_rules=assessed_rules(cfg, disabled, health),
+        ruleset=ruleset_id(),
         suggestions=found,
         counts=counts,
         hidden_preferences=0 if cfg.show_preferences else prefs,
@@ -253,10 +283,156 @@ def analyze(source: Union[str, Path, Sequence[dict], Document],
         suggested_checklist=suggested,
         metrics=mets if with_metrics else None,
         sections_detected=sorted({h.section for h in document.headings}),
-        health=engine_status(cfg, nlp=nlp),
+        health=health,
         config=cfg,
         document=document,
     )
+
+
+def assessed_rules(cfg: Config, disabled: set, health: list) -> list:
+    """The rules whose findings a check with these settings could show
+    (Codex review N2): the progress view counts a rule outside this list as
+    not assessed, never as zero."""
+    down = {t.tier for t in health if not t.ok}
+    out = []
+    for r in REGISTRY.values():
+        if r.id in disabled or r.tier in down:
+            continue
+        if r.category is Category.PREFERENCE and not cfg.show_preferences:
+            continue
+        if cfg.mode == "draft" and _scope(r.id) != "sentence":
+            continue
+        out.append(r.id)
+    return sorted(out)
+
+
+_RULESET: Optional[str] = None
+
+
+def ruleset_id() -> str:
+    """A short fingerprint of the engine version and its registered rules:
+    checks are compared only under the same one."""
+    global _RULESET
+    if _RULESET is None:
+        import hashlib
+        from . import __version__
+        ensure_rules_loaded()
+        key = __version__ + "|" + ",".join(sorted(REGISTRY))
+        _RULESET = __version__ + "+" + hashlib.sha256(
+            key.encode()).hexdigest()[:8]
+    return _RULESET
+
+
+# --- word prediction (2026-10-14) ---------------------------------------------
+
+# LaTeX commands whose argument is prose; any other command's argument
+# (\cite{, \ref{, \label{, \begin{, \url{ ...) is not.
+_PROSE_COMMANDS = frozenset({
+    "emph", "textbf", "textit", "textsl", "textsc", "text", "underline",
+    "footnote", "caption", "section", "subsection", "subsubsection",
+    "paragraph", "subparagraph", "chapter", "part", "title", "item",
+    "mbox", "textrm", "textsf", "enquote"})
+_OPEN_ARG = re.compile(r"\\([A-Za-z@]+)\*?(?:\[[^\]]*\])?\{[^{}]*$")
+_URLISH = re.compile(r"(?:://|www\.|@)\S*$")
+COMPLETE_WINDOW = 50_000      # characters of a long document read around
+
+
+@dataclass
+class Completion:
+    """What `complete()` returns. `status` says why there is nothing when
+    there is nothing: "ok", "off" (the writer turned prediction off),
+    "masked" (the cursor is in maths, code, a citation or a URL) or
+    "unavailable" (no model; health.py says why)."""
+    candidates: list = field(default_factory=list)
+    status: str = "ok"
+
+    def to_dict(self) -> dict:
+        return {"candidates": [c.to_dict() for c in self.candidates],
+                "status": self.status}
+
+
+def _in_unfinished_markup(before: str, kind: str) -> bool:
+    """The cursor is inside something still being typed that the masker
+    cannot see yet: an unclosed $...$, a citation key, a code span."""
+    para = before[before.rfind("\n\n") + 1:]
+    if _URLISH.search(para):
+        return True
+    if kind in ("latex", "markdown"):
+        dollars = len(re.findall(r"(?<!\\)\$", para))
+        if dollars % 2:
+            return True
+    if kind == "latex":
+        if re.search(r"\\[A-Za-z@]*$", para):
+            return True             # a command name being typed
+        m = _OPEN_ARG.search(para)
+        if m and m.group(1) not in _PROSE_COMMANDS:
+            return True
+    if kind == "markdown":
+        if before.count("```") % 2 or para.count("`") % 2:
+            return True
+        if re.search(r"\]\([^)]*$", para):
+            return True             # a link target
+    return False
+
+
+def complete(text: str, cursor: Optional[int] = None, *,
+             kind: str = "plain",
+             cfg: Optional[Config] = None,
+             near: Optional[Path] = None,
+             limit: int = 3,
+             **overrides: Any) -> Completion:
+    """Word prediction at `cursor` (default: the end of `text`).
+
+    Offers the end of the word being typed, or the next word or short
+    fixed term, ranked by how often published scientific prose continues
+    this way (researchly/predict.py). Never inserts anything: a surface
+    shows the candidates and replaces `[start, end)` with one only when the
+    writer accepts it. Nothing is offered inside masked material (maths,
+    code, citations, URLs, headings) or when the writer has turned
+    prediction off. The text is read in memory and kept nowhere.
+    """
+    from . import predict as predict_mod
+
+    if cfg is None:
+        cfg = config_mod.load(near, **overrides)
+    elif overrides:
+        cfg = cfg.with_overrides(**overrides)
+    if not cfg.prediction:
+        return Completion(status="off")
+    cursor = len(text) if cursor is None else max(0, min(cursor, len(text)))
+
+    # A long document is read around the cursor, from a paragraph break.
+    lo = 0
+    if cursor > COMPLETE_WINDOW:
+        lo = text.rfind("\n\n", 0, cursor - COMPLETE_WINDOW)
+        lo = 0 if lo < 0 else lo
+    hi = text.find("\n\n", cursor)
+    hi = len(text) if hi < 0 else hi
+    window = text[lo:hi]
+    at = cursor - lo
+    before = window[:at]
+    if _in_unfinished_markup(before, kind):
+        return Completion(status="masked")
+    document = Document.from_text(window, kind)
+    word_start = at - len(re.search(r"[A-Za-z'\-]*$", before).group(0))
+    check_from = word_start if word_start < at else max(0, at - 1)
+    if at and document.masked[check_from:at] != window[check_from:at]:
+        return Completion(status="masked")
+    # Masked atoms (citations, inline maths) break the context: the words
+    # either side of "[12]" are not a sequence.
+    chars = list(before)
+    for a, b in document.atoms:
+        if a < at:
+            for i in range(a, min(b, at)):
+                chars[i] = "\n"
+    context = "".join(chars)
+    model = predict_mod.get_model()
+    if model is None:
+        return Completion(status="unavailable")
+    found = predict_mod.complete(context, cursor,
+                                 spelling_choice=cfg.spelling, limit=limit,
+                                 model=model)
+    return Completion(candidates=found)
 
 
 def status(cfg: Optional[Config] = None, probe: bool = False

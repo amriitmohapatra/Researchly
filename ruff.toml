@@ -2,7 +2,8 @@
 # (real bugs), not style. Widen it in a dedicated clean-up change, not as a
 # side effect of feature work. Python 3.10 is the user's interpreter.
 target-version = "py310"
-extend-exclude = ["legacy", "apps/vscode-extension/dist"]
+extend-exclude = ["legacy", "_to_delete", "apps/vscode-extension/dist"]
 
 [lint]
-select = ["E9", "F63", "F7", "F82"]
+# 2026-10-14: widened with unused imports and empty f-strings (PLAN clean-up).
+select = ["E9", "F63", "F7", "F82", "F401", "F541"]

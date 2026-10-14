@@ -14,6 +14,8 @@ import type {
   AnalyzeOptions,
   ChecklistChoice,
   ChecklistChoiceInfo,
+  CompleteRequest,
+  CompleteResponse,
   AnalyzeFileResponse,
   AnalyzeRequest,
   AnalyzeResponse,
@@ -25,6 +27,7 @@ import type {
   Mode,
   ProfileChoice,
   RuleInfo,
+  Spelling,
   WordParagraph,
 } from "@researchly/contract";
 import { ENGINE_URL } from "./config";
@@ -55,6 +58,8 @@ export interface CheckParams {
   showPreferences: boolean;
   /** The article type to check as (S4). Omitted: "auto", the engine's guess from the headings. */
   documentType?: DocumentType | null;
+  /** The English spelling to keep to. Omitted: the account's saved choice (signed in), else "auto". */
+  spelling?: Spelling | null;
   /** Also ask for the critical reader's brief (a whole-document read; Revise only). */
   review?: boolean;
   /** Also ask for the narrative map (S4b): a whole-document read, sent exactly like the brief. */
@@ -74,6 +79,7 @@ export interface CheckParams {
 export function analysisOptions(p: {
   showPreferences: boolean;
   documentType?: DocumentType | null;
+  spelling?: Spelling | null;
   review?: boolean;
   narrative?: boolean;
   checklist?: ChecklistChoice | null;
@@ -86,6 +92,9 @@ export function analysisOptions(p: {
     narrative: p.narrative ?? false,
     ...(p.checklist ? { checklist: p.checklist } : {}),
     ...(p.mode ? { mode: p.mode } : {}),
+    // Only when the writer (or their account, or this browser) has a choice:
+    // leaving it out lets the engine apply the account's saved one.
+    ...(p.spelling ? { spelling: p.spelling } : {}),
   };
 }
 
@@ -133,7 +142,7 @@ export async function withBearer<T>(
 }
 
 export function buildRequest(
-  p: Pick<CheckParams, "content" | "format" | "showPreferences" | "documentType" | "review" | "narrative" | "checklist" | "mode">,
+  p: Pick<CheckParams, "content" | "format" | "showPreferences" | "documentType" | "spelling" | "review" | "narrative" | "checklist" | "mode">,
 ): AnalyzeRequest {
   return {
     content: p.content,
@@ -192,10 +201,10 @@ async function call<T>(
   init: RequestInit,
   signal: AbortSignal | undefined,
   validate: (body: unknown) => body is T,
-  context: { upload?: boolean; engineUrl: string; versioned?: boolean },
+  context: { upload?: boolean; engineUrl: string; versioned?: boolean; timeoutMs?: number },
 ): Promise<CheckResult<T>> {
   const timeout = new AbortController();
-  const timer = setTimeout(() => timeout.abort(), ANALYZE_TIMEOUT_MS);
+  const timer = setTimeout(() => timeout.abort(), context.timeoutMs ?? ANALYZE_TIMEOUT_MS);
   const combined = signal ? AbortSignal.any([signal, timeout.signal]) : timeout.signal;
   let res: Response;
   try {
@@ -223,7 +232,7 @@ async function call<T>(
   }
   if (!res.ok) return { ok: false, error: errorFromResponse(res.status, body, res.headers, { upload: context.upload }) };
   if (!validate(body)) {
-    return { ok: false, error: badPayloadError("The engine's answer was not in the expected shape.") };
+    return { ok: false, error: badPayloadError("The engine’s answer was not in the expected shape.") };
   }
   const version = (body as { schema_version?: unknown }).schema_version;
   // Analysis responses must say which contract they speak; /v1/rules has no version field.
@@ -262,6 +271,7 @@ export interface FileCheckParams {
   file: File;
   showPreferences: boolean;
   documentType?: DocumentType | null;
+  spelling?: Spelling | null;
   review?: boolean;
   narrative?: boolean;
   checklist?: ChecklistChoice | null;
@@ -320,6 +330,7 @@ export async function analyzeFile(
         {
           showPreferences: p.showPreferences,
           documentType: p.documentType,
+          spelling: p.spelling,
           review: p.review,
           narrative: p.narrative,
           checklist: p.checklist,
@@ -420,6 +431,8 @@ export interface WordCheckParams {
   disabledRules?: string[];
   /** The article type to check as (S4); omitted: "auto". */
   documentType?: DocumentType | null;
+  /** The English spelling to keep to; omitted: the account's saved choice (cloud, signed in), else this computer's config. */
+  spelling?: Spelling | null;
   /** The critical reader's brief: asked for in Revise, never in Draft (a whole-document read). */
   review?: boolean;
   /** The narrative map (S4b): asked for in Revise only, like the brief. */
@@ -430,7 +443,10 @@ export interface WordCheckParams {
 }
 
 export function buildWordRequest(
-  p: Pick<WordCheckParams, "paragraphs" | "showPreferences" | "mode" | "disabledRules" | "documentType" | "review" | "narrative" | "checklist">,
+  p: Pick<
+    WordCheckParams,
+    "paragraphs" | "showPreferences" | "mode" | "disabledRules" | "documentType" | "spelling" | "review" | "narrative" | "checklist"
+  >,
 ): AnalyzeWordRequest {
   return {
     paragraphs: p.paragraphs,
@@ -502,6 +518,86 @@ function looksLikeHealth(body: unknown): body is HealthResponse {
     (b.status === "ok" || b.status === "degraded") &&
     Array.isArray(b.tiers) &&
     b.tiers.every((t: unknown) => typeof t === "object" && t !== null && typeof (t as { tier?: unknown }).tier === "string")
+  );
+}
+
+/* ---------- word prediction (2026-10-14): POST /v1/complete ---------- */
+
+/**
+ * How long a prediction may take. Candidates that arrive later than this
+ * are no use to someone typing, so the request is dropped instead.
+ */
+export const COMPLETE_TIMEOUT_MS = 5_000;
+
+export interface CompleteParams {
+  /** The text around the cursor (lib/prediction.ts predictionWindow), never the whole document. */
+  text: string;
+  /** The cursor in `text`, in Unicode code points. */
+  cursor: number;
+  format: Format;
+  /** At most this many candidates (the contract allows 1 to 5). */
+  limit?: number;
+  signal?: AbortSignal;
+}
+
+export function buildCompleteRequest(p: Pick<CompleteParams, "text" | "cursor" | "format" | "limit">): CompleteRequest {
+  return {
+    text: p.text,
+    cursor: p.cursor,
+    format: p.format,
+    options: { limit: Math.min(5, Math.max(1, Math.trunc(p.limit ?? 3))) },
+  };
+}
+
+/** A CompleteResponse with well-formed candidates; anything else counts as "nothing to offer". */
+export function looksLikeCompleteResponse(body: unknown): body is CompleteResponse {
+  if (typeof body !== "object" || body === null) return false;
+  const b = body as Record<string, unknown>;
+  if (b.status !== "ok" && b.status !== "off" && b.status !== "masked" && b.status !== "unavailable") return false;
+  const cands = b.candidates ?? [];
+  return (
+    Array.isArray(cands) &&
+    cands.every((c: unknown) => {
+      if (typeof c !== "object" || c === null) return false;
+      const x = c as Record<string, unknown>;
+      return (
+        typeof x.text === "string" &&
+        x.text.length > 0 &&
+        isNat(x.start) &&
+        isNat(x.end) &&
+        x.start <= x.end &&
+        (x.kind === "word" || x.kind === "term")
+      );
+    })
+  );
+}
+
+/**
+ * Word prediction at a cursor: POST /v1/complete. Sends only a window of
+ * text around the cursor; nothing is kept here or by the engine.
+ *
+ * Signed in, the bearer token goes with it so the engine applies the
+ * account's own switch and spelling. Unlike a check, a refused token is not
+ * refreshed or signed out from here: a prediction is never worth
+ * interrupting the writer for, so it just offers nothing (the next check
+ * deals with the session). `auth` is null for "This computer".
+ */
+export async function complete(
+  p: CompleteParams,
+  engineUrl: string = ENGINE_URL,
+  auth?: EngineAuth | null,
+): Promise<CheckResult<CompleteResponse>> {
+  const token = auth ? await auth.token() : null;
+  return call(
+    `${engineUrl}/v1/complete`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "application/json", ...authHeader(token) },
+      body: JSON.stringify(buildCompleteRequest(p)),
+    },
+    p.signal,
+    looksLikeCompleteResponse,
+    { engineUrl, versioned: false, timeoutMs: COMPLETE_TIMEOUT_MS },
   );
 }
 

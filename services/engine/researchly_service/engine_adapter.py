@@ -24,14 +24,14 @@ from typing import List, Optional, Union
 
 from . import _core  # noqa: F401  (import path + isolation first)
 from . import __version__ as SERVICE_VERSION
-from .schemas import (AnalyzeOptions, AnalyzeResponse, AnalyzeWordResponse,
-                      Category, ChecklistChoiceInfo, ChecklistReport,
-                      Coverage, DocumentType, EngineInfo, FixSafety,
-                      HedgingPoint, LearnCard, Metrics, MissingLink, Mode,
-                      NarrativeMap, NarrativeMove, NarrativeSection,
-                      ProfileChoice, ProfileInfo, ReviewQuestion,
-                      ReviewReport, ReviewRuleCount, RuleInfo, Scope, Span,
-                      Suggestion, TierHealth, WordLocation, WordSuggestion)
+from .schemas import (AnalyzeOptions, AnalyzeResponse, Category, CompleteOptions, CompleteResponse,
+                      CompletionCandidate, ChecklistChoiceInfo, ChecklistReport,
+                      Coverage, EngineInfo, FixSafety,
+                      LearnCard, Metrics, Mode,
+                      NarrativeMap, ProfileChoice, ProfileInfo, ReadingSummary,
+                      ReviewReport, RuleInfo, Scope, Span,
+                      Suggestion, TableEvidence, TierHealth, WordLocation,
+                      WordSuggestion)
 
 import researchly
 from researchly import api, learn, packs, profiles, shapes, wordloc
@@ -92,7 +92,30 @@ def build_config(options: Optional[AnalyzeOptions],
             cfg.mode = options.mode.value
         if options.document_type is not None:
             cfg.document_type = options.document_type.value
+        if options.spelling is not None:
+            cfg.spelling = options.spelling.value
     return cfg
+
+
+def run_completion(text: str, cursor: Optional[int], fmt: str,
+                   options: Optional[CompleteOptions],
+                   account: Optional[dict] = None, **_who) -> CompleteResponse:
+    """Word prediction: one `api.complete()` call. No spaCy parse, so no
+    engine lock; the model is read-only SQLite opened per thread."""
+    cfg = Config()
+    if account is not None:
+        apply_remote(cfg, account)
+    limit = 3
+    if options is not None:
+        if options.spelling is not None:
+            cfg.spelling = options.spelling.value
+        limit = options.limit
+    got = api.complete(text, cursor, kind=fmt, cfg=cfg, limit=limit)
+    return CompleteResponse(
+        status=got.status,
+        candidates=[CompletionCandidate(text=c.text, start=c.start, end=c.end,
+                                        kind=c.kind)
+                    for c in got.candidates])
 
 
 # Everything beyond the suggestions is shaped once, in the core
@@ -168,6 +191,8 @@ def to_suggestion(s) -> Suggestion:
         replacement=s.replacement,
         fix_safety=_fix_safety(s.fix_safety),
         confidence=min(1.0, max(0.0, conf)),
+        table_evidence=(TableEvidence(**s.table_evidence)
+                        if getattr(s, "table_evidence", None) else None),
     )
 
 
@@ -245,15 +270,26 @@ def run_analysis(source: Union[str, Document], fmt: str,
         engine=engine_info(),
         elapsed_ms=0,
         warnings=list(a.document.warnings) if a.document is not None else [],
+        reading=_reading(a.document),
+        assessed_rules=list(a.assessed_rules),
+        ruleset=a.ruleset,
         **extra,
     )
     out.elapsed_ms = int(round((time.perf_counter() - t0) * 1000))
     return out
 
 
+def _reading(document) -> Optional[ReadingSummary]:
+    shaped = shapes.reading_summary(document)
+    return None if shaped is None else ReadingSummary(**shaped)
+
+
 # Tiers that never make the service "degraded" by being off: gec is opt-in
-# (no model ships), so missing/disabled is its normal state.
-_OPTIONAL_STATES = {"gec": {"missing", "disabled"}}
+# (no model ships), so missing/disabled is its normal state. Word prediction
+# helps the writer type; without its model every check still runs, so its
+# absence is reported on its own tier, not as a degraded service.
+_OPTIONAL_STATES = {"gec": {"missing", "disabled"},
+                    "prediction": {"missing", "disabled"}}
 
 
 def health_tiers(grammar_enabled: bool = True) -> List[TierHealth]:
@@ -305,10 +341,16 @@ def warm_up(grammar_enabled: bool = True) -> dict:
     t0 = time.perf_counter()
     info = {"rules_loaded": rules_loaded()}
     try:
-        api.get_nlp()
+        # The analysis loads spaCy itself, after it has started the grammar
+        # tier's first request in the background, so a local LanguageTool's
+        # JVM start-up and the spaCy load overlap (2026-10-14).
         run_analysis(WARMUP_TEXT, "plain", AnalyzeOptions(), grammar_enabled)
     except Exception as e:                       # reported by type only
         info["error_type"] = type(e).__name__
+        try:
+            api.get_nlp()                        # a parser even so
+        except Exception:
+            pass
     tiers = health_tiers(grammar_enabled)
     info["tiers"] = {t.tier: t.state for t in tiers}
     info["warmup_ms"] = int(round((time.perf_counter() - t0) * 1000))

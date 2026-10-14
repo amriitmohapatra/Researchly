@@ -38,6 +38,7 @@ export type WordSuggestion = S["WordSuggestion"];
 export type WordLocation = S["WordLocation"];
 export type Coverage = S["Coverage"];
 export type DocumentType = S["DocumentType"];
+export type Spelling = S["Spelling"];
 export type ProfileInfo = S["ProfileInfo"];
 export type ProfileChoice = S["ProfileChoice"];
 export type ReviewReport = S["ReviewReport"];
@@ -52,9 +53,18 @@ export type HedgingPoint = S["HedgingPoint"];
 export type ChecklistChoice = S["ChecklistChoice"];
 export type ChecklistReport = S["ChecklistReport"];
 export type ChecklistItem = S["ChecklistItem"];
+export type ChecklistPart = S["ChecklistPart"];
+export type NotCounted = S["NotCounted"];
 export type ChecklistChoiceInfo = S["ChecklistChoiceInfo"];
 export type LearnCard = S["LearnCard"];
 export type LearnResponse = S["LearnResponse"];
+export type CompleteRequest = S["CompleteRequest"];
+export type CompleteOptions = S["CompleteOptions"];
+export type CompleteResponse = S["CompleteResponse"];
+export type CompletionCandidate = S["CompletionCandidate"];
+export type ReadingSummary = S["ReadingSummary"];
+export type TableEvidence = S["TableEvidence"];
+export type SetAside = S["SetAside"];
 
 /** Mirrors schemas.MAX_CONTENT_CHARS; checked client-side for usability only. */
 export const MAX_CONTENT_CHARS = 1_000_000;
@@ -74,6 +84,14 @@ export const DOCUMENT_TYPES = [
   "grant",
   "response-to-reviewers",
 ] as const satisfies readonly DocumentType[];
+
+/**
+ * The English spellings a writer can keep to (2026-10-14), in the engine's
+ * order (researchly/config.py SPELLINGS). "auto" follows the document's own
+ * majority and flags only mixtures; any other value also flags every spelling
+ * of another dialect. "in" is Indian English, spelled as British.
+ */
+export const SPELLINGS = ["auto", "us", "uk", "uk-oxford", "ca", "au", "in"] as const satisfies readonly Spelling[];
 
 /**
  * The engine's default upload cap for /v1/analyze-file (RESEARCHLY_MAX_UPLOAD_BYTES,

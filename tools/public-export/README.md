@@ -15,7 +15,12 @@ documents, all of which remain in its git history.
 2. it keeps only paths that match `include.txt` and match nothing in
    `exclude.txt` (a new top-level folder is private until it is listed);
 3. it lays `overlay/` on top: the public README, CONTRIBUTING, SECURITY and
-   the public CI (the private CI minus the job that needs private sources);
+   the public CI (the private CI minus the job that needs private sources).
+   The overlay and the policy files (`include.txt`, `exclude.txt`,
+   `private-terms.txt`, `public-emails.txt`) are read **from the same ref**,
+   so an uncommitted edit cannot change an export; the private terms are
+   those of the ref together with today's, so an old ref is never gated
+   more weakly. A symbolic link in the overlay is refused;
 4. it **gates** the result and refuses it on any finding:
    - an 8-word run shared with a thesis, the course material or the legacy
      corpus, in any exported file (`ml/tools/check_third_party.py`);
@@ -25,7 +30,19 @@ documents, all of which remain in its git history.
    - an email address that is neither a placeholder nor in
      `public-emails.txt`;
    - a PDF, pickle, model file or stray archive, a file over 10 MB, or a
-     symbolic link.
+     symbolic link;
+   - any of these **inside a ZIP or Word file** the policy admits (the
+     demo's archive and documents): every member's name and text is
+     checked, Word's text with run boundaries removed (a word split across
+     runs is one word again), document metadata and comment authors
+     included, nested archives to two levels. An archive that cannot be
+     fully inspected (corrupt, encrypted, too large, nested too deep) is
+     refused, never passed.
+
+gitleaks is part of the gate and is required: without it the result is
+**INCOMPLETE** (exit 3) and `--sync-to` refuses to publish. For a quick
+local look without it, `--allow-incomplete` reports the gap and exits 0
+(never with `--sync-to`).
 
 CI runs the gate on every change (`public-export` job), so a problem is
 caught when it is introduced, not when publishing.

@@ -7,15 +7,20 @@ that proves it.
 | Path | What it is |
 |---|---|
 | `migrations/20261003120000_s2_settings.sql` | The schema: `user_settings`, `dictionary_words`, their RLS policies and grants, and `my_config()` (what the engine reads, with the user's own token). |
+| `migrations/20261004120000_s3_mode.sql` | `user_settings.mode` (Draft / Revise); `my_config()` gains it. |
+| `migrations/20261008120000_s4_document_type.sql` | `user_settings.document_type` (the article type); `my_config()` gains it. |
+| `migrations/20261008140000_s4_progress.sql` | The opt-in `keep_progress` switch and the `progress_events` table (rule counts only). |
+| `migrations/20261014120000_spelling_prediction.sql` | `user_settings.spelling`, the English spelling a writer keeps to (`auto`, `us`, `uk`, `uk-oxford`, `ca`, `au`, `in`; PLAN task #15), and `user_settings.prediction`, word prediction on (default) or off; `my_config()` gains both, so the hosted engine applies them. |
+| `migrations/20261014130000_progress_comparable.sql` | `progress_events.assessed` (the rule ids a check could show), `.mode` and `.ruleset`, so the progress view compares like with like (Codex review N2); rule ids, a word and a version string, never text. Older rows keep NULLs. |
 | `tests/shim.sql` | A stand-in for the parts of Supabase the migration needs (`auth.users`, `auth.uid()`, roles `anon` / `authenticated`, Supabase's default privileges), so the test runs on plain PostgreSQL 16. **Test only: never run it in Supabase.** |
-| `tests/test_two_user.py` | The Q7 two-user test (ARCHITECTURE.md §3): user A can never read, create as, update or delete user B's settings or dictionary, and `anon` can do nothing. Also the limits (200 muted rules, valid rule ids and locales, 1–64-character words, 5,000 words per user) and account-deletion cascade. |
+| `tests/test_two_user.py` | The Q7 two-user test (ARCHITECTURE.md §3): user A can never read, create as, update or delete user B's settings or dictionary, and `anon` can do nothing. Also the limits (200 muted rules, valid rule ids, locales and spellings, 1–64-character words, 5,000 words per user) and account-deletion cascade. |
 | `tests/run_local.sh` | Runs the test against a throwaway local PostgreSQL 16; no Docker. |
 
 ## What is stored, and what is not
 
 | Table | Holds | Limits |
 |---|---|---|
-| `user_settings` | muted rule ids, show-preferences switch, locale, `updated_at` | ≤ 200 rule ids, each like `S001` / `LT001`; locale `en-US` or `en-GB` |
+| `user_settings` | muted rule ids, show-preferences switch, locale, mode, article type, spelling, prediction switch, keep-progress switch, `updated_at` | ≤ 200 rule ids, each like `S001` / `LT001`; locale `en-US` or `en-GB`; spelling one of `auto` (default), `us`, `uk`, `uk-oxford`, `ca`, `au`, `in` |
 | `dictionary_words` | one word per row, `added_at` | 1–64 characters, no spaces; ≤ 5,000 per user |
 
 No document text, ever. No `profiles`, usage or feedback tables yet: a table
@@ -35,6 +40,25 @@ Deleting a user in Supabase (Authentication → Users) deletes their rows.
 Running it again is safe (it recreates its policies, triggers and functions
 and re-states its grants; rows are untouched). It does not change an existing
 table's columns or limits: that needs a new, later-dated migration file.
+
+Each later migration is applied the same way, once, in date order (the
+file names sort by date): paste the whole file, Run, expect "Success. No
+rows returned". All of them are safe to re-run.
+
+**Comparable progress (2026-10-14):** after the spelling migration, paste
+`migrations/20261014130000_progress_comparable.sql`. Check: **Table Editor →
+progress_events** shows `assessed`, `mode` and `ruleset` columns. Until it is
+applied the website still records progress, without them (older behaviour).
+
+**Spelling and prediction (2026-10-14):** paste
+`migrations/20261014120000_spelling_prediction.sql` after the earlier four.
+Check: **Table Editor → user_settings** shows a `spelling` column (default
+`auto`) and a `prediction` column (default `true`), and
+`select public.my_config();` in the SQL Editor (no signed-in user there, so it
+returns the defaults) now includes `"spelling": "auto"` and
+`"prediction": true`. Until it is applied, the website and the Word add-in
+still work: the spelling choice is then kept in the browser only and says it
+could not be saved to the account, and prediction stays on.
 
 ## Running the tests
 

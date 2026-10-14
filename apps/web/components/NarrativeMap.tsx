@@ -20,7 +20,8 @@ interface Props {
 /** The status word a reader sees: never colour alone (DESIGN.md). */
 export const STATUS_WORD: Record<NarrativeMove["status"], string> = {
   present: "present",
-  missing: "missing",
+  // The map reads wording: it can say a move was not detected, never that it is missing (Codex review N5).
+  not_detected: "not detected",
   out_of_order: "out of order",
 };
 
@@ -29,8 +30,8 @@ const per100 = new Intl.NumberFormat("en-GB", { minimumFractionDigits: 1, maximu
 /**
  * The narrative map (S4b, ADR-05): the third view of one check. Read top
  * to bottom: the engine's one-line note; one strip per section with its
- * expected moves in order, each marked present, missing or out of order
- * by shape and word; under the strip, each missing or out-of-order move
+ * expected moves in order, each marked present, not detected or out of order
+ * by shape and word; under the strip, each not-detected or out-of-order move
  * opens to its question, the lesson in everyday words and a frame to fill
  * in, and each present move keeps the writer's own sentence behind "Show
  * the sentence". A missing move and a missing link that name a Learn card
@@ -152,7 +153,7 @@ function Strip({ section: s, print }: { section: NarrativeSection; print: boolea
         {s.moves.map((m) => (
           <li
             key={m.id}
-            className={`nmap-cell nmap-cell-${m.status === "out_of_order" ? "out-of-order" : m.status}`}
+            className={`nmap-cell nmap-cell-${m.status === "out_of_order" ? "out-of-order" : m.status === "not_detected" ? "not-detected" : m.status}`}
             data-testid="narrative-move"
             data-move={m.id}
             data-status={m.status}
@@ -191,6 +192,12 @@ function Strip({ section: s, print }: { section: NarrativeSection; print: boolea
           {present.map((m) => (
             <li key={m.id} className="nmap-detail nmap-detail-present" data-testid="narrative-present" data-move={m.id}>
               <Evidence move={m} print={print} label />
+              {/* An opening sentence taken as this move says so: an assumption, not proof (Codex review N5). */}
+              {m.note.trim() ? (
+                <p className="nmap-detail-note muted" data-testid="narrative-present-note">
+                  {m.note.trim()}
+                </p>
+              ) : null}
             </li>
           ))}
         </ul>

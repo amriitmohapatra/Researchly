@@ -14,10 +14,14 @@ import {
   isLabelSection,
   LABEL_SECTIONS,
   labelContent,
+  labelsToReplace,
+  newAttemptId,
   nextParagraph,
   normaliseSession,
   progressLine,
   setVerdict,
+  startAttempt,
+  verdictOf,
   type LabelSection,
   type LabelSession,
   type Verdict,
@@ -54,8 +58,6 @@ export function LabelStudio() {
   const [changed, setChanged] = useState<LabelSession | null>(null);
   const session = changed ?? stored;
 
-  /** Which label each card of this paragraph holds (by suggestion id), so a changed mind replaces it. */
-  const [slots, setSlots] = useState<Record<string, number>>({});
   const [section, setSection] = useState<LabelSection>("introduction");
   const [text, setText] = useState("");
   const [phase, setPhase] = useState<Phase>("idle");
@@ -72,11 +74,8 @@ export function LabelStudio() {
     saveLabelStore(next);
   };
 
-  const verdictFor = (id: string): Verdict | null => {
-    const at = slots[id];
-    const l = at === undefined ? undefined : session.labels[at];
-    return l && l.paragraph === session.paragraph ? l.verdict : null;
-  };
+  // Labels this paragraph has from an earlier check (or from before a reload): a new check replaces them.
+  const toReplace = labelsToReplace(session);
 
   const runCheck = async () => {
     if (phase === "checking") return;
@@ -105,6 +104,8 @@ export function LabelStudio() {
           );
         setCards(shown);
         setCheckedAs(section);
+        // A new attempt only once the check succeeded: a failed or cancelled one changes nothing.
+        update(startAttempt(session, newAttemptId()));
         setPhase("done");
       } else {
         setError(r.error);
@@ -121,16 +122,13 @@ export function LabelStudio() {
     }
   };
 
-  const onVerdict = (s: Suggestion, verdict: Verdict) => {
-    const r = setVerdict(session, slots, s, checkedAs, verdict);
-    setSlots(r.slots);
-    update(r.session);
+  const onVerdict = (flag: number, s: Suggestion, verdict: Verdict) => {
+    update(setVerdict(session, { flag, rule_id: s.rule_id, category: s.category }, checkedAs, verdict));
   };
 
   const onNext = () => {
     abortRef.current?.abort();
     update(nextParagraph(session));
-    setSlots({});
     setCards([]);
     setText("");
     setPhase("idle");
@@ -151,7 +149,9 @@ export function LabelStudio() {
     setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
-  const labelled = cards.filter((c) => verdictFor(c.id) !== null).length;
+  // After a reload the cards are gone with the text, and the attempt with them.
+  const onScreen = session.attempt ? cards : [];
+  const labelled = onScreen.filter((_, i) => verdictOf(session, i) !== null).length;
 
   return (
     <div className="label-studio" data-testid="label-studio">
@@ -258,6 +258,13 @@ export function LabelStudio() {
             Next paragraph
           </button>
         </div>
+        {toReplace > 0 ? (
+          <p className="help" data-testid="label-replace-note">
+            This paragraph already has {toReplace === 1 ? "one label" : `${toReplace.toLocaleString("en-GB")} labels`} from
+            an earlier check. Checking it again replaces {toReplace === 1 ? "it" : "them"}, so nothing is counted twice;
+            &ldquo;Next paragraph&rdquo; keeps {toReplace === 1 ? "it" : "them"} as they are.
+          </p>
+        ) : null}
       </section>
 
       {error ? (
@@ -275,20 +282,20 @@ export function LabelStudio() {
       {phase === "done" ? (
         <section className="label-results" aria-labelledby="label-results-title" data-testid="label-results">
           <h2 id="label-results-title" className="results-title">
-            {cards.length === 1 ? "1 flag" : `${cards.length.toLocaleString("en-GB")} flags`}
+            {onScreen.length === 1 ? "1 flag" : `${onScreen.length.toLocaleString("en-GB")} flags`}
           </h2>
-          {cards.length === 0 ? (
+          {onScreen.length === 0 ? (
             <p className="empty-line" data-testid="label-empty">
               Nothing was flagged in this paragraph. Paragraphs without flags are skipped: go to the next one.
             </p>
           ) : (
             <>
               <p className="help">
-                {labelled} of {cards.length} labelled in this paragraph.
+                {labelled} of {onScreen.length} labelled in this paragraph.
               </p>
               <div className="cards label-cards">
-                {cards.map((s) => (
-                  <LabelCard key={s.id} suggestion={s} verdict={verdictFor(s.id)} onVerdict={onVerdict} />
+                {onScreen.map((s, i) => (
+                  <LabelCard key={s.id} suggestion={s} verdict={verdictOf(session, i)} onVerdict={(v) => onVerdict(i, s, v)} />
                 ))}
               </div>
             </>
@@ -325,7 +332,7 @@ export function LabelStudio() {
               onConfirm={async () => {
                 clearLabelStore();
                 setChanged(EMPTY_SESSION);
-                setSlots({});
+                setCards([]);
               }}
               testId="label-clear"
             />
@@ -343,7 +350,7 @@ function LabelCard({
 }: {
   suggestion: Suggestion;
   verdict: Verdict | null;
-  onVerdict: (s: Suggestion, v: Verdict) => void;
+  onVerdict: (v: Verdict) => void;
 }) {
   const meta = categoryMeta(s.category);
   const msgId = `lmsg-${s.id}`;
@@ -373,7 +380,7 @@ function LabelCard({
             type="button"
             className={`btn btn-compact label-verdict-btn${verdict === v.id ? " is-on" : ""}`}
             aria-pressed={verdict === v.id}
-            onClick={() => onVerdict(s, v.id)}
+            onClick={() => onVerdict(v.id)}
             data-testid={`verdict-${v.id}`}
           >
             {v.label}

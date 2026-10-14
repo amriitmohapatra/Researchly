@@ -14,8 +14,33 @@
 import "client-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { SUPABASE } from "./config";
+import { hasStoredKey } from "./prefs";
 
 let client: Promise<SupabaseClient> | null = null;
+
+/**
+ * Where supabase-js keeps this project's session (and, mid sign-in, the
+ * PKCE verifier as `<key>-code-verifier`): its default storage key.
+ */
+export function authStorageKey(): string | null {
+  const cfg = SUPABASE;
+  if (!cfg) return null;
+  return `sb-${new URL(cfg.url).hostname.split(".")[0]}-auth-token`;
+}
+
+/**
+ * Whether supabase-js has anything stored in this browser for this project
+ * (a session, or a sign-in under way). When it has nothing, the visitor is
+ * signed out, and loading the library (about a quarter of a page's
+ * JavaScript) only to be told so can wait for a sign-in (2026-10-14
+ * performance pass).
+ */
+export function hasStoredAuth(): boolean {
+  const key = authStorageKey();
+  if (!key || typeof window === "undefined") return false;
+  // Storage that cannot be read: let supabase-js decide, as before.
+  return hasStoredKey(key) ?? true;
+}
 
 /** The shared client, or null in a build without accounts (or on the server). */
 export function getSupabase(): Promise<SupabaseClient> | null {

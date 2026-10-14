@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import type { RuleInfo } from "@researchly/contract";
+import { useEffect, useId, useState } from "react";
+import type { DocumentType, RuleInfo } from "@researchly/contract";
 import { openSignIn, useAuth } from "@/lib/auth";
 import { ENGINE_URL } from "@/lib/config";
 import { cardForRule, lessonHref } from "@/lib/learn";
@@ -54,6 +54,9 @@ function SignedInProgress() {
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
   const [reload, setReload] = useState(0);
+  // Which article type's checks to compare (Codex review N2): the latest one's by default.
+  const [chosenType, setChosenType] = useState<DocumentType | null>(null);
+  const typeSelectId = useId();
   // Rule names and lesson links come from the engine's registry (no text is sent).
   const registry = useRegistry(ENGINE_URL, true);
 
@@ -100,14 +103,17 @@ function SignedInProgress() {
   }
 
   const rules = new Map<string, RuleInfo>((registry?.rules ?? []).map((r) => [r.id, r]));
-  const { checks, trends } = ruleTrends(loaded.events);
+  const view = ruleTrends(loaded.events, chosenType);
+  const { checks, trends } = view;
+  const typeLabel = (id: DocumentType) =>
+    registry?.profiles.find((p) => p.id === id)?.label ?? id.replace(/-/g, " ").replace(/^\w/, (c) => c.toUpperCase());
   const deleteControl =
     loaded.events.length > 0 ? (
       <div className="progress-delete">
         <ConfirmDelete
           label="Delete my progress…"
           title="Delete your recorded progress?"
-          body="Every recorded check (rule counts and word counts) will be removed from your account. This can’t be undone."
+          body="Every recorded check (rule counts, word counts and which checks ran) will be removed from your account. This can’t be undone."
           keepLabel="Keep it"
           confirmLabel="Delete it"
           busy={false}
@@ -136,7 +142,7 @@ function SignedInProgress() {
           <p className="section-intro">
             Researchly records nothing about your checks unless you ask it to. Switch on &ldquo;Keep my progress&rdquo;
             in <Link className="inline-link" href="/settings">Settings</Link> and, after each check, it records how many
-            times each check fired and how many words were checked. Never your text.
+            times each check fired, how many words were checked and which checks ran. Never your text.
           </p>
           {loaded.events.length > 0 ? (
             <p className="help">What was recorded before you switched it off stays until you delete it.</p>
@@ -159,11 +165,43 @@ function SignedInProgress() {
           <h2 id="progress-board-title" className="progress-board-title">
             How often each check fired, per 1,000 words
           </h2>
+          {view.documentTypes.length > 1 ? (
+            <p className="progress-compare">
+              <label htmlFor={typeSelectId}>Compare checks of</label>{" "}
+              <select
+                id={typeSelectId}
+                className="select"
+                value={view.documentType ?? ""}
+                onChange={(e) => setChosenType(e.target.value as DocumentType)}
+                data-testid="progress-type"
+              >
+                {view.documentTypes.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {typeLabel(t.id)} ({t.checks.toLocaleString("en-GB")})
+                  </option>
+                ))}
+              </select>
+            </p>
+          ) : null}
           <p className="help progress-board-help" data-testid="progress-help">
-            Across your {checks === 1 ? "one recorded check" : `${checks.toLocaleString("en-GB")} recorded checks`}, oldest on
-            the left. Each line runs from zero to its own highest value. A trajectory to notice, not a score: a draft
-            with more figures or more claims will fire more checks.
+            How often each check fired across your{" "}
+            {checks === 1 ? "one check" : `${checks.toLocaleString("en-GB")} checks`}
+            {view.documentType ? ` checked as ${typeLabel(view.documentType).toLowerCase()}` : ""}
+            {view.from && view.to && checks > 1 ? `, from ${dateFmt(view.from)} to ${dateFmt(view.to)}` : ""}, oldest on the
+            left. Each line runs from zero to its own highest value. A check that did not look for a rule (it was muted,
+            hidden, held back by Draft or unavailable) leaves a gap, never a zero. This is how often flags appeared, not a
+            score: a draft with more figures or more claims will fire more checks.
           </p>
+          {view.otherRuleset > 0 || view.draft > 0 ? (
+            <p className="help" data-testid="progress-excluded">
+              {view.otherRuleset > 0
+                ? `${view.otherRuleset.toLocaleString("en-GB")} earlier ${view.otherRuleset === 1 ? "check was" : "checks were"} made by another version of the checks and ${view.otherRuleset === 1 ? "is" : "are"} not compared. `
+                : ""}
+              {view.draft > 0
+                ? `${view.draft.toLocaleString("en-GB")} of these ${view.draft === 1 ? "check was" : "checks were"} in Draft, which looks only at sentences.`
+                : ""}
+            </p>
+          ) : null}
           <ul className="trend-list" data-testid="trend-list">
             {trends.map((t) => (
               <TrendRow key={t.ruleId} trend={t} rule={rules.get(t.ruleId) ?? null} checks={checks} />
@@ -183,7 +221,7 @@ function SignedInProgress() {
                 {trends.map((t) => (
                   <tr key={t.ruleId}>
                     <th scope="row">{nameOf(t.ruleId, rules.get(t.ruleId) ?? null)}</th>
-                    <td>{t.rates.map(formatRate).join(", ")}</td>
+                    <td>{t.rates.map((r) => (r === null ? "not assessed" : formatRate(r))).join(", ")}</td>
                   </tr>
                 ))}
               </tbody>
@@ -196,18 +234,32 @@ function SignedInProgress() {
   );
 }
 
+const DATE = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" });
+
+function dateFmt(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "" : DATE.format(d);
+}
+
 /** A rule's short name from the registry; its name or, failing both, a neutral phrase (codes are never shown). */
 function nameOf(id: string, rule: RuleInfo | null): string {
   return rule?.short?.trim() || rule?.name?.trim() || "A check no longer in the engine";
 }
 
-function TrendRow({ trend: t, rule, checks }: { trend: RuleTrend; rule: RuleInfo | null; checks: number }) {
+function TrendRow({ trend: t, rule }: { trend: RuleTrend; rule: RuleInfo | null; checks: number }) {
   const name = nameOf(t.ruleId, rule);
   const lesson = cardForRule(t.ruleId, rule?.learn_ref);
+  const assessed = t.rates.length - t.notAssessed;
   const values =
-    checks > 1
-      ? `From ${formatRate(t.first)} to ${formatRate(t.latest)} per 1,000 words`
-      : `${formatRate(t.latest)} per 1,000 words`;
+    t.first === null || t.latest === null
+      ? "Not assessed in these checks"
+      : assessed > 1
+        ? `From ${formatRate(t.first)} to ${formatRate(t.latest)} per 1,000 words`
+        : `${formatRate(t.latest)} per 1,000 words`;
+  const gaps =
+    t.notAssessed > 0
+      ? ` Not assessed in ${t.notAssessed === 1 ? "one check" : `${t.notAssessed.toLocaleString("en-GB")} checks`}.`
+      : "";
   return (
     <li className="trend" data-testid="trend" data-rule={t.ruleId}>
       <p className="trend-name">{name}</p>
@@ -220,7 +272,7 @@ function TrendRow({ trend: t, rule, checks }: { trend: RuleTrend; rule: RuleInfo
               : <strong className="trend-word">{t.word}</strong>
             </>
           ) : null}
-          .
+          .{gaps ? <span className="muted">{gaps}</span> : null}
         </p>
       </div>
       {lesson ? (

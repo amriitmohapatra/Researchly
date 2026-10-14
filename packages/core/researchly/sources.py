@@ -55,6 +55,24 @@ WORKS = {
     "lecture": LEARNINGS,
     "course-U1": LEARNINGS,
     "course-U2": LEARNINGS,
+    # A thesis-writing workshop on the research gap (2026-10-14);
+    # docs/knowledge-base.md §13 names it (private provenance).
+    "workshop-S2": LEARNINGS,
+    "Alvesson2011": ('M. Alvesson and J. Sandberg (2011), "Generating '
+                     'research questions through problematization", '
+                     "Academy of Management Review 36(2)"),
+    "Sandberg2011": ('J. Sandberg and M. Alvesson (2011), "Ways of '
+                     'constructing research questions: gap-spotting or '
+                     'problematization?", Organization 18(1)'),
+    "Bunton2005": ('D. Bunton (2005), "The structure of PhD conclusion '
+                   'chapters", Journal of English for Academic Purposes '
+                   "4(3)"),
+    "Kwan2006": ('B. S. C. Kwan (2006), "The schematic structure of '
+                 'literature reviews in doctoral theses of applied '
+                 'linguistics", English for Specific Purposes 25(1)'),
+    "Lim2006": ('J. M. H. Lim (2006), "Method sections of management '
+                'research articles: a pedagogically motivated qualitative '
+                'study", English for Specific Purposes 25(3)'),
     "Shehzad": 'W. Shehzad (2008), "Move two: establishing a niche"',
     "Swales": ("J. M. Swales (1990), Genre Analysis, on the three moves "
                "of a research introduction"),
@@ -85,6 +103,13 @@ WORKS = {
               "Recommendations for the Conduct, Reporting, Editing, and "
               "Publication of Scholarly Work in Medical Journals "
               "(tables and figures)"),
+    "VarCon": ("K. Atkinson, VarCon: variant spellings of American, British, "
+               "Canadian and Australian English (wordlist.aspell.net)"),
+    "Mays1991": ("E. Mays, F. J. Damerau and R. L. Mercer (1991), Context "
+                 "based spelling correction, Information Processing & "
+                 "Management 27(5)"),
+    "Swan": ("M. Swan (2016), Practical English Usage, 4th ed., Oxford "
+             "University Press, on uncountable nouns"),
 }
 
 

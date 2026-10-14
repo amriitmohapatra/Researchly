@@ -19,3 +19,7 @@
 \bZHAOZX\b
 \bChao[ _]?Fengqing\b
 \bA\d{7}[A-Z]\b
+# The thesis-writing workshop on the research gap (2026-10-14): credited
+# only in docs/knowledge-base.md §13, shown to users as the owner's learnings.
+\bEarn the Right to Ask\b
+\bThesis with AI in the Room\b

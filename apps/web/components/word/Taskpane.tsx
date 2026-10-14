@@ -6,30 +6,49 @@ import {
   MAX_WORD_PARAGRAPHS,
   type AnalyzeWordResponse,
   type DocumentType,
+  type Spelling,
   type TierHealth,
+  type WordParagraph,
   type WordSuggestion,
 } from "@researchly/contract";
-import { addWord, loadDocumentType, loadMode, loadSettings, muteRule, saveDocumentType, saveMode } from "@/lib/account";
+import {
+  addWord,
+  loadDocumentType,
+  loadMode,
+  loadSettings,
+  loadSpelling,
+  muteRule,
+  saveDocumentType,
+  saveMode,
+  saveSpelling,
+} from "@/lib/account";
 import { loadKeepProgress, recordProgress } from "@/lib/progress";
+import { claimText, textKey } from "@/lib/record-progress";
 import { getEngineAuth, signOut, useAuth } from "@/lib/auth";
 import { ENGINE_URL, LOCAL_ENGINE_URL, reportProblemHref } from "@/lib/config";
 import { analyzeWord, engineHealth } from "@/lib/engine";
-import { clientError, type CheckError } from "@/lib/errors";
+import { createCheckSession, PREVIOUS_NOTE, previousMark, type CheckTask } from "@/lib/check-session";
+import { type CheckError } from "@/lib/errors";
+import { buildQueue, passCounts, QUEUE_START, type QueueState } from "@/lib/queue";
 import { healthBanners } from "@/lib/health";
 import { briefState, narrativeState } from "@/lib/profiles";
 import { useProfileChoices } from "@/lib/registry";
 import { useRuleScopes } from "@/lib/scope";
+import { resolveSpelling } from "@/lib/spelling";
 import {
   isChecklistPref,
   loadChecklistChoice,
   loadDocumentTypeChoice,
   loadEngineChoice,
   loadModeChoice,
+  loadSpellingChoice,
   saveChecklistChoice,
   saveDocumentTypeChoice,
   saveEngineChoice,
   saveModeChoice,
+  saveSpellingChoice,
   subscribeDocumentType,
+  subscribeSpelling,
   subscribeWordPrefs,
   type ChecklistPref,
   type EngineChoice,
@@ -53,6 +72,7 @@ import {
   checklistState,
   useChecklistChoices,
 } from "@/lib/word/checklist";
+import { NO_MARKS, toggleMark, type ChecklistMarks } from "@/lib/checklists";
 import {
   coverageSentences,
   heldBackSentence,
@@ -67,12 +87,19 @@ import {
   wordSummary,
   type SectionFocus,
 } from "@/lib/word/view";
+import { usePredictionSetting } from "@/lib/use-prediction";
+import { CheckProgress } from "../CheckProgress";
 import { HealthBanner } from "../HealthBanner";
+import { PassChooser, RevisionQueue } from "../RevisionQueue";
 import { NarrativeMap } from "../NarrativeMap";
+import { PredictionToggle, WORD_PREDICTION_HELP } from "../PredictionStrip";
 import { ProfileSelect } from "../ProfileSelect";
+import { ReadingSummary } from "../ReadingSummary";
 import { ReviewBrief } from "../ReviewBrief";
+import { SpellingSelect } from "../SpellingSelect";
 import { CodeSignIn } from "./CodeSignIn";
-import { WordCard, type CardNote, type WordCardActions } from "./WordCard";
+import { NextWords } from "./NextWords";
+import { WordBusyContext, WordCard, type CardNote, type WordCardActions } from "./WordCard";
 import { WordChecklist } from "./WordChecklist";
 import { WordTabs, wordViewIds, type WordView } from "./WordTabs";
 
@@ -86,6 +113,8 @@ interface Checked {
   focus: SectionFocus | null;
   /** The reporting checklist this check asked for (S4c). */
   checklist: ChecklistPref;
+  /** An in-memory key of the checked text, so a recheck of the same words is not recorded twice (never stored or sent). */
+  progressKey?: string;
 }
 
 type Problem = { title: string; message: string };
@@ -104,12 +133,12 @@ function localDownError(e: CheckError): CheckError {
     ...e,
     title: "Researchly is not running on this computer",
     message:
-      "Start the local server (python3 server.py in Researchly's word-addin folder), then check again. Or switch to Researchly cloud under Settings below.",
+      "Start the local server (python3 server.py in Researchly’s word-addin folder), then check again. Or switch to Researchly cloud under Settings below.",
   };
 }
 
 /** Document-wide checks only make sense on a complete draft, so the stage says what each one checks. */
-const MODE_HELP = "Draft: check what you've written so far. Revise: check the finished manuscript.";
+const MODE_HELP = "Draft: check what you’ve written so far. Revise: check the finished manuscript.";
 
 /**
  * The Word add-in's taskpane (S3). Reads the document through Office.js
@@ -138,6 +167,15 @@ export function Taskpane() {
   const [chosenType, setChosenType] = useState<DocumentType | null>(null);
   const documentType: DocumentType = chosenType ?? (signedIn ? accountType : null) ?? storedType ?? "auto";
   const [typeNote, setTypeNote] = useState<string | null>(null);
+  // The English spelling to keep to (task #15), resolved like the type and
+  // shared with the website. Null when nothing chose one: the check leaves it
+  // to the engine (the account's saved choice on the cloud, this computer's
+  // config on the local server, else Auto).
+  const storedSpelling = useSyncExternalStore(subscribeSpelling, loadSpellingChoice, () => null);
+  const [accountSpelling, setAccountSpelling] = useState<Spelling | null>(null);
+  const [chosenSpelling, setChosenSpelling] = useState<Spelling | null>(null);
+  const spelling = resolveSpelling({ chosen: chosenSpelling, account: accountSpelling, stored: storedSpelling, signedIn });
+  const [spellingNote, setSpellingNote] = useState<string | null>(null);
   // The reporting checklist (S4c): this session's choice, else this computer's, else None.
   const storedChecklist = useSyncExternalStore(subscribeWordPrefs, loadChecklistChoice, () => null);
   const [chosenChecklist, setChosenChecklist] = useState<ChecklistPref | null>(null);
@@ -145,16 +183,27 @@ export function Taskpane() {
   /** Suggestions, the reviewer's brief, the narrative map or the checklist: survives a re-check, never stored. */
   const [resultsView, setResultsView] = useState<WordView>("suggestions");
   const [showPreferences, setShowPreferences] = useState(false);
+  // Word prediction (2026-10-14): the "Next words" panel, on unless the writer switched it off.
+  const prediction = usePredictionSetting(signedIn);
 
-  const [phase, setPhase] = useState<Phase>("idle");
+  // One check at a time (review proposal 8): a cancelled or superseded check's late reply is dropped.
+  const [session] = useState(() => createCheckSession<Checked>());
+  const run = useSyncExternalStore(session.subscribe, session.getState, session.getState);
+  const error = run.error;
+  /** Reading the document through Office.js, before anything is sent. */
+  const [reading, setReading] = useState(false);
+  const phase: Phase = reading ? "reading" : run.phase === "running" ? "checking" : run.phase;
   const [checked, setChecked] = useState<Checked | null>(null);
-  const [error, setError] = useState<CheckError | null>(null);
+  /** The revision queue's pass and place (review proposal 1): survives a re-check, never stored. */
+  const [queue, setQueue] = useState<QueueState>(QUEUE_START);
   const [problem, setProblem] = useState<Problem | null>(null);
   const [health, setHealth] = useState<{ engine: EngineChoice; tiers: TierHealth[] | null; reachable: boolean } | null>(null);
   const [notes, setNotes] = useState<Record<string, CardNote>>({});
   const [applied, setApplied] = useState<ReadonlySet<string>>(new Set());
   /** Cards an edit has made out of date (their paragraph changed, or an Apply ended unknown): no Apply until a re-check. */
   const [stale, setStale] = useState<ReadonlySet<string>>(new Set());
+  /** The writer's calls on checklist items (Codex review N1): confirmed or not applicable, this check only, never stored or sent. */
+  const [checklistMarks, setChecklistMarks] = useState<ChecklistMarks>(NO_MARKS);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [wordBusy, setWordBusy] = useState(false);
   const [accountNote, setAccountNote] = useState<AccountNote | null>(null);
@@ -163,13 +212,13 @@ export function Taskpane() {
   /** The writer chose to see the whole document after a section check (no re-check needed). */
   const [showWhole, setShowWhole] = useState(false);
   const [announcement, setAnnouncement] = useState("");
-  const runningRef = useRef(false);
-  const abortRef = useRef<AbortController | null>(null);
+  const readingRef = useRef(false);
   const errorRef = useRef<HTMLDivElement>(null);
   const ids = {
     mode: useId(),
     modeHelp: useId(),
     type: useId(),
+    spelling: useId(),
     checklist: useId(),
     checklistHelp: useId(),
     tabs: useId(),
@@ -189,9 +238,9 @@ export function Taskpane() {
     });
     return () => {
       live = false;
-      abortRef.current?.abort();
+      session.dispose();
     };
-  }, []);
+  }, [session]);
 
   // Which tiers the chosen engine is running, before any check (no text is sent).
   useEffect(() => {
@@ -234,6 +283,18 @@ export function Taskpane() {
     };
   }, [signedIn]);
 
+  // Signed in: the spelling comes from the account as well (shared with the website).
+  useEffect(() => {
+    if (!signedIn) return;
+    let live = true;
+    void loadSpelling().then((r) => {
+      if (live && r.ok && r.data) setAccountSpelling(r.data);
+    });
+    return () => {
+      live = false;
+    };
+  }, [signedIn]);
+
   useEffect(() => {
     if (error) errorRef.current?.focus();
   }, [error]);
@@ -249,52 +310,61 @@ export function Taskpane() {
 
   /* ---------- checking ---------- */
 
+  /**
+   * Read the document, then check it. Reading happens once at a time; the
+   * check itself goes through the session (review proposal 8), so a stage or
+   * type change during a long check supersedes it, and the reply of a
+   * cancelled or superseded check is dropped, never shown as current.
+   * Try again (and "Check again" after a cancel) reads the document afresh:
+   * in Word the document, not a snapshot, is what the writer means.
+   */
   const runCheck = useCallback(
     async (opts?: {
       mode?: ModeChoice;
       showPreferences?: boolean;
       section?: boolean;
       documentType?: DocumentType;
+      spelling?: Spelling;
       checklist?: ChecklistPref;
     }) => {
       const api = officeApi();
-      if (runningRef.current || !api || host?.status !== "word") return;
-      runningRef.current = true;
+      if (readingRef.current || !api || host?.status !== "word") return;
       const useMode = opts?.mode ?? mode;
       const useType = opts?.documentType ?? documentType;
+      const useSpelling = opts?.spelling ?? spelling;
       const useChecklist = opts?.checklist ?? checklist;
       const prefs = opts?.showPreferences ?? showPreferences;
       // A re-check (mute, stage change) keeps the current view: section or whole document.
       const wantSection = opts?.section ?? (checked?.focus !== null && checked?.focus !== undefined && !showWhole);
       const useEngine = engine;
-      setError(null);
+      // An earlier error or cancel note gives way; a check still running is left to be superseded.
+      if (session.getState().phase !== "running") session.settle();
       setProblem(null);
-      setPhase("reading");
+      readingRef.current = true;
+      setReading(true);
       setAnnouncement("Reading the document…");
+      let paragraphs: WordParagraph[];
+      let cursor: number | null = null;
+      let disabledRules: string[] = [];
       try {
         // The whole document is always sent: document-wide checks need all of
         // it. "Check this section" only records where the cursor is.
-        let cursor: number | null = null;
         if (wantSection) {
           try {
             cursor = await readSelectionParagraph(api);
           } catch {
             setProblem({ title: "Word did not say where the cursor is", message: "Nothing was sent. Click in the section you are working on, then check again." });
-            setPhase(checked ? "done" : "idle");
             return;
           }
         }
-        let paragraphs;
         try {
           paragraphs = await readParagraphs(api);
         } catch {
           setProblem({ title: "Word did not hand over the document", message: "Nothing was sent. Click in the document, then check again." });
-          setPhase("error");
           return;
         }
         if (!paragraphs.some((p) => p.text.trim())) {
           setProblem({ title: "This document is empty", message: "Write or paste some text into the document, then check again." });
-          setPhase(checked ? "done" : "idle");
           return;
         }
         if (paragraphs.length > MAX_WORD_PARAGRAPHS) {
@@ -302,22 +372,24 @@ export function Taskpane() {
             title: "This document is too long to check at once",
             message: `Researchly reads up to ${MAX_WORD_PARAGRAPHS.toLocaleString("en-GB")} paragraphs at a time. Check one chapter per document.`,
           });
-          setPhase(checked ? "done" : "idle");
           return;
         }
-
         // The local server has no accounts: the sign-in token never goes
         // there, but the account's muted rules do (a rule muted anywhere
         // stays muted everywhere).
-        let disabledRules: string[] = [];
         if (useEngine === "local" && signedIn) {
           const s = await loadSettings();
           if (s.ok) disabledRules = s.data.disabled_rules;
         }
+      } catch {
+        setProblem({ title: "The document could not be read", message: "Nothing was sent. Click in the document, then check again." });
+        return;
+      } finally {
+        readingRef.current = false;
+        setReading(false);
+      }
 
-        const ctrl = new AbortController();
-        abortRef.current = ctrl;
-        setPhase("checking");
+      const task: CheckTask<Checked> = async (signal) => {
         setAnnouncement("Checking your document…");
         // The brief, the narrative map and the checklist are whole-document reads, so they are asked for in Revise only.
         const r = await analyzeWord(
@@ -327,53 +399,50 @@ export function Taskpane() {
             mode: useMode,
             disabledRules,
             documentType: useType,
+            spelling: useSpelling,
             review: useMode === "revise",
             narrative: useMode === "revise",
             checklist: useMode === "revise" && useChecklist !== "none" ? useChecklist : null,
-            signal: ctrl.signal,
+            signal,
           },
           engineUrlFor(useEngine),
           useEngine === "local" ? null : getEngineAuth(),
         );
-        if (r.ok) {
-          const focus = cursor !== null ? sectionAround(paragraphs, cursor) : null;
-          setChecked((prev) => ({ seq: (prev?.seq ?? 0) + 1, data: r.data, engine: useEngine, focus, checklist: useChecklist }));
+        if (!r.ok) return { ok: false, error: useEngine === "local" ? localDownError(r.error) : r.error };
+        const focus = cursor !== null ? sectionAround(paragraphs, cursor) : null;
+        // A recheck of the same document text is not recorded twice (Codex review N2): an in-memory key only.
+        const progressKey = textKey(paragraphs.map((p) => p.text).join("\n"));
+        return { ok: true, data: { seq: 0, data: r.data, engine: useEngine, focus, checklist: useChecklist, progressKey } };
+      };
+      await session.start(task, {
+        onResult: (c) => {
+          setChecked((prev) => ({ ...c, seq: (prev?.seq ?? 0) + 1 }));
           setShowWhole(false);
           setNotes({});
           setApplied(new Set());
           setStale(new Set());
+          setChecklistMarks(NO_MARKS);
           setActiveId(null);
-          setPhase("done");
-          const listed = shownWordSuggestions(r.data, prefs);
-          setAnnouncement(focus ? sectionSummary(sectionView(listed, focus, scopes), focus) : wordSummary(listed.length));
+          const listed = shownWordSuggestions(c.data, prefs);
+          setAnnouncement(c.focus ? sectionSummary(sectionView(listed, c.focus, scopes), c.focus) : wordSummary(listed.length));
           // Opt-in progress (S4c): rule counts and words only, never text, and only
           // when the writer switched it on. A local check stays on this computer.
-          if (signedIn && useEngine === "cloud") {
-            const data = r.data;
+          if (signedIn && c.engine === "cloud") {
+            const data = c.data;
             void loadKeepProgress()
-              .then((k) => (k.ok && k.data ? recordProgress(data, true) : null))
+              .then((k) => (k.ok && k.data && claimText(c.progressKey) ? recordProgress(data, true) : null))
               .catch(() => undefined);
           }
-        } else {
-          setError(useEngine === "local" ? localDownError(r.error) : r.error);
-          setPhase("error");
-          setAnnouncement("");
-        }
-      } catch {
-        if (abortRef.current?.signal.aborted) {
-          setPhase(checked ? "done" : "idle");
-          setAnnouncement("Check cancelled.");
-        } else {
-          setError(clientError());
-          setPhase("error");
-        }
-      } finally {
-        runningRef.current = false;
-        abortRef.current = null;
-      }
+        },
+        onError: () => setAnnouncement(""),
+      });
     },
-    [host, mode, documentType, checklist, showPreferences, engine, signedIn, checked, showWhole, scopes],
+    [session, host, mode, documentType, spelling, checklist, showPreferences, engine, signedIn, checked, showWhole, scopes],
   );
+
+  const cancelCheck = () => {
+    if (session.cancel()) setAnnouncement("Check cancelled.");
+  };
 
   const onTypeChange = (next: DocumentType) => {
     if (next === documentType) return;
@@ -387,6 +456,20 @@ export function Taskpane() {
       });
     }
     if (checked) void runCheck({ documentType: next });
+  };
+
+  const onSpellingChange = (next: Spelling) => {
+    if (next === (spelling ?? "auto")) return;
+    setChosenSpelling(next);
+    saveSpellingChoice(next);
+    setSpellingNote(null);
+    if (signedIn) {
+      void saveSpelling(next).then((r) => {
+        if (r.ok) setAccountSpelling(next);
+        else setSpellingNote(`This choice could not be saved to your account, so it applies on this computer only. ${r.message}`);
+      });
+    }
+    if (checked) void runCheck({ spelling: next });
   };
 
   const onChecklistChange = (next: ChecklistPref) => {
@@ -414,7 +497,8 @@ export function Taskpane() {
   const onEngineChange = (next: EngineChoice) => {
     setChosenEngine(next);
     saveEngineChoice(next);
-    setError(null);
+    // The old engine's error no longer applies (a running check is left alone).
+    if (session.getState().phase !== "running") session.settle();
   };
 
   const onRevealPreferences = () => {
@@ -486,8 +570,8 @@ export function Taskpane() {
       note(s.id, {
         tone: "ok",
         text: r.tracked
-          ? "Applied as a tracked change. Accept or reject it in Word's Review tab."
-          : "Applied as a direct edit: this version of Word can't track it. Undo with Ctrl+Z (Cmd+Z on a Mac).",
+          ? "Applied as a tracked change. Accept or reject it in Word’s Review tab."
+          : "Applied as a direct edit: this version of Word can’t track it. Undo with Ctrl+Z (Cmd+Z on a Mac).",
       });
     },
     [checked],
@@ -503,7 +587,7 @@ export function Taskpane() {
         setAccountNote({ ok: false, text: r.message });
         return;
       }
-      setAccountNote({ ok: true, text: `Muted “${s.rule_name}”. It stays muted in Word and on the website. Unmute it in the website's Settings.` });
+      setAccountNote({ ok: true, text: `Muted “${s.rule_name}”. It stays muted in Word and on the website. Unmute it in the website’s Settings.` });
       void runCheck();
     },
     [runCheck],
@@ -546,6 +630,13 @@ export function Taskpane() {
   const checklistTab = Boolean(checked && (checked.checklist !== "none" || checked.data.checklist));
   const shownView: WordView = resultsView === "checklist" && !checklistTab ? "suggestions" : resultsView;
   const profileText = checked ? wordProfileLine(checked.data.profile) : null;
+  // The suggestions on screen while a newer check runs, failed or was cancelled are the previous check's.
+  const previous = previousMark(checked !== null, run);
+  // The revision queue walks what is listed (the section and its whole-document checks), in document order.
+  const listedIds = new Set([...split.inSection, ...split.wholeDocument].map((s) => s.id));
+  const inScope = shown.filter((s) => listedIds.has(s.id));
+  const passTotals = passCounts(inScope, scopes);
+  const wordQueue = queue.pass === "all" ? null : buildQueue(inScope, queue.pass, scopes);
 
   const wordCard = (s: WordSuggestion) => (
     <WordCard
@@ -555,7 +646,6 @@ export function Taskpane() {
       applied={applied.has(s.id)}
       stale={stale.has(s.id)}
       note={notes[s.id] ?? null}
-      busy={wordBusy || busy}
       onSelect={onSelect}
       onApply={onApply}
       actions={cardActions}
@@ -699,7 +789,7 @@ export function Taskpane() {
                 </select>
                 <p id={ids.checklistHelp} className="help control-help" data-testid="checklist-help">
                   {checklistHelp(checklists, checklist)}
-                  {checklist === "none" && suggestedChecklist ? ` Your text's words point to ${suggestedChecklist}.` : ""}
+                  {checklist === "none" && suggestedChecklist ? ` Your text’s words point to ${suggestedChecklist}.` : ""}
                 </p>
               </div>
 
@@ -707,7 +797,10 @@ export function Taskpane() {
                 <button
                   type="button"
                   className="btn btn-primary tp-check-btn"
-                  onClick={() => void runCheck({ section: false })}
+                  onClick={() => {
+                    // Busy: the button says so and Cancel is beside it; a press does not restart the check.
+                    if (!busy) void runCheck({ section: false });
+                  }}
                   aria-disabled={busy || undefined}
                   aria-describedby={ids.privacy}
                   data-testid="check-document"
@@ -724,7 +817,7 @@ export function Taskpane() {
                   )}
                 </button>
                 {phase === "checking" ? (
-                  <button type="button" className="btn btn-quiet" onClick={() => abortRef.current?.abort()}>
+                  <button type="button" className="btn btn-quiet" onClick={cancelCheck} data-testid="tp-cancel">
                     Cancel
                   </button>
                 ) : (
@@ -753,6 +846,8 @@ export function Taskpane() {
                   : "Analysed in memory and never stored. Nothing in the document changes unless you apply a revision."}
               </p>
             </section>
+
+            <NextWords engineUrl={engineUrlFor(engine)} local={engine === "local"} setting={prediction} />
 
             {localDown && !error ? (
               <div className="notice notice-health" role="status" data-testid="local-down">
@@ -805,6 +900,21 @@ export function Taskpane() {
               </div>
             ) : null}
 
+            {phase === "checking" && run.startedAt !== null ? (
+              <CheckProgress key={run.requestId} startedAt={run.startedAt} what="the document" hasPrevious={checked !== null} />
+            ) : null}
+
+            {!busy && run.note === "cancelled" ? (
+              <div className="notice notice-quiet" data-testid="tp-cancelled-note">
+                <p className="notice-text">
+                  Check cancelled.{checked ? "" : " Nothing was checked."}{" "}
+                  <button type="button" className="btn-link" onClick={() => void runCheck()} data-testid="tp-retry-cancelled">
+                    Check again
+                  </button>
+                </p>
+              </div>
+            ) : null}
+
             {busy && !checked ? (
               <div className="loading-card" aria-hidden="true">
                 <div className="skeleton" />
@@ -813,6 +923,7 @@ export function Taskpane() {
             ) : null}
 
             {checked ? (
+              <WordBusyContext.Provider value={wordBusy || busy}>
               <section className="tp-results" aria-labelledby="tp-results-title" aria-busy={busy || undefined} data-testid="tp-results">
                 <h2 id="tp-results-title" className="results-title">
                   {listed === 1 ? "1 suggestion" : `${listed.toLocaleString("en-GB")} suggestions`}
@@ -822,11 +933,17 @@ export function Taskpane() {
                   {checked.data.mode === "draft" ? "Draft" : "Revise"}
                   {checked.engine === "local" ? ", checked on this computer" : ""}. Click a suggestion to find it in the document.
                 </p>
+                {previous ? (
+                  <p className="previous-note" data-testid="previous-note" data-reason={previous}>
+                    {PREVIOUS_NOTE[previous]}
+                  </p>
+                ) : null}
                 {profileText ? (
                   <p className="profile-line muted" data-testid="profile-line">
                     {profileText}
                   </p>
                 ) : null}
+                <ReadingSummary reading={checked.data.reading} />
                 <WordTabs view={shownView} onChange={setResultsView} idBase={ids.tabs} checklist={checklistTab} />
                 {shownView === "checklist" ? (
                   <div
@@ -836,7 +953,12 @@ export function Taskpane() {
                     className="view-panel"
                     data-testid="checklist-panel"
                   >
-                    <WordChecklist state={checklistState(checked.data, checked.checklist)} onSwitchToRevise={() => onModeChange("revise")} />
+                    <WordChecklist
+                      state={checklistState(checked.data, checked.checklist)}
+                      onSwitchToRevise={() => onModeChange("revise")}
+                      marks={checklistMarks}
+                      onMark={(id, m) => setChecklistMarks((prev) => toggleMark(prev, id, m))}
+                    />
                   </div>
                 ) : shownView === "brief" ? (
                   <div
@@ -899,7 +1021,33 @@ export function Taskpane() {
                         </p>
                       ) : null}
                     </div>
-                    {split.inSection.length === 0 ? (
+                    {inScope.length > 0 ? (
+                      <PassChooser
+                        className="tp-passes"
+                        choice={queue.pass}
+                        counts={passTotals}
+                        onChoose={(p) => {
+                          setQueue({ pass: p, at: null });
+                          setActiveId(null);
+                        }}
+                      />
+                    ) : null}
+                    {wordQueue && inScope.length > 0 ? (
+                      <RevisionQueue
+                        compact
+                        queue={wordQueue}
+                        at={queue.at}
+                        onMove={(pos, s) => {
+                          setQueue({ pass: wordQueue.pass, at: pos });
+                          // Each step selects the finding's words in Word, as clicking its card does.
+                          void onSelect(s);
+                        }}
+                        renderCard={wordCard}
+                        counts={passTotals}
+                        onPass={(p) => setQueue({ pass: p, at: null })}
+                        scopeNote={focus ? `in ${sectionName(focus)}` : null}
+                      />
+                    ) : split.inSection.length === 0 ? (
                       <div className="empty" data-testid="tp-empty">
                         <p className="empty-title">{focus ? "Nothing to flag in this section" : "Nothing to flag"}</p>
                         <p className="muted">
@@ -909,7 +1057,7 @@ export function Taskpane() {
                     ) : (
                       <div className="cards tp-cards">{split.inSection.map(wordCard)}</div>
                     )}
-                    {split.wholeDocument.length > 0 ? (
+                    {!wordQueue && split.wholeDocument.length > 0 ? (
                       <section className="card-group" aria-labelledby="tp-whole-document-title" data-testid="whole-document">
                         <h3 id="tp-whole-document-title" className="col-title card-group-title">
                           Whole document
@@ -923,6 +1071,7 @@ export function Taskpane() {
                   </div>
                 )}
               </section>
+              </WordBusyContext.Provider>
             ) : null}
 
             <details className="panel tp-settings" data-testid="tp-settings">
@@ -974,6 +1123,10 @@ export function Taskpane() {
                   />
                   <span>Show preferences</span>
                 </label>
+
+                <SpellingSelect id={ids.spelling} value={spelling ?? "auto"} onChange={onSpellingChange} note={spellingNote} />
+
+                <PredictionToggle setting={prediction} testId="tp-prediction-switch" help={WORD_PREDICTION_HELP} showHelp />
 
                 {accounts ? (
                   <div className="tp-account-settings">

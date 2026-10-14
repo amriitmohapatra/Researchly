@@ -252,7 +252,7 @@ describe("applying a fix when Word fails (fails closed, says what happened)", ()
     const { api, state } = fake({ failures: { restoreTracking: true }, trackingMode: "Off" });
     const r = await applyReplacement(api, loc(1), "the");
     expect(r).toEqual({ ok: true, outcome: "restore_failed", tracked: true, message: RESTORE_FAILED_MESSAGE });
-    expect(RESTORE_FAILED_MESSAGE).toBe("The change was made, but Track Changes could not be switched back; check Word's Review tab.");
+    expect(RESTORE_FAILED_MESSAGE).toBe("The change was made, but Track Changes could not be switched back; check Word’s Review tab.");
     // The one insertion happened, and the review's bug (reporting it as "nothing was changed") is gone.
     expect(state.edits).toEqual([expect.objectContaining({ before: "the the", text: "the", tracked: true })]);
     expect(state.trackingMode).toBe("TrackAll");

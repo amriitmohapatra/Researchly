@@ -1,11 +1,12 @@
 "use client";
 
-import { memo, type MouseEvent } from "react";
+import { createContext, memo, useContext, type ButtonHTMLAttributes, type MouseEvent } from "react";
 import type { WordSuggestion } from "@researchly/contract";
 import { categoryMeta, sectionLabel } from "@/lib/categories";
 import { dictionaryCandidate, isRuleId } from "@/lib/settings";
 import { CategoryBadge } from "../CategoryIcon";
 import { REASONING_LABEL } from "../SuggestionCard";
+import { TableEvidence } from "../TableEvidence";
 
 export interface CardNote {
   tone: "ok" | "info" | "problem";
@@ -29,12 +30,33 @@ interface Props {
    */
   stale?: boolean;
   note: CardNote | null;
-  /** Word is busy with another action, or a check is running. */
-  busy: boolean;
   onSelect: (s: WordSuggestion) => void;
   onApply: (s: WordSuggestion) => void;
   /** Signed in only. Absent signed out: the card has no account actions. */
   actions: WordCardActions | null;
+}
+
+/**
+ * Word is busy with another action, or a check is running: every card's
+ * buttons say so and do nothing. A context rather than a card prop, so the
+ * switch on and off around each "Show in document" re-renders these
+ * buttons, not every card (2026-10-14 performance pass: on 1,200 cards a
+ * click on one card re-rendered all of them twice).
+ */
+export const WordBusyContext = createContext(false);
+
+function BusyButton({ onPress, ...rest }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onClick" | "type"> & { onPress: () => void }) {
+  const busy = useContext(WordBusyContext);
+  return (
+    <button
+      type="button"
+      {...rest}
+      aria-disabled={busy || undefined}
+      onClick={() => {
+        if (!busy) onPress();
+      }}
+    />
+  );
 }
 
 const MAX_QUOTE = 140;
@@ -52,7 +74,7 @@ function quote(text: string): string {
  * the words in the document; "Apply" appears only when the engine proposed
  * a concrete revision.
  */
-export const WordCard = memo(function WordCard({ suggestion: s, active, applied, stale = false, note, busy, onSelect, onApply, actions }: Props) {
+export const WordCard = memo(function WordCard({ suggestion: s, active, applied, stale = false, note, onSelect, onApply, actions }: Props) {
   const meta = categoryMeta(s.category);
   const section = sectionLabel(s.section);
   const msgId = `wmsg-${s.id}`;
@@ -97,6 +119,7 @@ export const WordCard = memo(function WordCard({ suggestion: s, active, applied,
           <q>{quote(s.text)}</q>
         </p>
       ) : null}
+      {s.table_evidence ? <TableEvidence evidence={s.table_evidence} /> : null}
       {hasFix ? (
         <p className="card-repl">
           <span className="card-repl-label">Suggested revision (your call):</span>{" "}
@@ -127,64 +150,44 @@ export const WordCard = memo(function WordCard({ suggestion: s, active, applied,
       ) : null}
 
       <div className="wcard-actions">
-        <button
-          type="button"
+        <BusyButton
           className="btn btn-quiet btn-compact"
           aria-describedby={msgId}
-          aria-disabled={busy || undefined}
-          onClick={() => {
-            if (!busy) onSelect(s);
-          }}
+          onPress={() => onSelect(s)}
           data-testid="select-in-document"
         >
           Show in document
-        </button>
+        </BusyButton>
         {hasFix && !applied && !stale ? (
-          <button
-            type="button"
+          <BusyButton
             className="btn btn-secondary btn-compact"
             aria-describedby={msgId}
-            aria-disabled={busy || undefined}
-            onClick={() => {
-              if (!busy) onApply(s);
-            }}
+            onPress={() => onApply(s)}
             data-testid="apply-fix"
           >
             {s.replacement === "" ? "Remove in document" : "Apply in document"}
-          </button>
+          </BusyButton>
         ) : null}
       </div>
 
       {actions && (mutable || word) ? (
         <div className="card-foot card-actions">
           {mutable ? (
-            <button
-              type="button"
+            <BusyButton
               className="btn-link btn-link-quiet"
               aria-describedby={msgId}
-              aria-disabled={busy || undefined}
-              onClick={() => {
-                if (!busy) actions.onMute(s);
-              }}
+              onPress={() => actions.onMute(s)}
               data-testid="mute-rule"
             >
               Mute this rule
-            </button>
+            </BusyButton>
           ) : null}
           {word ? (
-            <button
-              type="button"
-              className="btn-link btn-link-quiet"
-              aria-disabled={busy || undefined}
-              onClick={() => {
-                if (!busy) actions.onAddWord(s, word);
-              }}
-              data-testid="add-word"
-            >
+            <BusyButton className="btn-link btn-link-quiet" onPress={() => actions.onAddWord(s, word)} data-testid="add-word">
               <span>
                 Add <q translate="no">{word}</q> to dictionary
               </span>
-            </button>
+            </BusyButton>
           ) : null}
         </div>
       ) : null}

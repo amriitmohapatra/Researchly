@@ -40,8 +40,8 @@ PARAS = [{"text": "Introduction", "style": "Heading 1"},
 
 EVERY_OPTION = {
     "show_preferences": True, "disabled_rules": ["W204"], "mode": "revise",
-    "document_type": "auto", "review": True, "narrative": True,
-    "checklist": "auto",
+    "document_type": "auto", "spelling": "uk", "review": True,
+    "narrative": True, "checklist": "auto",
 }
 
 
@@ -78,7 +78,8 @@ def test_the_older_option_set_still_works(server):
 
 
 @pytest.mark.parametrize("bad", [{"document_type": "poem"}, {"review": "yes"},
-                                 {"checklist": "astrology"}, {"colour": "red"}])
+                                 {"checklist": "astrology"}, {"colour": "red"},
+                                 {"spelling": "klingon"}])
 def test_bad_options_are_refused(server, bad):
     with pytest.raises(server.ContractError):
         server.parse_word_request({"paragraphs": PARAS, "options": bad})

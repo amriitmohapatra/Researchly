@@ -11,6 +11,14 @@ paragraph number and the verdict: never the text.
 Verdicts: "useful" (right, or worth acting on), "wrong" (a false flag),
 "unsure" (left out of precision, counted separately).
 
+Since 2026-10-14 (Codex review N3) a label may also carry "attempt" (an
+opaque random id of the check it came from) and "flag" (its position in that
+check). The page already replaces labels when a paragraph is checked again;
+the reader makes sure of it: for each paragraph only the last attempt's
+labels count, and within an attempt only the last verdict per flag. What was
+dropped is reported. Files from before carry neither field and are read as
+they are.
+
 Output: a Markdown report with precision overall, by category and by rule,
 each with a Wilson 95% interval, because 50 paragraphs give small counts
 and a bare percentage would overstate what they show.
@@ -23,6 +31,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import re
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -52,11 +61,43 @@ def load(path) -> list:
                 or not isinstance(x.get("rule_id"), str):
             raise ValueError(f"label {i} is malformed")
         if set(x) - {"paragraph", "rule_id", "category", "section",
-                     "verdict"}:
+                     "verdict", "attempt", "flag"}:
             raise ValueError(f"label {i} carries unexpected fields; labels "
                              "hold no text")
+        if "attempt" in x and not (isinstance(x["attempt"], str)
+                                   and re.fullmatch(r"[a-z0-9]{6,16}",
+                                                    x["attempt"])):
+            raise ValueError(f"label {i} has a malformed attempt id")
+        if "flag" in x and not (isinstance(x["flag"], int)
+                                and not isinstance(x["flag"], bool)
+                                and x["flag"] >= 0):
+            raise ValueError(f"label {i} has a malformed flag position")
         out.append(x)
     return out
+
+
+def dedupe(labels: list) -> tuple:
+    """(the labels that count, how many were dropped): per paragraph the last
+    attempt only; within it, the last verdict per flag. Labels without an
+    attempt (files from before 2026-10-14) all count."""
+    last_attempt: dict = {}
+    for x in labels:
+        if "attempt" in x:
+            last_attempt[x["paragraph"]] = x["attempt"]
+    kept: dict = {}
+    order = []
+    for i, x in enumerate(labels):
+        if "attempt" not in x:
+            key = ("legacy", i)
+        elif last_attempt.get(x["paragraph"]) != x["attempt"]:
+            continue
+        else:
+            key = (x["paragraph"], x["attempt"], x.get("flag"))
+        if key not in kept:
+            order.append(key)
+        kept[key] = x
+    out = [kept[k] for k in order]
+    return out, len(labels) - len(out)
 
 
 def tally(labels: list, key) -> dict:
@@ -76,6 +117,7 @@ def _row(name: str, c: dict) -> str:
 
 
 def report(labels: list, min_flags: int = 3) -> str:
+    labels, dropped = dedupe(labels)
     paragraphs = len({x.get("paragraph") for x in labels})
     total = tally(labels, lambda x: "All flags")["All flags"]
     head = ("| | Useful | Wrong | Unsure | Precision | 95% interval |\n"
@@ -83,7 +125,14 @@ def report(labels: list, min_flags: int = 3) -> str:
     L = ["# Flag precision from labelled paragraphs", "",
          f"{len(labels)} flags in {paragraphs} paragraphs. Precision is "
          "useful / (useful + wrong); unsure flags are left out. The interval "
-         "is Wilson's 95% interval.", "", head, _row("All flags", total), "",
+         "is Wilson's 95% interval. Flags in one paragraph are not "
+         "independent, so read the intervals as descriptive until there "
+         "are enough paragraphs for a paragraph-clustered analysis."]
+    if dropped:
+        L += ["", f"{dropped} label{'s' if dropped != 1 else ''} from a "
+              "replaced check or a changed verdict "
+              f"{'were' if dropped != 1 else 'was'} set aside."]
+    L += ["", head, _row("All flags", total), "",
          "## By category", "", head]
     for k, c in sorted(tally(labels, lambda x: x.get("category", "?")).items()):
         L.append(_row(k, c))

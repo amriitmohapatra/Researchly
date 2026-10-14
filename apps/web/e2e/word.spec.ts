@@ -94,7 +94,7 @@ test.describe("Word taskpane", () => {
     await first.getByText("The full reasoning").click();
     await expect(first.getByText("A synthetic explanation")).toBeVisible();
     // The stage's help says what each stage checks.
-    await expect(page.getByTestId("mode-help")).toHaveText("Draft: check what you've written so far. Revise: check the finished manuscript.");
+    await expect(page.getByTestId("mode-help")).toHaveText("Draft: check what you’ve written so far. Revise: check the finished manuscript.");
 
     await expect(page.getByTestId("coverage")).toContainText("Checked 5 paragraphs of the document body, 1 of them in a table.");
     await expect(page.getByTestId("coverage")).toContainText(
@@ -239,7 +239,7 @@ test.describe("Word taskpane", () => {
     await expect(strips).toHaveCount(2);
     const methodsCells = strips.nth(0).getByTestId("narrative-move");
     await expect(methodsCells).toHaveCount(2);
-    await expect(methodsCells.nth(0)).toContainText("missing");
+    await expect(methodsCells.nth(0)).toContainText("not detected");
     const [a, b] = await methodsCells.evaluateAll((els) => els.map((e) => e.getBoundingClientRect().top));
     expect(b).toBeGreaterThan(a!);
     const detail = strips.nth(0).getByTestId("narrative-detail").first();
@@ -287,7 +287,7 @@ test.describe("Word taskpane", () => {
     const calls = await mockWordEngine(page, ENGINE);
     await page.goto("/word");
     await page.getByTestId("mode-draft").check();
-    await expect(page.getByTestId("mode-help")).toHaveText("Draft: check what you've written so far. Revise: check the finished manuscript.");
+    await expect(page.getByTestId("mode-help")).toHaveText("Draft: check what you’ve written so far. Revise: check the finished manuscript.");
     await page.getByTestId("mode-revise").check();
     await page.getByTestId("check-section").click();
     await expect(page.getByTestId("tp-results")).toBeVisible();
@@ -401,7 +401,15 @@ test.describe("Word taskpane", () => {
     await fakeOffice(page);
     const cloud = await mockWordEngine(page, ENGINE);
     await page.goto("/word");
+    // The closed Settings panel shows a disclosure marker (a flex summary drops the native one), turned when open.
+    const marker = () =>
+      page.getByTestId("tp-settings").locator("summary").evaluate((el) => {
+        const m = getComputedStyle(el, "::before");
+        return { width: m.borderLeftWidth, turned: m.transform !== "none" };
+      });
+    expect(await marker()).toEqual({ width: "5px", turned: false });
     await page.getByTestId("tp-settings").locator("summary").click();
+    await expect.poll(marker).toEqual({ width: "5px", turned: true });
     await page.getByTestId("engine-local").check();
     // Nothing is listening yet: health fails, and the pane says how to start it.
     await expect(page.getByTestId("local-down")).toContainText("Researchly is not running on this computer");
@@ -559,7 +567,7 @@ test.describe("Word taskpane: when Word fails during Apply (fails closed, says w
     const c = card(page, "In order to");
     await c.getByTestId("apply-fix").click();
     await expect(c.getByTestId("card-note")).toHaveText(
-      "The change was made, but Track Changes could not be switched back; check Word's Review tab.",
+      "The change was made, but Track Changes could not be switched back; check Word’s Review tab.",
     );
     await expect(c.getByTestId("apply-fix")).toHaveCount(0);
     expect((await wordState(page)).edits).toHaveLength(1);
@@ -622,7 +630,7 @@ test.describe("Word taskpane: the reporting checklist", () => {
     expect(calls[0]!.body.options).not.toHaveProperty("checklist");
     await expect(page.getByTestId("view-checklist")).toHaveCount(0);
     // The engine's suggestion is offered, never applied.
-    await expect(page.getByTestId("checklist-help")).toContainText("Your text's words point to STROBE.");
+    await expect(page.getByTestId("checklist-help")).toContainText("Your text’s words point to STROBE.");
 
     // A choice checks again (like a changed type) and opens nothing by itself.
     await page.getByTestId("checklist-select").selectOption("strobe");
@@ -635,14 +643,46 @@ test.describe("Word taskpane: the reporting checklist", () => {
     const list = page.getByTestId("word-checklist");
     await expect(list.getByTestId("checklist-note")).toHaveText(WORD_CHECKLIST.note);
     const items = list.getByTestId("checklist-item");
-    await expect(items).toHaveCount(3);
+    await expect(items).toHaveCount(WORD_CHECKLIST.items.length);
+    // The website's cautious words (Codex review N1), never "Reported".
+    await expect(list.getByTestId("checklist-edition")).toHaveText("Selected themes of STROBE (2007), not a full compliance check.");
+    const tally = list.getByTestId("checklist-tally");
+    await expect(tally).toHaveText("1 of 4 with possible evidence · 1 partly there · confirmed by you: 0");
+    await expect(list.getByTestId("checklist-status")).toHaveText(["Partly there", "Needs your check", "Found: please confirm", "Needs your check"]);
+    await expect(list).not.toContainText("Reported");
     await expect(items.nth(0)).toContainText("Statistical methods");
-    await expect(items.nth(0)).toContainText("Reported");
+    await expect(items.nth(0).getByTestId("checklist-refs")).toHaveText("STROBE (2007) item 12a");
+    await expect(items.nth(3).getByTestId("checklist-refs")).toHaveText("Good practice, not a numbered item");
+    await expect(items.nth(0).locator(".checklist-part-line")).toHaveText(["Found: the statistical methods", "Needs your check: how confounding was handled"]);
     await expect(items.nth(0).locator("q")).toHaveText(WORD_CHECKLIST.items[0]!.evidence!);
-    await expect(items.nth(1)).toContainText("Needs your check");
     await expect(items.nth(1)).toContainText(WORD_CHECKLIST.items[1]!.plain);
+    await expect(items.nth(2).getByTestId("checklist-not-counted")).toContainText("A sentence mentions this but is about earlier studies:");
+    await expect(items.nth(3).getByTestId("checklist-absent")).toHaveText("No Results section was found to look in.");
     await expect(list).toContainText(`Source: ${WORD_CHECKLIST.source}`);
     await expect(page.locator("meter, progress")).toHaveCount(0);
+
+    // The writer's calls, as on the website: this check only, never stored or sent.
+    await expect(items.nth(1).getByTestId("checklist-confirm")).toHaveCount(0);
+    const confirm = items.nth(2).getByTestId("checklist-confirm");
+    await confirm.click();
+    await expect(confirm).toHaveAttribute("aria-pressed", "true");
+    await expect(items.nth(2).getByTestId("checklist-status")).toHaveText("Confirmed by you");
+    await expect(list.getByTestId("checklist-live")).toHaveText("Limitations: confirmed by you.");
+    const na = items.nth(1).getByTestId("checklist-na");
+    await expect(na).toHaveAttribute("aria-pressed", "false");
+    await na.focus();
+    await page.keyboard.press("Enter");
+    await expect(na).toHaveAttribute("aria-pressed", "true");
+    await expect(items.nth(1).getByTestId("checklist-status")).toHaveText("Not applicable (your call)");
+    await expect(items.nth(1)).not.toContainText(WORD_CHECKLIST.items[1]!.plain);
+    await expect(list.getByTestId("checklist-live")).toHaveText("Setting: marked not applicable.");
+    await expect(tally).toHaveText("1 of 4 with possible evidence · 1 partly there · confirmed by you: 1 · not applicable (your call): 1");
+    // Kept across tabs within this check; nothing sent, nothing stored.
+    await page.getByTestId("view-suggestions").click();
+    await page.getByTestId("view-checklist").click();
+    await expect(list.getByTestId("checklist-item").nth(1).getByTestId("checklist-na")).toHaveAttribute("aria-pressed", "true");
+    expect(calls).toHaveLength(2);
+    expect(await page.evaluate(() => Object.keys(localStorage).filter((k) => /mark|confirm|applicable/i.test(k)))).toEqual([]);
 
     // Draft never asks for it: the tab says it needs Revise, with a switch.
     await page.getByTestId("mode-draft").check();
@@ -689,6 +729,9 @@ test.describe("Word taskpane: the reporting checklist", () => {
       await expect(page.getByTestId("tp-results")).toBeVisible();
       await page.getByTestId("view-checklist").click();
       await expect(page.getByTestId("word-checklist")).toBeVisible();
+      // Pressed toggles too, so their state is in the scan.
+      await page.getByTestId("checklist-item").nth(0).getByTestId("checklist-confirm").click();
+      await page.getByTestId("checklist-item").nth(1).getByTestId("checklist-na").click();
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       expect(overflow).toBeLessThanOrEqual(0);
       expect(await axeSerious(page)).toEqual([]);

@@ -164,16 +164,27 @@ describe("the printed report's context (Codex review R8)", () => {
     expect(html).toContain('<p class="print-loc" data-testid="print-location">sections/part-0.tex, line 3</p>');
   });
 
-  it("adds the reporting checklist after the narrative map when one ran, statuses in words, the writer's 'Not applicable' kept", () => {
+  it("adds the reporting checklist after the narrative map when one ran, the same cautious statuses, the writer's calls kept apart", () => {
+    const marks = new Map([
+      ["horizon", "not_applicable"],
+      ["data", "confirmed"],
+    ] as const);
     const html = renderToStaticMarkup(
-      <PrintReport data={{ ...base, checklist: CHECKLIST }} submittedText={SAMPLE_TEXT} showPreferences={false} at={at} notApplicable={new Set(["horizon"])} />,
+      <PrintReport data={{ ...base, checklist: CHECKLIST }} submittedText={SAMPLE_TEXT} showPreferences={false} at={at} checklistMarks={marks} />,
     );
     expect(html.indexOf('class="print-narrative"')).toBeLessThan(html.indexOf('class="print-checklist"'));
     expect(html.indexOf('class="print-checklist"')).toBeLessThan(html.indexOf('class="print-foot"'));
     const page = html.slice(html.indexOf('class="print-checklist"'), html.indexOf('class="print-foot"'));
-    expect(page).toContain("reported");
-    expect(page).toContain("not applicable (your call)");
-    expect(page).toContain("needs your check");
+    // Found but not confirmed, confirmed by the writer, not applicable, needs check: four different words.
+    expect(page).toContain(">Found: please confirm<");
+    expect(page).toContain(">Confirmed by the writer<");
+    expect(page).toContain(">Not applicable (the writer’s call)<");
+    expect(page).toContain(">Needs your check<");
+    expect(page).not.toMatch(/>reported<|>Reported</);
+    expect(page).toContain("Selected themes of EPIFORGE 2020, not a full compliance check.");
+    expect(page).toContain("1 of 6 with possible evidence · 1 partly there · confirmed by the writer: 1 · not applicable (the writer’s call): 1");
+    expect(page).toContain("EPIFORGE 2020 item 8");
+    expect(page).toContain("No Results section was found to look in.");
     expect(page).not.toContain("<button");
     expect(page).toContain("This checks reporting only, never the science.");
     const none = renderToStaticMarkup(<PrintReport data={base} submittedText={SAMPLE_TEXT} showPreferences={false} at={at} />);

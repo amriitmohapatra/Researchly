@@ -11,6 +11,10 @@ instead of the cloud. Only that page's origin (and the dev server's) may
 call them from a browser (CORS, with the private-network preflight a
 public HTTPS page needs to reach localhost).
 
+2026-10-14: `POST /v1/complete` (also at `/complete`) answers word
+prediction for the taskpane's "Next words" panel, with the hosted
+engine's CompleteRequest/CompleteResponse shapes.
+
 Usage:
     python server.py            # http://localhost:3517
     python server.py --port N
@@ -42,6 +46,7 @@ from researchly import transform                       # noqa: E402
 from researchly import wordloc                         # noqa: E402
 from researchly import packs as packs_mod              # noqa: E402
 from researchly import shapes                          # noqa: E402
+from researchly.document import cell_place            # noqa: E402
 from researchly.profiles import DOCUMENT_TYPES         # noqa: E402
 
 _NLP_LOCK = threading.Lock()
@@ -142,7 +147,8 @@ MAX_BODY_BYTES = 64 * 1024 * 1024
 MODES = ("draft", "revise")
 # Every option of the contract's AnalyzeOptions (packages/contract).
 OPTION_KEYS = {"show_preferences", "disabled_rules", "mode",
-               "document_type", "review", "narrative", "checklist"}
+               "document_type", "spelling", "review", "narrative",
+               "checklist"}
 CHECKLISTS = {"auto"} | set(packs_mod.checklists())
 # Tiers whose being off never makes this engine "degraded" (as the hosted one).
 _OPTIONAL_STATES = {"gec": {"missing", "disabled"}}
@@ -198,8 +204,9 @@ def parse_word_request(payload) -> tuple:
     clean = []
     total = 0
     for i, p in enumerate(paras):
-        if not isinstance(p, dict) or set(p) - {"text", "style", "kind"}:
-            raise bad(f"paragraph {i} must be {{text, style, kind}}")
+        if not isinstance(p, dict) or set(p) - {"text", "style", "kind",
+                                                "cell"}:
+            raise bad(f"paragraph {i} must be {{text, style, kind, cell}}")
         text = p.get("text", "")
         style = p.get("style", "")
         kind = p.get("kind", "body")
@@ -210,8 +217,13 @@ def parse_word_request(payload) -> tuple:
                       f"{MAX_STYLE_CHARS} characters")
         if kind not in ("body", "table"):
             raise bad(f"paragraph {i}: kind must be body or table")
+        cell = p.get("cell")
+        if cell is not None and cell_place(cell) is None:
+            raise bad(f"paragraph {i}: cell must be [table, row, col] or "
+                      "[table, row, col, colspan] of whole numbers")
         total += len(text)
-        clean.append({"text": text, "style": style, "kind": kind})
+        clean.append({"text": text, "style": style, "kind": kind,
+                      "cell": cell})
     if total > MAX_CONTENT_CHARS:
         raise ContractError(413, "payload_too_large",
                             f"at most {MAX_CONTENT_CHARS:,} characters at a time")
@@ -234,6 +246,10 @@ def parse_word_request(payload) -> tuple:
     if doc_type is not None and doc_type not in DOCUMENT_TYPES:
         raise bad("document_type must be one of " + ", ".join(DOCUMENT_TYPES))
     extra["document_type"] = doc_type
+    spelling = opts.get("spelling")
+    if spelling is not None and spelling not in config_mod.SPELLINGS:
+        raise bad("spelling must be one of " + ", ".join(config_mod.SPELLINGS))
+    extra["spelling"] = spelling
     for flag in ("review", "narrative"):
         v = opts.get(flag, False)
         if not isinstance(v, bool):
@@ -268,6 +284,7 @@ def _word_suggestion(s, doc, paragraphs: list) -> dict:
         "replacement": s.replacement,
         "fix_safety": "safe" if s.fix_safety == "safe" else "review",
         "confidence": min(1.0, max(0.0, conf)),
+        "table_evidence": s.table_evidence,
         "location": wordloc.locate(doc, paragraphs, s.start, s.end),
     }
 
@@ -288,6 +305,8 @@ def analyze_word(payload) -> dict:
         cfg.mode = mode
     if extra["document_type"] is not None:
         cfg.document_type = extra["document_type"]
+    if extra["spelling"] is not None:
+        cfg.spelling = extra["spelling"]
     a = api.analyze(paragraphs, nlp=get_nlp(), cfg=cfg,
                     with_review=extra["review"],
                     with_narrative=extra["narrative"],
@@ -313,6 +332,65 @@ def analyze_word(payload) -> dict:
     }
     out["elapsed_ms"] = int(round((time.perf_counter() - t0) * 1000))
     return out
+
+
+MAX_COMPLETE_CHARS = 100_000       # the hosted engine's CompleteRequest cap
+COMPLETE_FORMATS = ("plain", "markdown", "latex")
+COMPLETE_KEYS = {"text", "cursor", "format", "options"}
+COMPLETE_OPTION_KEYS = {"limit", "spelling"}
+
+
+def parse_complete_request(payload) -> tuple:
+    """Validate a CompleteRequest by hand (stdlib only). Returns
+    (text, cursor, format, limit, spelling). The cursor counts Unicode code
+    points, which is what a Python index is."""
+    bad = lambda msg: ContractError(422, "invalid_request", msg)  # noqa: E731
+    if not isinstance(payload, dict):
+        raise bad("the body must be a JSON object")
+    extra = set(payload) - COMPLETE_KEYS
+    if extra:
+        raise bad(f"unknown field(s): {', '.join(sorted(extra))}")
+    text = payload.get("text")
+    if not isinstance(text, str):
+        raise bad("text must be a string")
+    if len(text) > MAX_COMPLETE_CHARS:
+        raise ContractError(413, "payload_too_large",
+                            f"at most {MAX_COMPLETE_CHARS:,} characters around the cursor")
+    cursor = payload.get("cursor")
+    if cursor is not None and (isinstance(cursor, bool) or not isinstance(cursor, int)
+                               or cursor < 0):
+        raise bad("cursor must be a whole number of characters")
+    if cursor is not None and cursor > len(text):
+        raise bad("cursor is beyond the end of the text")
+    fmt = payload.get("format", "plain")
+    if fmt not in COMPLETE_FORMATS:
+        raise bad("format must be one of " + ", ".join(COMPLETE_FORMATS))
+    opts = payload.get("options") or {}
+    if not isinstance(opts, dict) or set(opts) - COMPLETE_OPTION_KEYS:
+        raise bad("options must be {limit, spelling}")
+    limit = opts.get("limit", 3)
+    if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 5:
+        raise bad("limit must be 1 to 5")
+    spelling = opts.get("spelling")
+    if spelling is not None and spelling not in config_mod.SPELLINGS:
+        raise bad("spelling must be one of " + ", ".join(config_mod.SPELLINGS))
+    return text, cursor, fmt, limit, spelling
+
+
+def complete_v1(payload) -> dict:
+    """POST /v1/complete (and /complete): word prediction at the cursor, as
+    the hosted engine answers it (CompleteResponse). Candidates only: the
+    taskpane inserts one only when the writer clicks it. This computer's
+    shared config decides whether prediction is on ([features]
+    prediction). The text is read in memory and kept nowhere."""
+    text, cursor, fmt, limit, spelling = parse_complete_request(payload)
+    cfg = config_mod.load()
+    if spelling is not None:
+        cfg.spelling = spelling
+    got = api.complete(text, cursor, kind=fmt, cfg=cfg, limit=limit)
+    return {"status": got.status,
+            "candidates": [{"text": c.text, "start": c.start, "end": c.end,
+                            "kind": c.kind} for c in got.candidates]}
 
 
 def health_v1() -> dict:
@@ -370,7 +448,8 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_OPTIONS(self):
         # CORS preflight for the hosted taskpane's local mode (S3).
-        if self._route() not in ("/v1/analyze-word", "/v1/health"):
+        if self._route() not in ("/v1/analyze-word", "/v1/health",
+                                 "/v1/complete", "/complete"):
             self.send_response(404)
             self.send_header("Content-Length", "0")
             self.end_headers()
@@ -382,9 +461,11 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", "0")
         self.end_headers()
 
-    def _v1_post(self):
-        """POST /v1/analyze-word. Text is held for this request only and
-        never written anywhere (no telemetry on this path)."""
+    def _v1_post(self, answer=None):
+        """POST /v1/analyze-word (or, with `answer=complete_v1`,
+        /v1/complete). Text is held for this request only and never
+        written anywhere (no telemetry on this path)."""
+        answer = answer or analyze_word
         cors = self._cors()
         origin = self.headers.get("Origin")
         if origin is not None and not cors:
@@ -405,7 +486,7 @@ class Handler(SimpleHTTPRequestHandler):
             return self._json(422, error_body(
                 "invalid_request", "The body is not valid JSON."), cors)
         try:
-            return self._json(200, analyze_word(payload), cors)
+            return self._json(200, answer(payload), cors)
         except ContractError as e:
             return self._json(e.status, error_body(e.code, e.message), cors)
         except Exception as e:  # reported by type only: messages can quote text
@@ -447,6 +528,9 @@ class Handler(SimpleHTTPRequestHandler):
     def do_POST(self):
         if self._route() == "/v1/analyze-word":
             return self._v1_post()
+        if self._route() in ("/v1/complete", "/complete"):
+            # Word prediction for the taskpane's "Next words" panel.
+            return self._v1_post(complete_v1)
         try:
             length = int(self.headers.get("Content-Length", "0"))
             payload = json.loads(self.rfile.read(length) or b"{}")
@@ -514,7 +598,7 @@ class Handler(SimpleHTTPRequestHandler):
                     cfg = cfg.with_overrides(**{
                         k: payload[k] for k in
                         ("show_preferences", "locale", "document_type",
-                         "aggressiveness", "grammar_tier", "gec_tier",
+                         "spelling", "aggressiveness", "grammar_tier", "gec_tier",
                          "disabled")
                         if k in payload})
                     if not config_mod.save_user(cfg):

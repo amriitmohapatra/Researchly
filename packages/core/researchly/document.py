@@ -177,6 +177,24 @@ def _typed_caption(text: str, style: str) -> bool:
     return bool(_TYPED_CAPTION.match(text)) and not _TOC_ENTRY.search(text)
 
 
+# The largest table, row, column or colspan number a cell place may carry
+# (the service's schema uses the same bound; a test pins them together).
+MAX_CELL_INDEX = 100_000
+
+
+def cell_place(cell) -> Optional[tuple[int, int, int, int]]:
+    """A table cell's `[table, row, col]` or `[table, row, col, colspan]`
+    (0-based), as the .docx reader or the Word add-in gives it; None for
+    anything else."""
+    if not isinstance(cell, (list, tuple)) or len(cell) not in (3, 4):
+        return None
+    if not all(isinstance(x, int) and not isinstance(x, bool)
+               and 0 <= x <= MAX_CELL_INDEX for x in cell):
+        return None
+    span = cell[3] if len(cell) == 4 else 1
+    return (cell[0], cell[1], cell[2], span) if span >= 1 else None
+
+
 @dataclass
 class StructureItem:
     """A figure, table, equation, caption or citation (kept for S2b)."""
@@ -202,6 +220,11 @@ class Document:
     # (start, end) spans that are table cells, not prose. Metrics exclude
     # them: a table of parameter values is not a set of long sentences.
     table_spans: list[tuple[int, int]] = field(default_factory=list)
+    # (start, end, table, row, col, colspan) for the table cells whose place
+    # in their table is known (an uploaded .docx gives it; the add-in does
+    # not): X401 reads rows and columns from them (Codex review #7).
+    table_cells: list[tuple[int, int, int, int, int, int]] = field(
+        default_factory=list)
     # Set by the file adapters (researchly.ingest); empty for pasted text.
     segments: list[Segment] = field(default_factory=list)
     structure: list[StructureItem] = field(default_factory=list)
@@ -214,6 +237,9 @@ class Document:
     # over it (S4): a commentary's body is argued like a Discussion, a
     # pasted abstract is an abstract. None keeps "unknown"/"front"/"other".
     default_section: Optional[str] = None
+    # What was set aside while reading, by kind: {"code": 3, ...}
+    # (reading.py; the coverage summary reports it).
+    read: dict = field(default_factory=dict)
     _line_starts: list[int] = field(default_factory=list, repr=False)
 
     # -- construction -------------------------------------------------------
@@ -263,13 +289,34 @@ class Document:
             masked, headings = text, _detect_plain_headings(text)
         atoms = (res.atoms if kind == "latex"
                  else inline_atoms(text, kind) if kind == "markdown" else [])
+        read: dict[str, int] = {}
         if kind == "plain":
+            from . import reading
             layout = layout_spans(text) + url_spans(text)
+            code = reading.code_spans(text)
+            inline = reading.inline_spans(text)
+            for name, spans in (("layout", layout), ("code", code),
+                                ("maths_or_code", inline)):
+                if spans:
+                    read[name] = len(spans)
+            layout = layout + code + inline
             if layout:
                 masked = list(masked)
                 _mask_spans(masked, layout)
                 masked = "".join(masked)
                 atoms = sorted(atoms + layout)
+        # Researchly checks English: a paragraph in another language is
+        # masked, and the writer is told (2026-10-14).
+        from . import reading
+        foreign = reading.foreign_spans(masked)
+        if foreign:
+            notice = reading.language_notice(masked, foreign)
+            masked = list(masked)
+            _mask_spans(masked, [(a, b) for a, b, _ in foreign])
+            masked = "".join(masked)
+            read["other_language"] = len(foreign)
+            if notice:
+                warnings.append(notice)
         # Mask heading TEXT as well (after recording it): headings are not
         # sentences, and without terminal punctuation the parser merges them
         # into the following paragraph's first sentence, corrupting
@@ -285,6 +332,7 @@ class Document:
         masked = "".join(chars)
         doc = cls(original=text, masked=masked, kind=kind, headings=headings,
                   structure=structure, warnings=warnings, atoms=atoms)
+        doc.read = read
         doc._line_starts = [0] + [m.end() for m in re.finditer(r"\n", text)]
         return doc
 
@@ -319,12 +367,17 @@ class Document:
         chars = list(doc.masked)
         style_headings: list[Heading] = []
         table_spans: list[tuple[int, int]] = []
+        table_cells: list[tuple[int, int, int, int, int, int]] = []
         captions: list[StructureItem] = []
         for i, p in enumerate(paragraphs):
             style = (p.get("style") or "").lower().replace(" ", "")
             title = texts[i].strip()
             if p.get("kind") == "table" and title:
                 table_spans.append((offsets[i], offsets[i] + len(texts[i])))
+                place = cell_place(p.get("cell"))
+                if place is not None:
+                    table_cells.append(
+                        (offsets[i], offsets[i] + len(texts[i])) + place)
                 continue          # never a heading, never prose
             if not title:
                 continue
@@ -373,6 +426,7 @@ class Document:
                             end=end, level=level))
                 _mask_spans(chars, [(start, end)])
         doc.table_spans = table_spans
+        doc.table_cells = table_cells
         doc.structure = captions
         if table_spans:
             # from_text() already ran keyword heading detection over the
@@ -656,6 +710,8 @@ _TOKEN_PUNCT = ".,;:()[]{}\"'’“”"
 def _math_token(tok: str) -> bool | None:
     """True for a token of flattened maths, False for a word, None for
     punctuation or a bare number (neither)."""
+    if len(tok) > 1 and tok.isascii() and tok.isalpha():
+        return False            # a plain word: the common case, no regex
     core = tok.strip(_TOKEN_PUNCT)
     if not core or re.fullmatch(r"[\d.,%-]+", core):
         return None
@@ -675,8 +731,22 @@ def layout_spans(text: str) -> list[tuple[int, int]]:
             continue
         if not _RELATION.search(line):
             continue
-        kinds = [k for k in map(_math_token, line.split()) if k is not None]
-        if len(kinds) >= 3 and sum(kinds) >= 0.5 * len(kinds):
+        # Maths when at least half of three or more word-like tokens are
+        # maths. A prose line with "p < 0.05" in it would read every token;
+        # stop once the maths tokens can no longer catch up (2026-10-14).
+        toks = line.split()
+        maths = words = 0
+        for i, tok in enumerate(toks):
+            kind = _math_token(tok)
+            if kind is None:
+                continue
+            if kind:
+                maths += 1
+            else:
+                words += 1
+            if maths - words + (len(toks) - 1 - i) < 0:
+                break
+        if maths + words >= 3 and maths >= 0.5 * (maths + words):
             spans.append((m.start(), m.end()))
     return spans
 

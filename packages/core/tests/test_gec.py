@@ -12,8 +12,7 @@ import pytest
 from researchly import api
 from researchly import config as config_mod
 from researchly import gec
-from researchly.document import Document
-from researchly.engine import Category, REGISTRY, check
+from researchly.engine import Category, REGISTRY
 from researchly.gec import Edit, EditBackend
 
 NLP = api.get_nlp()

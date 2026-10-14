@@ -18,6 +18,16 @@ export if any of these is found:
     a file over the size limit;
   - a symbolic link.
 
+ZIP and Word (.docx) files the policy admits are opened and every member
+is held to the same checks (names, text, document metadata, comments),
+within size and depth limits; an archive that cannot be inspected is
+refused (Codex review N6, 2026-10-14). The overlay and the policy files
+are read from the exported ref, never from the working tree, so an
+uncommitted edit cannot change an export; the private terms are those of
+the ref together with the current ones. gitleaks is required: without it
+the gate reports INCOMPLETE (exit 3) and never syncs, unless
+--allow-incomplete is given for a local look.
+
     python3 tools/public-export/export.py --check            # CI: gate only
     python3 tools/public-export/export.py --out /tmp/public  # write + gate
     python3 tools/public-export/export.py --out /tmp/public \\
@@ -26,7 +36,8 @@ export if any of these is found:
 --sync-to points at a clone of the public repository: after a clean gate the
 clone's tree is replaced by the export and committed (never pushed; pushing
 is the owner's deliberate step). Exit codes: 0 clean, 1 findings, 2 usage or
-setup error (for example, no private sources to scan against).
+setup error (for example, no private sources to scan against), 3 incomplete
+(a required scanner is missing).
 
 Stdlib only; Python 3.10 compatible. Nothing in this folder is exported.
 """
@@ -37,15 +48,26 @@ import argparse
 import json
 import re
 import shutil
+import io
 import subprocess
 import sys
 import tempfile
+import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
 OVERLAY = HERE / "overlay"
+# Where the policy and the overlay live inside the repository's tree: read
+# from the exported ref (git show), never from the working tree.
+POLICY_TREE = "tools/public-export"
+# Limits for looking inside ZIP and .docx files (Codex review N6).
+ARCHIVE_SUFFIXES = {".zip", ".docx"}
+ARCHIVE_MAX_MEMBERS = 5000
+ARCHIVE_MAX_MEMBER = 20 * 1024 * 1024
+ARCHIVE_MAX_TOTAL = 100 * 1024 * 1024
+ARCHIVE_MAX_DEPTH = 2
 
 MAX_BYTES = 10 * 1024 * 1024
 # Binary files the public tree may hold; anything else binary is refused.
@@ -138,6 +160,31 @@ class Policy:
             emails={e.lower() for e in _read_lines(here / "public-emails.txt")},
         )
 
+    @classmethod
+    def load_ref(cls, ref: str, repo: Path = None,
+                 also: "Policy | None" = None) -> "Policy":
+        """The policy committed at `ref` (include, exclude, terms, emails).
+        `also` adds its private terms: exporting an old ref never uses a
+        weaker list than today's."""
+        repo = repo or REPO
+        tmp = Path(tempfile.mkdtemp(prefix="researchly-policy-"))
+        try:
+            for name in ("include.txt", "exclude.txt", "private-terms.txt",
+                         "public-emails.txt"):
+                try:
+                    data = _git("show", "%s:%s/%s" % (ref, POLICY_TREE, name),
+                                cwd=repo)
+                except subprocess.CalledProcessError:
+                    data = b""
+                (tmp / name).write_bytes(data)
+            policy = cls.load(tmp)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+        if also is not None:
+            have = {t for t, _ in policy.terms}
+            policy.terms += [(t, rx) for t, rx in also.terms if t not in have]
+        return policy
+
     def admits(self, rel: str) -> bool:
         return (any(r.match(rel) for r in self.include)
                 and not any(r.match(rel) for r in self.exclude))
@@ -163,38 +210,61 @@ def tracked(ref: str, repo: Path = REPO) -> list[tuple[str, str, str]]:
 
 
 def export(ref: str, out: Path, policy: Policy, repo: Path = REPO,
-           overlay: Path = OVERLAY) -> tuple[list[str], list[str]]:
+           overlay: Path | None = None) -> tuple[list[str], list[str]]:
     """Write the admitted files at `ref`, then the overlay, into `out`.
 
     Returns (exported paths, refused symlinks). Reads blobs from git, so an
-    uncommitted or ignored file can never be exported.
+    uncommitted or ignored file can never be exported. The overlay is read
+    from `ref` too (tools/public-export/overlay/ in its tree); `overlay` (a
+    folder) is for tests only. A symbolic link is never exported, overlay
+    included.
     """
     out.mkdir(parents=True, exist_ok=True)
     exported: list[str] = []
     symlinks: list[str] = []
-    for mode, sha, rel in tracked(ref, repo):
+    rows = tracked(ref, repo)
+    for mode, sha, rel in rows:
         if not policy.admits(rel):
             continue
         if mode == "120000":
             symlinks.append(rel)
             continue
-        data = _git("cat-file", "blob", sha, cwd=repo)
-        dest = out / rel
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_bytes(data)
-        if mode == "100755":
-            dest.chmod(0o755)
+        _write_blob(out, rel, sha, mode, repo)
         exported.append(rel)
-    if overlay.is_dir():
+    prefix = POLICY_TREE + "/overlay/"
+    if overlay is None:
+        for mode, sha, path in rows:
+            if not path.startswith(prefix):
+                continue
+            rel = path[len(prefix):]
+            if mode == "120000":
+                symlinks.append("overlay/" + rel)
+                continue
+            _write_blob(out, rel, sha, mode, repo)
+            if rel not in exported:
+                exported.append(rel)
+    elif overlay.is_dir():
         for src in sorted(overlay.rglob("*")):
+            rel = src.relative_to(overlay).as_posix()
+            if src.is_symlink():
+                symlinks.append("overlay/" + rel)
+                continue
             if src.is_file():
-                rel = src.relative_to(overlay).as_posix()
                 dest = out / rel
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(src, dest)
                 if rel not in exported:
                     exported.append(rel)
     return sorted(exported), symlinks
+
+
+def _write_blob(out: Path, rel: str, sha: str, mode: str, repo: Path) -> None:
+    data = _git("cat-file", "blob", sha, cwd=repo)
+    dest = out / rel
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_bytes(data)
+    if mode == "100755":
+        dest.chmod(0o755)
 
 
 # ─────────────────────────────── the gate ───────────────────────────────
@@ -247,34 +317,116 @@ def gate(out: Path, policy: Policy, repo: Path = REPO, symlinks=(),
                 findings.append(Finding("file type", rel, 0, "archives are published only as the demo's output"))
             elif suffix == ".mp4" and not rel.startswith(VIDEO_DIRS):
                 findings.append(Finding("file type", rel, 0, "video is published only from media/"))
+            if suffix in ARCHIVE_SUFFIXES:
+                for member, text in _archive_texts(rel, data, findings, policy):
+                    texts.append((Path(member), text))
+                    _scan_text(member, text, policy, findings)
             continue
         text = data.decode("utf-8", "replace")
         texts.append((Path(rel), text))
-        for term, rx in policy.terms:
-            for m in rx.finditer(text):
-                findings.append(Finding("private term", rel, _line_of(text, m.start()), "matches %r" % term))
-        for name, pattern in SECRET_PATTERNS:
-            for m in re.finditer(pattern, text):
-                findings.append(Finding("secret", rel, _line_of(text, m.start()), name))
-        for m in EMAIL_RX.finditer(text):
-            email = m.group(0).rstrip(".").lower()
-            if email in policy.emails or PLACEHOLDER_EMAIL_RX.search(email):
-                continue
-            findings.append(Finding("email", rel, _line_of(text, m.start()),
-                                    "%s is not a placeholder or in public-emails.txt" % email))
+        _scan_text(rel, text, policy, findings)
 
     if third_party:
         findings.extend(_third_party(texts, repo))
-    findings.extend(_gitleaks(out))
-    return findings, stats
+    leaks = _gitleaks(out)
+    stats["incomplete"] = [] if leaks is not None else [
+        "gitleaks is not installed: the export was not scanned with the "
+        "public CI's secret rules"]
+    findings.extend(leaks or [])
+    return _dedupe(findings), stats
 
 
-def _gitleaks(out: Path) -> list[Finding]:
-    """gitleaks over the exported tree, when it is installed (CI installs it):
-    the public CI runs it on every push, so the gate checks the same rules."""
+def _dedupe(findings: list) -> list:
+    seen, out = set(), []
+    for f in findings:
+        key = (f.kind, f.path, f.line, f.detail)
+        if key not in seen:
+            seen.add(key)
+            out.append(f)
+    return out
+
+
+def _scan_text(rel: str, text: str, policy: Policy, findings: list) -> None:
+    for term, rx in policy.terms:
+        for m in rx.finditer(text):
+            findings.append(Finding("private term", rel, _line_of(text, m.start()), "matches %r" % term))
+    for name, pattern in SECRET_PATTERNS:
+        for m in re.finditer(pattern, text):
+            findings.append(Finding("secret", rel, _line_of(text, m.start()), name))
+    for m in EMAIL_RX.finditer(text):
+        email = m.group(0).rstrip(".").lower()
+        if email in policy.emails or PLACEHOLDER_EMAIL_RX.search(email):
+            continue
+        findings.append(Finding("email", rel, _line_of(text, m.start()),
+                                "%s is not a placeholder or in public-emails.txt" % email))
+
+
+_XML_BREAK = re.compile(r"</w:p>|<w:br\s*/>|<w:tab\s*/>|</a:p>|</text:p>")
+
+
+def _xml_text(xml: str) -> str:
+    """The text of an Office XML part with run boundaries removed, so a
+    word Word split across runs ("Zanzi" + "barova") is one word again."""
+    return re.sub(r"<[^>]+>", "", _XML_BREAK.sub("\n", xml))
+
+
+def _archive_texts(rel: str, data: bytes, findings: list, policy: Policy,
+                   depth: int = 0):
+    """(member path, text) for every text member of a ZIP or .docx, and for
+    archives inside it up to ARCHIVE_MAX_DEPTH. Member names are checked
+    for private terms and forbidden types; an archive that cannot be fully
+    inspected is a finding, never a pass."""
+    try:
+        zf = zipfile.ZipFile(io.BytesIO(data))
+        infos = zf.infolist()
+    except (zipfile.BadZipFile, OSError, ValueError) as e:
+        findings.append(Finding("archive", rel, 0, "cannot be inspected (%s)" % type(e).__name__))
+        return
+    if len(infos) > ARCHIVE_MAX_MEMBERS or sum(i.file_size for i in infos) > ARCHIVE_MAX_TOTAL:
+        findings.append(Finding("archive", rel, 0, "too large to inspect (members or total size over the limit)"))
+        return
+    for info in infos:
+        if info.is_dir():
+            continue
+        member = "%s!%s" % (rel, info.filename)
+        for term, rx in policy.terms:
+            if rx.search(info.filename):
+                findings.append(Finding("private term", member, 0, "the member name matches %r" % term))
+        msuffix = Path(info.filename).suffix.lower()
+        if msuffix in FORBIDDEN_SUFFIXES and msuffix not in ARCHIVE_SUFFIXES:
+            findings.append(Finding("file type", member, 0, "%s files are never published, inside an archive either" % msuffix))
+            continue
+        if info.file_size > ARCHIVE_MAX_MEMBER:
+            findings.append(Finding("archive", member, 0, "member too large to inspect"))
+            continue
+        try:
+            raw = zf.read(info)
+        except Exception as e:      # encrypted, corrupt, unsupported method
+            findings.append(Finding("archive", member, 0, "cannot be read (%s)" % type(e).__name__))
+            continue
+        if msuffix in ARCHIVE_SUFFIXES or raw[:2] == b"PK":
+            if depth + 1 > ARCHIVE_MAX_DEPTH:
+                findings.append(Finding("archive", member, 0, "archives nested too deeply to inspect"))
+                continue
+            yield from _archive_texts(member, raw, findings, policy, depth + 1)
+            continue
+        if _is_binary(raw):
+            continue                # images, fonts: no text to scan
+        text = raw.decode("utf-8", "replace")
+        yield member, text
+        if msuffix in (".xml", ".rels") or text.lstrip().startswith("<?xml"):
+            plain = _xml_text(text)
+            if plain.strip() and plain != text:
+                yield member + " (text)", plain
+
+
+def _gitleaks(out: Path) -> "list[Finding] | None":
+    """gitleaks over the exported tree (CI installs it): the public CI runs
+    it on every push, so the gate checks the same rules. None when it is
+    not installed: the gate is then incomplete, never silently clean."""
     exe = shutil.which("gitleaks")
     if not exe:
-        return []
+        return None
     with tempfile.TemporaryDirectory() as tmp:
         report = Path(tmp) / "gitleaks.json"
         subprocess.run([exe, "dir", str(out), "--no-banner", "--exit-code", "0",
@@ -351,11 +503,20 @@ def main(argv=None) -> int:
     ap.add_argument("--sync-to", type=Path, help="after a clean gate, replace this public clone's tree and commit")
     ap.add_argument("--report", type=Path, help="also write the findings and stats as JSON")
     ap.add_argument("--list", action="store_true", help="print every exported path")
+    ap.add_argument("--allow-incomplete", action="store_true",
+                    help="local look only: report a missing scanner instead of failing (never syncs)")
     args = ap.parse_args(argv)
     if not args.check and not args.out:
         ap.error("give --out DIR, or --check")
 
-    policy = Policy.load()
+    try:
+        policy = Policy.load_ref(args.ref, also=Policy.load())
+    except subprocess.CalledProcessError:
+        print("error: %s is not a ref of this repository" % args.ref, file=sys.stderr)
+        return 2
+    if not policy.include:
+        print("error: the policy (include.txt) is not committed at %s" % args.ref, file=sys.stderr)
+        return 2
     if not policy.terms:
         print("error: private-terms.txt is missing or empty", file=sys.stderr)
         return 2
@@ -385,14 +546,21 @@ def main(argv=None) -> int:
         print("binary files: %d (%s)" % (len(stats["binary"]), ", ".join(sorted({Path(b).suffix for b in stats["binary"]}))))
         for f in findings:
             print(f)
-        print("gate: %s (%d finding%s)" % ("CLEAN" if not findings else "REFUSED",
-                                            len(findings), "" if len(findings) == 1 else "s"))
+        for why in stats.get("incomplete", []):
+            print("incomplete: %s" % why)
+        print("gate: %s (%d finding%s)%s" % ("CLEAN" if not findings else "REFUSED",
+                                              len(findings), "" if len(findings) == 1 else "s",
+                                              ", INCOMPLETE" if stats.get("incomplete") else ""))
         if args.report:
             args.report.write_text(json.dumps({
                 "ref": sha, "files": paths, "stats": stats,
                 "findings": [f.__dict__ for f in findings]}, indent=2), "utf-8")
         if findings:
             return 1
+        if stats.get("incomplete"):
+            if args.sync_to:
+                print("not syncing: an incomplete gate never publishes", file=sys.stderr)
+            return 0 if args.allow_incomplete and not args.sync_to else 3
         if args.sync_to:
             changed = sync(out, args.sync_to.resolve(),
                            "Sync from the private repository (%s)" % sha)

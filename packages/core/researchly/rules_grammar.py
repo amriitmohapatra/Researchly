@@ -322,13 +322,29 @@ def reset() -> None:
       source="LanguageTool",
       tier="grammar", fix_safety="review")
 def lt001_grammar(doc, document: Document):
+    pending = getattr(document, "_lt_pending", None)
+    document._lt_pending = None
+    if pending is not None and pending[0] is document.masked \
+            and pending[1] is getattr(document, "config", None):
+        matches = pending[2].result()      # started by start_check()
+    else:
+        matches = _fetch_matches(document)
+    if matches is None:
+        return
+    yield from _suggestions(matches, document)
+
+
+def _fetch_matches(document: Document):
+    """LanguageTool's raw matches for the document, or None when the tier
+    is off, unavailable or failed (the failure is recorded for health.py).
+    Reads only `document.masked` and `document.config`."""
     cfg = getattr(document, "config", None)
     if cfg is not None and cfg.grammar_tier is False:   # explicitly off
-        return
+        return None
     locale = getattr(cfg, "locale", None) or "en-US"
     tool = get_tool(locale)
     if tool is None:
-        return
+        return None
     global _STATE, _DETAIL
     try:
         matches = tool.check(document.masked)
@@ -341,10 +357,42 @@ def lt001_grammar(doc, document: Document):
         _DETAIL = f"LanguageTool check failed ({type(e).__name__})"
         if remote_url() is not None:
             _drop_remote_tool()
-        return
+        return None
     # A check that works is the ground truth: recover from an earlier
     # failure (a sidecar restart) instead of reporting "error" forever.
     _STATE, _DETAIL = "ready", ""
+    return matches
+
+
+def start_check(document: Document) -> None:
+    """Start LT001's LanguageTool request now, in a background thread, so
+    it runs while spaCy parses (2026-10-14 performance pass).
+
+    The request needs only the masked text and the settings, never the
+    parse, and LanguageTool runs in its own process (a local JVM or the
+    hosted sidecar), so the two overlap: on a 30,000-word document the
+    check went from parse + grammar to roughly the longer of the two. The
+    rule collects the result when its turn comes, so findings, their order
+    and the tier's health state are exactly what a synchronous call gives.
+    The result lives on the document for the length of one analysis and is
+    dropped as soon as the rule reads it."""
+    from concurrent.futures import Future
+
+    future: Future = Future()
+
+    def run() -> None:
+        try:
+            future.set_result(_fetch_matches(document))
+        except BaseException as e:            # re-raised by the rule
+            future.set_exception(e)
+
+    document._lt_pending = (document.masked,
+                            getattr(document, "config", None), future)
+    threading.Thread(target=run, name="researchly-lt001",
+                     daemon=True).start()
+
+
+def _suggestions(matches, document: Document):
     for m in matches:
         # attribute names vary across language_tool_python versions
         issue = (getattr(m, "rule_issue_type", None)
