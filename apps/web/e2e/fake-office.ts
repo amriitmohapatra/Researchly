@@ -16,7 +16,10 @@
  * - setting `changeTrackingMode` without WordApi 1.4 does not throw, it
  *   fails the whole batch at sync and nothing in it is applied (the bug that
  *   once silently killed every Apply in the old add-in);
- * - `search` finds non-overlapping matches, left to right, like Word.
+ * - `search` finds non-overlapping matches, left to right, like Word;
+ * - table cells (WordApi 1.3) report rowIndex, cellIndex and the row's
+ *   cellCount only after `context.sync()`, and are null objects for a table
+ *   paragraph the fake was given no cell for.
  */
 
 export interface FakeParagraph {
@@ -24,6 +27,12 @@ export interface FakeParagraph {
   style?: string;
   styleBuiltIn?: string;
   tableNestingLevel?: number;
+  /**
+   * Where a table paragraph's cell sits, as Word 1.3 reports it: `rowIndex`
+   * and `cellIndex` (cells along the row) and its row's `cellCount`. Left
+   * out on a table paragraph: Word gives a null object (an unplaceable cell).
+   */
+  cell?: { rowIndex: number; cellIndex: number; cellCount: number };
 }
 
 export interface FakeWordConfig {
@@ -32,6 +41,8 @@ export interface FakeWordConfig {
   host?: string | null;
   /** WordApi 1.4 (tracked changes, fields). Default true. */
   api14?: boolean;
+  /** WordApi 1.3 (table cells, word prediction). Default true; false also means no 1.4. */
+  api13?: boolean;
   /** The writer's Track Changes setting before any apply. Default "Off". */
   trackingMode?: string;
   /** Paragraph indexes whose ranges sit inside a Word field (a citation). */
@@ -50,9 +61,10 @@ export interface FakeWordConfig {
    *   makes the change and then reports an error (a batch that partly ran);
    * - `select`: selecting a range fails;
    * - `restoreTracking`: switching Track Changes back off (any mode other
-   *   than TrackAll) fails.
+   *   than TrackAll) fails;
+   * - `cells`: loading a table cell's place fails.
    */
-  failures?: { fields?: boolean; insert?: "before" | "after"; select?: boolean; restoreTracking?: boolean };
+  failures?: { fields?: boolean; insert?: "before" | "after"; select?: boolean; restoreTracking?: boolean; cells?: boolean };
 }
 
 export interface FakeEdit {
@@ -78,7 +90,8 @@ export interface FakeWordState {
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export function installFakeOffice(target: any, config: FakeWordConfig): FakeWordState {
-  const api14 = config.api14 !== false;
+  const api13 = config.api13 !== false;
+  const api14 = api13 && config.api14 !== false;
   const failures = config.failures ?? {};
   const state: FakeWordState = {
     paragraphs: config.paragraphs.map((p) => ({ ...p })),
@@ -188,9 +201,36 @@ export function installFakeOffice(target: any, config: FakeWordConfig): FakeWord
       return r;
     }
 
+    // A table cell, WordApi 1.3: its numbers arrive at sync, like any loaded property.
+    function makeCell(p: FakeParagraph) {
+      const place = (p.tableNestingLevel ?? 0) > 0 ? p.cell : undefined;
+      const row: any = {
+        load() {
+          ops.push(() => {
+            row.cellCount = place!.cellCount;
+          });
+        },
+      };
+      const cell: any = {
+        isNullObject: undefined,
+        parentRow: row,
+        load() {
+          ops.push(() => {
+            if (failures.cells) throw new Error("GeneralException: the table cell could not be read");
+            cell.isNullObject = !place;
+            if (place) {
+              cell.rowIndex = place.rowIndex;
+              cell.cellIndex = place.cellIndex;
+            }
+          });
+        },
+      };
+      return cell;
+    }
+
     function makeParagraph(pi: number) {
       const p: FakeParagraph = state.paragraphs[pi]!;
-      return {
+      const para: any = {
         text: p.text,
         style: p.style ?? "Normal",
         styleBuiltIn: p.styleBuiltIn ?? "Other",
@@ -208,6 +248,11 @@ export function installFakeOffice(target: any, config: FakeWordConfig): FakeWord
           return { items, load() {} };
         },
       };
+      // Older Word has no table-cell API at all.
+      if (api13) {
+        Object.defineProperty(para, "parentTableCellOrNullObject", { get: () => makeCell(p), enumerable: true });
+      }
+      return para;
     }
 
     const paragraphs = {
@@ -285,7 +330,7 @@ export function installFakeOffice(target: any, config: FakeWordConfig): FakeWord
       requirements: {
         isSetSupported(name: string, version?: string) {
           if (name !== "WordApi") return false;
-          return versionAtMost(version, api14 ? "1.4" : "1.3");
+          return versionAtMost(version, api14 ? "1.4" : api13 ? "1.3" : "1.2");
         },
       },
       document: {
