@@ -497,7 +497,7 @@ def _table_model(document: Document, t) -> "tables.Table | None":
 
 def _read_table(document: Document, t):
     if document.kind == "latex":
-        grid = tables.latex_grid(document.original[t.start:t.end])
+        grid = tables.latex_grid(document.original[t.start:t.end], t.start)
     elif document.kind == "word":
         cells = [c for c in document.table_cells if t.start <= c[0] < t.end]
         spans = [s for s in document.table_spans if t.start <= s[0] < t.end]
@@ -601,8 +601,10 @@ def _decimal_places(d: int) -> str:
 
 
 def _judge(t, model, rows, cols, written: str, text: str, end: int):
-    """("pass" | "flag" | "abstain", evidence) for the number the sentence
-    gives for a named row or column."""
+    """("pass" | "flag" | "abstain", evidence, compared) for the number the
+    sentence gives for a named row or column. `compared` is (row, col,
+    number) when the named row and column come down to one cell holding
+    numbers, else None."""
     quoted = tables.numbers(written)[0]
     row_set = sorted(rows.cover) if rows else model.data_rows
     col_set = sorted(cols.cover) if cols else model.value_cols
@@ -611,10 +613,10 @@ def _judge(t, model, rows, cols, written: str, text: str, end: int):
     # sentence did not mean it ("in most cases" is not the Cases column).
     if quoted.decimals > 0:
         if not any(n.decimals > 0 for _, _, n in expected):
-            return "abstain", ""
+            return "abstain", "", None
     elif not any(n.percent or "%" in model.unit_text(r, c)
                  for r, c, n in expected):
-        return "abstain", ""
+        return "abstain", "", None
     place = _place(t, model, rows, cols)
     main = []                     # each expected cell's first number
     seen = set()
@@ -622,6 +624,7 @@ def _judge(t, model, rows, cols, written: str, text: str, end: int):
         if (r, c) not in seen:
             seen.add((r, c))
             main.append((r, c, n))
+    one = len(main) == 1
     hits = [(r, c, n) for r, c, n in expected if tables.rounds_to(n, quoted)]
     after = text[end:end + 48]
     m = re.match(r"\s*(?:[A-Za-z-]+\s+){0,3}?(?:per\b|/)\s*[\d ,]+", after)
@@ -645,8 +648,9 @@ def _judge(t, model, rows, cols, written: str, text: str, end: int):
                        ", which matches when rounded to "
                        + _decimal_places(quoted.decimals))
                 return "pass", (f"{place}: {n.written} — the text says "
-                                f"{written}{how}")
-        return "flag", conflicts[0]
+                                f"{written}{how}"), (r, c, n) if one else None
+        r, c, n = hits[0]
+        return "flag", conflicts[0], (r, c, n) if one else None
     # Not in the named cell. A proportion is not a percentage.
     for r, c, n in main:
         percent_cell = n.percent or "%" in model.unit_text(r, c)
@@ -655,17 +659,18 @@ def _judge(t, model, rows, cols, written: str, text: str, end: int):
                               True), quoted):
             return "flag", (f"{place} holds {n.written}, a proportion; the "
                             f"text gives {written}, a percentage — use one "
-                            "form so they match.")
+                            "form so they match."), (r, c, n) if one else None
         if not quoted.percent and percent_cell and tables.rounds_to(
                 tables.Number(n.written, n.value / 100, n.decimals + 2,
                               False), quoted):
             return "flag", (f"{place} holds {n.written}, a percentage; the "
                             f"text gives {written}, a proportion — use one "
-                            "form so they match.")
+                            "form so they match."), (r, c, n) if one else None
     holds = _listing([n for _, _, n in main])
     if len(main) == 1 and main[0][2].decimals > quoted.decimals:
         holds += (f" ({tables.rounded(main[0][2], quoted.decimals)} when "
                   f"rounded to {_decimal_places(quoted.decimals)})")
+    compared = main[0] if one else None
     elsewhere = [(r, c) for r, c, n in model.values(model.data_rows,
                                                      model.value_cols)
                  if tables.rounds_to(n, quoted)]
@@ -682,17 +687,59 @@ def _judge(t, model, rows, cols, written: str, text: str, end: int):
             why = "column" if r in row_set else "cell"
         return "flag", (f"{place} holds {holds}, not {written}; {written} "
                         f"is in {', '.join(where)} — a value from the wrong "
-                        f"{why}?")
+                        f"{why}?"), compared
     return "flag", (f"{place} holds {holds}, not {written} — a typo, an "
-                    "older value, or a number from elsewhere?")
+                    "older value, or a number from elsewhere?"), compared
+
+
+_UNIT_TAIL = re.compile(r"\s*,\s*(?:%|n|no\.|n\s*\(%\)|mean|median)\s*$",
+                        re.IGNORECASE)
+
+
+def _header(text: str) -> str:
+    """A row's or column's name without its unit: "Incidence (per 1,000)"
+    -> "Incidence", "Vaccinated, %" -> "Vaccinated"."""
+    text = re.sub(r"\s*(?:\([^()]*\)|\[[^\[\]]*\])", "", text)
+    return " ".join(_UNIT_TAIL.sub("", text).split())
+
+
+def _cell_evidence(document: Document, t, model, compared, written: str):
+    """The compared cell as the service's TableEvidence: where it is, its
+    headers, what it holds as the text would quote it, and the rounding
+    the comparison allowed."""
+    r, c, n = compared
+    cell = model.grid.at(r, c)
+    if cell is None or cell.start < 0 or cell.end < cell.start:
+        return None
+    quoted = tables.numbers(written)[0]
+    expected = n.written
+    if (not n.percent and "%" in model.unit_text(r, c)
+            and len(tables.numbers(cell.text)) == 1):
+        expected += "%"           # "12.5" under "Vaccinated (%)"
+    return {
+        "table": t.name,
+        "row": cell.row,
+        "column": c,
+        "row_header": _header(model.row_name.get(r, "")),
+        "column_header": _header(model.col_name.get(c, "")),
+        "cell_start": cell.start,
+        "cell_end": cell.end,
+        "cell_text": document.original[cell.start:cell.end],
+        "expected": expected,
+        "quoted": written,
+        "rounding": ("rounded to " + _decimal_places(quoted.decimals)
+                     if n.decimals > quoted.decimals else ""),
+    }
 
 
 def table_evidence(doc, document: Document):
     """For each number a sentence quotes from one table: (start, end,
-    verdict, evidence). The verdict is "pass" or "flag" for the number held
-    to a named row and column (its evidence names the cell and any
+    verdict, evidence, cell). The verdict is "pass" or "flag" for the number
+    held to a named row and column (its evidence names the cell and any
     rounding), "missing" for any other number that is nowhere in the
-    table. X401 reports the flags and the missing."""
+    table. `cell` is the compared cell as a dict (the service's
+    TableEvidence) when the sentence's row and column come down to one
+    cell, else None. X401 reports the flags and the missing."""
     st = structure_of(document)
     floats_cited: dict = {}
     for m, fs in _text_mentions(st):
@@ -754,15 +801,17 @@ def table_evidence(doc, document: Document):
             m, written, value, decimals = item
             start, end = a + m.start(), a + m.start() + len(m.group(0).strip())
             if item is bound:
-                verdict, evidence = _judge(t, model, rows, cols, written,
-                                           text, m.end())
+                verdict, evidence, compared = _judge(
+                    t, model, rows, cols, written, text, m.end())
                 if verdict != "abstain":
-                    yield start, end, verdict, evidence
+                    yield start, end, verdict, evidence, (
+                        _cell_evidence(document, t, model, compared, written)
+                        if compared is not None else None)
                     continue
             if not _in_table(value, decimals, table_text):
                 yield start, end, "missing", (
                     f"{written} is not in {t.name} — a typo, an older "
-                    "value, or a number from elsewhere?")
+                    "value, or a number from elsewhere?"), None
 
 
 @rule("X401", "number-not-in-table", Category.CORRECTION,
@@ -783,9 +832,10 @@ def table_evidence(doc, document: Document):
       source="§6",
       scope="document")
 def x401_number_not_in_table(doc, document: Document):
-    for start, end, verdict, evidence in table_evidence(doc, document):
+    for start, end, verdict, evidence, cell in table_evidence(doc, document):
         if verdict != "pass":
-            yield Suggestion(message=evidence, start=start, end=end)
+            yield Suggestion(message=evidence, start=start, end=end,
+                             table_evidence=cell)
 
 
 _AGGREGATE = re.compile(

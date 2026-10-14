@@ -51,12 +51,17 @@ def post(client, paras):
     return r.json()
 
 
-def test_cell_places_let_x401_flag_a_swapped_row(client):
+def test_cell_places_let_x401_flag_a_swapped_arm(client):
+    # 12.5% is the control arm's mortality, quoted for the treatment arm.
     (s,) = x401(post(client, paragraphs(SWAPPED)))
     assert s["text"] == "12.5%"
-    assert s["message"] == ("Table 1 reports 8.2% in the Mortality row, "
-                            "Treatment column; this sentence says 12.5%.")
+    assert s["message"] == (
+        "Table 1, row 'Mortality', column 'Treatment' holds 8.2%, not "
+        "12.5%; 12.5% is in column 'Control' — a value from the wrong "
+        "column?")
     ev = s["table_evidence"]
+    assert ev["table"] == "Table 1" and ev["cell_text"] == "8.2%"
+    assert ev["rounding"] == ""
     assert ev["row_header"] == "Mortality"
     assert ev["column_header"] == "Treatment"
     assert (ev["row"], ev["column"]) == (1, 1)

@@ -39,10 +39,16 @@ MAX_ROWS, MAX_COLS = 300, 40
 
 @dataclass
 class Cell:
-    row: int
+    row: int              # the table's own row number (0-based)
     col: int
     span: int
     text: str
+    start: int = -1       # where the cell is written in the document
+    end: int = -1
+
+
+# (col, span, text, start, end): one cell of a row, as a reader finds it.
+RawCell = tuple[int, int, str, int, int]
 
 
 @dataclass
@@ -61,18 +67,21 @@ class Grid:
         return cell.text if cell is not None else ""
 
 
-def _grid(rows: list[list[tuple[int, int, str]]]) -> Optional[Grid]:
-    """(col, span, text) per row -> a Grid, or None when it is too small
-    or too large to be a table of results."""
-    rows = [r for r in rows if any(t.strip() for _, _, t in r)]
-    if len(rows) < 2 or len(rows) > MAX_ROWS:
+def _grid(rows: list[list[RawCell]]) -> Optional[Grid]:
+    """Cells per row -> a Grid without its empty rows (each cell keeps
+    its row's number in the table), or None when it is too small or too
+    large to be a table of results."""
+    kept = [(i, r) for i, r in enumerate(rows)
+            if any(t.strip() for _, _, t, _, _ in r)]
+    if len(kept) < 2 or len(kept) > MAX_ROWS:
         return None
-    ncols = max(c + s for r in rows for c, s, _ in r)
+    ncols = max(c + s for _, r in kept for c, s, _, _, _ in r)
     if ncols < 2 or ncols > MAX_COLS:
         return None
     out = []
-    for i, r in enumerate(rows):
-        out.append([Cell(i, c, s, " ".join(t.split())) for c, s, t in r])
+    for i, r in kept:
+        out.append([Cell(i, c, s, " ".join(t.split()), a, b)
+                    for c, s, t, a, b in r])
     return Grid(out, ncols)
 
 
@@ -156,14 +165,15 @@ def _strip_rules(row: str) -> str:
         row = row[end:]
 
 
-def _split(s: str, sep: str) -> list[str]:
-    """Split at `sep` ('&' or '\\\\') outside braces, never at `\\&`."""
+def _split(s: str, sep: str) -> list[tuple[str, int]]:
+    """Split at `sep` ('&' or '\\\\') outside braces, never at `\\&`:
+    (piece, where it starts in s)."""
     out, depth, start, i = [], 0, 0, 0
     while i < len(s):
         ch = s[i]
         if ch == "\\":
             if sep == "\\\\" and depth == 0 and s.startswith("\\\\", i):
-                out.append(s[start:i])
+                out.append((s[start:i], start))
                 i += 2
                 if i < len(s) and s[i] == "*":
                     i += 1
@@ -174,7 +184,7 @@ def _split(s: str, sep: str) -> list[str]:
                 continue
             if (sep == "\\\\" and depth == 0
                     and s.startswith("\\tabularnewline", i)):
-                out.append(s[start:i])
+                out.append((s[start:i], start))
                 i += len("\\tabularnewline")
                 start = i
                 continue
@@ -185,10 +195,10 @@ def _split(s: str, sep: str) -> list[str]:
         elif ch == "}":
             depth = max(0, depth - 1)
         elif ch == "&" and sep == "&" and depth == 0:
-            out.append(s[start:i])
+            out.append((s[start:i], start))
             start = i + 1
         i += 1
-    out.append(s[start:])
+    out.append((s[start:], start))
     return out
 
 
@@ -244,10 +254,24 @@ def latex_text(cell: str) -> str:
     return " ".join(s.split())
 
 
-def latex_grid(src: str) -> Optional[Grid]:
+def _blank(s: str, a: int, b: int) -> str:
+    """s with s[a:b] turned to spaces: offsets after it stay true."""
+    return s[:a] + " " * (b - a) + s[b:]
+
+
+def _span(text: str, at: int) -> tuple[int, int]:
+    """Where `text`, found at offset `at`, starts and ends without its
+    surrounding spaces."""
+    lead = len(text) - len(text.lstrip())
+    return at + lead, at + len(text.rstrip())
+
+
+def latex_grid(src: str, base: int = 0) -> Optional[Grid]:
     """The grid of the one tabular in a LaTeX table float; None when there
-    is none, more than one (sub-tables), or it cannot be read."""
-    src = _COMMENT.sub("", src)
+    is none, more than one (sub-tables), or it cannot be read. `base` is
+    where `src` starts in the document, so each cell knows where it is
+    written."""
+    src = _COMMENT.sub(lambda m: " " * len(m.group(0)), src)
     found = list(_TABULAR.finditer(src))
     if len(found) != 1 or _OTHER_TABLE.search(src):
         return None
@@ -273,7 +297,7 @@ def latex_grid(src: str) -> Optional[Grid]:
     end = src.find("\\end{" + env + "}", i)
     if end == -1:
         return None
-    body = src[i:end]
+    body, at = src[i:end], base + i
     # \caption{...} and \label{...} inside a longtable are not cells.
     for macro in ("caption", "label"):
         while True:
@@ -282,26 +306,32 @@ def latex_grid(src: str) -> Optional[Grid]:
             if not c:
                 break
             g = _group(body, c.end())
-            body = body[:c.start()] + (body[g[1]:] if g else
-                                       body[c.end():])
+            body = _blank(body, c.start(), g[1] if g else c.end())
     # A longtable repeats its header on every page: keep the first one.
-    if "\\endfirsthead" in body:
-        head, rest = body.split("\\endfirsthead", 1)
-        cut = max(rest.rfind(k) for k in ("\\endhead", "\\endfoot",
-                                           "\\endlastfoot"))
-        body = head + "\\\\" + (rest[cut:] if cut >= 0 else rest)
-    elif "\\endhead" in body:
-        head, rest = body.split("\\endhead", 1)
-        cut = max(rest.rfind(k) for k in ("\\endfoot", "\\endlastfoot"))
-        body = head + "\\\\" + (rest[cut:] if cut >= 0 else rest)
+    for first, later in (("\\endfirsthead", ("\\endhead", "\\endfoot",
+                                             "\\endlastfoot")),
+                         ("\\endhead", ("\\endfoot", "\\endlastfoot"))):
+        k = body.find(first)
+        if k == -1:
+            continue
+        cut = max(body.rfind(x) for x in later)
+        stop = cut if cut > k else k + len(first)
+        body = _blank(body, k, stop)
+        body = body[:k] + "\\\\" + body[k + 2:]       # the header row ends
+        break
     rows = []
-    for raw in _split(body, "\\\\"):
-        raw = _strip_rules(raw)
+    for raw, roff in _split(body, "\\\\"):
+        stripped = _strip_rules(raw)
+        roff += len(raw) - len(stripped)
+        raw = stripped
         if not raw.strip():
             continue
         cells, col = [], 0
-        for part in _split(raw, "&"):
-            part = _strip_rules(part)
+        for part, poff in _split(raw, "&"):
+            stripped = _strip_rules(part)
+            poff += len(part) - len(stripped)
+            part = stripped
+            a, b = _span(part, at + roff + poff)
             span = 1
             mc = _unwrap(part, "multicolumn", "{{{")
             if mc is not None:
@@ -316,7 +346,7 @@ def latex_grid(src: str) -> Optional[Grid]:
             mk = _unwrap(part, "makecell", "[{")
             if mk is not None:
                 part = mk[1]
-            cells.append((col, span, latex_text(part)))
+            cells.append((col, span, latex_text(part), a, b))
             col += span
         rows.append(cells)
     return _grid(rows)
@@ -332,17 +362,19 @@ def word_grid(cells: list[tuple[int, int, int, int, int, int, str]]
     if not cells or len({c[2] for c in cells}) != 1:
         return None
     by_pos: dict[tuple[int, int], list] = {}
-    for _, _, _, r, c, span, text in cells:
+    for a, b, _, r, c, span, text in cells:
         key = (r, c)
         if key in by_pos:
-            by_pos[key][1] = max(by_pos[key][1], span)
-            by_pos[key][2] += " " + text
+            cell = by_pos[key]
+            cell[1] = max(cell[1], span)
+            cell[2] += " " + text
+            cell[3], cell[4] = min(cell[3], a), max(cell[4], b)
         else:
-            by_pos[key] = [c, span, text]
+            by_pos[key] = [c, span, text, a, b]
     nrows = max(r for r, _ in by_pos) + 1
-    rows: list[list[tuple[int, int, str]]] = [[] for _ in range(nrows)]
-    for (r, _), (c, span, text) in sorted(by_pos.items()):
-        rows[r].append((c, span, text))
+    rows: list[list[RawCell]] = [[] for _ in range(nrows)]
+    for (r, _), cell in sorted(by_pos.items()):
+        rows[r].append(tuple(cell))
     return _grid(rows)
 
 

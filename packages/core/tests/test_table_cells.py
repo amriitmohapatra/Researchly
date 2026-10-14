@@ -11,7 +11,7 @@ uploaded .docx, and plain text and Markdown (which have no tables here).
 import pytest
 
 from researchly import api, tables
-from researchly.document import Document
+from researchly.document import MAX_CELL_INDEX, Document
 from researchly.ingest import load_bytes
 from researchly.rules_structure import table_evidence
 
@@ -35,7 +35,8 @@ def hits(doc: Document):
 
 
 def evidence(doc: Document):
-    return list(table_evidence(NLP(doc.masked), doc))
+    """(start, end, verdict, message) for each judged number."""
+    return [x[:4] for x in table_evidence(NLP(doc.masked), doc)]
 
 
 # Incidence per 1,000 by age group. 4.13 appears twice (repeated value).
@@ -83,6 +84,37 @@ def test_wrongly_rounded_value_fires_and_shows_the_rounding():
     assert h.message.startswith(
         "Table 1, row '18–29', column 'Incidence (per 1,000)' holds 4.13 "
         "(4.1 when rounded to 1 decimal place), not 4.2")
+
+
+def test_a_named_cell_comes_with_structured_evidence():
+    doc = age("In Table~\\ref{tab:a}, the incidence in the 18--29 age group "
+              "was 4.2 per 1,000.")
+    (h,) = hits(doc)
+    ev = h.table_evidence
+    assert {k: ev[k] for k in ("table", "row", "column", "row_header",
+                               "column_header", "cell_text", "expected",
+                               "quoted", "rounding")} == {
+        "table": "Table 1", "row": 1, "column": 2, "row_header": "18–29",
+        "column_header": "Incidence", "cell_text": "4.13",
+        "expected": "4.13", "quoted": "4.2",
+        "rounding": "rounded to 1 decimal place"}
+    # The offsets point at the cell in the LaTeX source.
+    assert doc.original[ev["cell_start"]:ev["cell_end"]] == "4.13"
+    assert ev["cell_start"] == doc.original.index("120 & 4.13") + 6
+
+
+def test_a_row_alone_over_several_value_columns_has_no_cell():
+    # "18–29" names a row with two numbers (cases and incidence): the
+    # comparison is with the row, so no single cell is reported.
+    doc = age("Among those aged 18--29 it was 6.2 per 1,000 "
+              "(Table~\\ref{tab:a}).")
+    (h,) = hits(doc)
+    assert "row '18–29'" in h.message and h.table_evidence is None
+
+
+def test_a_number_nowhere_in_the_table_has_no_cell():
+    (h,) = hits(age("The incidence was 9.9 per 1,000 (Table~\\ref{tab:a})."))
+    assert h.table_evidence is None
 
 
 def test_more_decimals_than_the_cell_never_matches_by_rounding():
@@ -386,10 +418,19 @@ def test_word_cells_with_places_pass_a_rounded_value():
 
 
 def test_word_cells_with_places_catch_a_swapped_row():
-    (h,) = hits(word_doc("Among men aged 18–29, the incidence was 6.2 per "
-                         "1,000 (Table 1)."))
+    doc = word_doc("Among men aged 18–29, the incidence was 6.2 per 1,000 "
+                   "(Table 1).")
+    (h,) = hits(doc)
     assert "row 'Men / 18–29'" in h.message
     assert "6.2 is in row 'Men / 30–44'" in h.message
+    ev = h.table_evidence
+    assert (ev["row"], ev["column"]) == (2, 2)          # the table's own row
+    assert ev["row_header"] == "Men / 18–29"
+    assert ev["column_header"] == "Incidence per 1,000"
+    assert doc.original[ev["cell_start"]:ev["cell_end"]] == "4.13"
+    # 6.2 has one decimal place: the cell may be rounded to compare.
+    assert ev["expected"] == "4.13" and ev["quoted"] == "6.2"
+    assert ev["rounding"] == "rounded to 1 decimal place"
 
 
 def test_word_cells_with_places_catch_a_wrong_group():
@@ -431,7 +472,8 @@ def test_word_cells_of_a_nested_table_have_no_grid():
 
 
 @pytest.mark.parametrize("bad", [[0, 1], [0, -1, 2], ["0", 1, 2], [0, 1, 2, 0],
-                                 [True, 1, 2], "0,1,2", None])
+                                 [True, 1, 2], [0, 1, MAX_CELL_INDEX + 1],
+                                 [0, 1, 2.5], "0,1,2", None])
 def test_malformed_cell_places_are_ignored(bad):
     doc = Document.from_word([{"text": "4.13", "kind": "table", "cell": bad}])
     assert doc.table_cells == [] and doc.table_spans == [(0, 4)]

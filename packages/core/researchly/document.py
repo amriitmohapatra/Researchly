@@ -177,13 +177,19 @@ def _typed_caption(text: str, style: str) -> bool:
     return bool(_TYPED_CAPTION.match(text)) and not _TOC_ENTRY.search(text)
 
 
-def _cell_place(cell) -> Optional[tuple[int, int, int, int]]:
+# The largest table, row, column or colspan number a cell place may carry
+# (the service's schema uses the same bound; a test pins them together).
+MAX_CELL_INDEX = 100_000
+
+
+def cell_place(cell) -> Optional[tuple[int, int, int, int]]:
     """A table cell's `[table, row, col]` or `[table, row, col, colspan]`
-    (0-based), as the .docx reader gives it; None for anything else."""
+    (0-based), as the .docx reader or the Word add-in gives it; None for
+    anything else."""
     if not isinstance(cell, (list, tuple)) or len(cell) not in (3, 4):
         return None
-    if not all(isinstance(x, int) and not isinstance(x, bool) and x >= 0
-               for x in cell):
+    if not all(isinstance(x, int) and not isinstance(x, bool)
+               and 0 <= x <= MAX_CELL_INDEX for x in cell):
         return None
     span = cell[3] if len(cell) == 4 else 1
     return (cell[0], cell[1], cell[2], span) if span >= 1 else None
@@ -368,7 +374,7 @@ class Document:
             title = texts[i].strip()
             if p.get("kind") == "table" and title:
                 table_spans.append((offsets[i], offsets[i] + len(texts[i])))
-                place = _cell_place(p.get("cell"))
+                place = cell_place(p.get("cell"))
                 if place is not None:
                     table_cells.append(
                         (offsets[i], offsets[i] + len(texts[i])) + place)
