@@ -710,6 +710,8 @@ _TOKEN_PUNCT = ".,;:()[]{}\"'’“”"
 def _math_token(tok: str) -> bool | None:
     """True for a token of flattened maths, False for a word, None for
     punctuation or a bare number (neither)."""
+    if len(tok) > 1 and tok.isascii() and tok.isalpha():
+        return False            # a plain word: the common case, no regex
     core = tok.strip(_TOKEN_PUNCT)
     if not core or re.fullmatch(r"[\d.,%-]+", core):
         return None
@@ -729,8 +731,22 @@ def layout_spans(text: str) -> list[tuple[int, int]]:
             continue
         if not _RELATION.search(line):
             continue
-        kinds = [k for k in map(_math_token, line.split()) if k is not None]
-        if len(kinds) >= 3 and sum(kinds) >= 0.5 * len(kinds):
+        # Maths when at least half of three or more word-like tokens are
+        # maths. A prose line with "p < 0.05" in it would read every token;
+        # stop once the maths tokens can no longer catch up (2026-10-14).
+        toks = line.split()
+        maths = words = 0
+        for i, tok in enumerate(toks):
+            kind = _math_token(tok)
+            if kind is None:
+                continue
+            if kind:
+                maths += 1
+            else:
+                words += 1
+            if maths - words + (len(toks) - 1 - i) < 0:
+                break
+        if maths + words >= 3 and maths >= 0.5 * (maths + words):
             spans.append((m.start(), m.end()))
     return spans
 

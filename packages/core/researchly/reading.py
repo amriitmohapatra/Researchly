@@ -106,20 +106,30 @@ def inline_spans(text: str) -> list[tuple[int, int]]:
 # --- other languages -----------------------------------------------------------------
 
 MIN_WORDS = 12
+_WORD = re.compile(r"[^\W\d_]+")
 
 
 def paragraph_language(text: str) -> str | None:
     """None for English (or too short to tell); otherwise the language the
-    paragraph is in: "Spanish", ..., or "another script"."""
-    letters = [c for c in text if c.isalpha()]
-    if len(letters) >= 40:
-        latin = sum(1 for c in letters if c < "ɐ")
-        if latin < 0.5 * len(letters):
-            return "another script"
-    words = [w.lower() for w in re.findall(r"[^\W\d_]+", text)]
+    paragraph is in: "Spanish", ..., or "another script".
+
+    Runs on every paragraph of every check and of every prediction
+    request's window, so the two exits below skip work that cannot change
+    the answer (2026-10-14 performance pass): an ASCII paragraph has only
+    Latin letters, and once English function words are more than a third
+    of the words no other language can reach three times their share."""
+    if not text.isascii():
+        letters = [c for c in text if c.isalpha()]
+        if len(letters) >= 40:
+            latin = sum(1 for c in letters if c < "ɐ")
+            if latin < 0.5 * len(letters):
+                return "another script"
+    words = [w.lower() for w in _WORD.findall(text)]
     if len(words) < MIN_WORDS:
         return None
     english = sum(w in lx.ENGLISH_FUNCTION_WORDS for w in words) / len(words)
+    if 3 * english > 1.0:
+        return None             # a share is at most 1.0
     best, share = None, 0.0
     for lang, vocab in lx.OTHER_FUNCTION_WORDS.items():
         s = sum(w in vocab for w in words) / len(words)
