@@ -8,6 +8,7 @@ import {
   type DocumentType,
   type Spelling,
   type TierHealth,
+  type WordParagraph,
   type WordSuggestion,
 } from "@researchly/contract";
 import {
@@ -25,7 +26,9 @@ import { loadKeepProgress, recordProgress } from "@/lib/progress";
 import { getEngineAuth, signOut, useAuth } from "@/lib/auth";
 import { ENGINE_URL, LOCAL_ENGINE_URL, reportProblemHref } from "@/lib/config";
 import { analyzeWord, engineHealth } from "@/lib/engine";
-import { clientError, type CheckError } from "@/lib/errors";
+import { createCheckSession, PREVIOUS_NOTE, previousMark, type CheckTask } from "@/lib/check-session";
+import { type CheckError } from "@/lib/errors";
+import { buildQueue, passCounts, QUEUE_START, type QueueState } from "@/lib/queue";
 import { healthBanners } from "@/lib/health";
 import { briefState, narrativeState } from "@/lib/profiles";
 import { useProfileChoices } from "@/lib/registry";
@@ -82,7 +85,9 @@ import {
   wordSummary,
   type SectionFocus,
 } from "@/lib/word/view";
+import { CheckProgress } from "../CheckProgress";
 import { HealthBanner } from "../HealthBanner";
+import { PassChooser, RevisionQueue } from "../RevisionQueue";
 import { NarrativeMap } from "../NarrativeMap";
 import { ProfileSelect } from "../ProfileSelect";
 import { ReviewBrief } from "../ReviewBrief";
@@ -171,9 +176,16 @@ export function Taskpane() {
   const [resultsView, setResultsView] = useState<WordView>("suggestions");
   const [showPreferences, setShowPreferences] = useState(false);
 
-  const [phase, setPhase] = useState<Phase>("idle");
+  // One check at a time (review proposal 8): a cancelled or superseded check's late reply is dropped.
+  const [session] = useState(() => createCheckSession<Checked>());
+  const run = useSyncExternalStore(session.subscribe, session.getState, session.getState);
+  const error = run.error;
+  /** Reading the document through Office.js, before anything is sent. */
+  const [reading, setReading] = useState(false);
+  const phase: Phase = reading ? "reading" : run.phase === "running" ? "checking" : run.phase;
   const [checked, setChecked] = useState<Checked | null>(null);
-  const [error, setError] = useState<CheckError | null>(null);
+  /** The revision queue's pass and place (review proposal 1): survives a re-check, never stored. */
+  const [queue, setQueue] = useState<QueueState>(QUEUE_START);
   const [problem, setProblem] = useState<Problem | null>(null);
   const [health, setHealth] = useState<{ engine: EngineChoice; tiers: TierHealth[] | null; reachable: boolean } | null>(null);
   const [notes, setNotes] = useState<Record<string, CardNote>>({});
@@ -188,8 +200,7 @@ export function Taskpane() {
   /** The writer chose to see the whole document after a section check (no re-check needed). */
   const [showWhole, setShowWhole] = useState(false);
   const [announcement, setAnnouncement] = useState("");
-  const runningRef = useRef(false);
-  const abortRef = useRef<AbortController | null>(null);
+  const readingRef = useRef(false);
   const errorRef = useRef<HTMLDivElement>(null);
   const ids = {
     mode: useId(),
@@ -215,9 +226,9 @@ export function Taskpane() {
     });
     return () => {
       live = false;
-      abortRef.current?.abort();
+      session.dispose();
     };
-  }, []);
+  }, [session]);
 
   // Which tiers the chosen engine is running, before any check (no text is sent).
   useEffect(() => {
@@ -287,6 +298,14 @@ export function Taskpane() {
 
   /* ---------- checking ---------- */
 
+  /**
+   * Read the document, then check it. Reading happens once at a time; the
+   * check itself goes through the session (review proposal 8), so a stage or
+   * type change during a long check supersedes it, and the reply of a
+   * cancelled or superseded check is dropped, never shown as current.
+   * Try again (and "Check again" after a cancel) reads the document afresh:
+   * in Word the document, not a snapshot, is what the writer means.
+   */
   const runCheck = useCallback(
     async (opts?: {
       mode?: ModeChoice;
@@ -297,8 +316,7 @@ export function Taskpane() {
       checklist?: ChecklistPref;
     }) => {
       const api = officeApi();
-      if (runningRef.current || !api || host?.status !== "word") return;
-      runningRef.current = true;
+      if (readingRef.current || !api || host?.status !== "word") return;
       const useMode = opts?.mode ?? mode;
       const useType = opts?.documentType ?? documentType;
       const useSpelling = opts?.spelling ?? spelling;
@@ -307,34 +325,34 @@ export function Taskpane() {
       // A re-check (mute, stage change) keeps the current view: section or whole document.
       const wantSection = opts?.section ?? (checked?.focus !== null && checked?.focus !== undefined && !showWhole);
       const useEngine = engine;
-      setError(null);
+      // An earlier error or cancel note gives way; a check still running is left to be superseded.
+      if (session.getState().phase !== "running") session.settle();
       setProblem(null);
-      setPhase("reading");
+      readingRef.current = true;
+      setReading(true);
       setAnnouncement("Reading the document…");
+      let paragraphs: WordParagraph[];
+      let cursor: number | null = null;
+      let disabledRules: string[] = [];
       try {
         // The whole document is always sent: document-wide checks need all of
         // it. "Check this section" only records where the cursor is.
-        let cursor: number | null = null;
         if (wantSection) {
           try {
             cursor = await readSelectionParagraph(api);
           } catch {
             setProblem({ title: "Word did not say where the cursor is", message: "Nothing was sent. Click in the section you are working on, then check again." });
-            setPhase(checked ? "done" : "idle");
             return;
           }
         }
-        let paragraphs;
         try {
           paragraphs = await readParagraphs(api);
         } catch {
           setProblem({ title: "Word did not hand over the document", message: "Nothing was sent. Click in the document, then check again." });
-          setPhase("error");
           return;
         }
         if (!paragraphs.some((p) => p.text.trim())) {
           setProblem({ title: "This document is empty", message: "Write or paste some text into the document, then check again." });
-          setPhase(checked ? "done" : "idle");
           return;
         }
         if (paragraphs.length > MAX_WORD_PARAGRAPHS) {
@@ -342,22 +360,24 @@ export function Taskpane() {
             title: "This document is too long to check at once",
             message: `Researchly reads up to ${MAX_WORD_PARAGRAPHS.toLocaleString("en-GB")} paragraphs at a time. Check one chapter per document.`,
           });
-          setPhase(checked ? "done" : "idle");
           return;
         }
-
         // The local server has no accounts: the sign-in token never goes
         // there, but the account's muted rules do (a rule muted anywhere
         // stays muted everywhere).
-        let disabledRules: string[] = [];
         if (useEngine === "local" && signedIn) {
           const s = await loadSettings();
           if (s.ok) disabledRules = s.data.disabled_rules;
         }
+      } catch {
+        setProblem({ title: "The document could not be read", message: "Nothing was sent. Click in the document, then check again." });
+        return;
+      } finally {
+        readingRef.current = false;
+        setReading(false);
+      }
 
-        const ctrl = new AbortController();
-        abortRef.current = ctrl;
-        setPhase("checking");
+      const task: CheckTask<Checked> = async (signal) => {
         setAnnouncement("Checking your document…");
         // The brief, the narrative map and the checklist are whole-document reads, so they are asked for in Revise only.
         const r = await analyzeWord(
@@ -371,50 +391,43 @@ export function Taskpane() {
             review: useMode === "revise",
             narrative: useMode === "revise",
             checklist: useMode === "revise" && useChecklist !== "none" ? useChecklist : null,
-            signal: ctrl.signal,
+            signal,
           },
           engineUrlFor(useEngine),
           useEngine === "local" ? null : getEngineAuth(),
         );
-        if (r.ok) {
-          const focus = cursor !== null ? sectionAround(paragraphs, cursor) : null;
-          setChecked((prev) => ({ seq: (prev?.seq ?? 0) + 1, data: r.data, engine: useEngine, focus, checklist: useChecklist }));
+        if (!r.ok) return { ok: false, error: useEngine === "local" ? localDownError(r.error) : r.error };
+        const focus = cursor !== null ? sectionAround(paragraphs, cursor) : null;
+        return { ok: true, data: { seq: 0, data: r.data, engine: useEngine, focus, checklist: useChecklist } };
+      };
+      await session.start(task, {
+        onResult: (c) => {
+          setChecked((prev) => ({ ...c, seq: (prev?.seq ?? 0) + 1 }));
           setShowWhole(false);
           setNotes({});
           setApplied(new Set());
           setStale(new Set());
           setActiveId(null);
-          setPhase("done");
-          const listed = shownWordSuggestions(r.data, prefs);
-          setAnnouncement(focus ? sectionSummary(sectionView(listed, focus, scopes), focus) : wordSummary(listed.length));
+          const listed = shownWordSuggestions(c.data, prefs);
+          setAnnouncement(c.focus ? sectionSummary(sectionView(listed, c.focus, scopes), c.focus) : wordSummary(listed.length));
           // Opt-in progress (S4c): rule counts and words only, never text, and only
           // when the writer switched it on. A local check stays on this computer.
-          if (signedIn && useEngine === "cloud") {
-            const data = r.data;
+          if (signedIn && c.engine === "cloud") {
+            const data = c.data;
             void loadKeepProgress()
               .then((k) => (k.ok && k.data ? recordProgress(data, true) : null))
               .catch(() => undefined);
           }
-        } else {
-          setError(useEngine === "local" ? localDownError(r.error) : r.error);
-          setPhase("error");
-          setAnnouncement("");
-        }
-      } catch {
-        if (abortRef.current?.signal.aborted) {
-          setPhase(checked ? "done" : "idle");
-          setAnnouncement("Check cancelled.");
-        } else {
-          setError(clientError());
-          setPhase("error");
-        }
-      } finally {
-        runningRef.current = false;
-        abortRef.current = null;
-      }
+        },
+        onError: () => setAnnouncement(""),
+      });
     },
-    [host, mode, documentType, spelling, checklist, showPreferences, engine, signedIn, checked, showWhole, scopes],
+    [session, host, mode, documentType, spelling, checklist, showPreferences, engine, signedIn, checked, showWhole, scopes],
   );
+
+  const cancelCheck = () => {
+    if (session.cancel()) setAnnouncement("Check cancelled.");
+  };
 
   const onTypeChange = (next: DocumentType) => {
     if (next === documentType) return;
@@ -469,7 +482,8 @@ export function Taskpane() {
   const onEngineChange = (next: EngineChoice) => {
     setChosenEngine(next);
     saveEngineChoice(next);
-    setError(null);
+    // The old engine's error no longer applies (a running check is left alone).
+    if (session.getState().phase !== "running") session.settle();
   };
 
   const onRevealPreferences = () => {
@@ -601,6 +615,13 @@ export function Taskpane() {
   const checklistTab = Boolean(checked && (checked.checklist !== "none" || checked.data.checklist));
   const shownView: WordView = resultsView === "checklist" && !checklistTab ? "suggestions" : resultsView;
   const profileText = checked ? wordProfileLine(checked.data.profile) : null;
+  // The suggestions on screen while a newer check runs, failed or was cancelled are the previous check's.
+  const previous = previousMark(checked !== null, run);
+  // The revision queue walks what is listed (the section and its whole-document checks), in document order.
+  const listedIds = new Set([...split.inSection, ...split.wholeDocument].map((s) => s.id));
+  const inScope = shown.filter((s) => listedIds.has(s.id));
+  const passTotals = passCounts(inScope, scopes);
+  const wordQueue = queue.pass === "all" ? null : buildQueue(inScope, queue.pass, scopes);
 
   const wordCard = (s: WordSuggestion) => (
     <WordCard
@@ -762,7 +783,10 @@ export function Taskpane() {
                 <button
                   type="button"
                   className="btn btn-primary tp-check-btn"
-                  onClick={() => void runCheck({ section: false })}
+                  onClick={() => {
+                    // Busy: the button says so and Cancel is beside it; a press does not restart the check.
+                    if (!busy) void runCheck({ section: false });
+                  }}
                   aria-disabled={busy || undefined}
                   aria-describedby={ids.privacy}
                   data-testid="check-document"
@@ -779,7 +803,7 @@ export function Taskpane() {
                   )}
                 </button>
                 {phase === "checking" ? (
-                  <button type="button" className="btn btn-quiet" onClick={() => abortRef.current?.abort()}>
+                  <button type="button" className="btn btn-quiet" onClick={cancelCheck} data-testid="tp-cancel">
                     Cancel
                   </button>
                 ) : (
@@ -860,6 +884,21 @@ export function Taskpane() {
               </div>
             ) : null}
 
+            {phase === "checking" && run.startedAt !== null ? (
+              <CheckProgress key={run.requestId} startedAt={run.startedAt} what="the document" hasPrevious={checked !== null} />
+            ) : null}
+
+            {!busy && run.note === "cancelled" ? (
+              <div className="notice notice-quiet" data-testid="tp-cancelled-note">
+                <p className="notice-text">
+                  Check cancelled.{checked ? "" : " Nothing was checked."}{" "}
+                  <button type="button" className="btn-link" onClick={() => void runCheck()} data-testid="tp-retry-cancelled">
+                    Check again
+                  </button>
+                </p>
+              </div>
+            ) : null}
+
             {busy && !checked ? (
               <div className="loading-card" aria-hidden="true">
                 <div className="skeleton" />
@@ -877,6 +916,11 @@ export function Taskpane() {
                   {checked.data.mode === "draft" ? "Draft" : "Revise"}
                   {checked.engine === "local" ? ", checked on this computer" : ""}. Click a suggestion to find it in the document.
                 </p>
+                {previous ? (
+                  <p className="previous-note" data-testid="previous-note" data-reason={previous}>
+                    {PREVIOUS_NOTE[previous]}
+                  </p>
+                ) : null}
                 {profileText ? (
                   <p className="profile-line muted" data-testid="profile-line">
                     {profileText}
@@ -954,7 +998,33 @@ export function Taskpane() {
                         </p>
                       ) : null}
                     </div>
-                    {split.inSection.length === 0 ? (
+                    {inScope.length > 0 ? (
+                      <PassChooser
+                        className="tp-passes"
+                        choice={queue.pass}
+                        counts={passTotals}
+                        onChoose={(p) => {
+                          setQueue({ pass: p, at: null });
+                          setActiveId(null);
+                        }}
+                      />
+                    ) : null}
+                    {wordQueue && inScope.length > 0 ? (
+                      <RevisionQueue
+                        compact
+                        queue={wordQueue}
+                        at={queue.at}
+                        onMove={(pos, s) => {
+                          setQueue({ pass: wordQueue.pass, at: pos });
+                          // Each step selects the finding's words in Word, as clicking its card does.
+                          void onSelect(s);
+                        }}
+                        renderCard={wordCard}
+                        counts={passTotals}
+                        onPass={(p) => setQueue({ pass: p, at: null })}
+                        scopeNote={focus ? `in ${sectionName(focus)}` : null}
+                      />
+                    ) : split.inSection.length === 0 ? (
                       <div className="empty" data-testid="tp-empty">
                         <p className="empty-title">{focus ? "Nothing to flag in this section" : "Nothing to flag"}</p>
                         <p className="muted">
@@ -964,7 +1034,7 @@ export function Taskpane() {
                     ) : (
                       <div className="cards tp-cards">{split.inSection.map(wordCard)}</div>
                     )}
-                    {split.wholeDocument.length > 0 ? (
+                    {!wordQueue && split.wholeDocument.length > 0 ? (
                       <section className="card-group" aria-labelledby="tp-whole-document-title" data-testid="whole-document">
                         <h3 id="tp-whole-document-title" className="col-title card-group-title">
                           Whole document
