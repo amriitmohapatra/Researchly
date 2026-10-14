@@ -517,19 +517,25 @@ export const CHECKLISTS: ChecklistChoiceInfo[] = [
 export const CHECKLIST_SOURCE = "S. Pollett et al. (2021), the EPIFORGE 2020 guidelines for reporting epidemic forecasting and prediction research";
 
 /**
- * A checklist report for SAMPLE_TEXT. Synthetic: the topics, questions and
- * reasons are Researchly's own wording; the one reported item quotes the
- * sample's own sentence. Two items need the writer's check.
+ * A checklist report for SAMPLE_TEXT, in the cautious contract (Codex
+ * review N1). Synthetic: the topics, questions and reasons are Researchly's
+ * own wording; every quoted sentence is the sample's own. One item found
+ * (possible evidence, to be confirmed), one partly there (a compound
+ * question with one part found), one with a matching sentence the engine
+ * did not count, one whose section the document lacks, and one that is
+ * good practice rather than a numbered item of the guideline.
  */
 export const CHECKLIST: ChecklistReport = {
   id: "epiforge",
   label: "EPIFORGE",
+  edition: "EPIFORGE 2020",
   design: "epidemic forecasts, projections and predictions",
   source: CHECKLIST_SOURCE,
   suggested: false,
-  reported: 1,
-  total: 3,
-  note: "1 of 3 items were found in the text. The others need your check: they may be reported in a table, a figure or the supplement, or not apply to this study. This checks reporting only, never the science.",
+  found: 1,
+  partial: 1,
+  total: 6,
+  note: "1 of 6 items has possible evidence in the text; 1 more is partly there. Confirm each one: a matching sentence is not proof. The others need your check: they may be in a table, a figure or the supplement, or not apply to this study. These are selected themes of the guideline, not a full compliance check, and they check reporting only, never the science.",
   items: [
     {
       id: "model",
@@ -537,8 +543,12 @@ export const CHECKLIST: ChecklistReport = {
       question: "Is the model described well enough to reproduce: its structure and type?",
       plain: "Readers need to know what produced the numbers.",
       sections: ["methods"],
-      status: "reported",
+      refs: ["8"],
+      status: "found",
       evidence: "The samples were analysed using a renewal model.",
+      parts: [],
+      not_counted: null,
+      section_absent: false,
     },
     {
       id: "horizon",
@@ -546,8 +556,16 @@ export const CHECKLIST: ChecklistReport = {
       question: "Is the forecast horizon given (how far ahead)?",
       plain: "Accuracy falls with the horizon; readers need it to weigh any number.",
       sections: ["introduction", "methods"],
+      refs: ["13"],
       status: "needs_check",
       evidence: null,
+      parts: [],
+      not_counted: {
+        reason: "future",
+        label: "promises it for later",
+        quote: "In order to understand the the dynamics of transmission, further studies are needed.",
+      },
+      section_absent: false,
     },
     {
       id: "uncertainty",
@@ -555,8 +573,54 @@ export const CHECKLIST: ChecklistReport = {
       question: "Are forecasts given with their uncertainty (intervals or quantiles)?",
       plain: "A point forecast without its range invites false confidence.",
       sections: ["results", "methods"],
+      refs: ["14"],
       status: "needs_check",
       evidence: null,
+      parts: [],
+      not_counted: null,
+      section_absent: false,
+    },
+    {
+      id: "data",
+      topic: "Data",
+      question: "Are the data sources described, and is it said whether the data are available?",
+      plain: "Others can only check a forecast whose data they can find.",
+      sections: ["methods"],
+      refs: ["5", "6"],
+      status: "partial",
+      evidence: "We utilize daily case counts, and 𝑅ₜ was estimated using a seven day window.",
+      parts: [
+        { label: "the data sources", found: true, evidence: "We utilize daily case counts, and 𝑅ₜ was estimated using a seven day window." },
+        { label: "whether the data are available", found: false, evidence: null },
+      ],
+      not_counted: null,
+      section_absent: false,
+    },
+    {
+      id: "evaluation",
+      topic: "Evaluation",
+      question: "Is forecast performance evaluated, with the metrics named?",
+      plain: "A forecast's track record is what lets a reader trust the next one.",
+      sections: ["results"],
+      refs: ["10", "11"],
+      status: "needs_check",
+      evidence: null,
+      parts: [],
+      not_counted: null,
+      section_absent: true,
+    },
+    {
+      id: "funding",
+      topic: "Funding",
+      question: "Are the funders named, with their role in the work?",
+      plain: "Readers weigh a forecast knowing who paid for it.",
+      sections: [],
+      refs: [],
+      status: "needs_check",
+      evidence: null,
+      parts: [],
+      not_counted: null,
+      section_absent: false,
     },
   ],
 };

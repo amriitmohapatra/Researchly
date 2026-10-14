@@ -3104,11 +3104,77 @@ main:focus {
   line-height: 1.6;
   text-wrap: pretty;
 }
-.checklist-na {
+/* The guideline's version and what the list is not; the tally in words (counts, never a score). */
+.checklist-edition {
+  margin-top: 2px;
+  font-size: 0.9375rem;
+  text-wrap: pretty;
+}
+.checklist-tally {
+  margin-top: 4px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-wrap: pretty;
+}
+/* The guideline's own item numbers, under the topic: small, quiet, the sans. */
+.checklist-refs {
+  margin-top: 1px;
+  font-size: 0.875rem;
+  color: var(--ink-2);
+}
+/* A compound question, part by part: the state in words, then the part; its sentence quoted under it. */
+.checklist-parts {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.checklist-part-line {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.checklist-part-state {
+  font-weight: 600;
+}
+.checklist-part[data-found="false"] .checklist-part-state {
+  font-style: italic;
+}
+.checklist-part .checklist-evidence {
+  margin-top: 4px;
+}
+/* What the engine set aside, and a section the document lacks: said quietly, after the evidence. */
+.checklist-absent,
+.checklist-aside {
+  margin-top: 6px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+}
+.checklist-aside q {
+  font-family: var(--serif);
+  font-size: 0.9375rem;
+  quotes: "\201C" "\201D";
+}
+/* The writer's two calls: toggle buttons that wrap, never a scrollbar. */
+.checklist-marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 16px;
   margin-top: 2px;
 }
-.checklist-na[aria-pressed="true"] {
-  text-decoration-style: dotted;
+/* Pressed is said by aria-pressed, and shown by a tick and weight, never by colour alone. */
+.checklist-mark[aria-pressed="true"] {
+  font-weight: 650;
+}
+.checklist-mark[aria-pressed="true"]::before {
+  content: "\2713\00a0";
+  content: "\2713\00a0" / "";
+  text-decoration: none;
 }
 .checklist-source {
   margin-top: 12px;
@@ -3178,8 +3244,20 @@ main:focus {
     font-size: 10pt;
   }
   .print-checklist .checklist-plain,
-  .print-checklist .checklist-question {
+  .print-checklist .checklist-question,
+  .print-checklist .checklist-part-line,
+  .print-checklist .checklist-edition,
+  .print-checklist .checklist-tally {
     font-size: 9.5pt;
+  }
+  .print-checklist .checklist-refs,
+  .print-checklist .checklist-absent,
+  .print-checklist .checklist-aside {
+    font-size: 8.5pt;
+    color: #444;
+  }
+  .print-checklist .checklist-aside q {
+    font-size: 9pt;
   }
 }
 
@@ -3572,9 +3650,27 @@ main:focus {
   font-weight: 400;
   color: var(--ink-2);
 }
+.wchecklist-edition {
+  margin-top: 2px;
+  font-size: 0.875rem;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+.wchecklist-tally {
+  margin-top: 4px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-wrap: pretty;
+}
 .wchecklist-note {
   margin-top: 4px;
   text-wrap: pretty;
+}
+.wchecklist-refs {
+  margin-top: 1px;
+  font-size: 0.8125rem;
+  color: var(--ink-2);
 }
 .wchecklist-items {
   list-style: none;
@@ -3595,7 +3691,9 @@ main:focus {
   gap: 2px 12px;
 }
 .wchecklist-topic-name {
+  min-width: 0;
   font-weight: 650;
+  overflow-wrap: anywhere;
 }
 /* The status is a word; "needs your check" is a prompt, so it is set in italic, not in a colour. */
 .wchecklist-status {
@@ -3610,23 +3708,20 @@ main:focus {
   font-size: 0.9375rem;
   text-wrap: pretty;
 }
-.wchecklist-evidence {
-  margin-top: 6px;
-  padding-left: 12px;
-  border-left: 2px solid var(--line-strong);
-  font-family: var(--serif);
+/* The shared item detail (components/ChecklistParts.tsx), a step smaller in the narrow pane. */
+.wchecklist .checklist-evidence {
   font-size: 1rem;
-  color: var(--ink-2);
-  overflow-wrap: anywhere;
 }
-.wchecklist-evidence q {
-  quotes: "\201C" "\201D";
-}
-.wchecklist-plain {
+.wchecklist .checklist-plain {
   margin-top: 6px;
   font-size: 0.9375rem;
   color: var(--ink-2);
-  text-wrap: pretty;
+}
+.wchecklist .checklist-part-line {
+  font-size: 0.875rem;
+}
+.wchecklist .checklist-mark {
+  font-size: 0.875rem;
 }
 .wchecklist .card-source {
   margin-top: 10px;

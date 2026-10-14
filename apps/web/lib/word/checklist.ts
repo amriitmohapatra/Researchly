@@ -1,10 +1,12 @@
 /**
  * The reporting checklist in the Word taskpane (S4c): the choices, what the
- * Checklist tab shows for a check, and the words for an item's status. Pure
+ * Checklist tab shows for a check, and the words for an item's status (the
+ * website's, from lib/checklists.ts, so the two surfaces never drift). Pure
  * except for the hook, and unit-tested. A checklist checks reporting only,
  * never the science; "needs your check" is a prompt, never a verdict.
  */
 import type { ChecklistChoiceInfo, ChecklistItem, ChecklistReport, Mode } from "@researchly/contract";
+import { statusWords, type ChecklistMark } from "../checklists";
 import type { ChecklistPref } from "../prefs";
 import { useRegistry } from "../registry";
 
@@ -75,9 +77,13 @@ export function checklistState(
   return asked === "auto" ? { kind: "none_suggested" } : { kind: "missing" };
 }
 
-/** The status in a word or two: a prompt, never a verdict. */
-export function itemStatusWord(item: Pick<ChecklistItem, "status">): string {
-  return item.status === "reported" ? "Reported" : "Needs your check";
+/**
+ * The status in a few words, the website's own (lib/checklists.ts): "Found
+ * — please confirm", "Partly there" or "Needs your check", or the writer's
+ * call ("Confirmed by you", "Not applicable (your call)"). Never "reported".
+ */
+export function itemStatusWord(item: Pick<ChecklistItem, "status">, mark?: ChecklistMark): string {
+  return statusWords(item, mark, "screen");
 }
 
 /** The label of a suggested checklist id, for "Your text's words point to STROBE." */
