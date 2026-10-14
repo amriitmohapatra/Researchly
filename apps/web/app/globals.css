@@ -56,6 +56,9 @@
   /* One radius for every box; pills only for chips, badges and the switch. */
   --radius: 8px;
   --shadow: 0 1px 2px rgb(27 31 36 / 0.05);
+  /* The one overlay with a lift (the account panel), and the tap flash: both per scheme. */
+  --overlay-shadow: 0 6px 20px rgb(27 31 36 / 0.12);
+  --tap: rgb(38 52 77 / 0.12);
   --measure: 62ch;
 }
 
@@ -92,6 +95,8 @@
     --preference-tint: rgb(204 121 167 / 0.26);
 
     --shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+    --overlay-shadow: 0 8px 24px rgb(0 0 0 / 0.55);
+    --tap: rgb(184 200 230 / 0.16);
   }
 }
 
@@ -106,6 +111,8 @@
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  /* Keyboard focus never lands under the "Dismissed. Undo" note pinned to the bottom of the window. */
+  scroll-padding-bottom: 72px;
 }
 
 body {
@@ -148,7 +155,7 @@ select,
 input,
 textarea {
   touch-action: manipulation;
-  -webkit-tap-highlight-color: rgb(38 52 77 / 0.12);
+  -webkit-tap-highlight-color: var(--tap);
 }
 
 :focus-visible {
@@ -481,9 +488,28 @@ main:focus {
 .controls {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  /* Labels line up across a row; a help line under a select (Check as, Spelling) hangs below it instead of pushing its neighbours down. */
+  align-items: flex-start;
   gap: 14px 24px;
   margin-top: 16px;
+}
+/*
+ * The switches and the actions take their own row under the selects: a
+ * zero-height, full-width item between the two groups breaks the line, so a
+ * switch never floats beside a select's help line. They already follow the
+ * selects in the source, so the reading and tab order are unchanged.
+ */
+.controls::before {
+  content: "";
+  order: 1;
+  flex-basis: 100%;
+  height: 0;
+}
+.controls > .control-toggle,
+.controls > .prediction-control,
+.controls > .control-actions {
+  order: 2;
+  align-self: center;
 }
 
 .control {
@@ -574,7 +600,8 @@ main:focus {
   color: var(--accent-ink);
   min-width: 7.5rem;
 }
-.btn-primary:hover {
+.btn-primary:hover,
+.btn-primary:active {
   background: var(--accent-hover);
 }
 .btn-primary[aria-disabled="true"] {
@@ -593,6 +620,11 @@ main:focus {
   background: transparent;
   border-color: var(--line);
   font-weight: 500;
+}
+/* Pressed: one step past hover, so a tap on a phone is seen. */
+.btn-secondary:active,
+.btn-quiet:active {
+  background: var(--line);
 }
 
 .btn-link {
@@ -1442,7 +1474,7 @@ main:focus {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  box-shadow: 0 6px 20px rgb(27 31 36 / 0.12);
+  box-shadow: var(--overlay-shadow);
 }
 .account-who {
   display: grid;
@@ -1768,6 +1800,9 @@ main:focus {
   display: grid;
   gap: 4px;
 }
+.setting-row > .btn {
+  justify-self: start;
+}
 .setting-toggle {
   display: inline-flex;
   width: fit-content;
@@ -1776,6 +1811,9 @@ main:focus {
   margin: 0;
   padding: 0;
   border: 0;
+}
+.locale-set legend {
+  padding: 0;
 }
 .radio {
   display: flex;
@@ -1901,6 +1939,13 @@ main:focus {
   }
   .select {
     min-width: 9rem;
+  }
+  /* Stacked one per line, the selects share one width (as in the Word pane) instead of three ragged ones. */
+  .controls > .control:not(.control-toggle):not(.control-actions) {
+    width: 100%;
+  }
+  .controls .select {
+    width: 100%;
   }
 }
 
@@ -2032,13 +2077,18 @@ main:focus {
   margin: 0;
   cursor: pointer;
 }
+.segment:not(.is-on):hover {
+  background: var(--surface-2);
+}
 .segment.is-on {
   background: var(--accent);
   color: var(--accent-ink);
 }
+/* The ring sits inside the box (which clips), with a band of surface between it and a filled segment, so it shows on the accent too. */
 .segment:has(input:focus-visible) {
   outline: 3px solid var(--focus);
   outline-offset: -3px;
+  box-shadow: inset 0 0 0 5px var(--surface);
 }
 
 .tp-results {
@@ -2102,8 +2152,30 @@ main:focus {
   min-height: 44px;
   display: flex;
   align-items: center;
+  gap: 8px;
   cursor: pointer;
   font-weight: 600;
+  list-style: none;
+  border-radius: var(--radius);
+}
+.tp-settings > summary::-webkit-details-marker {
+  display: none;
+}
+/* The same marker as the cards' disclosures: display:flex drops the native one, and a closed panel must still read as one that opens. */
+.tp-settings > summary::before {
+  content: "";
+  width: 0;
+  height: 0;
+  border-left: 5px solid currentColor;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform 0.15s ease;
+}
+.tp-settings[open] > summary::before {
+  transform: rotate(90deg);
+}
+.tp-settings > summary:hover {
+  background: var(--surface-2);
 }
 .tp-settings-body {
   display: grid;
@@ -2258,6 +2330,7 @@ main:focus {
 .brief-points {
   margin: 8px 0 0;
   padding-left: 20px;
+  list-style: disc;
   display: grid;
   gap: 6px;
   font-size: 1rem;
@@ -2849,7 +2922,9 @@ main:focus {
  * colours; nothing here is a score. Taskpane (.tp-*) rules are untouched.
  */
 
-/* "The lesson": a closed disclosure under the full reasoning, set off like it. */
+/* "The lesson": a closed disclosure under the full reasoning, set off like it.
+ * Its parts are scoped to .lesson-body: the lesson page (.lesson-page) uses the same
+ * class names at page scale, and unscoped rules leaked a 2rem title into every card. */
 .lesson {
   margin-top: 4px;
 }
@@ -2883,14 +2958,14 @@ main:focus {
 .lesson[open] > summary::before {
   transform: rotate(90deg);
 }
-.lesson-source {
+.lesson-body .lesson-source {
   margin-top: 8px;
   font-size: 0.8125rem;
   line-height: 1.45;
   color: var(--ink-2);
   overflow-wrap: anywhere;
 }
-.lesson-source cite {
+.lesson-body .lesson-source cite {
   font-family: var(--serif);
   font-size: 0.875rem;
   font-style: italic;
@@ -2905,30 +2980,30 @@ main:focus {
 .card .lesson-body {
   border-left-color: color-mix(in srgb, var(--c-line) 50%, transparent);
 }
-.lesson-title {
+.lesson-body .lesson-title {
   font-weight: 650;
   line-height: 1.45;
 }
-.lesson-text {
+.lesson-body .lesson-text {
   margin-top: 4px;
   font-size: 1rem;
   line-height: 1.6;
   text-wrap: pretty;
 }
-.lesson-pair {
+.lesson-body .lesson-pair {
   display: grid;
   gap: 8px;
   margin-top: 10px;
 }
-.lesson-example {
+.lesson-body .lesson-example {
   margin: 0;
 }
-.lesson-example-label {
+.lesson-body .lesson-example-label {
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--ink-2);
 }
-.lesson-quote {
+.lesson-body .lesson-quote {
   margin: 2px 0 0;
   padding-left: 10px;
   border-left: 2px solid var(--line-strong);
@@ -2937,19 +3012,19 @@ main:focus {
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
-.lesson-quote q {
+.lesson-body .lesson-quote q {
   quotes: "\201C" "\201D";
 }
-.lesson-habit {
+.lesson-body .lesson-habit {
   margin-top: 10px;
   font-size: 0.9375rem;
   line-height: 1.55;
   text-wrap: pretty;
 }
-.lesson-habit-label {
+.lesson-body .lesson-habit-label {
   font-weight: 600;
 }
-.lesson-more {
+.lesson-body .lesson-more {
   font-size: 0.9375rem;
   padding-bottom: 4px;
 }
@@ -3340,36 +3415,39 @@ main:focus {
 }
 
 /* ---- Lessons: one lesson, read as a short document at the reading measure ---- */
-.lesson {
+/* Scoped to .lesson-page: the card's "The lesson" disclosure uses the same class names at card scale. */
+.lesson-page {
   max-width: var(--measure);
 }
-.lesson-kicker {
+.lesson-page .lesson-kicker {
   font-size: 0.9375rem;
   margin-bottom: 4px;
 }
-.lesson-title {
+.lesson-page .lesson-title {
   font-size: clamp(1.6rem, 1.35rem + 1vw, 2rem);
   letter-spacing: -0.015em;
   margin-bottom: 12px;
 }
-.lesson-text {
+.lesson-page .lesson-text {
   font-size: 1.0625rem;
   line-height: 1.6;
   text-wrap: pretty;
 }
-.lesson-examples {
+.lesson-page .lesson-examples {
   display: grid;
   gap: 16px;
   margin: 24px 0;
 }
-.lesson-example {
+.lesson-page .lesson-example {
   margin: 0;
 }
-.lesson-example-label {
+.lesson-page .lesson-example-label {
+  font-size: 0.8125rem;
   font-weight: 650;
+  color: var(--ink-2);
   margin-bottom: 4px;
 }
-.lesson-quote {
+.lesson-page .lesson-quote {
   margin: 0;
   padding: 2px 0 2px 16px;
   font-family: var(--serif);
@@ -3379,35 +3457,35 @@ main:focus {
   text-wrap: pretty;
 }
 /* The two differ by line style and label, never by colour: dashed before, solid after. */
-.lesson-before .lesson-quote {
+.lesson-page .lesson-before .lesson-quote {
   border-left: 2px dashed var(--line-strong);
   color: var(--ink-2);
 }
-.lesson-after .lesson-quote {
+.lesson-page .lesson-after .lesson-quote {
   border-left: 2px solid var(--accent);
   color: var(--ink);
 }
-.lesson-habit {
+.lesson-page .lesson-habit {
   padding-top: 16px;
   border-top: 1px solid var(--line);
 }
-.lesson-habit-title {
+.lesson-page .lesson-habit-title {
   font-size: 1.125rem;
   margin-bottom: 6px;
 }
-.lesson-habit p {
+.lesson-page .lesson-habit p {
   line-height: 1.6;
   text-wrap: pretty;
 }
-.lesson-source {
+.lesson-page .lesson-source {
   margin-top: 16px;
 }
-.lesson-nav {
+.lesson-page .lesson-nav {
   margin-top: 24px;
   padding-top: 16px;
   border-top: 1px solid var(--line);
 }
-.lesson-nav-list {
+.lesson-page .lesson-nav-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -3778,6 +3856,9 @@ main:focus {
 .pass-btn:hover {
   background: var(--surface-2);
 }
+.pass-btn:active {
+  background: var(--line);
+}
 .pass-btn[aria-pressed="true"] {
   background: var(--accent);
   border-color: var(--accent);
@@ -3859,9 +3940,31 @@ main:focus {
 .queue-all summary {
   display: flex;
   align-items: center;
+  gap: 8px;
   min-height: 32px;
   cursor: pointer;
   font-weight: 600;
+  list-style: none;
+}
+.queue-all summary::-webkit-details-marker {
+  display: none;
+}
+/* The cards' disclosure marker: display:flex drops the native one, and a closed list must still read as one that opens. */
+.queue-all summary::before {
+  content: "";
+  width: 0;
+  height: 0;
+  border-left: 5px solid currentColor;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform 0.15s ease;
+}
+.queue-all[open] summary::before {
+  transform: rotate(90deg);
+}
+.queue-all summary:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .queue-list {
   display: grid;
@@ -3966,8 +4069,12 @@ main:focus {
 .prediction-option.is-first {
   border-color: var(--line-strong);
 }
-.prediction-option:hover {
+.prediction-option:hover,
+.prediction-option:active {
   border-color: var(--accent);
+}
+.prediction-option:active {
+  background: var(--surface-2);
 }
 .prediction-hint {
   color: var(--ink-2);

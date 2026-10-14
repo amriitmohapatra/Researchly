@@ -111,7 +111,7 @@ function mapError(
   if (code === "unsupported_file" || (context.upload && status === 415)) {
     return {
       kind: "unsupported_file",
-      title: "This file type can't be checked",
+      title: "This file type can’t be checked",
       message: parsed?.message || `Researchly reads ${UPLOAD_TYPES_SENTENCE}`,
       requestId,
       retryable: false,
@@ -329,7 +329,7 @@ export function signInErrorMessage(err: AuthErrorLike): string {
     code === "email_address_not_authorized" ||
     code === "user_banned"
   ) {
-    return "A sign-in link can't be sent to this address. Check that it is typed correctly.";
+    return "A sign-in link can’t be sent to this address. Check that it is typed correctly.";
   }
   if ((err.status ?? 0) >= 500) {
     return "The sign-in service could not send the email. Try again in a few minutes; if it keeps happening, use Report a problem.";

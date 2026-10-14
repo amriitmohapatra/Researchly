@@ -448,7 +448,7 @@ test.describe("uploads", () => {
     await page.goto("/");
     await expect(page.getByTestId("account-button")).toBeVisible();
     await page.getByTestId("file-input").setInputFiles({ name: "figure.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF") });
-    await expect(page.getByTestId("file-problem")).toContainText(".pdf files can't be checked");
+    await expect(page.getByTestId("file-problem")).toContainText(".pdf files can’t be checked");
     expect(calls).toHaveLength(0);
   });
 

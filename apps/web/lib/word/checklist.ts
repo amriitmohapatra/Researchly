@@ -48,7 +48,7 @@ export function checklistOptions(list: readonly ChecklistChoiceInfo[]): { value:
 /** The help line under the select for a choice. */
 export function checklistHelp(list: readonly ChecklistChoiceInfo[], value: ChecklistPref): string {
   if (value === "none") return "No reporting checklist. Checked in Revise only, like the brief.";
-  if (value === "auto") return "The checklist your text's own words point to, if any. Reporting only, never the science.";
+  if (value === "auto") return "The checklist your text’s own words point to, if any. Reporting only, never the science.";
   const c = list.find((x) => x.id === value);
   return c ? `For ${c.design}. Reporting only, never the science.` : "Reporting only, never the science.";
 }

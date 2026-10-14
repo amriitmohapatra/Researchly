@@ -397,7 +397,7 @@ export const CHANGED_MESSAGE =
 export const NOT_FOUND_MESSAGE =
   "Word could not find this text exactly, so nothing was changed. Check the document again; if this keeps happening, make the change by hand.";
 export const APPROXIMATE_APPLY_MESSAGE =
-  "This passage is too long for Word to find whole, so the revision can't be applied safely. Make the change by hand.";
+  "This passage is too long for Word to find whole, so the revision can’t be applied safely. Make the change by hand.";
 export const RANGE_CHANGED_MESSAGE =
   "The text Word found no longer matches what was checked, so nothing was changed. Check the document again.";
 export const FIELD_MESSAGE =
@@ -489,7 +489,7 @@ export type ApplyResult =
 export const FIELD_UNKNOWN_MESSAGE =
   "Word could not say whether this text is part of a citation or another field, so nothing was changed. Make this change by hand.";
 export const RESTORE_FAILED_MESSAGE =
-  "The change was made, but Track Changes could not be switched back; check Word's Review tab.";
+  "The change was made, but Track Changes could not be switched back; check Word’s Review tab.";
 export const UNKNOWN_MESSAGE = "Word reported an error after the edit; check the text before trying again.";
 
 const notApplied = (message: string): ApplyResult => ({ ok: false, outcome: "not_applied", message });

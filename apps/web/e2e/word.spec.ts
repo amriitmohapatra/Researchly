@@ -94,7 +94,7 @@ test.describe("Word taskpane", () => {
     await first.getByText("The full reasoning").click();
     await expect(first.getByText("A synthetic explanation")).toBeVisible();
     // The stage's help says what each stage checks.
-    await expect(page.getByTestId("mode-help")).toHaveText("Draft: check what you've written so far. Revise: check the finished manuscript.");
+    await expect(page.getByTestId("mode-help")).toHaveText("Draft: check what you’ve written so far. Revise: check the finished manuscript.");
 
     await expect(page.getByTestId("coverage")).toContainText("Checked 5 paragraphs of the document body, 1 of them in a table.");
     await expect(page.getByTestId("coverage")).toContainText(
@@ -287,7 +287,7 @@ test.describe("Word taskpane", () => {
     const calls = await mockWordEngine(page, ENGINE);
     await page.goto("/word");
     await page.getByTestId("mode-draft").check();
-    await expect(page.getByTestId("mode-help")).toHaveText("Draft: check what you've written so far. Revise: check the finished manuscript.");
+    await expect(page.getByTestId("mode-help")).toHaveText("Draft: check what you’ve written so far. Revise: check the finished manuscript.");
     await page.getByTestId("mode-revise").check();
     await page.getByTestId("check-section").click();
     await expect(page.getByTestId("tp-results")).toBeVisible();
@@ -401,7 +401,15 @@ test.describe("Word taskpane", () => {
     await fakeOffice(page);
     const cloud = await mockWordEngine(page, ENGINE);
     await page.goto("/word");
+    // The closed Settings panel shows a disclosure marker (a flex summary drops the native one), turned when open.
+    const marker = () =>
+      page.getByTestId("tp-settings").locator("summary").evaluate((el) => {
+        const m = getComputedStyle(el, "::before");
+        return { width: m.borderLeftWidth, turned: m.transform !== "none" };
+      });
+    expect(await marker()).toEqual({ width: "5px", turned: false });
     await page.getByTestId("tp-settings").locator("summary").click();
+    await expect.poll(marker).toEqual({ width: "5px", turned: true });
     await page.getByTestId("engine-local").check();
     // Nothing is listening yet: health fails, and the pane says how to start it.
     await expect(page.getByTestId("local-down")).toContainText("Researchly is not running on this computer");
@@ -559,7 +567,7 @@ test.describe("Word taskpane: when Word fails during Apply (fails closed, says w
     const c = card(page, "In order to");
     await c.getByTestId("apply-fix").click();
     await expect(c.getByTestId("card-note")).toHaveText(
-      "The change was made, but Track Changes could not be switched back; check Word's Review tab.",
+      "The change was made, but Track Changes could not be switched back; check Word’s Review tab.",
     );
     await expect(c.getByTestId("apply-fix")).toHaveCount(0);
     expect((await wordState(page)).edits).toHaveLength(1);
@@ -622,7 +630,7 @@ test.describe("Word taskpane: the reporting checklist", () => {
     expect(calls[0]!.body.options).not.toHaveProperty("checklist");
     await expect(page.getByTestId("view-checklist")).toHaveCount(0);
     // The engine's suggestion is offered, never applied.
-    await expect(page.getByTestId("checklist-help")).toContainText("Your text's words point to STROBE.");
+    await expect(page.getByTestId("checklist-help")).toContainText("Your text’s words point to STROBE.");
 
     // A choice checks again (like a changed type) and opens nothing by itself.
     await page.getByTestId("checklist-select").selectOption("strobe");

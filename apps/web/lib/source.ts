@@ -26,7 +26,7 @@ export function checkFile(file: { name: string; size: number }): FileProblem | n
   if (!(UPLOAD_EXTENSIONS as readonly string[]).includes(ext)) {
     return {
       kind: "type",
-      message: `${ext ? `${ext} files can't be checked.` : "This file has no extension."} Researchly reads ${UPLOAD_TYPES_SENTENCE}`,
+      message: `${ext ? `${ext} files can’t be checked.` : "This file has no extension."} Researchly reads ${UPLOAD_TYPES_SENTENCE}`,
     };
   }
   if (file.size === 0) return { kind: "empty", message: "This file is empty." };

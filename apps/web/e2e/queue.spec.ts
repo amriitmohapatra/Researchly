@@ -76,6 +76,10 @@ test.describe("revision queue", () => {
     await expect(position).toHaveText(/^Issue 1 of 1 in this pass\. Occurrence 1 of 3\./);
     await expect(position).toHaveAttribute("aria-live", "polite");
     await expect(page.getByTestId("queue-occurrences")).toContainText("Found 3 times in your text.");
+    // The closed list of every issue shows a disclosure marker (its flex summary drops the native one).
+    expect(
+      await page.getByTestId("queue-all").locator("summary").evaluate((el) => getComputedStyle(el, "::before").borderLeftWidth),
+    ).toBe("5px");
     const doc = page.getByTestId("document");
     await expect(doc.locator("mark")).toHaveCount(3); // only this pass's findings are highlighted
     await expect(doc.locator('[data-sids~="sp-1"]')).toHaveClass(/is-active/);

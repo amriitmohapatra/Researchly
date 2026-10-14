@@ -67,7 +67,7 @@ describe("client-side file checks (usability only)", () => {
   it("refuses other types and says what is accepted", () => {
     const p = checkFile({ name: "figure.pdf", size: 10 });
     expect(p?.kind).toBe("type");
-    expect(p?.message).toContain(".pdf files can't be checked");
+    expect(p?.message).toContain(".pdf files can’t be checked");
     expect(p?.message).toContain(".docx");
     expect(checkFile({ name: "README", size: 10 })?.message).toContain("no extension");
   });

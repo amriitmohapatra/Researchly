@@ -232,7 +232,7 @@ async function call<T>(
   }
   if (!res.ok) return { ok: false, error: errorFromResponse(res.status, body, res.headers, { upload: context.upload }) };
   if (!validate(body)) {
-    return { ok: false, error: badPayloadError("The engine's answer was not in the expected shape.") };
+    return { ok: false, error: badPayloadError("The engine’s answer was not in the expected shape.") };
   }
   const version = (body as { schema_version?: unknown }).schema_version;
   // Analysis responses must say which contract they speak; /v1/rules has no version field.

@@ -213,7 +213,7 @@ export function PrintReport({
         </div>
       </section>
 
-      <section className="print-brief" aria-label="Reviewer's brief">
+      <section className="print-brief" aria-label="Reviewer’s brief">
         <h2>Reviewer&rsquo;s brief</h2>
         {brief.kind === "ready" ? (
           <ReviewBrief state={brief} />

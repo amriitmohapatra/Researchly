@@ -31,7 +31,7 @@ export function accountErrorMessage(err: DbError | null | undefined): string {
     case "23514": // check_violation: the 5,000-word cap trigger, or the word-shape check
       return /full/i.test(err.message ?? "")
         ? "Your dictionary is full (5,000 words). Remove a word to add another."
-        : "That word can't be added: words are 1 to 64 characters with no spaces.";
+        : "That word can’t be added: words are 1 to 64 characters with no spaces.";
     case "42501":
     case "PGRST301":
     case "PGRST303":

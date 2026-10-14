@@ -27,7 +27,7 @@ type Reason = Exclude<CursorContext, { ok: true }>["reason"] | null;
 export function nextWordsIdle(reason: Reason): string {
   switch (reason) {
     case "unsupported":
-      return "This version of Word can't share where the cursor is, so Next words is not available here. Checking is not affected.";
+      return "This version of Word can’t share where the cursor is, so Next words is not available here. Checking is not affected.";
     case "selection":
       return "Words are offered at the cursor, not for selected text.";
     case "heading":
