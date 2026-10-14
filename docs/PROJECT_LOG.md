@@ -2228,3 +2228,13 @@ is now the 65-second cut, narrated by Kokoro-82M (Apache-2.0, offline). The
 README caption says the narration is a synthetic voice, as ad and social
 platforms increasingly ask. The music-only cut remains in the public
 repository's history from its second commit.
+
+## 2026-10-14 — Progress summary
+
+**What.** At the owner's request, wrote `docs/PROGRESS_SUMMARY_2026-10-14.md`
+on the branch `claude/vigilant-hawking-hnexgd`. It summarises P1–P39 and
+`PLAN.md`: a timeline, what was built by area, the most recent changes
+(PRs #9–#12, 2026-10-08) and the open items for the owner and for
+engineering. It is documentation only. No code, tests or PLAN boxes
+changed, and `main` is untouched. There were no commits between
+2026-10-08 and this entry.
