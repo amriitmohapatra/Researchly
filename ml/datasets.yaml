@@ -1191,3 +1191,142 @@ datasets:
       only if every dataset it was fine-tuned on also has ship_model here,
       and it passes the ADR-06 promotion gate (model card, held-out
       precision, noise floor, ONNX SHA-256 pin, health.py entry).
+
+  # --- Survey of open academic-writing sources (2026-10-14; docs/open-writing-sources.md).
+  # Nothing below is used yet. Licences are as found by web search and are
+  # unverified until someone reads the licence first-hand.
+
+  - id: google-books-ngrams-2012
+    name: "Google Books Ngram corpus, 2012-07-01 release (English)"
+    kind: corpus
+    source: "Google Books Ngram Viewer datasets (storage.googleapis.com/books/ngrams/books/)"
+    location: null
+    in_git: false
+    licence: "CC-BY-3.0 (as stated by third-party package pages; Google's own page not checked)"
+    licence_verified: false
+    licence_evidence: "https://pypi.org/project/google-ngram-downloader (second-hand)"
+    commercial_ok: unknown
+    permitted_use: [private_eval]
+    current_use: "planned: train a local n-gram model for context-aware spelling and word choice"
+    shipped_today: false
+    sha256: null
+    notes: >-
+      If verified as CC BY 3.0, a derived n-gram model may ship with
+      attribution (ship_model). Books are not research prose: compare with an
+      n-gram model trained on CC BY / CC0 PMC articles (S5a) before choosing.
+
+  - id: wikipedia-common-misspellings
+    name: "Wikipedia: Lists of common misspellings/For machines"
+    kind: lexicon
+    source: "https://en.wikipedia.org/wiki/Wikipedia:Lists_of_common_misspellings/For_machines"
+    location: null
+    in_git: false
+    licence: "CC-BY-SA (second-hand: CRAN fuzzystring COPYRIGHTS)"
+    licence_verified: false
+    licence_evidence: "https://cran.nics.utk.edu/cran/web/packages/fuzzystring/COPYRIGHTS (second-hand)"
+    commercial_ok: unknown
+    permitted_use: [private_eval]
+    current_use: "planned: an error model for the spelling tier"
+    shipped_today: false
+    sha256: null
+    notes: >-
+      Share-alike: a shipped derived list stays CC BY-SA, so keep it a separate
+      data file with its own notice. Not every listed form is wrong in context.
+
+  - id: proselint-rules
+    name: "proselint checks (amperser/proselint)"
+    kind: knowledge_source
+    source: "https://github.com/amperser/proselint"
+    location: null
+    in_git: false
+    licence: "BSD (per the 2016 SciPy paper; repository LICENSE not checked)"
+    licence_verified: false
+    licence_evidence: "https://proceedings.scipy.org/articles/Majora-629e541a-00d.pdf (second-hand)"
+    commercial_ok: unknown
+    permitted_use: [private_eval, knowledge_derivation]
+    current_use: "planned: port selected checks as Researchly rules"
+    shipped_today: false
+    sha256: null
+    notes: "Each ported check needs fire and don't-fire tests, a noise-floor run and attribution."
+
+  - id: write-good-rules
+    name: "write-good (btford/write-good)"
+    kind: knowledge_source
+    source: "https://github.com/btford/write-good"
+    location: null
+    in_git: false
+    licence: "MIT (README notice, 2014)"
+    licence_verified: false
+    licence_evidence: "https://cdn.jsdelivr.net/npm/write-good@1.0.8/README.md"
+    commercial_ok: true
+    permitted_use: [private_eval, knowledge_derivation]
+    current_use: "planned: compare with existing passive/wordiness rules; port only what adds precision"
+    shipped_today: false
+    sha256: null
+
+  - id: us-plain-language-word-list
+    name: "U.S. Federal Plain Language Guidelines (2011) and the plainlanguage.gov word suggestions"
+    kind: lexicon
+    source: "plainlanguage.gov (archived)"
+    location: null
+    in_git: false
+    licence: "Likely public domain as U.S. federal work (not confirmed on the site)"
+    licence_verified: false
+    licence_evidence: "https://cybercemetery.unt.edu/oilspill/20121014022836mp_/http://www.plainlanguage.gov/howto/wordsuggestions/index.cfm"
+    commercial_ok: unknown
+    permitted_use: [private_eval, knowledge_derivation]
+    current_use: "planned: extend the plain-words lexicon"
+    shipped_today: false
+    sha256: null
+
+  - id: mensh-kording-2017
+    name: "Mensh & Kording (2017), Ten simple rules for structuring papers, PLOS Comput Biol 13(9): e1005619"
+    kind: knowledge_source
+    source: "https://doi.org/10.1371/journal.pcbi.1005619"
+    location: null
+    in_git: false
+    licence: "CC-BY-4.0 (PLOS; second-hand via search)"
+    licence_verified: false
+    licence_evidence: "https://pmc.ncbi.nlm.nih.gov/articles/PMC5619685/ (second-hand)"
+    commercial_ok: true
+    permitted_use: [private_eval, knowledge_derivation]
+    current_use: "planned: Learn cards and narrative-map questions, cited by name"
+    shipped_today: false
+    sha256: null
+
+  - id: academic-phrasebank
+    name: "Academic Phrasebank (University of Manchester)"
+    kind: knowledge_source
+    source: "https://www.phrasebank.manchester.ac.uk/"
+    location: null
+    in_git: false
+    licence: "Copyright, University of Manchester; PDF editions forbid redistribution"
+    licence_verified: false
+    licence_evidence: "https://www.phrasebank.manchester.ac.uk/ (footer); PDF notice (second-hand)"
+    commercial_ok: false
+    permitted_use: []
+    current_use: "cite only, as a pointer for writers; no phrases ship"
+    shipped_today: false
+    sha256: null
+
+  - id: rejected-commercial-extension-tables
+    name: "Decoded data tables and models from a commercial writing assistant's browser extension (REJECTED)"
+    kind: corpus
+    source: "Uploaded by the owner on 2026-10-14: decoders (groffline.py, extract_tables.py, onnx_dump.py, probe_ngrams.py, demo.py) and the decoded tables (n-gram table, autocorrect classifier, vocabulary, phrase and completion lists, dialect map, blocklists)"
+    location: null
+    in_git: false
+    licence: "Proprietary to the extension's publisher; no licence to reuse"
+    licence_verified: true
+    licence_evidence: "The decoders' own docstrings: they port and decode code and data shipped inside a commercial Firefox extension (v8.912.0, 2024 builds)"
+    commercial_ok: false
+    permitted_use: []
+    current_use: "none: rejected"
+    shipped_today: false
+    sha256: null
+    notes: >-
+      The owner said the files are theirs. Decoding a copy of another
+      company's product does not give the right to reuse its data, so this
+      stays rejected unless written evidence shows the owner holds the rights
+      (authorship of the extension, or a licence from its publisher). Then
+      update this entry with that evidence first. The capability is to be
+      rebuilt from open sources (docs/open-writing-sources.md).

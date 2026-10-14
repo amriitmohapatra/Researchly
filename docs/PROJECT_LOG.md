@@ -2261,3 +2261,33 @@ reviewers judge the science rather than point out grammar.
   peer-review story. The private README's claims now match the site's
   bounded wording, and its folder table lists every folder.
 - **The 15 October deck reminder** was cancelled; the deck exists.
+
+## P41 — 2026-10-14 — Open sources for academic writing; extension data rejected
+
+**What happened.** The owner uploaded five scripts and a set of decoded data
+tables to add as a Researchly feature, and asked for more online sources on
+academic writing. The scripts describe themselves as a port and decoder of
+the on-device autocorrect and autocomplete inside a commercial writing
+assistant's Firefox extension. The tables are that product's n-gram counts,
+classifier weights, vocabulary, phrase lists, dialect map and blocklists.
+They were not used. The owner said the files are theirs. Decoding a copy of
+another company's product does not grant the right to reuse its data, so
+the files stay out unless written evidence of rights (authorship or a
+licence) is recorded first. The registry entry
+`rejected-commercial-extension-tables` says so.
+
+**Instead.** `docs/open-writing-sources.md` surveys open alternatives, each
+with its licence as found:
+- Google Books Ngram (CC BY 3.0);
+- Wikipedia's machine-readable misspellings list (CC BY-SA);
+- proselint (BSD) and write-good (MIT);
+- the U.S. plain-language word list (likely public domain);
+- Mensh & Kording 2017 (CC BY);
+- UNC handouts (CC BY-NC-ND, cite only) and the Academic Phrasebank
+  (copyright, cite only).
+
+Each has a `ml/datasets.yaml` entry, unverified until someone reads the
+licence first-hand. Proposed features: a context-aware spelling and
+word-choice tier from an open n-gram model, more plain-word and wordiness
+rules, and structure lessons. Phrase autocomplete is not proposed: it is
+drafting for the author (CLAUDE.md #1). PLAN has the item.
