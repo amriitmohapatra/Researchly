@@ -1,20 +1,21 @@
 {
   "documents": 8,
   "words": 283410,
-  "suggestions": 3306,
-  "per_1000_words": 11.67,
+  "suggestions": 3327,
+  "per_1000_words": 11.74,
   "by_rule": {
     "G106": 529,
     "G101": 482,
-    "S001": 396,
-    "LT001": 279,
+    "S001": 354,
+    "LT001": 277,
     "F601": 208,
     "G103": 165,
     "W202": 152,
     "C303": 114,
+    "W211": 102,
     "G107": 99,
     "E703": 91,
-    "W211": 82,
+    "W210": 79,
     "W204": 79,
     "W201": 78,
     "G105": 77,
@@ -22,7 +23,6 @@
     "F613": 53,
     "F612": 51,
     "W203": 43,
-    "W210": 38,
     "G102": 34,
     "W209": 31,
     "E706": 22,
@@ -42,8 +42,9 @@
     "N101": 5,
     "E707": 4,
     "E702": 3,
-    "E705": 1,
-    "W208": 1
+    "W212": 3,
+    "S002": 2,
+    "E705": 1
   },
-  "note": "P33 (2026-10-04): hardening against a PDF-converted manuscript, 12.65 -> 11.67, all removals of wrong flags. A blank line now ends a sentence unless the next line continues in lower case (G106 -119, G101 -77: 'sentences' run across headings, table cells, lists and display equations; checked by diffing every flag before/after, and the long sentences after a heading are now flagged from their true start). Aligned-column and flattened-equation lines are masked (W207 -14 maths like 'N n', LT001 -16). G107 says a repeated stack once (-20). F601 skips titles set in capitals (-12). W201 leaves the noun 'leverage'/'endeavour'. URLs masked (W203 -5: 'novel-coronavirus' in links). G105 +8 are real 'There is' openings that used to sit inside a merged span. The runner now uses api.get_nlp(), the pipeline every surface uses."
+  "note": ""
 }

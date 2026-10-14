@@ -57,3 +57,49 @@ def test_cli_round_trip(tmp_path, capsys):
         (1, "C303", "convention", "useful"))}))
     assert lp.main([str(p)]) == 0
     assert "| All flags | 1 | 0 | 0 | 100% |" in capsys.readouterr().out
+
+
+# --- Codex review N3 (2026-10-14): one observation per flag -------------------
+
+def _lab(paragraph, verdict, attempt=None, flag=None, rule="G106"):
+    x = {"paragraph": paragraph, "rule_id": rule, "category": "improvement",
+         "section": "results", "verdict": verdict}
+    if attempt is not None:
+        x["attempt"], x["flag"] = attempt, flag
+    return x
+
+
+def test_only_the_last_attempt_of_a_paragraph_counts():
+    labels = [_lab(1, "wrong", "attemptaa1", 0),
+              _lab(1, "useful", "attemptbb2", 0),      # rechecked: replaces
+              _lab(2, "useful", "attemptcc3", 0)]
+    kept, dropped = lp.dedupe(labels)
+    assert dropped == 1 and [x["verdict"] for x in kept] == ["useful", "useful"]
+
+
+def test_a_changed_verdict_counts_once_and_two_flags_count_twice():
+    labels = [_lab(1, "wrong", "attemptaa1", 0),
+              _lab(1, "useful", "attemptaa1", 0),
+              _lab(1, "wrong", "attemptaa1", 1)]
+    kept, dropped = lp.dedupe(labels)
+    assert dropped == 1 and len(kept) == 2
+
+
+def test_files_from_before_attempts_are_read_as_they_are():
+    kept, dropped = lp.dedupe([_lab(1, "useful"), _lab(1, "useful")])
+    assert dropped == 0 and len(kept) == 2
+
+
+def test_a_text_attempt_id_is_refused(tmp_path):
+    p = tmp_path / "l.json"
+    p.write_text(json.dumps({"version": 1, "labels": [
+        _lab(1, "useful", "We fitted a model", 0)]}))
+    with pytest.raises(ValueError):
+        lp.load(p)
+
+
+def test_the_report_says_what_was_set_aside():
+    out = lp.report([_lab(1, "wrong", "attemptaa1", 0),
+                     _lab(1, "useful", "attemptbb2", 0)])
+    assert "1 label from a replaced check or a changed verdict was set aside" in out
+    assert "paragraph-clustered" in out

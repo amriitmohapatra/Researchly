@@ -208,6 +208,27 @@ test.describe("signed in", () => {
     expect(typeOf(1)).toBe("abstract");
   });
 
+  test("the spelling comes from the account, and a change is saved to it and checked again (task #15)", async ({ page }) => {
+    await seedSession(page);
+    const sb = await mockSupabase(page, {
+      settings: { disabled_rules: [], show_preferences: false, locale: "en-US", spelling: "uk" },
+    });
+    const calls = await mockEngineAuth(page, (_c, route) => reply(route, 200, signedInPaste));
+    await page.goto("/");
+    await expect(page.getByLabel("Spelling", { exact: true })).toHaveValue("uk");
+    await pasteAndCheck(page);
+    await expect(page.getByRole("heading", { name: "2 suggestions" })).toBeVisible();
+    const spellingOf = (i: number) => (calls[i]!.json as { options: { spelling?: string } }).options.spelling;
+    expect(spellingOf(0)).toBe("uk");
+
+    await page.getByLabel("Spelling", { exact: true }).selectOption("in");
+    await expect.poll(() => sb.settings?.spelling).toBe("in");
+    const upsert = sb.sent.find((r) => r.path === "/rest/v1/user_settings" && r.method === "POST");
+    expect(JSON.parse(upsert!.body)).toEqual({ spelling: "in" });
+    await expect.poll(() => calls.length).toBe(2);
+    expect(spellingOf(1)).toBe("in");
+  });
+
   test("401 unauthorized: refresh once, retry once with the new token", async ({ page }) => {
     await seedSession(page);
     const sb = await mockSupabase(page);
@@ -480,7 +501,7 @@ test.describe("settings page", () => {
     expect(sb.settings?.show_preferences).toBe(true);
 
     await page.getByTestId("locale-en-US").check();
-    await expect(page.getByTestId("settings-status")).toHaveText("Spelling set to American English.");
+    await expect(page.getByTestId("settings-status")).toHaveText("Grammar checks set to American English.");
     expect(sb.settings?.locale).toBe("en-US");
 
     // Limits are explained before anything is sent.

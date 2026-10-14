@@ -70,3 +70,10 @@ def test_is_prose_threshold():
     assert ctp.is_prose("we fitted a renewal model to daily counts".split())
     assert not ctp.is_prose("6 7 8 9 10 11 12 13".split())
     assert not ctp.is_prose("table 2 3 4 5 6 7 8".split())
+
+
+def test_the_prediction_attribution_list_is_not_scanned():
+    # authors and titles that theses also cite: bibliographic records
+    import check_third_party as ctp
+    assert ctp.SKIP_NAME_RX.match("predict_sources.tsv")
+    assert not ctp.SKIP_NAME_RX.match("predict.py")

@@ -4,6 +4,14 @@
       "AnalyzeFileResponse": {
         "additionalProperties": false,
         "properties": {
+          "assessed_rules": {
+            "description": "The rules whose findings this check could show (not muted, not off for the article type, not held back by Draft, not hidden preferences, not on a tier that is down). A rule outside this list was not assessed: not the same as zero.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Assessed Rules",
+            "type": "array"
+          },
           "checklist": {
             "anyOf": [
               {
@@ -84,6 +92,17 @@
             "$ref": "#/components/schemas/ProfileInfo",
             "description": "The article-type profile this check ran under."
           },
+          "reading": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReadingSummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What was read and what was set aside."
+          },
           "review": {
             "anyOf": [
               {
@@ -94,6 +113,18 @@
               }
             ],
             "description": "Present when `options.review` was true."
+          },
+          "ruleset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Engine version and a fingerprint of its rules; checks compare only under the same.",
+            "title": "Ruleset"
           },
           "schema_version": {
             "const": "1",
@@ -217,6 +248,17 @@
             "description": "Include Preference-type suggestions (hidden by default).",
             "title": "Show Preferences",
             "type": "boolean"
+          },
+          "spelling": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Spelling"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The English spelling to keep to. Omitted: the caller's saved setting, else auto."
           }
         },
         "title": "AnalyzeOptions",
@@ -250,6 +292,14 @@
       "AnalyzeResponse": {
         "additionalProperties": false,
         "properties": {
+          "assessed_rules": {
+            "description": "The rules whose findings this check could show (not muted, not off for the article type, not held back by Draft, not hidden preferences, not on a tier that is down). A rule outside this list was not assessed: not the same as zero.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Assessed Rules",
+            "type": "array"
+          },
           "checklist": {
             "anyOf": [
               {
@@ -327,6 +377,17 @@
             "$ref": "#/components/schemas/ProfileInfo",
             "description": "The article-type profile this check ran under."
           },
+          "reading": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReadingSummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What was read and what was set aside."
+          },
           "review": {
             "anyOf": [
               {
@@ -337,6 +398,18 @@
               }
             ],
             "description": "Present when `options.review` was true."
+          },
+          "ruleset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Engine version and a fingerprint of its rules; checks compare only under the same.",
+            "title": "Ruleset"
           },
           "schema_version": {
             "const": "1",
@@ -423,6 +496,14 @@
       "AnalyzeWordResponse": {
         "additionalProperties": false,
         "properties": {
+          "assessed_rules": {
+            "description": "The rules whose findings this check could show (not muted, not off for the article type, not held back by Draft, not hidden preferences, not on a tier that is down). A rule outside this list was not assessed: not the same as zero.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Assessed Rules",
+            "type": "array"
+          },
           "checklist": {
             "anyOf": [
               {
@@ -503,6 +584,17 @@
             "$ref": "#/components/schemas/ProfileInfo",
             "description": "The article-type profile this check ran under."
           },
+          "reading": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReadingSummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What was read and what was set aside."
+          },
           "review": {
             "anyOf": [
               {
@@ -513,6 +605,18 @@
               }
             ],
             "description": "Present when `options.review` was true."
+          },
+          "ruleset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Engine version and a fingerprint of its rules; checks compare only under the same.",
+            "title": "Ruleset"
           },
           "schema_version": {
             "const": "1",
@@ -638,12 +742,30 @@
                 "type": "null"
               }
             ],
-            "description": "The sentence that reports it (never logged).",
+            "description": "The sentence that may report it (never logged).",
             "title": "Evidence"
           },
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "not_counted": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NotCounted"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "parts": {
+            "description": "For a compound question, each part.",
+            "items": {
+              "$ref": "#/components/schemas/ChecklistPart"
+            },
+            "title": "Parts",
+            "type": "array"
           },
           "plain": {
             "title": "Plain",
@@ -652,6 +774,20 @@
           "question": {
             "title": "Question",
             "type": "string"
+          },
+          "refs": {
+            "description": "The guideline's own item numbers this question covers; empty = good practice the guideline does not list.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Refs",
+            "type": "array"
+          },
+          "section_absent": {
+            "default": false,
+            "description": "The document has sections, but none of those where readers look for this item.",
+            "title": "Section Absent",
+            "type": "boolean"
           },
           "sections": {
             "description": "Where readers look for it.",
@@ -662,9 +798,10 @@
             "type": "array"
           },
           "status": {
-            "description": "needs_check is a prompt, never a verdict: the item may be in a table, a figure or the supplement, or not apply.",
+            "description": "found: possible evidence for every part, for the writer to confirm (a matching sentence is not proof); partial: some parts found; needs_check: a prompt, never a verdict (the item may be in a table, a figure or the supplement, or not apply).",
             "enum": [
-              "reported",
+              "found",
+              "partial",
               "needs_check"
             ],
             "title": "Status",
@@ -685,6 +822,39 @@
         "title": "ChecklistItem",
         "type": "object"
       },
+      "ChecklistPart": {
+        "additionalProperties": false,
+        "description": "One thing a compound question asks for (Codex review N1).",
+        "properties": {
+          "evidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The sentence that may report it (never logged).",
+            "title": "Evidence"
+          },
+          "found": {
+            "title": "Found",
+            "type": "boolean"
+          },
+          "label": {
+            "description": "e.g. \"the date of the last search\".",
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "found"
+        ],
+        "title": "ChecklistPart",
+        "type": "object"
+      },
       "ChecklistReport": {
         "additionalProperties": false,
         "description": "A reporting checklist checked against the text: reporting only,\nnever the science.",
@@ -692,6 +862,17 @@
           "design": {
             "title": "Design",
             "type": "string"
+          },
+          "edition": {
+            "description": "The guideline version mapped, e.g. \"PRISMA 2020\".",
+            "title": "Edition",
+            "type": "string"
+          },
+          "found": {
+            "description": "Items with possible evidence for every part (to be confirmed by the writer).",
+            "minimum": 0.0,
+            "title": "Found",
+            "type": "integer"
           },
           "id": {
             "title": "Id",
@@ -712,9 +893,9 @@
             "title": "Note",
             "type": "string"
           },
-          "reported": {
+          "partial": {
             "minimum": 0.0,
-            "title": "Reported",
+            "title": "Partial",
             "type": "integer"
           },
           "source": {
@@ -735,15 +916,146 @@
         "required": [
           "id",
           "label",
+          "edition",
           "design",
           "source",
           "suggested",
           "items",
-          "reported",
+          "found",
+          "partial",
           "total",
           "note"
         ],
         "title": "ChecklistReport",
+        "type": "object"
+      },
+      "CompleteOptions": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "default": 3,
+            "description": "How many candidates to return at most.",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "spelling": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Spelling"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The English spelling to offer words in. Omitted: the caller's saved setting, else the spelling the text already uses."
+          }
+        },
+        "title": "CompleteOptions",
+        "type": "object"
+      },
+      "CompleteRequest": {
+        "additionalProperties": false,
+        "description": "Word prediction at a cursor (2026-10-14). Send the text around the\ncursor, not necessarily the whole document: a few thousand characters\nbefore it are plenty, plus the rest of its paragraph.",
+        "properties": {
+          "cursor": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Offset of the cursor in `text`, counted in Unicode code points (not UTF-16 units), like `start` and `end` in the reply. Omitted: the end of `text`.",
+            "title": "Cursor"
+          },
+          "format": {
+            "$ref": "#/components/schemas/Format",
+            "default": "plain",
+            "description": "How to read `text`."
+          },
+          "options": {
+            "$ref": "#/components/schemas/CompleteOptions"
+          },
+          "text": {
+            "description": "Text around the cursor. Held in memory for this request only; never stored or logged.",
+            "maxLength": 100000,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "CompleteRequest",
+        "type": "object"
+      },
+      "CompleteResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/CompletionCandidate"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "status": {
+            "default": "ok",
+            "description": "Why there are no candidates, when there are none: off (the writer turned prediction off), masked (the cursor is in maths, code, a citation, a URL or a heading), unavailable (no model).",
+            "enum": [
+              "ok",
+              "off",
+              "masked",
+              "unavailable"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "title": "CompleteResponse",
+        "type": "object"
+      },
+      "CompletionCandidate": {
+        "additionalProperties": false,
+        "properties": {
+          "end": {
+            "description": "The cursor.",
+            "minimum": 0.0,
+            "title": "End",
+            "type": "integer"
+          },
+          "kind": {
+            "description": "word: one word; term: a fixed term of two or three words (\"confidence interval\").",
+            "enum": [
+              "word",
+              "term"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "start": {
+            "description": "Where the typed part of the word begins.",
+            "minimum": 0.0,
+            "title": "Start",
+            "type": "integer"
+          },
+          "text": {
+            "description": "What to put in place of `text[start:end]` if the writer accepts.",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "start",
+          "end",
+          "kind"
+        ],
+        "title": "CompletionCandidate",
         "type": "object"
       },
       "Coverage": {
@@ -1182,9 +1494,10 @@
         "type": "string"
       },
       "MoveStatus": {
+        "description": "present / not_detected / out_of_order. \"not_detected\", not \"missing\":\nthe map reads wording, so it can only say a move was not found in it\n(Codex review N5, 2026-10-14).",
         "enum": [
           "present",
-          "missing",
+          "not_detected",
           "out_of_order"
         ],
         "title": "MoveStatus",
@@ -1378,6 +1691,39 @@
         "title": "NarrativeSection",
         "type": "object"
       },
+      "NotCounted": {
+        "additionalProperties": false,
+        "description": "A sentence the signals matched that was not counted as reporting.",
+        "properties": {
+          "label": {
+            "description": "The reason in plain words.",
+            "title": "Label",
+            "type": "string"
+          },
+          "quote": {
+            "description": "The sentence (never logged).",
+            "title": "Quote",
+            "type": "string"
+          },
+          "reason": {
+            "description": "absent: it says the thing is not reported; future: it promises it for later; prior: it is about earlier studies.",
+            "enum": [
+              "absent",
+              "future",
+              "prior"
+            ],
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason",
+          "label",
+          "quote"
+        ],
+        "title": "NotCounted",
+        "type": "object"
+      },
       "ProfileChoice": {
         "additionalProperties": false,
         "properties": {
@@ -1444,6 +1790,29 @@
           "guessed"
         ],
         "title": "ProfileInfo",
+        "type": "object"
+      },
+      "ReadingSummary": {
+        "additionalProperties": false,
+        "description": "What the checks read and what they set aside (2026-10-14): code,\nmaths, layout, paragraphs in another language. Counts only.",
+        "properties": {
+          "set_aside": {
+            "items": {
+              "$ref": "#/components/schemas/SetAside"
+            },
+            "title": "Set Aside",
+            "type": "array"
+          },
+          "words_checked": {
+            "minimum": 0.0,
+            "title": "Words Checked",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "words_checked"
+        ],
+        "title": "ReadingSummary",
         "type": "object"
       },
       "ReviewQuestion": {
@@ -1748,6 +2117,39 @@
         "title": "Segment",
         "type": "object"
       },
+      "SetAside": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "minimum": 0.0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "code",
+              "maths_or_code",
+              "layout",
+              "marked_up",
+              "other_language"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "description": "What it is, in plain words.",
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "count",
+          "label"
+        ],
+        "title": "SetAside",
+        "type": "object"
+      },
       "SourceFormat": {
         "description": "How an uploaded file was read.",
         "enum": [
@@ -1843,6 +2245,20 @@
         ],
         "title": "Span",
         "type": "object"
+      },
+      "Spelling": {
+        "description": "Which English spelling to keep to (2026-10-14). `auto` follows the\ndocument's own majority and flags only mixtures; a choice also flags\nspellings of other dialects (\"color\" in a British paper).",
+        "enum": [
+          "auto",
+          "us",
+          "uk",
+          "uk-oxford",
+          "ca",
+          "au",
+          "in"
+        ],
+        "title": "Spelling",
+        "type": "string"
       },
       "StructureItem": {
         "additionalProperties": false,
@@ -1966,6 +2382,17 @@
           "span": {
             "$ref": "#/components/schemas/Span"
           },
+          "table_evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TableEvidence"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "X401 only: the table cell the quoted number was compared with. Absent when the check fell back to the whole table."
+          },
           "text": {
             "description": "The flagged source text, content[start:end].",
             "title": "Text",
@@ -1998,6 +2425,86 @@
           "confidence"
         ],
         "title": "Suggestion",
+        "type": "object"
+      },
+      "TableEvidence": {
+        "additionalProperties": false,
+        "description": "The cell a sentence names by its row and column, and what it holds\n(X401, Codex review #7). Document text: never logged.",
+        "properties": {
+          "cell_end": {
+            "description": "End offset of the cell's text.",
+            "minimum": 0.0,
+            "title": "Cell End",
+            "type": "integer"
+          },
+          "cell_start": {
+            "description": "Offset of the cell's text in `content`, like Span.start.",
+            "minimum": 0.0,
+            "title": "Cell Start",
+            "type": "integer"
+          },
+          "cell_text": {
+            "description": "The cell as the table writes it.",
+            "title": "Cell Text",
+            "type": "string"
+          },
+          "column": {
+            "description": "0-based grid column of the cell.",
+            "minimum": 0.0,
+            "title": "Column",
+            "type": "integer"
+          },
+          "column_header": {
+            "description": "The column's header, without its unit.",
+            "title": "Column Header",
+            "type": "string"
+          },
+          "expected": {
+            "description": "The cell's value as the text would quote it, e.g. \"8.2%\".",
+            "title": "Expected",
+            "type": "string"
+          },
+          "quoted": {
+            "description": "The number the sentence quotes.",
+            "title": "Quoted",
+            "type": "string"
+          },
+          "rounding": {
+            "default": "",
+            "description": "The rounding allowed, e.g. \"rounded to 1 decimal place\"; \"\" for none.",
+            "title": "Rounding",
+            "type": "string"
+          },
+          "row": {
+            "description": "0-based row of the cell.",
+            "minimum": 0.0,
+            "title": "Row",
+            "type": "integer"
+          },
+          "row_header": {
+            "description": "The row's header, without its unit.",
+            "title": "Row Header",
+            "type": "string"
+          },
+          "table": {
+            "description": "The table as cited, e.g. \"Table 1\".",
+            "title": "Table",
+            "type": "string"
+          }
+        },
+        "required": [
+          "table",
+          "row",
+          "column",
+          "row_header",
+          "column_header",
+          "cell_start",
+          "cell_end",
+          "cell_text",
+          "expected",
+          "quoted"
+        ],
+        "title": "TableEvidence",
         "type": "object"
       },
       "TierHealth": {
@@ -2135,6 +2642,25 @@
         "additionalProperties": false,
         "description": "One paragraph as Office JS reports it (`body.paragraphs`).",
         "properties": {
+          "cell": {
+            "anyOf": [
+              {
+                "items": {
+                  "maximum": 100000.0,
+                  "minimum": 0.0,
+                  "type": "integer"
+                },
+                "maxItems": 4,
+                "minItems": 3,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where a table paragraph sits: [table, row, col] or [table, row, col, colspan], 0-based, col counted in grid columns. Optional; sent only when the client can place the cell reliably (WordApi 1.3, no merged cells). Lets X401 compare a quoted number with the row and column a sentence names. Ignored on body paragraphs.",
+            "title": "Cell"
+          },
           "kind": {
             "default": "body",
             "description": "table: a table cell's paragraph (not prose).",
@@ -2240,6 +2766,17 @@
           },
           "span": {
             "$ref": "#/components/schemas/Span"
+          },
+          "table_evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TableEvidence"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "X401 only: the table cell the quoted number was compared with. Absent when the check fell back to the whole table."
           },
           "text": {
             "description": "The flagged source text, content[start:end].",
@@ -2692,6 +3229,128 @@
         "summary": "Analyze Word",
         "tags": [
           "analysis"
+        ]
+      }
+    },
+    "/v1/complete": {
+      "post": {
+        "description": "Word prediction at a cursor: the end of the word being typed, or the\nnext word or short fixed term. Candidates only; nothing is inserted\nunless the writer accepts one. Nothing is offered in maths, code,\ncitations, URLs or headings, or when the writer has turned it off.",
+        "operationId": "complete",
+        "parameters": [
+          {
+            "description": "`Bearer <Supabase access token>` when signed in. Omit for anonymous use.",
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "`Bearer <Supabase access token>` when signed in. Omit for anonymous use.",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompleteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Malformed request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign-in invalid or expired (unauthorized), or this needs an account (sign_in_required)"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Document too large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request failed validation"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limited"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Engine error (no document text in the body)"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign-in could not be checked (auth_unavailable)"
+          }
+        },
+        "summary": "Complete",
+        "tags": [
+          "prediction"
         ]
       }
     },

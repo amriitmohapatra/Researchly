@@ -488,14 +488,28 @@ main:focus {
 .controls {
   display: flex;
   flex-wrap: wrap;
-  /* Labels line up across a row; a help line under one select (Check as) hangs below it instead of pushing its neighbours down. */
+  /* Labels line up across a row; a help line under a select (Check as, Spelling) hangs below it instead of pushing its neighbours down. */
   align-items: flex-start;
   gap: 14px 24px;
   margin-top: 16px;
 }
+/*
+ * The switches and the actions take their own row under the selects: a
+ * zero-height, full-width item between the two groups breaks the line, so a
+ * switch never floats beside a select's help line. They already follow the
+ * selects in the source, so the reading and tab order are unchanged.
+ */
+.controls::before {
+  content: "";
+  order: 1;
+  flex-basis: 100%;
+  height: 0;
+}
 .controls > .control-toggle,
+.controls > .prediction-control,
 .controls > .control-actions {
-  align-self: flex-end;
+  order: 2;
+  align-self: center;
 }
 
 .control {
@@ -1178,6 +1192,53 @@ main:focus {
 }
 .card-quote q {
   quotes: "\201C" "\201D";
+}
+
+/* X401: the table cell the sentence names, beside the number it quotes (Codex #7). */
+.card-table {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  font-size: 0.9375rem;
+}
+.card-table-place {
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.card-table-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  margin: 4px 0 0;
+}
+.card-table-values dt {
+  color: var(--ink-2);
+  font-size: 0.875rem;
+}
+.card-table-values dd {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.card-table-note {
+  margin-top: 4px;
+  color: var(--ink-2);
+  font-size: 0.875rem;
+}
+.card-table-show {
+  margin-top: 4px;
+  font-size: 0.875rem;
+}
+/* The cell itself, in the text: outlined rather than tinted, so it never reads as a second finding. */
+.hl.hl-cell {
+  background: transparent;
+  text-decoration-line: none;
+  outline: 2px dashed var(--line-strong);
+  outline-offset: 1px;
 }
 
 .card-repl {
@@ -2364,7 +2425,7 @@ main:focus {
 
 /* ---------- S4b: the narrative map ----------
  * The third view of a check. One strip per section: the expected moves in
- * order as small cells, each saying present, missing or out of order by
+ * order as small cells, each saying present, not detected or out of order by
  * the dot's shape (filled, hollow, half) and by the word, never by colour.
  * Under the strip the missing and out-of-order moves open to a question,
  * the lesson and a frame to fill in (serif, in a dashed box: a template,
@@ -2423,7 +2484,7 @@ main:focus {
   font-size: 0.875rem;
   line-height: 1.3;
 }
-.nmap-cell-missing {
+.nmap-cell-not-detected {
   border-style: dashed;
   color: var(--ink-2);
 }
@@ -2440,7 +2501,7 @@ main:focus {
   border: 1.5px solid var(--ink);
   background: var(--ink);
 }
-.nmap-cell-missing .nmap-dot {
+.nmap-cell-not-detected .nmap-dot {
   background: transparent;
   border-color: var(--line-strong);
 }
@@ -2813,7 +2874,7 @@ main:focus {
     border: 4pt solid #000;
     background: none;
   }
-  .print-narrative .nmap-cell-missing .nmap-dot {
+  .print-narrative .nmap-cell-not-detected .nmap-dot {
     border-width: 1pt;
   }
   .print-narrative .nmap-cell-out-of-order .nmap-dot {
@@ -3118,11 +3179,77 @@ main:focus {
   line-height: 1.6;
   text-wrap: pretty;
 }
-.checklist-na {
+/* The guideline's version and what the list is not; the tally in words (counts, never a score). */
+.checklist-edition {
+  margin-top: 2px;
+  font-size: 0.9375rem;
+  text-wrap: pretty;
+}
+.checklist-tally {
+  margin-top: 4px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-wrap: pretty;
+}
+/* The guideline's own item numbers, under the topic: small, quiet, the sans. */
+.checklist-refs {
+  margin-top: 1px;
+  font-size: 0.875rem;
+  color: var(--ink-2);
+}
+/* A compound question, part by part: the state in words, then the part; its sentence quoted under it. */
+.checklist-parts {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.checklist-part-line {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.checklist-part-state {
+  font-weight: 600;
+}
+.checklist-part[data-found="false"] .checklist-part-state {
+  font-style: italic;
+}
+.checklist-part .checklist-evidence {
+  margin-top: 4px;
+}
+/* What the engine set aside, and a section the document lacks: said quietly, after the evidence. */
+.checklist-absent,
+.checklist-aside {
+  margin-top: 6px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+}
+.checklist-aside q {
+  font-family: var(--serif);
+  font-size: 0.9375rem;
+  quotes: "\201C" "\201D";
+}
+/* The writer's two calls: toggle buttons that wrap, never a scrollbar. */
+.checklist-marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 16px;
   margin-top: 2px;
 }
-.checklist-na[aria-pressed="true"] {
-  text-decoration-style: dotted;
+/* Pressed is said by aria-pressed, and shown by a tick and weight, never by colour alone. */
+.checklist-mark[aria-pressed="true"] {
+  font-weight: 650;
+}
+.checklist-mark[aria-pressed="true"]::before {
+  content: "\2713\00a0";
+  content: "\2713\00a0" / "";
+  text-decoration: none;
 }
 .checklist-source {
   margin-top: 12px;
@@ -3192,8 +3319,20 @@ main:focus {
     font-size: 10pt;
   }
   .print-checklist .checklist-plain,
-  .print-checklist .checklist-question {
+  .print-checklist .checklist-question,
+  .print-checklist .checklist-part-line,
+  .print-checklist .checklist-edition,
+  .print-checklist .checklist-tally {
     font-size: 9.5pt;
+  }
+  .print-checklist .checklist-refs,
+  .print-checklist .checklist-absent,
+  .print-checklist .checklist-aside {
+    font-size: 8.5pt;
+    color: #444;
+  }
+  .print-checklist .checklist-aside q {
+    font-size: 9pt;
   }
 }
 
@@ -3419,6 +3558,19 @@ main:focus {
 .spark-hit:hover {
   fill: var(--surface-2);
 }
+.spark-gap {
+  fill: var(--surface);
+  stroke: var(--line-strong);
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+.spark-dot {
+  fill: var(--accent);
+  pointer-events: none;
+}
+.progress-compare {
+  margin: 4px 0 8px;
+}
 .spark-end {
   fill: var(--accent);
   stroke: var(--bg);
@@ -3554,6 +3706,18 @@ main:focus {
   width: 100%;
   min-width: 0;
 }
+
+/* ---- The English spelling to keep to (task #15): beside "Check as", in the
+   taskpane's Settings, and on the settings page ---- */
+.control-spelling .select {
+  min-width: 12rem;
+  max-width: 100%;
+}
+.tp-settings .control-spelling,
+.tp-settings .control-spelling .select {
+  width: 100%;
+  min-width: 0;
+}
 .wchecklist {
   max-width: var(--measure);
 }
@@ -3564,9 +3728,27 @@ main:focus {
   font-weight: 400;
   color: var(--ink-2);
 }
+.wchecklist-edition {
+  margin-top: 2px;
+  font-size: 0.875rem;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+.wchecklist-tally {
+  margin-top: 4px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-wrap: pretty;
+}
 .wchecklist-note {
   margin-top: 4px;
   text-wrap: pretty;
+}
+.wchecklist-refs {
+  margin-top: 1px;
+  font-size: 0.8125rem;
+  color: var(--ink-2);
 }
 .wchecklist-items {
   list-style: none;
@@ -3587,7 +3769,9 @@ main:focus {
   gap: 2px 12px;
 }
 .wchecklist-topic-name {
+  min-width: 0;
   font-weight: 650;
+  overflow-wrap: anywhere;
 }
 /* The status is a word; "needs your check" is a prompt, so it is set in italic, not in a colour. */
 .wchecklist-status {
@@ -3602,23 +3786,20 @@ main:focus {
   font-size: 0.9375rem;
   text-wrap: pretty;
 }
-.wchecklist-evidence {
-  margin-top: 6px;
-  padding-left: 12px;
-  border-left: 2px solid var(--line-strong);
-  font-family: var(--serif);
+/* The shared item detail (components/ChecklistParts.tsx), a step smaller in the narrow pane. */
+.wchecklist .checklist-evidence {
   font-size: 1rem;
-  color: var(--ink-2);
-  overflow-wrap: anywhere;
 }
-.wchecklist-evidence q {
-  quotes: "\201C" "\201D";
-}
-.wchecklist-plain {
+.wchecklist .checklist-plain {
   margin-top: 6px;
   font-size: 0.9375rem;
   color: var(--ink-2);
-  text-wrap: pretty;
+}
+.wchecklist .checklist-part-line {
+  font-size: 0.875rem;
+}
+.wchecklist .checklist-mark {
+  font-size: 0.875rem;
 }
 .wchecklist .card-source {
   margin-top: 10px;
@@ -3641,5 +3822,302 @@ main:focus {
   }
   .header-end .account-button {
     max-width: 27vw;
+  }
+}
+
+/* ---------- revision queue (review proposal 1) ---------- */
+
+/* "Work through": the ordinary list or one pass. 8px radius (pills are for the category chips). */
+.passes {
+  margin-top: 16px;
+}
+.passes-label {
+  margin-bottom: 4px;
+}
+.pass-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pass-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 4px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.pass-btn:hover {
+  background: var(--surface-2);
+}
+.pass-btn:active {
+  background: var(--line);
+}
+.pass-btn[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+.pass-count {
+  font-variant-numeric: tabular-nums;
+  min-width: 1.5em;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+}
+.pass-help {
+  margin-top: 6px;
+  max-width: var(--measure);
+}
+
+.queue {
+  display: grid;
+  gap: 12px;
+}
+.queue .col-title {
+  margin-bottom: 0;
+}
+.queue-nav,
+.queue-occurrences {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+}
+.queue-nav {
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+.queue-occurrences {
+  border: 1px dashed var(--line-strong);
+}
+.queue-pos {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.queue-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.queue-buttons .btn[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: default;
+}
+.queue-total {
+  margin-top: -4px;
+}
+.queue-occ-line,
+.queue-occ-pos,
+.queue-end {
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+}
+.queue-occ-pos {
+  font-variant-numeric: tabular-nums;
+}
+.queue-end {
+  max-width: var(--measure);
+}
+.queue-views {
+  margin-top: 0;
+}
+.queue-all summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  cursor: pointer;
+  font-weight: 600;
+  list-style: none;
+}
+.queue-all summary::-webkit-details-marker {
+  display: none;
+}
+/* The cards' disclosure marker: display:flex drops the native one, and a closed list must still read as one that opens. */
+.queue-all summary::before {
+  content: "";
+  width: 0;
+  height: 0;
+  border-left: 5px solid currentColor;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform 0.15s ease;
+}
+.queue-all[open] summary::before {
+  transform: rotate(90deg);
+}
+.queue-all summary:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.queue-list {
+  display: grid;
+  gap: 2px;
+  margin: 8px 0 0;
+  padding-left: 1.5em;
+}
+.queue-pick {
+  display: inline;
+  min-height: 0;
+  padding: 4px 0;
+  text-align: left;
+  font-weight: 500;
+}
+.queue-pick[aria-current] {
+  font-weight: 700;
+}
+.queue-times {
+  font-size: 0.875rem;
+}
+
+/* The Word pane: one narrow column, the four choices as a 2 by 2 grid. */
+.queue-compact .queue-nav,
+.queue-compact .queue-occurrences {
+  padding: 8px 10px;
+}
+.tp-passes .pass-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.tp-passes .pass-btn {
+  justify-content: space-between;
+  text-align: left;
+}
+
+/* ---------- long checks (review proposal 8) ---------- */
+
+.check-progress {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--info-line);
+  border-radius: var(--radius);
+  background: var(--info-bg);
+}
+.check-progress .spinner {
+  flex: none;
+  margin-top: 4px;
+}
+.check-progress-status {
+  font-weight: 600;
+  max-width: var(--measure);
+}
+.check-progress-time {
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+/* Results from the previous check while a newer one runs, failed or was cancelled: said in words, a dashed rule beside. */
+.previous-note {
+  margin-top: 8px;
+  padding: 6px 12px;
+  border-left: 3px dashed var(--line-strong);
+  color: var(--ink);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  max-width: var(--measure);
+}
+.cancel-note {
+  margin-top: 16px;
+}
+
+/* ---------- word prediction (2026-10-14) ---------- */
+
+/* A quiet strip under the editor: the candidates, then how to take one. Space is held so the text never jumps. */
+.prediction-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  min-height: 36px;
+  margin-top: 6px;
+  font-size: 0.9375rem;
+}
+.prediction-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.prediction-option {
+  min-height: 32px;
+  padding: 2px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--serif); /* the writer's words */
+  font-size: 1rem;
+  cursor: pointer;
+}
+.prediction-option.is-first {
+  border-color: var(--line-strong);
+}
+.prediction-option:hover,
+.prediction-option:active {
+  border-color: var(--accent);
+}
+.prediction-option:active {
+  background: var(--surface-2);
+}
+.prediction-hint {
+  color: var(--ink-2);
+  font-size: 0.85rem;
+}
+.prediction-control {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The Word pane's "Next words" panel. */
+.tp-next {
+  padding: 10px 12px;
+}
+.tp-next-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.tp-next-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.tp-next .prediction-options {
+  margin-top: 6px;
+}
+.tp-next-note {
+  margin-top: 4px;
+  font-size: 0.875rem;
+  color: var(--ink-2);
+}
+
+/* What was read and what was set aside: one quiet line under the heading. */
+.reading-line {
+  margin-top: 4px;
+  font-size: 0.9rem;
+  max-width: var(--measure);
+  text-wrap: pretty;
+}
+
+@media print {
+  .prediction-strip {
+    display: none;
   }
 }

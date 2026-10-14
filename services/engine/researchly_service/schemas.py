@@ -13,9 +13,10 @@ inside pydantic field annotations evaluated at runtime.
 from __future__ import annotations
 
 from enum import Enum
-from typing import Dict, List, Literal, Optional
+from typing import Annotated, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import (BaseModel, ConfigDict, Field, StrictInt,
+                      model_validator)
 
 SCHEMA_VERSION = "1"
 
@@ -55,6 +56,19 @@ class DocumentType(str, Enum):
     policy_brief = "policy-brief"
     grant = "grant"
     response_to_reviewers = "response-to-reviewers"
+
+
+class Spelling(str, Enum):
+    """Which English spelling to keep to (2026-10-14). `auto` follows the
+    document's own majority and flags only mixtures; a choice also flags
+    spellings of other dialects ("color" in a British paper)."""
+    auto = "auto"
+    us = "us"
+    uk = "uk"
+    uk_oxford = "uk-oxford"
+    ca = "ca"
+    au = "au"
+    in_ = "in"      # Indian English: spelled as British English
 
 
 class ChecklistChoice(str, Enum):
@@ -107,6 +121,9 @@ class AnalyzeOptions(_Strict):
     document_type: Optional[DocumentType] = Field(
         None, description="The article type to check as. Omitted: the "
                           "caller's saved setting, else auto.")
+    spelling: Optional[Spelling] = Field(
+        None, description="The English spelling to keep to. Omitted: the "
+                          "caller's saved setting, else auto.")
     review: bool = Field(
         False, description="Also build the critical reader's brief "
                            "(`review` in the response) from the same analysis.")
@@ -127,7 +144,61 @@ class AnalyzeRequest(_Strict):
     options: AnalyzeOptions = Field(default_factory=AnalyzeOptions)
 
 
+MAX_COMPLETE_CHARS = 100_000
+
+
+class CompleteOptions(_Strict):
+    spelling: Optional[Spelling] = Field(
+        None, description="The English spelling to offer words in. Omitted: "
+                          "the caller's saved setting, else the spelling the "
+                          "text already uses.")
+    limit: int = Field(3, ge=1, le=5,
+                       description="How many candidates to return at most.")
+
+
+class CompleteRequest(_Strict):
+    """Word prediction at a cursor (2026-10-14). Send the text around the
+    cursor, not necessarily the whole document: a few thousand characters
+    before it are plenty, plus the rest of its paragraph."""
+    format: Format = Field(Format.plain, description="How to read `text`.")
+    text: str = Field(..., max_length=MAX_COMPLETE_CHARS,
+                      description="Text around the cursor. Held in memory for "
+                                  "this request only; never stored or logged.")
+    cursor: Optional[int] = Field(
+        None, ge=0, description="Offset of the cursor in `text`, counted in "
+                                "Unicode code points (not UTF-16 units), like "
+                                "`start` and `end` in the reply. Omitted: the "
+                                "end of `text`.")
+    options: CompleteOptions = Field(default_factory=CompleteOptions)
+
+
+class CompletionCandidate(_Strict):
+    text: str = Field(..., description="What to put in place of "
+                                       "`text[start:end]` if the writer accepts.")
+    start: int = Field(..., ge=0, description="Where the typed part of the "
+                                              "word begins.")
+    end: int = Field(..., ge=0, description="The cursor.")
+    kind: Literal["word", "term"] = Field(
+        ..., description="word: one word; term: a fixed term of two or "
+                         "three words (\"confidence interval\").")
+
+
+class CompleteResponse(_Strict):
+    candidates: List[CompletionCandidate] = Field(default_factory=list)
+    status: Literal["ok", "off", "masked", "unavailable"] = Field(
+        "ok", description="Why there are no candidates, when there are none: "
+                          "off (the writer turned prediction off), masked "
+                          "(the cursor is in maths, code, a citation, a URL "
+                          "or a heading), unavailable (no model).")
+
+
 MAX_WORD_PARAGRAPHS = 50_000
+
+
+# A table, row or column number in a cell place (Document.table_cells);
+# the same bound as researchly.document.MAX_CELL_INDEX (a test pins it).
+MAX_CELL_INDEX = 100_000
+CellIndex = Annotated[StrictInt, Field(ge=0, le=MAX_CELL_INDEX)]
 
 
 class WordParagraph(_Strict):
@@ -137,6 +208,20 @@ class WordParagraph(_Strict):
                        "e.g. \"Heading 1\", \"Caption\", \"Normal\".")
     kind: Literal["body", "table"] = Field(
         "body", description="table: a table cell's paragraph (not prose).")
+    cell: Optional[List[CellIndex]] = Field(
+        None, min_length=3, max_length=4,
+        description="Where a table paragraph sits: [table, row, col] or "
+                    "[table, row, col, colspan], 0-based, col counted in "
+                    "grid columns. Optional; sent only when the client can "
+                    "place the cell reliably (WordApi 1.3, no merged cells). "
+                    "Lets X401 compare a quoted number with the row and "
+                    "column a sentence names. Ignored on body paragraphs.")
+
+    @model_validator(mode="after")
+    def _colspan(self) -> "WordParagraph":
+        if self.cell is not None and len(self.cell) == 4 and self.cell[3] < 1:
+            raise ValueError("a cell's colspan is at least 1")
+        return self
 
 
 class AnalyzeWordRequest(_Strict):
@@ -165,6 +250,25 @@ class Span(_Strict):
     col: int = Field(..., ge=0, description="1-based column of `start`; 0 if unknown.")
 
 
+class TableEvidence(_Strict):
+    """The cell a sentence names by its row and column, and what it holds
+    (X401, Codex review #7). Document text: never logged."""
+    table: str = Field(..., description='The table as cited, e.g. "Table 1".')
+    row: int = Field(..., ge=0, description="0-based row of the cell.")
+    column: int = Field(..., ge=0, description="0-based grid column of the cell.")
+    row_header: str = Field(..., description="The row's header, without its unit.")
+    column_header: str = Field(..., description="The column's header, without its unit.")
+    cell_start: int = Field(..., ge=0, description="Offset of the cell's text in "
+                                                   "`content`, like Span.start.")
+    cell_end: int = Field(..., ge=0, description="End offset of the cell's text.")
+    cell_text: str = Field(..., description="The cell as the table writes it.")
+    expected: str = Field(..., description='The cell\'s value as the text would '
+                                           'quote it, e.g. "8.2%".')
+    quoted: str = Field(..., description="The number the sentence quotes.")
+    rounding: str = Field("", description='The rounding allowed, e.g. "rounded '
+                                          'to 1 decimal place"; "" for none.')
+
+
 class Suggestion(_Strict):
     id: str = Field(..., description="Stable fingerprint of (rule_id, start, end, text); "
                                      "used by /v1/feedback in S2.")
@@ -187,6 +291,10 @@ class Suggestion(_Strict):
                           "≤40-char learned edit. Never generated prose.")
     fix_safety: FixSafety
     confidence: float = Field(..., ge=0.0, le=1.0)
+    table_evidence: Optional[TableEvidence] = Field(
+        None, description="X401 only: the table cell the quoted number was "
+                          "compared with. Absent when the check fell back to "
+                          "the whole table.")
 
 
 class Metrics(_Strict):
@@ -255,8 +363,11 @@ class ReviewQuestion(_Strict):
 
 
 class MoveStatus(str, Enum):
+    """present / not_detected / out_of_order. "not_detected", not "missing":
+    the map reads wording, so it can only say a move was not found in it
+    (Codex review N5, 2026-10-14)."""
     present = "present"
-    missing = "missing"
+    not_detected = "not_detected"
     out_of_order = "out_of_order"
 
 
@@ -328,6 +439,23 @@ class NarrativeMap(_Strict):
     source: str
 
 
+class ChecklistPart(_Strict):
+    """One thing a compound question asks for (Codex review N1)."""
+    label: str = Field(..., description='e.g. "the date of the last search".')
+    found: bool
+    evidence: Optional[str] = Field(None, description="The sentence that may "
+                                    "report it (never logged).")
+
+
+class NotCounted(_Strict):
+    """A sentence the signals matched that was not counted as reporting."""
+    reason: Literal["absent", "future", "prior"] = Field(
+        ..., description="absent: it says the thing is not reported; future: "
+        "it promises it for later; prior: it is about earlier studies.")
+    label: str = Field(..., description="The reason in plain words.")
+    quote: str = Field(..., description="The sentence (never logged).")
+
+
 class ChecklistItem(_Strict):
     id: str
     topic: str
@@ -335,11 +463,23 @@ class ChecklistItem(_Strict):
     plain: str
     sections: List[str] = Field(default_factory=list,
                                 description="Where readers look for it.")
-    status: Literal["reported", "needs_check"] = Field(
-        ..., description="needs_check is a prompt, never a verdict: the item "
-        "may be in a table, a figure or the supplement, or not apply.")
+    refs: List[str] = Field(default_factory=list, description="The "
+                            "guideline's own item numbers this question "
+                            "covers; empty = good practice the guideline "
+                            "does not list.")
+    status: Literal["found", "partial", "needs_check"] = Field(
+        ..., description="found: possible evidence for every part, for the "
+        "writer to confirm (a matching sentence is not proof); partial: "
+        "some parts found; needs_check: a prompt, never a verdict (the item "
+        "may be in a table, a figure or the supplement, or not apply).")
     evidence: Optional[str] = Field(None, description="The sentence that "
-                                    "reports it (never logged).")
+                                    "may report it (never logged).")
+    parts: List[ChecklistPart] = Field(default_factory=list, description=
+                                       "For a compound question, each part.")
+    not_counted: Optional[NotCounted] = None
+    section_absent: bool = Field(False, description="The document has "
+                                 "sections, but none of those where readers "
+                                 "look for this item.")
 
 
 class ChecklistReport(_Strict):
@@ -347,12 +487,16 @@ class ChecklistReport(_Strict):
     never the science."""
     id: str
     label: str
+    edition: str = Field(..., description='The guideline version mapped, '
+                         'e.g. "PRISMA 2020".')
     design: str
     source: str
     suggested: bool = Field(..., description="True when the text's own words "
                             "point to this checklist.")
     items: List[ChecklistItem]
-    reported: int = Field(..., ge=0)
+    found: int = Field(..., ge=0, description="Items with possible evidence "
+                       "for every part (to be confirmed by the writer).")
+    partial: int = Field(..., ge=0)
     total: int = Field(..., ge=0)
     note: str
 
@@ -402,6 +546,20 @@ class ReviewReport(_Strict):
                             "does not establish scientific validity.")
 
 
+class SetAside(_Strict):
+    kind: Literal["code", "maths_or_code", "layout", "marked_up",
+                  "other_language"]
+    count: int = Field(..., ge=0)
+    label: str = Field(..., description="What it is, in plain words.")
+
+
+class ReadingSummary(_Strict):
+    """What the checks read and what they set aside (2026-10-14): code,
+    maths, layout, paragraphs in another language. Counts only."""
+    words_checked: int = Field(..., ge=0)
+    set_aside: List[SetAside] = Field(default_factory=list)
+
+
 class AnalyzeResponse(_Strict):
     schema_version: Literal["1"] = SCHEMA_VERSION
     mode: Mode = Field(Mode.revise, description="The mode this check ran in.")
@@ -432,6 +590,16 @@ class AnalyzeResponse(_Strict):
                                      "degraded tier (CLAUDE.md: no silent tiers).")
     engine: EngineInfo
     elapsed_ms: int = Field(..., ge=0)
+    assessed_rules: List[str] = Field(
+        default_factory=list, description="The rules whose findings this "
+        "check could show (not muted, not off for the article type, not held "
+        "back by Draft, not hidden preferences, not on a tier that is down). "
+        "A rule outside this list was not assessed: not the same as zero.")
+    ruleset: Optional[str] = Field(None, description="Engine version and a "
+                                   "fingerprint of its rules; checks compare "
+                                   "only under the same.")
+    reading: Optional[ReadingSummary] = Field(
+        None, description="What was read and what was set aside.")
     warnings: List[str] = Field(
         default_factory=list,
         description="What was skipped or approximated while reading the text, "

@@ -1,7 +1,6 @@
 """Tests for the W0 engine changes: suggestion enrichment, overlap
 resolution between correction tiers, and the safe-fix declaration."""
 
-import pytest
 import spacy
 
 from researchly import engine as engine_mod
@@ -143,9 +142,12 @@ def test_correction_tiers_are_declared_on_the_commodity_rules():
     # abstaining scaffold until a local model ships, but its tier claim is
     # real (test_gec.py pins the abstention + offset-safety contract)
     assert REGISTRY["GEC001"].tier == engine_mod.TIER_GEC
+    # S002 (2026-10-14): real-word confusions judged on SymSpell's bigram
+    # counts, so it lives and dies with the spelling tier
+    assert REGISTRY["S002"].tier == engine_mod.TIER_SPELLING
     # everything else is craft or lens, never a correction tier
     for rid, r in REGISTRY.items():
-        if rid not in ("S001", "LT001", "GEC001"):
+        if rid not in ("S001", "S002", "LT001", "GEC001"):
             assert r.tier not in engine_mod.CORRECTION_TIER_PRIORITY, \
                 f"{rid} claims a correction tier it does not implement"
 

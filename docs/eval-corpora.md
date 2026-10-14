@@ -84,10 +84,10 @@ regression set W3 needs (articles, agreement, prepositions, tense).
 
 | Corpus | Why | Licence |
 |---|---|---|
-| **JFLEG** (`jhu-clsp/jfleg` on HF, or `keisks/jfleg`) | 1,511 sentences × 4 fluency rewrites — tests whether we over-edit | HF card says **CC BY-NC-SA 4.0**; the GitHub repo declares **no licence** |
+| **JFLEG** (`jhu-clsp/jfleg` on HF, or `keisks/jfleg`) | 1,511 sentences × 4 fluency rewrites — tests whether we over-edit | **CC BY-NC-SA 4.0** (HF card and the GitHub README's License section; corrected 2026-10-14 from "no licence", per the 2026-10-03 registry audit) |
 | **CoNLL-2014 test** | the classic 1,312-sentence benchmark; comparability with published GEC numbers | research use |
 | **GMEG** (`grammarly/GMEG`) | Grammarly's *own* multi-domain benchmark — formal native, informal native, learner; 4 references each | **no licence declared** |
-| **CWEB** (`SimonHFL/CWEB`) | 13,574 web sentences; low error density, so it is a false-positive test by design | **no licence declared** |
+| **CWEB** (`SimonHFL/CWEB`) | 13,574 web sentences; low error density, so it is a false-positive test by design | **CC BY-NC-SA 4.0** (README's License section; corrected 2026-10-14) |
 | **PMC Open Access** | vast published biomedical prose — the domain FP oracle. Split into commercial-use-allowed (CC0/BY/BY-SA/BY-ND) and NC groups; take the CC-BY bulk packages | per-article, machine-readable |
 | **arXiv** | metadata **CC0**; full text is *not* generally redistributable — most submissions use arXiv's default licence | mixed — read carefully |
 

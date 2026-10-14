@@ -108,7 +108,7 @@ The corpus-based anatomy of gap statements:
 - "Move 2 is the hinge… builds up a demand for the current contribution" →
   D902's explanation text.
 
-## 6. Pallas 2022, *Doctoral Student Skills* (`Doctoral Student Skills….pdf`; ch. 7 duplicated as `Writing conference abstract.pdf`)
+## 6. Pallas 2023, *Doctoral Student Skills* (`Doctoral Student Skills….pdf`; ch. 7 duplicated as `Writing conference abstract.pdf`)
 
 - **The 6-part abstract structure + fill-in sentence frames** → AB801's
   rationale + the planned abstract lens; the frames belong in a future
@@ -176,6 +176,10 @@ Named in `researchly/sources.py`; cited by name only, never quoted.
 | ICMJE Recommendations (tables and figures) | Number figures and tables consecutively in the order the text first cites them; cite each one | **X101–X104** |
 | BIPM, SI Brochure (9th ed.) | A space separates a number from its unit | **N101** (as consistency, not prescription) |
 | AMA Manual of Style (11th ed.) | Do not begin a sentence with a numeral | **N102** |
+| Swan, *Practical English Usage* (4th ed., 2016) | Uncountable nouns take no plural; count them with a unit noun | **W212** (2026-10-14) |
+| Mays, Damerau & Mercer (1991), *Context based spelling correction* | A real word can be a misspelling of another; the surrounding words decide | **S002** (2026-10-14) |
+| NLM SPECIALIST Lexicon, release 2026 (SPECIALIST NLP Tools; U.S. Government product, redistributed with its conditions) | Biomedical English is ordinary vocabulary in a paper, not a spelling error | S001's word check (P41, 2026-10-14) |
+| Atkinson, VarCon (data, MIT-like + Ispell BSD notices) | One spelling per document; which spellings belong to which English | **W210, W213**, S001's variant acceptance (2026-10-14) |
 | Guide §9.1 (owner's) | Define a term once, at first use, then use it consistently | **F612, F613, W211** (Endo's "different terms = different things" corroborates W211) |
 | Guide §9.2 | Introduce, display, interpret every equation; an equation is a clause of its sentence | **X301**, **X302** (the owner's professor made the same correction, 2026-10-08) |
 | Guide §9.7 | A caption states the figure's point and lets it be read unaided | **X202** (Endo's figure self-sufficiency corroborates) |
@@ -212,6 +216,31 @@ Order is judged in the abstract and the introduction only. The argument's missin
 | EPIFORGE | epidemic forecasts and projections | 15 | Pollett et al. (2021), EPIFORGE 2020 |
 
 Each item is paraphrased in Researchly's words, with the section it belongs in and a cue the engine looks for. An item is reported as "reported" (with the sentence that matched) or "needs your check". It is never reported as missing, because a cue cannot prove absence. The pack checks reporting, never the science (P3). The guideline texts are not reproduced; each item cites its statement by name.
+
+## 13. Thesis workshop: the gap as an argument (2026-10-14)
+
+**Source.** Slides of a thesis-writing workshop given to the owner: *Earn the Right to Ask: Earning your Gap*, Session 2 of the series *Writing the Thesis with AI in the Room* (`Notes_On_Writing/Session 2 - Earn the Right to Ask.pdf`, 35 pages; registry id `nw-workshop-s2-gap`). The slides say their frameworks (the three tests, the four cracks, the five jobs, the key noun, return addresses and the "could say / can now say / still cannot say" triad) are the presenters' own, and that every example is a teaching fiction that should not be cited. Users see the source as **Amriit's learnings** (code `workshop-S2`, like the lecture and the course, §9b); the published works the slides stand on are cited by name.
+
+**What was taken, paraphrased.**
+
+- *An absence is not a gap; a gap is an argument.* Three tests turn an absence into a gap: the consequence (what fails while the question stays open: the stake), adjudication (could evidence settle it) and inheritance (who takes up the answer). Gaps come from four cracks: tension (credible work disagrees), absence, limit (true in one setting, untested in another: name the mechanism that changes, not the place) and assumption (agreed but untested); the crack chooses the design.
+- *Carry the gap.* One key noun is carried by every chapter; when it changes, the claim has drifted. The gap does a different job per chapter: announce and stake it (introduction), build the case by saying where each body of work stops (review), make it answerable by naming what earlier designs could not see and what this one still cannot (methods), rule on it, closed, narrowed, reframed or reopened, rather than "fills the gap" (discussion), and account for it and hand it on: what the field could say, can now say and still cannot say (conclusion).
+- The slides list weak versions they call typical of generated drafts: "remains underexplored", "further research is needed", "has largely overlooked", "well suited to exploring", "fills the gap … contributes to a deeper understanding", "future research could explore …".
+- *Link the review.* Every review section has a return address in a later chapter. An orphan is a review section nothing later uses; a stranger is a source that drives the discussion but never appeared in the review.
+
+**Published works cited by name** (`researchly/sources.py`): Alvesson & Sandberg (2011), *Generating research questions through problematization*, Academy of Management Review 36(2):247–271 (`Alvesson2011`); Sandberg & Alvesson (2011), *Ways of constructing research questions: gap-spotting or problematization?*, Organization 18(1):23–44 (`Sandberg2011`); Bunton (2005), *The structure of PhD conclusion chapters*, Journal of English for Academic Purposes 4(3):207–224 (`Bunton2005`); Kwan (2006), *The schematic structure of literature reviews in doctoral theses of applied linguistics*, English for Specific Purposes 25(1):30–55 (`Kwan2006`); Lim (2006), *Method sections of management research articles*, English for Specific Purposes 25(3):282–309 (`Lim2006`); Swales (1990) was already a source.
+
+| Idea | Where it lives | Source codes |
+|---|---|---|
+| The consequence test: a bare absence in the Introduction with no stake in it or the sentences around it | **D903 gap-without-stake** (Improvement, Introduction only, aggregated; off where no gap is expected; an unsoftened "has not been studied" stays E705's card) | `workshop-S2+Sandberg2011+Alvesson2011` |
+| Rule on the gap, don't fill it | **D904 fills-the-gap** (Improvement, Discussion and Conclusion; a partial or negated claim, an aim, "closes the gap" and literal gaps are left alone) | `workshop-S2` |
+| Account and hand on, not "further research is needed" | **D905 generic-future-research** (Improvement, Discussion, Limitations and Conclusion; fires only when nothing in the sentence names what is open) | `workshop-S2+Bunton2005` |
+| Strangers | the narrative map's link `stranger_sources` (Discussion) and a point in the brief's question D: sources cited in two or more sentences of the Discussion and nowhere before it; shown, never flagged; abstains without a review section or with fewer than three readable citations in it (`researchly/discourse/citations.py`) | `workshop-S2+Kwan2006` |
+| Make it answerable: what the design cannot show | the narrative map's Methods move `design_limit`, thesis chapters only | `workshop-S2+Lim2006` |
+| The triad: what is still open | the narrative map's Conclusion move `still_open`, thesis chapters only | `workshop-S2+Bunton2005` |
+| Lessons | Learn cards **gap-stake** ("Say what the gap costs") and **carry-the-gap** ("Carry the gap to the end"), with examples written for Researchly | as above |
+
+**Not built, and why.** The key-noun thread (one noun per chapter, drift when it changes): the slides' own key nouns include verbs ("decide"), so picking the noun needs judgement a parse cannot supply; recorded in PLAN as research-grade. Orphan review sections: a section's return address is an idea, not a citation, so citation overlap would call a used section an orphan. The four cracks and the three tests beyond the consequence test (adjudication, inheritance), "the gap picks the method", inherited methods and wrong measures: they judge the science, not the wording. A ruling move on the Discussion map (closed / narrowed / reframed / reopened): the words for a verdict are too varied to detect, so most discussions would show it as missing; D904 catches the anti-pattern instead. "Taken together" as buried tension and "well suited to exploring" in Methods: common and usually innocent, so they would cost precision. "Contributes to a deeper understanding": a vague-contribution phrase better handled as an extension of E701's empty phrases after a corpus check. Thread versus tape (the same sentence pasted into every chapter) is deterministic and could be built later.
 
 ## Shipped this phase (v0.4)
 

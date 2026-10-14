@@ -5,6 +5,15 @@
  * A label holds the paragraph number, the rule id, the category, the
  * section and the verdict. Never the paragraph, never the flagged words:
  * the Python reader refuses a label with any other field.
+ *
+ * Attempts (Codex review N3, 2026-10-14): each check of a paragraph is an
+ * attempt with an opaque random id (never derived from the text), and each
+ * label names its attempt and its flag's position in that check. A changed
+ * verdict replaces the label with the same attempt and flag; checking the
+ * paragraph again replaces every label an earlier attempt gave it (the page
+ * says so before the check); a failed or cancelled check changes nothing.
+ * So a reload, a recheck after an edit, or two flags of one rule can never
+ * leave duplicates or orphans for the evaluator.
  */
 import type { Category } from "@researchly/contract";
 
@@ -31,15 +40,30 @@ export interface Label {
   category: Category | string;
   section: string;
   verdict: Verdict;
+  /** The check (attempt) the flag came from: an opaque random id. */
+  attempt?: string;
+  /** The flag's position among that check's flags (0-based). */
+  flag?: number;
 }
 
-/** What the page keeps between reloads: the paragraph being labelled and the labels so far. */
+/** What the page keeps between reloads: the paragraph being labelled, its current attempt and the labels so far. */
 export interface LabelSession {
   paragraph: number;
   labels: Label[];
+  /** The check of this paragraph whose flags are on screen; null before the first, and after a reload (the text is gone). */
+  attempt?: string | null;
 }
 
-export const EMPTY_SESSION: LabelSession = { paragraph: 1, labels: [] };
+export const EMPTY_SESSION: LabelSession = { paragraph: 1, labels: [], attempt: null };
+
+const ATTEMPT = /^[a-z0-9]{6,16}$/;
+
+/** An opaque attempt id: random, never derived from the paragraph. */
+export function newAttemptId(random: () => number = Math.random): string {
+  let id = "";
+  for (let i = 0; i < 10; i++) id += "abcdefghijklmnopqrstuvwxyz0123456789"[Math.floor(random() * 36)];
+  return id;
+}
 
 export function isVerdict(v: unknown): v is Verdict {
   return typeof v === "string" && (VERDICTS as readonly string[]).includes(v);
@@ -59,7 +83,12 @@ function toLabel(x: unknown): Label | null {
   if (typeof o.paragraph !== "number" || !Number.isInteger(o.paragraph) || o.paragraph < 1) return null;
   const category = typeof o.category === "string" && SHORT.test(o.category) ? o.category : "unknown";
   const section = typeof o.section === "string" && SHORT.test(o.section) ? o.section : "unknown";
-  return { paragraph: o.paragraph, rule_id: o.rule_id, category, section, verdict: o.verdict };
+  const label: Label = { paragraph: o.paragraph, rule_id: o.rule_id, category, section, verdict: o.verdict };
+  if (typeof o.attempt === "string" && ATTEMPT.test(o.attempt) && typeof o.flag === "number" && Number.isInteger(o.flag) && o.flag >= 0) {
+    label.attempt = o.attempt;
+    label.flag = o.flag;
+  }
+  return label;
 }
 
 /** A stored session, or the empty one when the store is missing, from an older page or tampered with. */
@@ -69,7 +98,9 @@ export function normaliseSession(raw: unknown): LabelSession {
   const labels = Array.isArray(o.labels) ? o.labels.map(toLabel).filter((l): l is Label => l !== null) : [];
   const last = labels.reduce((m, l) => Math.max(m, l.paragraph), 0);
   const p = typeof o.paragraph === "number" && Number.isInteger(o.paragraph) && o.paragraph >= 1 ? o.paragraph : 1;
-  return { paragraph: Math.max(p, last), labels };
+  // After a reload the paragraph's text is gone, so its flags cannot be shown
+  // again: the attempt is closed, and the next check of it replaces its labels.
+  return { paragraph: Math.max(p, last), labels, attempt: null };
 }
 
 /** How many paragraphs have at least one label. */
@@ -85,33 +116,67 @@ export function progressLine(s: LabelSession): string {
 }
 
 /**
- * Give the flag at `slot` in this paragraph a verdict. `slots` maps a card
- * (by its suggestion id) to its label's index, so changing one's mind
- * replaces the label instead of adding a second.
+ * Labels the current paragraph already has from earlier checks (another
+ * attempt, or one before a reload): checking it again replaces them.
+ */
+export function labelsToReplace(s: LabelSession): number {
+  return s.labels.filter((l) => l.paragraph === s.paragraph && (!l.attempt || l.attempt !== s.attempt)).length;
+}
+
+/**
+ * A check of the current paragraph succeeded: it becomes the attempt on
+ * screen, and every label the paragraph had from other attempts goes.
+ */
+export function startAttempt(s: LabelSession, attempt: string): LabelSession {
+  return {
+    ...s,
+    attempt,
+    labels: s.labels.filter((l) => l.paragraph !== s.paragraph || l.attempt === attempt),
+  };
+}
+
+/**
+ * Give flag number `flag` of the attempt on screen a verdict: a changed mind
+ * replaces the label with the same attempt and flag, never adds a second.
+ * Nothing happens without an attempt on screen.
  */
 export function setVerdict(
   s: LabelSession,
-  slots: Readonly<Record<string, number>>,
-  card: { id: string; rule_id: string; category: string },
+  card: { flag: number; rule_id: string; category: string },
   section: string,
   verdict: Verdict,
-): { session: LabelSession; slots: Record<string, number> } {
-  const label: Label = { paragraph: s.paragraph, rule_id: card.rule_id, category: card.category, section, verdict };
-  const at = slots[card.id];
-  if (at !== undefined && s.labels[at]?.paragraph === s.paragraph) {
+): LabelSession {
+  if (!s.attempt) return s;
+  const label: Label = {
+    paragraph: s.paragraph,
+    rule_id: card.rule_id,
+    category: card.category,
+    section,
+    verdict,
+    attempt: s.attempt,
+    flag: card.flag,
+  };
+  const at = s.labels.findIndex((l) => l.paragraph === s.paragraph && l.attempt === s.attempt && l.flag === card.flag);
+  if (at >= 0) {
     const labels = [...s.labels];
     labels[at] = label;
-    return { session: { ...s, labels }, slots: { ...slots } };
+    return { ...s, labels };
   }
-  return { session: { ...s, labels: [...s.labels, label] }, slots: { ...slots, [card.id]: s.labels.length } };
+  return { ...s, labels: [...s.labels, label] };
+}
+
+/** The verdict flag number `flag` of the attempt on screen holds, if any. */
+export function verdictOf(s: LabelSession, flag: number): Verdict | null {
+  if (!s.attempt) return null;
+  return s.labels.find((l) => l.paragraph === s.paragraph && l.attempt === s.attempt && l.flag === flag)?.verdict ?? null;
 }
 
 /** "Next paragraph": the next number, once the current one has a label (an unlabelled paragraph keeps its number). */
 export function nextParagraph(s: LabelSession): LabelSession {
-  return s.labels.some((l) => l.paragraph === s.paragraph) ? { ...s, paragraph: s.paragraph + 1 } : s;
+  return s.labels.some((l) => l.paragraph === s.paragraph) ? { ...s, paragraph: s.paragraph + 1, attempt: null } : s;
 }
 
-/** The exported file: `{"version": 1, "labels": [...]}`, the five fields of each label, nothing else. */
+/** The exported file: `{"version": 1, "labels": [...]}`, the five fields of each label plus its attempt and flag position, nothing else. */
 export function exportLabels(s: LabelSession): { version: 1; labels: Label[] } {
   return {
     version: 1,
@@ -121,6 +186,7 @@ export function exportLabels(s: LabelSession): { version: 1; labels: Label[] } {
       category: l.category,
       section: l.section,
       verdict: l.verdict,
+      ...(l.attempt && l.flag !== undefined ? { attempt: l.attempt, flag: l.flag } : {}),
     })),
   };
 }

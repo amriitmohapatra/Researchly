@@ -43,10 +43,19 @@ order from a chapter or two and keep the ones that have at least one flag.
 1. Open the website's **Label** page (it appears in the menu when you are
    signed in, and also at `/label`).
 2. Choose the section, paste one paragraph, check it, and mark each card
-   Useful, Wrong or Unsure. Move to the next paragraph.
+   Useful, Wrong or Unsure. Move to the next paragraph. Changed your mind?
+   Press the other verdict: it replaces the first. Reloaded the page, or
+   edited the paragraph? Check it again: the page says it will replace the
+   paragraph's earlier labels, so nothing is counted twice. A check that
+   fails changes nothing.
 3. When you have 50, press **Export labels**. The file holds rule ids,
-   categories, sections, paragraph numbers and your verdicts. **It holds no
-   text**: neither the paragraphs nor the flagged words leave the page.
+   categories, sections, paragraph numbers, your verdicts, and for each
+   label a random id of the check it came from and the flag's position in
+   it. **It holds no text**: neither the paragraphs nor the flagged words
+   are in it. Checking a paragraph does send it to the Researchly engine
+   you use, like any check (the hosted engine reads it in memory and keeps
+   nothing; a local engine keeps it on your computer); only the export
+   and the labels kept in your browser are text-free.
 4. Run the report:
 
    ```
@@ -54,7 +63,11 @@ order from a chapter or two and keep the ones that have at least one flag.
    ```
 
    It prints precision overall, by category and by rule, each with a 95%
-   interval (Wilson), and the rules with the most false flags.
+   interval (Wilson), and the rules with the most false flags. It counts
+   one verdict per flag: labels from a replaced check, or an earlier verdict
+   on the same flag, are set aside and the report says how many. Flags in
+   one paragraph are not independent, so read the intervals as descriptive
+   until there are many paragraphs.
 5. Paste the report into PLAN.md under S4's exit check, or send the file to
    Claude to do it.
 

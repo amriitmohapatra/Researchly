@@ -77,7 +77,7 @@ def test_a_complete_paper_has_every_move_present():
     for s in n["sections"]:
         assert all(m["status"] == "present" for m in s["moves"]), s["section"]
         assert s["present"] == s["expected"]
-    assert n["note"] == "Every expected move is present."
+    assert n["note"] == "Every expected move was found."
     gap = next(m for m in section(n, "introduction")["moves"] if m["id"] == "gap")
     assert gap["evidence"].startswith("However, little is known")
 
@@ -87,9 +87,9 @@ def test_a_missing_move_carries_its_question_and_frame():
         "We therefore set out to estimate transmission in three districts.", "")
     n = narrative(text)
     aim = next(m for m in section(n, "introduction")["moves"] if m["id"] == "aim")
-    assert aim["status"] == "missing" and aim["evidence"] is None
+    assert aim["status"] == "not_detected" and aim["evidence"] is None
     assert aim["question"].endswith("?") and "[" in aim["frame"]
-    assert "1 expected move is missing" in n["note"]
+    assert "1 expected move was not detected" in n["note"]
 
 
 def test_one_misplaced_sentence_is_reported_once():
@@ -223,7 +223,7 @@ def test_opening_sentence_counts_as_the_opening_move():
     assert statuses(narrative(text), "abstract")["background"] == "present"
     cold = ("Abstract\n\nWe aimed to estimate transmission. However, the "
             "drivers remain unclear.\n")
-    assert statuses(narrative(cold), "abstract")["background"] == "missing"
+    assert statuses(narrative(cold), "abstract")["background"] == "not_detected"
 
 
 @pytest.mark.parametrize("sentence,section,move", [
@@ -248,3 +248,69 @@ def test_a_word_title_is_front_matter_not_a_section():
     assert [h.section for h in doc.headings] == ["front", "abstract"]
     n = api.analyze(doc, nlp=NLP, with_narrative=True).narrative
     assert [s["section"] for s in n["sections"]] == ["abstract"]
+
+
+# --- Codex review N4 and N5 (2026-10-14) ---------------------------------------
+
+def _map(text, **kw):
+    return api.analyze(text, nlp=NLP, with_narrative=True,
+                       disabled={"LT001"}, **kw).narrative
+
+
+def _moves_of(n, label):
+    (s,) = [x for x in n["sections"] if x["label"] == label]
+    return {m["id"]: m for m in s["moves"]}
+
+
+def test_two_moves_in_one_sentence_are_in_order():
+    n = _map("Introduction\n\nAlthough little is known about migration, we "
+             "aimed to estimate annual flows.\n")
+    mv = _moves_of(n, "Introduction")
+    assert mv["gap"]["status"] == "present" and mv["aim"]["status"] == "present"
+    assert not [m for m in mv.values() if m["status"] == "out_of_order"]
+
+
+def test_reversed_moves_across_sentences_still_warn_and_explain():
+    n = _map("Introduction\n\nWe aimed to estimate annual flows. Malaria is "
+             "a major burden. Little is known about migration.\n")
+    for m in _moves_of(n, "Introduction").values():
+        if m["status"] == "out_of_order":
+            assert m["note"].strip()
+    assert any(m["status"] == "out_of_order"
+               for m in _moves_of(n, "Introduction").values())
+
+
+def test_a_response_to_reviewers_is_described_not_judged():
+    n = _map("Introduction\n\nThis response explains our changes.\n",
+             document_type="response-to-reviewers", with_review=True)
+    for s in n["sections"]:
+        assert all(m["status"] != "not_detected" for m in s["moves"])
+        assert all(m["id"] != "territory" for m in s["moves"])  # no assumed rationale
+    assert "nothing is marked as not detected" in n["note"]
+
+
+def test_a_commentary_is_not_asked_for_a_research_gap():
+    n = _map("Introduction\n\nWe argue that policy must change.\n",
+             document_type="commentary")
+    assert "gap" not in _moves_of(n, "Introduction")
+
+
+def test_the_opening_fallback_says_it_is_an_assumption():
+    n = _map("Introduction\n\nThe weather was mild that year. We aimed to "
+             "estimate annual flows.\n")
+    t = _moves_of(n, "Introduction")["territory"]
+    assert t["status"] == "present" and "first sentence" in t["note"]
+
+
+def test_a_second_chapter_is_mapped_on_its_own():
+    n = _map("Introduction\n\nMalaria burden is high. Little is known about "
+             "X. We aim to estimate Y.\n\nMethods\n\nWe fitted a model.\n\n"
+             "Introduction\n\nThe second chapter starts here.\n")
+    second = _moves_of(n, "Introduction (2)")
+    assert second["gap"]["status"] == "not_detected"   # not completed by chapter one
+    assert _moves_of(n, "Introduction")["gap"]["status"] == "present"
+
+
+def test_not_detected_is_the_word():
+    n = _map("Introduction\n\nMalaria is a major burden.\n")
+    assert "not detected" in n["note"] and "missing" not in n["note"]

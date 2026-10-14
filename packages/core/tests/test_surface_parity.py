@@ -40,7 +40,7 @@ def isolated(tmp_path, monkeypatch):
 
 def _cli_rule_ids(path):
     """What `researchly check` would report."""
-    from researchly import cli
+    from researchly import cli  # noqa: F401  (loads the CLI path)
     cfg = config_mod.load(path)
     return {s.rule_id for s in api.analyze(path, nlp=NLP, cfg=cfg).suggestions}
 

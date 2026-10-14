@@ -16,12 +16,35 @@ import re
 from collections import Counter
 
 from . import lexicons as lx
-from . import spelling
+from . import spelling, spellrank
 from .document import Document
 from .engine import Category, Suggestion, rule
 
 MIN_LEN = 3
 WORD_RX = re.compile(r"[A-Za-z]+(?:'[A-Za-z]+)?")
+
+# The word either side within the same clause: punctuation that ends a
+# clause, or a line break, cuts the context.
+_PREV_WORD = re.compile(r"([A-Za-z']+)[ \t]*$")
+_NEXT_WORD = re.compile(r"[ \t]*([A-Za-z']+)")
+
+
+def _neighbours(text: str, start: int, end: int) -> tuple[str | None,
+                                                          str | None]:
+    before = _PREV_WORD.search(text, max(0, start - 40), start)
+    after = _NEXT_WORD.match(text, end)
+    return (before.group(1).lower() if before else None,
+            after.group(1).lower() if after else None)
+
+
+def _distance(typed: str, cand: str) -> int:
+    """Edit distance, with a run-together pair ("inspite" → "in spite")
+    counted as the one missing space it is."""
+    if " " in cand and cand.replace(" ", "") == typed:
+        return 1
+    from symspellpy.editdistance import DistanceAlgorithm, EditDistance
+    dist = EditDistance(DistanceAlgorithm.DAMERAU_OSA).compare(typed, cand, 3)
+    return dist if dist >= 0 else 3
 
 
 def _sentence_start(text: str, start: int) -> bool:
@@ -116,7 +139,13 @@ def s001_spelling(doc, document: Document):
             continue
         if w.isupper():                       # acronyms → F601's business
             continue
+        # "mDh", "nIter", "logLik": a lower-case start with a capital inside
+        # is a code name, not a word ("THe", a shift slip, is still checked)
+        if w[0].islower() and any(c.isupper() for c in w[1:]):
+            continue
         lower = w.lower()
+        if lower in lx.APOSTROPHELESS_CONTRACTIONS:
+            continue                          # "dont": W208 owns it
         if lower in domain or lower in user:
             continue
         if w.upper() in lx.ACRONYM_ALLOWLIST:
@@ -140,14 +169,17 @@ def s001_spelling(doc, document: Document):
         if spelling.known_with_fallbacks(lower):
             continue
 
-        scored = spelling.suggest_with_distance(lower, top_n=3)
+        # Ranked by the noisy-channel model with the words either side
+        # ("infact, the" → "in fact"; "thier study" → "their").
+        prev, nxt = _neighbours(text, m.start(), m.end())
+        candidates = [c for c, _ in spellrank.rank(lower, prev, nxt)]
         # A capitalized unknown at a sentence start may be a NAME opening
         # the sentence ("Kieshha and colleagues…"). Only flag it when a
         # distance-1 correction exists ("Thiss"→"this") — anything farther
         # is more likely a name than a typo.
-        if capitalized and (not scored or scored[0][1] > 1):
+        if capitalized and (not candidates
+                            or _distance(lower, candidates[0]) > 1):
             continue
-        candidates = [t for t, _ in scored]
         if candidates:
             top = spelling.match_case(candidates[0], w)
             rest = (f" (also: {', '.join(candidates[1:])})"
@@ -155,10 +187,62 @@ def s001_spelling(doc, document: Document):
             msg = f"Did you mean '{top}'?{rest}"
             repl = top
         else:
-            msg = ("Not in any dictionary — if this is your term, "
-                   "`researchly dict add` it.")
+            msg = ("Not in any dictionary. If this is your term, add it "
+                   "to your dictionary.")
             repl = None
         yield Suggestion(
             message=msg,
             start=m.start(), end=m.end(),
             replacement=repl)
+
+
+# --- S002: real-word confusions --------------------------------------------
+
+# How much likelier, in natural-log odds, the other word must be in this
+# context before S002 speaks: 5.0 is about 150 times. Set on the eight
+# theses and the 115 PMC articles so that published prose stays silent.
+CONFUSION_MARGIN = 5.0
+
+_CONFUSIONS: dict[str, str] = dict(lx.CONFUSIONS)
+
+
+@rule("S002", "real-word-confusion", Category.CORRECTION,
+      "A real word that the context says was probably meant as another "
+      "(the affect of; the principle investigator; a casual relationship).",
+      'Both spellings are words, so a dictionary passes them. A language '
+      'model of English word pairs (SymSpell\'s bigram counts) compares the '
+      'word with its usual confusion in the same place: only when the other '
+      'word is about 150 times likelier, and attested on both sides, is it '
+      'suggested. Pairs are chosen for scientific prose, where "casual" for '
+      '"causal" or "trail" for "trial" changes the meaning.',
+      plain=("This is a real word, but the words around it suggest you meant "
+             "a similar one, for example 'effect' instead of 'affect', or "
+             "'causal' instead of 'casual'. Check which one you meant."),
+      source="Mays1991", tier="spelling", fix_safety="review")
+def s002_confusion(doc, document: Document):
+    text = document.masked
+    pairs = spellrank.bigrams()
+    for m in re.finditer(r"[A-Za-z]+", text):
+        typed = m.group(0)
+        lower = typed.lower()
+        alt = _CONFUSIONS.get(lower)
+        if alt is None or (typed.isupper() and len(typed) > 1):
+            continue
+        prev, nxt = _neighbours(text, m.start(), m.end())
+        if not prev or not nxt:
+            continue                      # judge only with both neighbours
+        if (prev, alt) not in pairs or (alt, nxt) not in pairs:
+            continue                      # the other word must be attested
+        own = spellrank.log_next(prev, lower) + spellrank.log_next(lower, nxt)
+        other = spellrank.log_next(prev, alt) + spellrank.log_next(alt, nxt)
+        # Known limit: a literal use in a common frame ("the trail was
+        # muddy") can still be questioned; demanding more evidence when the
+        # typed word is normal on both sides lost "the affect of", the
+        # slip that matters more in a paper (2026-10-14).
+        if other - own < CONFUSION_MARGIN:
+            continue
+        fixed = spelling.match_case(alt, typed)
+        yield Suggestion(
+            message=f"Did you mean '{fixed}'? Here '{prev} {alt} {nxt}' is "
+                    f"far more usual than '{prev} {lower} {nxt}'.",
+            start=m.start(), end=m.end(), replacement=fixed)

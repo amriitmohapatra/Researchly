@@ -45,6 +45,11 @@ python ../../apps/desktop-mac/researchly_app.py   # macOS app (maintenance-only)
   taggers/classifiers proposing **minimal token-level edits**, confidence-
   scored, gated off inside masked spans, never auto-applied, labelled
   `tier="gec"`. Rewriting itself stays deterministic (`transform.py`).
+  *Amended 2026-10-14:* word prediction is permitted (owner decision): the
+  end of a word, the next word, or a fixed term of ≤ 3 words; n-gram counts
+  from CC BY/CC0 articles (attributed), each sequence in ≥ 3 articles;
+  never auto-inserted (Tab/click); nothing in masked spans; can be turned
+  off. See CLAUDE.md #1 and `researchly/predict.py`.
 - **Confidential by design** *(amended 2026-10-03; was "no text leaves the
   machine")*. Document text is processed in memory, never stored, logged,
   shared or trained on without a per-feature opt-in; no cloud LLM sees it;

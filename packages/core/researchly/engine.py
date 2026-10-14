@@ -13,7 +13,7 @@ Design decisions (traceable to the landscape research):
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import Callable, Iterable, Optional
 
@@ -60,6 +60,10 @@ class Suggestion:
     # Set by a rule when it knows better than its own declared default —
     # the learned tier scores per edit, deterministic rules do not.
     confidence: float = 1.0
+    # The table cell a number was compared with (X401, Codex review #7):
+    # table, headers, cell place and offsets, the cell's value and any
+    # rounding. None for every other suggestion.
+    table_evidence: Optional[dict] = None
     # filled in by the engine from the rule registry:
     rule_id: str = ""
     rule_name: str = ""
@@ -96,6 +100,7 @@ class Suggestion:
             "col": self.col,
             "start": self.start,
             "end": self.end,
+            "table_evidence": self.table_evidence,
         }
 
 

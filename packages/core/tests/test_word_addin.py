@@ -157,3 +157,30 @@ def test_polish_reads_muted_rules_from_shared_config(tmp_path, monkeypatch):
     config_mod.mute_rule("W201")
     r2 = transform.polish(text, NLP, disabled=config_mod.load().disabled)
     assert not any(e["rule_id"] == "W201" for e in r2.to_dict()["edits"])
+
+
+def test_local_taskpane_offers_every_spelling_and_saves_it(tmp_path, monkeypatch):
+    """The local taskpane's Spelling select lists exactly the engine's
+    values and saves through /config into the shared config (the ONLY
+    settings store), which every local surface then reads."""
+    import re
+    from researchly import config as config_mod
+    web = Path(addin_server.__file__).resolve().parent / "web"
+    html = (web / "taskpane.html").read_text(encoding="utf-8")
+    select = re.search(r'<select id="setSpelling">(.*?)</select>', html, re.S)
+    assert select is not None
+    values = tuple(re.findall(r'<option value="([^"]+)"', select.group(1)))
+    assert values == config_mod.SPELLINGS
+    js = (web / "taskpane.js").read_text(encoding="utf-8")
+    assert 'saveSetting({ spelling: $("setSpelling").value })' in js
+    assert '$("setSpelling").value = config.spelling' in js
+
+    # What server.py's /config does with {"spelling": "uk"}.
+    user_dir = tmp_path / ".researchly"
+    monkeypatch.setattr(config_mod, "USER_DIR", user_dir)
+    monkeypatch.setattr(config_mod, "USER_CONFIG_FILE",
+                        user_dir / "config.toml")
+    monkeypatch.chdir(tmp_path)
+    assert config_mod.save_user(config_mod.load().with_overrides(spelling="uk"))
+    assert config_mod.load().spelling == "uk"
+    assert config_mod.load().to_dict()["spelling"] == "uk"

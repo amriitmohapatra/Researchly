@@ -118,7 +118,19 @@
       </select>
     </div>
     <div class="setting-row">
-      <label for="setLocale">English variant</label>
+      <label for="setSpelling">Spelling</label>
+      <select id="setSpelling">
+        <option value="auto">Auto (follow the document)</option>
+        <option value="us">American</option>
+        <option value="uk">British (-ise)</option>
+        <option value="uk-oxford">British (Oxford -ize)</option>
+        <option value="ca">Canadian</option>
+        <option value="au">Australian</option>
+        <option value="in">Indian (British spelling)</option>
+      </select>
+    </div>
+    <div class="setting-row">
+      <label for="setLocale">English variant (grammar checks)</label>
       <select id="setLocale">
         <option value="en-US">en-US</option>
         <option value="en-GB">en-GB</option>

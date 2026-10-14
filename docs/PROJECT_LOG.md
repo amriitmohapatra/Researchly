@@ -2228,3 +2228,594 @@ is now the 65-second cut, narrated by Kokoro-82M (Apache-2.0, offline). The
 README caption says the narration is a synthetic voice, as ad and social
 platforms increasingly ask. The music-only cut remains in the public
 repository's history from its second commit.
+
+## 2026-10-09 — Codex follow-up codebase and feature review
+
+**Request.** Reassess Researchly after the 8 October updates and open a PR
+adding `Codex_Review_9Oct2026.md`.
+
+**Reviewed.** Latest `main` at `87fbec647c8ab1a9cc16d6d072ffe2440c9b0305`
+(PR #12 included), compared with the previous review. Reassessed all eight
+prior findings, then inspected the new narrative map, lessons, reporting
+checklists, progress, labelling/evaluation and public-export workflow.
+The report records six reproduced findings with priorities, source
+references, suggested changes and acceptance criteria, plus a feature
+roadmap. The findings concern checklist status overstatement, incompatible
+progress comparisons, duplicate labels after reload, same-sentence move
+ordering, profile-independent narrative expectations and archive scan
+coverage in the public-export gate. No production leak was observed or
+alleged; the gate reproduction used a harmless synthetic sentinel locally.
+
+**Validation.** Python 3.10: core 918 passed / 2 skipped; service 183 passed;
+OpenAPI current. Web lint, confidentiality-boundary check, TypeScript and
+345 unit tests passed; contract generation check passed. Production-build
+Playwright: 152 passed / 7 opt-in screenshot cases skipped, using system
+Chromium and mocked engine/Supabase/Office. Demo 25 and label evaluator 5
+passed. Export-tool suite: 8 passed with gitleaks 8.21.2. Targeted Python
+and TypeScript reproductions exercised the real relevant functions.
+Missing demo dependencies and gitleaks were installed only in external
+review tooling; no dependency manifest or lockfile changed.
+
+**Limits.** No PostgreSQL binaries were available, so the two-user/RLS
+suite was inspected but not rerun. Real Microsoft Word, live account,
+deployment/migration and corpus acceptance checks were not performed;
+the report distinguishes these from passing automated tests. No public
+export was published and no runtime fixes were made. This PR changes only
+the new review and this project-log entry.
+
+## 2026-10-09 — Publish the Codex review and contributor credit
+
+At the owner's explicit request, prepared a public edition of
+`Codex_Review_9Oct2026.md` for `amriitmohapatra/researchly-public`, with
+Codex authorship and README credits for both Claude and Codex. The public
+application files at `47e4903` match the source assessed in the review.
+The public edition removes internal links and identifies release-tool
+observations and original validation separately from public-checkout
+claims. No application changes or private evaluation materials are copied.
+
+Mirrored the public review and contributor section in the export overlays
+so later publication can retain them after this change reaches the source
+branch used for export. The original private review remains unchanged.
+
+Publication status: the prepared public commit is `34a2dfe` (Codex author,
+GitHub's verified Codex connector bot email). Git push and the GitHub blob
+API both returned HTTP 403; the API explicitly said “Resource not
+accessible by integration.” The connection needs write access to
+`researchly-public` before publication can complete. Public files remain
+local; the export overlays have been pushed to private PR #13. The two
+public documents passed the export policy's text/secret scans with zero
+findings, and all public review links resolve in the target checkout.
+
+Publication completed after the owner updated access: retry pushed
+`34a2dfe47fead8300fe096e7ef9dd4f2de02afde` to `researchly-public/main`.
+GitHub resolves the author to `chatgpt-codex-connector[bot]`; the README
+credits both Claude and Codex and links to the published review. Public
+CI run `37874571781` was queued at verification time. This supersedes the
+HTTP 403 publication blocker above; the export-overlay changes still need
+to reach the source used for future syncs.
+
+## 2026-10-14 — Progress summary
+
+**What.** At the owner's request, wrote `docs/PROGRESS_SUMMARY_2026-10-14.md`
+on the branch `claude/vigilant-hawking-hnexgd`. It summarises P1–P39 and
+`PLAN.md`: a timeline, what was built by area, the most recent changes
+(PRs #9–#12, 2026-10-08) and the open items for the owner and for
+engineering. It is documentation only. No code, tests or PLAN boxes
+changed, and `main` is untouched. There were no commits between
+2026-10-08 and this entry.
+
+## P40 — 2026-10-14 — The spelling engine, rebuilt from open data; British or American; a prediction experiment
+
+**Why.** The owner was given a "pre-trained engine" by a friend (22 files)
+and asked to (1) learn how it was built, (2) build an engine at parity with
+it, (3) do better for academic writing, checking open-source repositories
+and Grammarly alternatives along the way. Mid-way the owner asked for text
+prediction as an experiment, and for UK/US detection with a choice of style.
+
+**What the bundle is** (`research/05-keyboard-engine-anatomy.md`). A mobile
+keyboard's autocorrect and prediction engine: a 166k-word vocabulary, a
+5-gram model of ~491 billion tokens in a fingerprinted perfect hash, a
+context-dependent noisy-channel error model, a 38-feature MLP ranker (touch
+geometry among its inputs), a 4,698-pair replace list, dialect maps,
+hashed blocklists and 102k email phrase completions. Built for email and
+messaging: no "hypothesis", "In this study" or "confidence interval" among
+its phrases; no "seroprevalence" or "estimand" in its vocabulary; its
+replace list *adds* contractions. Licence: the friend says it came from an
+MIT source he cannot name and allows use but not publication. The files'
+form (n-grams "probed" from a hash that cannot be listed, an ONNX graph
+rewritten as JSON) points to an app's data, so it is registered
+`private_eval` only (`keyboard-engine-bundle`), never committed, and used
+only as a parity benchmark. Asking the friend for the original source is
+on the owner's list.
+
+**Survey** (`research/06-open-resources.md`, sub-agent; ~70 resources,
+every licence opened first-hand). It changed three assumptions: every
+common typo list descends from Wikipedia's CC BY-SA list (so none ships);
+VarCon/ESDB is MIT-like and carries the dialect data; the SymSpell bigram
+file in the symspellpy wheel has undocumented provenance.
+
+**Built.**
+- *Same architecture, open data.* `researchly/spellrank.py`: a noisy-channel
+  ranker, score = error(typed | meant) + log P(meant | previous word) +
+  log P(next word | meant), over SymSpell candidates, the correctly
+  inflected form, and two-word splits the bigram list confirms ("inspite"
+  → "in spite"). S001 now ranks with the words either side.
+- *S001's fallbacks follow English spelling.* The suffix fallback accepted
+  any known base plus any ending, excusing "occured", "begining",
+  "happend", "acess", "personaly"; the prefix fallback excused "untill"
+  (un + till). Now: consonant doubling, -e before -ing/-ed, -es after
+  s/x/z/ch/sh, y → i, -ally/-ely, and an accidental-prefix check on short
+  stems. The letter-swap UK/US fallback (which accepted "rigourous" and
+  "controled") is replaced by VarCon.
+- *Beyond the keyboard engine.* **S002** real-word confusions ("principle
+  component", "a casual relationship", "were effected by"; one-way pairs,
+  ~150× evidence; than/then and from/form left to LanguageTool after they
+  misfired on published prose); **W212** uncountable plurals (softwares,
+  informations, criterias); **W208** now offers the full form and catches
+  "dont"-style contractions a keyboard would "fix" the other way; **W213**
+  + the `spelling` setting (auto, us, uk, uk-oxford, ca, au: TOML, CLI
+  overrides, `options.spelling` on every analysis route, the local Word
+  server); **W210** gets 9,281 sense-aware VarCon pairs, drops curated
+  pairs VarCon contradicts (analyses/analyzes), and resolves a mixture by
+  the document's own detected dialect.
+- *Tools.* `ml/eval/spelling_bench.py` (public lists, fetched at run
+  time, 80/20 split), `ml/eval/spelling_context_bench.py`,
+  `ml/tools/build_variants.py`, `ml/tools/build_spell_errors.py` (refuses
+  sources without `ship_model`; `--experiment` writes only outside the
+  repo). Registry: `varcon`, `symspell-bigram-dictionary`,
+  `mitton-misspelling-corpora`, `norvig-spell-testsets`,
+  `wikipedia-misspellings-for-machines`, `keyboard-engine-bundle`.
+- *Prediction experiment* (`ml/experiments/prediction/`, never imported by
+  the engine). On held-out PMC articles: keystrokes saved 44.6% (academic
+  n-grams) vs 29.6% (general English); section models did not help yet.
+
+**Evidence.**
+
+| Check | Result |
+|---|---|
+| core | 1019 passed, 2 skipped |
+| service | 188 |
+| ml eval + realdocs | 38 (27 + 11 new) |
+| contract (OpenAPI + TS) | regenerated, `spelling` option |
+| ruff, third-party scan | clean, 0 hits |
+| noise floor (8 theses, LT on) | 11.67 → 11.86 (gate OK; baseline updated): W210 +41 genuine mixtures, S001 +10 (rigourous, bootstraping, contre, PDF joins), W212 +3, S002 +2 (both "principle component") |
+| S001 on 115 PMC articles (735k words) | 2,069 → 1,958 flags: ~130 false flags on US/medical spellings gone (anesthesia, hemoglobin, etiology, artifacts); new: precent, proces, acces |
+| S002 on 1.03M words (theses + PMC) | 3 flags, all genuine |
+| Context ranking, 3,000 typos planted in CC BY sentences | first suggestion right: 92.4% (SymSpell) → 96.3% |
+| Public lists, held-out 20% | detection unchanged; top-1 within ±3 points of SymSpell without context; a learned error table (not shipped) adds +2 to +10 |
+| Private parity, the bundle's own 4,414 single-word corrections | S001 catches 96.9% (93.2% before today); first suggestion right 91.9% |
+
+**Owner decisions waiting** (PLAN): the SymSpell bigram file's provenance;
+whether to ship a learned error table derived from CC BY-SA lists; the
+bundle's original source; the spelling selector on the surfaces and an
+account column; whether prediction ever goes further.
+
+**Lessons.**
+- A morphological fallback is a spelling rule or it is a hole: "known
+  word + any ending" excused the commonest misspellings in English for two
+  months.
+- Dialect data must be read by sense. "program" and "meter" are British in
+  one sense, so a word-level UK/US map would have flagged correct British.
+- Measure a context model with context. Isolated misspelling lists showed
+  the ranker as neutral; planted typos in real sentences halved the wrong
+  first suggestions.
+
+**Addendum (P40, same day): the friend's licence file.** A `license.md`
+arrived: the standard MIT text, "Copyright (c) 2018-2026", with the
+holder's name and email redacted and no project or source named. Reading:
+the licence type is now stated, but it cannot be relied on yet. MIT's only
+condition is to include the copyright notice in every copy, which a redacted
+notice cannot satisfy, and nothing links the file to these data or shows
+that its signer owns them. The registry entry `keyboard-engine-bundle`
+records it and stays `private_eval`. What would settle it: the unredacted
+notice and where the original was published (URL, package or commit), so
+the data can be matched to it. With those, MIT would allow use and shipping
+with the notice, and the friend's request not to publish his improved files
+can still be honoured (the public export never includes them).
+
+## P41 — 2026-10-14 — Head to head with the shared engine; a biomedical lexicon
+
+**Why.** The original source of the bundle no longer exists, so the owner
+chose: test the bundle privately beside Researchly, improve Researchly
+where the bundle wins, then discard the bundle. The friend then shared the
+bundle's runtime (`engine.py` and helpers), which made it possible to run
+the real engine rather than its data alone. The owner also shared five of
+their own documents (a manuscript plan, a Chapter 1 framework, a TAC
+summary, a paper draft and a `.tex` example) to test both.
+
+**Private harness** (`ml/private_eval/`, not on the export allow-list, to
+be deleted when done): `bundle_engine.py` loads the runtime and assets from
+the scratch folder (never committed) and runs the bundle's whole path:
+replace list, letter-bag candidate search, context-dependent error table,
+5-gram counts through its perfect hash, and the MLP with its 0.95
+autocorrect threshold. Its "touch" features turned out to be QWERTY
+positions of the typed letters, so it runs on typed text. `compare.py`
+(public lists, planted slips, false flags inside the same S001 rule) and
+`docs_compare.py` (the owner's documents; flags written outside the repo
+only). The runtime was read before use: it only reads local files.
+
+**What the bundle did better, and the fixes (open data, own methods).**
+- *Vocabulary.* It knew biomedical words Researchly did not (spectrin,
+  biofilm, rifampin, epitopes). Fix: the NLM **SPECIALIST Lexicon** (2026
+  release; registry `specialist-lexicon`; redistributed with its conditions,
+  attribution and a description of the modifications in the header of
+  `data/specialist_words.txt`, built by `ml/tools/build_specialist_words.py`):
+  278k single-word forms, minus literature misspellings it records as
+  variants ("accessable", "millenium") and forms our inflection rules reject.
+- *Detection.* Researchly's ending shortcut let "adviced", "awared",
+  "spreaded", "acquited" and "surprizingly" through. Fixes: when the lexicon
+  holds the base word, only the inflections it lists are accepted; "qu"
+  counts as a consonant for doubling; -ise-only words (surprise, advise,
+  revise...) never take -ize. Cost on ~1M words of genuine prose: 13
+  tokens, several of them real errors; the genuine terms (differenced,
+  infecteds, rogued...) went into the scientific lexicon.
+- *Far misspellings.* Its letter-bag search reaches spellings by ear that
+  are three or four edits away. Fix: our own letter-bag candidates over the
+  commoner dictionary words (numpy), used only when nothing is one edit
+  away, ranked by the noisy channel. Tuned on the training split only.
+
+**What Researchly did better, unchanged.** Context with the word on both
+sides; precision on scientific prose; it never blocks topic words (the
+bundle refuses "obesity", "suicide", "gender", "elderly", "diabetes",
+"migrant" by design); it never silently rewrites (the bundle would change
+"poisson" to "poison" in the owner's TAC summary).
+
+**Owner's documents** (counts only here; the drafts stay confidential).
+Spelling-tier flags across the five: Researchly 18 before → 6 after (two
+real fixes found on them: W208 no longer reads "WHO's" as "who is", ×5;
+S001 skips code names like "mDh" and knows bdf/rng/eigen); the bundle 22,
+mostly core epidemiology vocabulary, and it would have silently
+autocorrected 3 words, 2 of them wrongly.
+
+**Evidence.**
+
+| Check | Result |
+|---|---|
+| core | 1034 passed, 2 skipped |
+| ml/eval spelling tools | 13 |
+| ruff, third-party scan | clean, 0 hits |
+| S001 false flags inside the same rule, 115 PMC articles | Researchly 2.64 → 0.85 /1000w; bundle 2.45 |
+| same, 8 theses | Researchly 1.40 → 1.21; bundle 2.02 |
+| planted slips in CC BY sentences (1,000, both engines' dictionaries) | Researchly 95.9% first suggestion right (95.5% with the left word only); bundle 89.1%; its autocorrect: 72.7% right, 1.9% wrong |
+| public lists, held-out 20% (old → now) | caught unchanged (85.0, 92.8, 96.4%); top-1 Birkbeck 38.4 → 44.0%, Aspell 62.2 → 63.3%, Wikipedia 86.9 → 87.0%, Holbrook 37.5 → 34.4% (184 words); top-3 up on all |
+
+**Lessons.**
+- Run the competitor for real before concluding: on its data alone the
+  bundle looked better on vocabulary; with its own runtime it also showed
+  what a keyboard's policies do to research text (blocked topic words,
+  silent wrong fixes).
+- A bigger dictionary lowers false flags and recall together; the lexicon's
+  own inflection table is what recovers the recall.
+- Test on the owner's real documents: five files found two bugs (acronym
+  possessives, code names) that a million words of corpus had not.
+
+**Addendum (P41, same day): final numbers.** The head-to-head rerun on the
+committed code: planted slips 97.3% first suggestion right (97.2% with the
+left word only) against the bundle's 89.6%, whose autocorrect would apply
+76.0% right and 1.8% wrong; S001 false flags 0.85 (PMC) and 1.22 (theses)
+per 1000 words against 2.46 and 2.06. The bundle still detects 2.5–4.5
+points more of the public lists' misspellings and ranks Birkbeck's
+spellings by ear slightly better (40.9 vs 38.5% top-1 on a 600-pair
+sample). Noise floor 11.86 → **11.74** (gate OK, baseline lowered): S001
+−52, W208 −1, W211 +20; the W211 additions were read, all genuine mixtures
+in one thesis (data set/dataset, health care/healthcare, time
+point/timepoint), found because the lexicon knows more closed compounds.
+On the 115 PMC articles S001 is 628 flags (2,069 before P40).
+
+## P42 — 2026-10-14 — Table evidence: X401 checks the cell a sentence names (Codex #7); the Word add-in sends cell places
+
+> *Merge note (P43):* this entry's engine half (`tables.py`, the X401 cell
+> comparison) met a parallel implementation and was superseded by it; its
+> add-in cell places, `server.py` passthrough, contract fields and tests
+> were kept and adapted. See P43.
+
+*(Built on `claude/lucid-clarke-49a6ou` and merged into this branch at the
+owner's request, so the work continues here.)*
+
+**Why.** Codex review #7 (8 October): X401 only asked whether a quoted
+number appears *anywhere* in the cited table. "The treatment mortality was
+12.5% (Table 1)" passed when 12.5% was the control arm's figure. The owner
+asked for the Word add-in to send table cell places. The row and column
+matching it would feed did not exist yet, so the owner chose to build #7
+first, in two stages: first keep table structure, then match prose to
+cells. The owner also passed on a plan with the guard rails followed here:
+- plain rectangular tables only;
+- exact header matches only;
+- numbers compared by type;
+- abstain when more than one cell fits;
+- evidence on the suggestion.
+
+**What.**
+- **Cell places.** A Word paragraph may carry `cell`: `[table, row, col]`
+  or `[table, row, col, colspan]`, 0-based, col in grid columns.
+  - `Document.from_word` keeps them in `Document.table_cells`; malformed
+    places are ignored.
+  - The `.docx` reader places every cell from the XML. It counts
+    `gridSpan` for colspan, and reads rows and cells through content
+    controls.
+  - A table with a vertical merge, `gridBefore` or `gridAfter`, or a table
+    nested in another, gets no places at all.
+  - With places, the add-in's cells are joined into one table by their
+    table number. Before, an empty cell more than 4 characters wide split
+    the table.
+- **`researchly/tables.py`.** A table becomes a grid: row 0 holds the
+  column headers and column 0 the row headers.
+  - A sentence names a cell only when it names exactly one row header and
+    one column header. Either may go unnamed when the table has only one
+    data row or column.
+  - Header matching ignores case, punctuation, a trailing unit ("(%)",
+    "[years]", ", %") and a leading "the". There are no synonyms and no
+    fuzzy matching.
+  - A longer header wins over one inside it ("Mortality at one year" over
+    "Mortality").
+  - No cell is named when a header repeats, when one is both a row and a
+    column header, or when two rows or two columns are named.
+  - Merged cells and tables with no header row or column are unsupported.
+- **X401.** The cell check runs for a sentence that quotes one number, from
+  one table, without deriving it (than, lower, reduced, points, from, by 4,
+  ...).
+  - Numbers are typed: a percentage is compared only with a percentage. A
+    cell is a percentage cell when it or its header says "%".
+  - The old rounding allowance stays: the text may round what the table
+    reports. It now accepts half-up rounding too.
+  - On a mismatch, X401 says "Table 1 reports 8.2% in the Mortality row,
+    Treatment column; this sentence says 12.5%." When the table holds more
+    decimals, the message adds "(8.2% rounded to 1 decimal place)".
+  - A matching number elsewhere in the table no longer hides the mismatch.
+  - Every abstention falls back to the old whole-table check. Abstaining
+    is never shown as a confirmation.
+- **Contract.**
+  - `WordParagraph.cell` is optional: strict whole numbers, at most 100,000,
+    colspan at least 1.
+  - `Suggestion.table_evidence` (`TableEvidence`) carries the table, the
+    headers, the row and column, the cell's offsets and text, the expected
+    and quoted values, and the rounding. The engine's `Suggestion` has the
+    same field, and `to_dict` carries it.
+  - `openapi.json` and `schema.d.ts` are regenerated.
+- **The local Word add-in** (`apps/word-addin/web/taskpane.js`).
+  - On WordApi 1.3 it loads each table paragraph's
+    `parentTableCellOrNullObject` (`rowIndex`, `cellIndex`) and its row's
+    `cellCount`, and sends `cell`. It asks for nothing below 1.3.
+  - Tables are numbered by runs of consecutive table paragraphs: Word
+    merges two tables with nothing between them.
+  - `cellIndex` counts cells along the row, not grid columns. So a table
+    whose rows report different cell counts (merged cells) sends no places,
+    and neither does a nested table, a paragraph Word could not place, or
+    rows out of order.
+  - Any error sends no places; nothing else is lost.
+  - `server.py` validates `cell` on the contract route
+    (`parse_word_request`) and returns `table_evidence`. Its `/check` route
+    passes paragraphs to the engine unchanged.
+
+**Evidence.**
+
+| Check | Result |
+|---|---|
+| core (new: `test_table_cells.py` 39, `test_word_addin_cells.py` 8; the JS runs under Node) | 965 passed, 2 skipped |
+| service (new: `test_table_cells_service.py` 14) | 197 |
+| demo, eval and bench | 56 |
+| contract check (`export_openapi --check`, `npm run check`) | clean |
+| ruff | clean |
+| third-party scan | 0 hits |
+
+- The tests cover:
+  - swapped groups, a wrong row, repeated values, rounding, a unit in the
+    header, incompatible units;
+  - four kinds of ambiguous names, derived numbers, one data column and
+    nested header names;
+  - merged cells, no places, and LaTeX;
+  - malformed places on both routes, the .docx reader (gridSpan, two
+    paragraphs in one cell, vMerge, gridBefore, nested tables), and an
+    end-to-end .docx upload.
+- The noise gate passes at 11.67/1000w, unchanged (the corpus is plain
+  text, and X401 needs a table).
+
+**Not done.**
+- **The add-in the owner uses does not send `cell` yet.** The owner uses
+  the hosted add-in (`manifest.hosted.xml`). Its taskpane is
+  `apps/web/lib/word/office.ts`, and it calls the hosted engine, or
+  `server.py` when "This computer" is chosen. The taskpane change above is
+  in the old local add-in (`apps/word-addin/web/`, maintenance only). The
+  engine, the service and `server.py`'s `/v1/analyze-word` already accept
+  `cell`, so a `.docx` upload gets the cell check once the engine is
+  deployed. Next: port `cellPlaces`/`tablePlaces` into the hosted taskpane
+  (PLAN #7).
+- The cell places have not been tried in real Word.
+- LaTeX `tabular` grids, merged header rows and row groups keep the
+  whole-table check.
+
+**Lessons.**
+- Check that the work a task builds on exists before building on it. The
+  task described row and column matching as done; no branch had it.
+- Office JS `cellIndex` is not a grid column. When a client cannot read
+  colspan reliably, it should send nothing rather than a guess: the engine
+  falls back cleanly.
+- Typed comparison is the cheapest guard against a false "wrong cell"
+  flag. A sentence naming a row and a column by chance rarely also quotes
+  the same kind of number as that cell.
+
+## P43 — 2026-10-14 — Word prediction becomes a core feature; spelling choice everywhere; revision queue; tables by row and column; the research gap as an argument
+
+**Why.** The owner's decisions after P41: ship the two-word list and the
+learned typo model, treat Indian English as British, make text prediction
+"a core feature of the app", and "Engineering you can do, please do, NOW".
+Mid-batch the owner added workshop slides on the research gap ("Check if
+anything is relevant to be added to researchly's brain").
+
+**What.**
+- *Owner decisions recorded.* SymSpell bigram list confirmed (registry).
+  The learned typo table ships: `data/spell_errors.json`, edit
+  probabilities learned from the Wikipedia misspelling list's train split
+  only (Mitton's corpora state no licence), CC BY-SA 4.0 with attribution in
+  the file and `data/NOTICE.md`. Held-out top-1 rose 2–7 points on every
+  list (Birkbeck 44.0 → 46.2%, Holbrook 34.4 → 41.5, Aspell 63.3 → 67.8,
+  norvig2 77.6 → 81.2, Wikipedia 87.0 → 91.4); the Mitton-trained variant
+  added a little more and was not shipped. Spelling option `in` (Indian
+  English, British spelling) in engine, service and contract.
+- *Word prediction (CLAUDE.md #1, AGENTS.md and ADR-07 amended with the
+  owner's decision and its limits).* `researchly/predict.py`: stupid-backoff
+  n-grams (contexts of up to three words) in a read-only SQLite file;
+  completes the word being typed, offers the next word, or a fixed term of
+  at most three words when the model is sure; follows the chosen or
+  detected spelling and the word's usual case. Model: `data/predict.sqlite`
+  (37 MB) built by `ml/tools/build_prediction_model.py` from 2,543 Europe
+  PMC open-access research articles (18.5M words; 3,000 found, 207 refused
+  on their own `<license>`: 193 named no CC BY/CC0 licence, 14 NC/ND/SA).
+  Every kept sequence occurs in ≥3 articles. Attribution for each article:
+  `data/predict_sources.tsv`. Registry: `europepmc-oa-prediction-corpus`.
+  `api.complete()` offers nothing in maths, code, citations, URLs, headings
+  or unfinished markup, and nothing when the writer turns it off
+  (`[features] prediction`, account `user_settings.prediction`); a health
+  tier says when the model is missing. `POST /v1/complete` (own rate
+  budget, 240/min), canary scenarios, LSP completion items,
+  `researchly complete`. Website: a strip under the editor (Tab, click,
+  Esc; stale replies dropped). Word: a "Next words" panel (WordApi 1.3
+  checked) and `/v1/complete` on the local server.
+- *Reading.* `researchly/reading.py`: pasted code (R, Python, Stan,
+  console), inline maths and `code`, and paragraphs in another language
+  are masked in plain text and Word; an English-only notice; every reply
+  carries a reading summary (words checked, what was set aside), shown as
+  one quiet line on the website and in Word.
+- *Spelling choice everywhere* (helper): selector on the website and in
+  both Word taskpanes; migration `20261014120000_spelling_prediction.sql`
+  adds `user_settings.spelling` and `.prediction`; `my_config()` returns
+  both; two-user test 117 passed against a real PostgreSQL.
+- *Revision queue and long checks* (helper; Codex #1, #8): passes
+  (Correctness first, Clarity next, Whole-document review), repeats grouped
+  with Next/Previous; numbered check sessions so a late reply never shows as
+  current; previous results kept and marked; Cancel and Check again.
+- *X401 by row and column* (helper; Codex #7): `researchly/tables.py`;
+  the cell, its value and the rounding in the message; falls back or
+  abstains when the named row or column is unclear. **Two implementations
+  met here:** another session built X401 cell checking for Word in
+  parallel (P42, pushed first). The merge keeps this helper's engine (it
+  also reads LaTeX tabulars, handles units and proportion vs percentage, 78
+  tests) and P42's add-in cell places, `server.py` passthrough, contract
+  fields (`WordParagraph.cell`, `Suggestion.table_evidence`) and its tests,
+  adapted to the kept engine.
+- *The research gap* (helper; from the slides, paraphrased, credited in
+  `docs/knowledge-base.md` §13): D903 gap without a stake (Introduction),
+  D904 "fills the gap" (Discussion, Conclusion), D905 generic future
+  research; "stranger" sources that drive the Discussion but never appear
+  earlier, on the narrative map and the brief; two Learn cards; two
+  thesis-only map questions. Key-noun drift and orphan sections recorded as
+  research-grade (not reliable enough).
+- *Clean-ups.* Pallas 2023; the S001 message names no command; JFLEG and
+  CWEB licences corrected; 25 cosmetic lint findings fixed and `ruff.toml`
+  widened (F401, F541; `_to_delete` excluded).
+
+**Evidence.**
+
+| Check | Result |
+|---|---|
+| core | 1237 passed, 2 skipped |
+| service | 225 passed |
+| web (vitest) | 450 passed; lint, typecheck, confidentiality boundary clean |
+| Playwright (helpers, merged branches) | 152 passed (checker, word, prediction, queue, accounts ×3) |
+| ml/eval | 19 passed; third-party scan 0 hits; ruff clean |
+| prediction, 20,002 held-out words (articles never trained on) | next word top-1 **20.2%**, top-3 30.9%, keystrokes saved **46.9%** (experiment: 14.3%, 22.9%, 44.6%; everyday English 11.4%, 19.1%, 29.6%) |
+| prediction latency | ~1 ms per request once loaded (first call ~0.2 s) |
+| noise floor (all tiers, 8 theses) | **11.74**/1000w, unchanged (gate OK); D904 +1, E703/G101/G106 −1 each (code and language masking); reading masks almost nothing in accepted theses, as it should |
+
+**Lessons.**
+- Count n-grams in shards: the first build counted 18.5M words at once and
+  the container killed it (and a helper's Java with it). Sixteen hash
+  shards of the context, pruned as they finish, peaked near 1 GB.
+- An evaluation that is slower than the feature hides a feature bug: the
+  held-out run scanned 40,000 words per keystroke prefix, which a writer
+  would have felt too; a sorted index with bisect fixed both.
+- An attribution list is bibliographic data that theses also cite: the
+  third-party scan matched author lists, so the file is skipped by name.
+- Three helpers on one website conflict in the same composer; merging one
+  branch and asking the next helper to merge onto it worked better than
+  resolving eight files by hand.
+
+**Addendum (P43, same day): the two X401s reconciled.** After the merge
+with P42, the kept engine fills `Suggestion.table_evidence` (exactly the
+contract's TableEvidence fields) when a named row × column comes down to one
+numeric cell, and None otherwise; `MAX_CELL_INDEX` (100,000) bounds cell
+places in the engine and the schema alike. The hosted taskpane
+(`apps/web/lib/word/office.ts`) now sends cell places on WordApi 1.3, none
+for merged or nested tables, older Word or any error (15 unit, 4 e2e
+tests). Final: core 1250 passed / 2 skipped; service 239; web 465 unit;
+contract up to date; ruff clean; third-party scan 0 hits. Owner: one table
+in real Word on the Mac (wrong row → X401 names the cell; merged cells →
+whole-table check).
+
+**Addendum (P43, same day): the cell on the card.** Owner: "Show the X401
+cell on the card too." `apps/web/components/TableEvidence.tsx` renders
+`table_evidence` on the website card and the Word card: the cell's place,
+what it holds, what the sentence says, the rounding allowed. On the website
+"Show the cell" outlines the cell in the text (a dashed outline, so it
+never reads as a second finding); the outlined cell maps back to its card
+(`lib/table-evidence.ts`: `cellId`/`baseId`). Word shows the box without a
+jump, since the reply has no Word location for the cell. Evidence: 7 unit
+tests, 1 e2e; web 472 unit; checker, word, queue and table e2e 95 passed;
+lint, typecheck and the confidentiality boundary clean.
+
+## P44 — 2026-10-14 — The 9 October review's six findings, fixed on this branch
+
+**Why.** The owner's review branch `codex/review-9oct2026` (PR #13) had six
+findings whose CI never finished (the private repository's Actions minutes
+ran out). Owner: "work on the issues raised by codex in this chat. Merge
+that PR here and continue to work here." The branch was merged (fd509d8),
+each finding reproduced against unchanged code first, and fixed in the
+order N1, N6, N2, N3, N4, N5 (PLAN, "Codex review (9 Oct)").
+
+**What.**
+- *N1, checklist matches are possible evidence, never "reported"*
+  (b60eec5 engine, 9687cb2 surfaces). A keyword match is "found, please
+  confirm"; compound questions are checked part by part ("partly there");
+  "not reported", promises and cited prior studies are set aside and shown
+  as such; an absent section says so. Each pack names its edition and item
+  numbers (STROBE 2007, CONSORT 2010, PRISMA 2020, EPIFORGE 2020). Website,
+  Word and the printed report share one wording module
+  (`apps/web/lib/checklists.ts`) and one item view (`ChecklistParts.tsx`);
+  the writer can mark "Confirmed by me" or "Not applicable" for the
+  session only (nothing stored), and Word gained Not applicable.
+- *N6, the export gate opens archives* (f5862cd). ZIP and .docx members
+  get every check (names, text with Word's run boundaries removed,
+  metadata, comment authors, two levels deep); policy and overlay are read
+  from the exported git ref, not the working tree; a missing gitleaks gives
+  INCOMPLETE (exit 3) and never syncs.
+- *N2, progress compares like with like* (eb181b0). The engine reports
+  `assessed_rules` and a `ruleset` fingerprint; progress rows store them
+  with the mode (migration `20261014130000_progress_comparable.sql`). A
+  rule that did not run is a gap on the sparkline (a hollow mark), never a
+  zero; one article type and one ruleset are compared at a time; an
+  unchanged recheck is not recorded twice.
+- *N3, labels name their check and flag* (c849a94). Each successful check
+  starts an attempt (a random id, never text); a changed verdict or a
+  recheck replaces rather than adds; the evaluator
+  (`ml/eval/label_precision.py`) keeps the last attempt per paragraph and
+  the last verdict per flag and reports what it set aside.
+- *N4 + N5, the narrative map* (e562422). Two moves in one sentence are
+  not "out of order", and every order warning explains itself. Expected
+  moves follow the article type; a response to reviewers is described,
+  never judged; "not detected" replaces "missing" (contract, website, Word,
+  print); repeated sections are mapped per instance; an opening-sentence
+  fallback is labelled an assumption.
+
+**Evidence.** Core 1275 passed / 2 skipped; service 239; Supabase two-user
+tests 122 on PostgreSQL 16; web lint, typecheck and 498 unit tests; e2e
+chromium 119 passed / 7 skipped, accounts 51 passed; ml/eval 24; export
+tests 16 passed / 1 skipped and the real gate (gitleaks 8.21.2) CLEAN;
+ruff clean; third-party scan 0 hits. Noise floor 11.74 flags/1000w,
+unchanged from the P41 baseline (gate OK; four rules moved by one flag
+each); the ≤ 11 target is still open.
+
+**Deploy order (unchanged in spirit).** Supabase migrations S4c first, then
+`20261014120000_spelling_prediction.sql`, then
+`20261014130000_progress_comparable.sql`; then the engine; then the web
+app. Word: restart and fully quit Word (Cmd-Q) after the deploy.
+
+**Lessons.**
+- A finding that says "overstates" is about words as much as logic: the
+  checklist's engine was fixed first, but the review is only closed when
+  every surface (screen, Word, paper) says the same cautious thing, so the
+  wording lives in one module.
+- A comparison over time needs to record *what was measured*, not only the
+  result; a muted rule looked like progress until the row stored which
+  rules ran.
+- A gate that reads its policy from the working tree can be fooled by an
+  uncommitted edit; read everything from the ref being exported.

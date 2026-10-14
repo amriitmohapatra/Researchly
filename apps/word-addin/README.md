@@ -25,6 +25,13 @@ document** on one card; that change is a tracked change wherever your Word
 supports it (WordApi 1.4: Word 2021 / Microsoft 365), and a direct edit
 (undo with Cmd-Z) otherwise.
 
+**Next words** (word prediction, 2026-10-14): a small panel under the check
+panel offers up to three words for the cursor as you type (it needs
+WordApi 1.3; the panel says so if your Word is older). Clicking one adds
+the rest of the word at the cursor; nothing is added otherwise. With "This
+computer", `server.py` answers it at `/v1/complete`. Hide it with **Hide**,
+or with **Word prediction** under Settings.
+
 ### Owner steps (one time)
 
 1. **Apply the S3 database change.** In Supabase, open **SQL Editor → New

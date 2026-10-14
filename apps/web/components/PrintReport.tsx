@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import type { AnalyzeResponse, SourceInfo, Suggestion } from "@researchly/contract";
 import { categoryMeta, countByCategory, CATEGORIES, CATEGORY_ORDER, sectionLabel } from "@/lib/categories";
 import { markNumbers, numberSuggestions, reportTitle } from "@/lib/print";
+import { NO_MARKS, type ChecklistMarks } from "@/lib/checklists";
 import { briefState, narrativeState, profileLine } from "@/lib/profiles";
 import {
   dismissedReportLine,
@@ -41,8 +42,8 @@ interface Props {
   mutedRules?: ReadonlySet<string>;
   /** For a multi-file upload: suggestion id -> "file, line N", as the cards show it. */
   locations?: ReadonlyMap<string, string> | null;
-  /** Checklist items the writer marked "Not applicable" on screen (this session). */
-  notApplicable?: ReadonlySet<string>;
+  /** The writer's calls on checklist items on screen (this session): confirmed or not applicable, kept apart on paper. */
+  checklistMarks?: ChecklistMarks;
 }
 
 /**
@@ -71,7 +72,7 @@ export function PrintReport({
   dismissed = NONE,
   mutedRules = NONE,
   locations = null,
-  notApplicable = NONE,
+  checklistMarks = NO_MARKS,
 }: Props) {
   const allShown = useMemo(() => shownSuggestions(data, showPreferences), [data, showPreferences]);
   const shown = useMemo(() => withoutSetAside(allShown, dismissed, mutedRules), [allShown, dismissed, mutedRules]);
@@ -237,7 +238,7 @@ export function PrintReport({
       {data.checklist ? (
         <section className="print-checklist" aria-label="Reporting checklist" data-testid="print-checklist">
           <h2>Reporting checklist</h2>
-          <ChecklistView report={data.checklist} notApplicable={notApplicable} variant="print" />
+          <ChecklistView report={data.checklist} marks={checklistMarks} variant="print" />
         </section>
       ) : null}
 

@@ -17,7 +17,6 @@ the three versions carry the same ones (see demo/README.md). Python 3.10.
 from __future__ import annotations
 
 import argparse
-import copy
 import io
 import re
 import sys

@@ -1,12 +1,13 @@
 /**
  * Design review screenshots for the build with accounts (not assertions):
- * Settings, /progress and the account menu, light and dark, at 375 and
+ * Settings, /progress (with a gap in one line) and the account menu, light and dark, at 375 and
  * 1366px, each with every axe violation logged. Runs only with SCREENSHOTS=1
  * (project "accounts"); see screenshots-pages.spec.ts.
  */
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { mockEngineAuth, mockSupabase, reply, seedSession } from "./supabase-mock";
+import type { RuleInfo } from "@researchly/contract";
 import { RULES, signedInPaste } from "./accounts-fixtures";
 
 const DIR = process.env.SHOTS_DIR ?? "test-results/shots";
@@ -23,11 +24,28 @@ async function axeAll(page: Page, name: string) {
   );
 }
 
+/** Four checks; the third did not assess S001, so its line has a gap (never a zero). */
 const RECORDED = [
-  { created_at: "2026-10-01T09:00:00Z", words: 500, document_type: "manuscript", counts: { G106: 4, S001: 1 } },
-  { created_at: "2026-10-03T09:00:00Z", words: 1000, document_type: "manuscript", counts: { G106: 3, S001: 1, W202: 1 } },
-  { created_at: "2026-10-05T09:00:00Z", words: 2000, document_type: "manuscript", counts: { G106: 2, S001: 2 } },
+  { created_at: "2026-10-01T09:00:00Z", words: 500, document_type: "manuscript", counts: { G106: 4, S001: 1 }, assessed: ["G106", "S001", "W202"] },
+  { created_at: "2026-10-03T09:00:00Z", words: 1000, document_type: "manuscript", counts: { G106: 3, S001: 1, W202: 1 }, assessed: ["G106", "S001", "W202"] },
+  { created_at: "2026-10-04T09:00:00Z", words: 1500, document_type: "manuscript", counts: { G106: 3 }, assessed: ["G106", "W202"] },
+  { created_at: "2026-10-05T09:00:00Z", words: 2000, document_type: "manuscript", counts: { G106: 2, S001: 2 }, assessed: ["G106", "S001", "W202"] },
 ];
+
+const rule = (id: string, short: string, learn_ref: string | null = null): RuleInfo => ({
+  id,
+  name: id.toLowerCase(),
+  short,
+  why: "w",
+  plain: "p",
+  source: "s",
+  category: "improvement",
+  tier: "craft",
+  fix_safety: "review",
+  scope: "sentence",
+  learn_ref,
+});
+const REGISTRY: RuleInfo[] = [...RULES, rule("G106", "Long sentence", "long-sentences"), rule("S001", "Possible misspelling"), rule("W202", "Wordy phrase")];
 
 for (const scheme of ["light", "dark"] as const) {
   for (const w of [375, 1366]) {
@@ -40,7 +58,7 @@ for (const scheme of ["light", "dark"] as const) {
         words: ["Rt", "nowcasting"],
         progress: RECORDED,
       } as never);
-      await mockEngineAuth(page, (_c, route) => reply(route, 200, signedInPaste), RULES);
+      await mockEngineAuth(page, (_c, route) => reply(route, 200, signedInPaste), REGISTRY);
       await page.goto("/settings");
       await expect(page.getByTestId("muted-rule").first()).toBeVisible();
       await page.screenshot({ path: `${DIR}/${P}-settings-${w}-${scheme}.png`, fullPage: true });

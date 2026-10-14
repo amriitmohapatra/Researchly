@@ -36,7 +36,7 @@ def test_map_on_request(client):
     assert [m.id for m in intro.moves] == ["territory", "gap", "aim"]
     assert all(m.status.value == "present" for m in intro.moves)
     disc = n.sections[1]
-    missing = [m for m in disc.moves if m.status.value == "missing"]
+    missing = [m for m in disc.moves if m.status.value == "not_detected"]
     assert missing and all(m.question.endswith("?") and m.frame for m in missing)
     assert n.hedging and n.source and "Swales" in n.source
 

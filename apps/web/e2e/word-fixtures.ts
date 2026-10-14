@@ -242,7 +242,7 @@ const WORD_MOVE_SOURCE = "J. M. Swales (1990), Genre Analysis, Cambridge Univers
 
 /** The narrative map for DOC (S4b). Synthetic; the evidence sentences are the document's own. */
 export const WORD_NARRATIVE: NarrativeMap = {
-  note: "4 expected moves are missing; each one below has a question and a frame to fill in.",
+  note: "4 expected moves were not detected in the wording; each one below has a question and a frame to fill in. The map reads wording, so check before adding anything.",
   profile: "manuscript",
   source: NARRATIVE_SOURCE,
   unmapped: [],
@@ -258,7 +258,7 @@ export const WORD_NARRATIVE: NarrativeMap = {
         {
           id: "methods.data",
           label: "The data",
-          status: "missing",
+          status: "not_detected",
           question: "Does the Methods section say what data were used, and where they came from?",
           plain: "A reader judges the result by the data behind it. Say what was collected, from whom, and when.",
           frame: "“[Data] were collected from [source] between [start] and [end].”",
@@ -304,7 +304,7 @@ export const WORD_NARRATIVE: NarrativeMap = {
         {
           id: "discussion.prior",
           label: "Against earlier work",
-          status: "missing",
+          status: "not_detected",
           question: "Does the Discussion compare the findings with earlier work?",
           plain: "A finding means more next to what was known before. Say whether it agrees, and if not, why.",
           frame: "“Our estimate is [consistent with / higher than] [earlier work], which [reason].”",
@@ -316,7 +316,7 @@ export const WORD_NARRATIVE: NarrativeMap = {
         {
           id: "discussion.limits",
           label: "What this cannot show",
-          status: "missing",
+          status: "not_detected",
           question: "Does the Discussion state the limitations?",
           plain: "A limitation stated by the author is a boundary; one found by the reviewer is a rebuttal. State them first.",
           frame: "“This study has limitations. First, [constraint], which means [bounded consequence].”",
@@ -328,7 +328,7 @@ export const WORD_NARRATIVE: NarrativeMap = {
         {
           id: "discussion.implication",
           label: "What should change",
-          status: "missing",
+          status: "not_detected",
           question: "Does the ending say what a reader could do with this?",
           plain: "The ending widens back out: say what should change in the field or in practice, and for whom.",
           frame: "“[Decision-makers] could use this to [action], provided [condition].”",
@@ -364,16 +364,24 @@ export function wordProfileFor(type: DocumentType | null | undefined): ProfileIn
   return { ...p, evidence: p.guessed ? "Methods" : "" };
 }
 
-/** A STROBE report for DOC (S4c). Synthetic: one item reported by the document's own sentence, two that need the writer's check. */
+/**
+ * A STROBE report for DOC (S4c), in the cautious contract (Codex review N1).
+ * Synthetic: a compound question partly there (one part found by the
+ * document's own sentence), one that needs the writer's check, one found,
+ * with a sentence the engine set aside, and one good-practice item whose
+ * section the document lacks.
+ */
 export const WORD_CHECKLIST: ChecklistReport = {
   id: "strobe",
   label: "STROBE",
+  edition: "STROBE (2007)",
   design: "observational studies (cohort, case-control, cross-sectional)",
   source: "STROBE Statement (2007), checklist for observational studies",
   suggested: false,
-  reported: 1,
-  total: 3,
-  note: "1 of 3 items were found in the text. The others need your check: they may be reported in a table, a figure or the supplement, or not apply to this study. This checks reporting only, never the science.",
+  found: 1,
+  partial: 1,
+  total: 4,
+  note: "1 of 4 items has possible evidence in the text; 1 more is partly there. Confirm each one: a matching sentence is not proof. The others need your check: they may be in a table, a figure or the supplement, or not apply to this study. These are selected themes of the guideline, not a full compliance check, and they check reporting only, never the science.",
   items: [
     {
       id: "methods.statistics",
@@ -381,8 +389,19 @@ export const WORD_CHECKLIST: ChecklistReport = {
       question: "Are the statistical methods described, including how confounding was handled?",
       plain: "A reader needs the model to judge the estimate.",
       sections: ["methods"],
-      status: "reported",
+      refs: ["12a"],
+      status: "partial",
       evidence: "In order to estimate the effective reproduction number, a renewal model was fitted.",
+      parts: [
+        {
+          label: "the statistical methods",
+          found: true,
+          evidence: "In order to estimate the effective reproduction number, a renewal model was fitted.",
+        },
+        { label: "how confounding was handled", found: false, evidence: null },
+      ],
+      not_counted: null,
+      section_absent: false,
     },
     {
       id: "methods.setting",
@@ -390,8 +409,12 @@ export const WORD_CHECKLIST: ChecklistReport = {
       question: "Are the setting, locations and dates of the study described?",
       plain: "Where and when the data come from decides whom the result applies to.",
       sections: ["methods"],
+      refs: ["5"],
       status: "needs_check",
       evidence: null,
+      parts: [],
+      not_counted: null,
+      section_absent: false,
     },
     {
       id: "discussion.limitations",
@@ -399,8 +422,25 @@ export const WORD_CHECKLIST: ChecklistReport = {
       question: "Are the limitations discussed, with the direction of any bias?",
       plain: "Stating the limits yourself keeps the claim inside them.",
       sections: ["discussion"],
+      refs: ["19"],
+      status: "found",
+      evidence: "It is clearly proven that the the effect of vector control was large, and the the data agree.",
+      parts: [],
+      not_counted: { reason: "prior", label: "is about earlier studies", quote: "The the priors were weakly informative for nowcasting." },
+      section_absent: false,
+    },
+    {
+      id: "results.funding",
+      topic: "Funding",
+      question: "Are the funders named, with their role?",
+      plain: "Readers weigh a study knowing who paid for it.",
+      sections: ["results"],
+      refs: [],
       status: "needs_check",
       evidence: null,
+      parts: [],
+      not_counted: null,
+      section_absent: true,
     },
   ],
 };

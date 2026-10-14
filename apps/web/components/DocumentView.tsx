@@ -2,6 +2,7 @@
 
 import { memo, useCallback, type KeyboardEvent, type MouseEvent } from "react";
 import type { Segment } from "@/lib/segments";
+import { baseId } from "@/lib/table-evidence";
 import { categoryMeta } from "@/lib/categories";
 
 interface Props {
@@ -75,10 +76,12 @@ export const DocumentView = memo(function DocumentView({ segments, activeId, onS
         if (s.ids.length === 0) return <span key={`t${s.start}`}>{s.text}</span>;
         const primary = categoryMeta(s.category ?? "improvement").id;
         const active = activeId !== null && s.ids.includes(activeId);
+        // An X401 card's table cell, shown on request: outlined, not tinted.
+        const cell = s.ids.every((id) => id !== baseId(id));
         return (
           <mark
             key={`m${s.start}`}
-            className={`hl hl-${primary}${s.ids.length > 1 ? " hl-multi" : ""}${active ? " is-active" : ""}`}
+            className={`hl hl-${primary}${cell ? " hl-cell" : ""}${s.ids.length > 1 ? " hl-multi" : ""}${active ? " is-active" : ""}`}
             data-sids={s.ids.join(" ")}
             data-category={primary}
             tabIndex={-1}
