@@ -55,6 +55,12 @@ export type ChecklistItem = S["ChecklistItem"];
 export type ChecklistChoiceInfo = S["ChecklistChoiceInfo"];
 export type LearnCard = S["LearnCard"];
 export type LearnResponse = S["LearnResponse"];
+export type CompleteRequest = S["CompleteRequest"];
+export type CompleteOptions = S["CompleteOptions"];
+export type CompleteResponse = S["CompleteResponse"];
+export type CompletionCandidate = S["CompletionCandidate"];
+export type ReadingSummary = S["ReadingSummary"];
+export type SetAside = S["SetAside"];
 
 /** Mirrors schemas.MAX_CONTENT_CHARS; checked client-side for usability only. */
 export const MAX_CONTENT_CHARS = 1_000_000;

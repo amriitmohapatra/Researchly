@@ -67,11 +67,15 @@ import {
   wordSummary,
   type SectionFocus,
 } from "@/lib/word/view";
+import { usePredictionSetting } from "@/lib/use-prediction";
 import { HealthBanner } from "../HealthBanner";
 import { NarrativeMap } from "../NarrativeMap";
+import { PredictionToggle, WORD_PREDICTION_HELP } from "../PredictionStrip";
 import { ProfileSelect } from "../ProfileSelect";
+import { ReadingSummary } from "../ReadingSummary";
 import { ReviewBrief } from "../ReviewBrief";
 import { CodeSignIn } from "./CodeSignIn";
+import { NextWords } from "./NextWords";
 import { WordCard, type CardNote, type WordCardActions } from "./WordCard";
 import { WordChecklist } from "./WordChecklist";
 import { WordTabs, wordViewIds, type WordView } from "./WordTabs";
@@ -145,6 +149,8 @@ export function Taskpane() {
   /** Suggestions, the reviewer's brief, the narrative map or the checklist: survives a re-check, never stored. */
   const [resultsView, setResultsView] = useState<WordView>("suggestions");
   const [showPreferences, setShowPreferences] = useState(false);
+  // Word prediction (2026-10-14): the "Next words" panel, on unless the writer switched it off.
+  const prediction = usePredictionSetting(signedIn);
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [checked, setChecked] = useState<Checked | null>(null);
@@ -754,6 +760,8 @@ export function Taskpane() {
               </p>
             </section>
 
+            <NextWords engineUrl={engineUrlFor(engine)} local={engine === "local"} setting={prediction} />
+
             {localDown && !error ? (
               <div className="notice notice-health" role="status" data-testid="local-down">
                 <div>
@@ -827,6 +835,7 @@ export function Taskpane() {
                     {profileText}
                   </p>
                 ) : null}
+                <ReadingSummary reading={checked.data.reading} />
                 <WordTabs view={shownView} onChange={setResultsView} idBase={ids.tabs} checklist={checklistTab} />
                 {shownView === "checklist" ? (
                   <div
@@ -974,6 +983,8 @@ export function Taskpane() {
                   />
                   <span>Show preferences</span>
                 </label>
+
+                <PredictionToggle setting={prediction} testId="tp-prediction-switch" help={WORD_PREDICTION_HELP} showHelp />
 
                 {accounts ? (
                   <div className="tp-account-settings">

@@ -780,6 +780,8 @@ test.describe("accessibility", () => {
     await page.keyboard.press("Tab");
     await expect(page.getByLabel("Show preferences")).toBeFocused();
     await page.keyboard.press("Tab");
+    await expect(page.getByLabel("Word prediction")).toBeFocused();
+    await page.keyboard.press("Tab");
     await expect(page.getByTestId("check")).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(page.getByRole("heading", { name: "8 suggestions" })).toBeVisible();

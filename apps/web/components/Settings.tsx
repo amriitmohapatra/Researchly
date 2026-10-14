@@ -26,6 +26,7 @@ import {
 } from "@/lib/settings";
 import { CategoryIcon } from "./CategoryIcon";
 import { ConfirmDelete } from "./pages/ConfirmDelete";
+import { PredictionSettings } from "./PredictionSettings";
 
 const nf = new Intl.NumberFormat("en-GB");
 /** Above this many words the list gets a filter box. */
@@ -200,6 +201,8 @@ function SignedInSettings() {
           });
         }}
       />
+
+      <PredictionSettings />
 
       <Dictionary
         words={words}
