@@ -193,8 +193,8 @@ at the top of that file.
 Things a future agent will otherwise get wrong:
 
 - **The noise floor is just above target.** With every tier on, accepted
-  theses get **11.86 flags/1000w** (P40 baseline: W210 learned 9k VarCon
-  pairs and found genuine UK/US mixtures; 11.67 at P33, 12.65 after S2b
+  theses get **11.74 flags/1000w** (P41 baseline, after the SPECIALIST
+  lexicon cut S001; 11.86 at P40, when W210 learned 9k VarCon pairs; 11.67 at P33, 12.65 after S2b
   added its consistency rules, 14.51 before the Q3 tune). Q3's target is ≤ 11.
   Measure with `api.get_nlp()`, never a bare `spacy.load()`: the shared
   pipeline ends a sentence at a blank line (unless the next line carries

@@ -2423,3 +2423,16 @@ autocorrected 3 words, 2 of them wrongly.
   own inflection table is what recovers the recall.
 - Test on the owner's real documents: five files found two bugs (acronym
   possessives, code names) that a million words of corpus had not.
+
+**Addendum (P41, same day): final numbers.** The head-to-head rerun on the
+committed code: planted slips 97.3% first suggestion right (97.2% with the
+left word only) against the bundle's 89.6%, whose autocorrect would apply
+76.0% right and 1.8% wrong; S001 false flags 0.85 (PMC) and 1.22 (theses)
+per 1000 words against 2.46 and 2.06. The bundle still detects 2.5–4.5
+points more of the public lists' misspellings and ranks Birkbeck's
+spellings by ear slightly better (40.9 vs 38.5% top-1 on a 600-pair
+sample). Noise floor 11.86 → **11.74** (gate OK, baseline lowered): S001
+−52, W208 −1, W211 +20; the W211 additions were read, all genuine mixtures
+in one thesis (data set/dataset, health care/healthcare, time
+point/timepoint), found because the lexicon knows more closed compounds.
+On the 115 PMC articles S001 is 628 flags (2,069 before P40).
