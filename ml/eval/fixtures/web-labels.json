@@ -6,28 +6,36 @@
       "rule_id": "G106",
       "category": "improvement",
       "section": "introduction",
-      "verdict": "useful"
+      "verdict": "useful",
+      "attempt": "attempta01",
+      "flag": 0
     },
     {
       "paragraph": 1,
       "rule_id": "S001",
       "category": "correction",
       "section": "introduction",
-      "verdict": "wrong"
+      "verdict": "wrong",
+      "attempt": "attempta01",
+      "flag": 1
     },
     {
       "paragraph": 2,
       "rule_id": "C201",
       "category": "convention",
       "section": "discussion",
-      "verdict": "unsure"
+      "verdict": "unsure",
+      "attempt": "attemptb02",
+      "flag": 0
     },
     {
       "paragraph": 2,
       "rule_id": "C201",
       "category": "convention",
       "section": "discussion",
-      "verdict": "useful"
+      "verdict": "useful",
+      "attempt": "attemptb02",
+      "flag": 1
     }
   ]
 }

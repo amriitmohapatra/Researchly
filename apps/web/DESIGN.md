@@ -168,6 +168,14 @@ own "Whole document" group so they are never lost. The chooser starts at
   count, Export (`researchly-labels.json`: rule ids and verdicts, no text)
   and "Start over…" behind a confirmation. Labels stay in this browser. In
   the account menu.
+- Attempts (Codex review N3, 2026-10-14): each successful check of a
+  paragraph is an attempt (a random id, never derived from the text); a
+  label names its attempt and its flag's position. A changed verdict
+  replaces; a recheck of the paragraph replaces its earlier labels, which
+  a quiet note under the buttons says beforehand ("This paragraph already
+  has 2 labels from an earlier check…"); a failed or cancelled check
+  changes nothing. After a reload the cards are gone with the text, so the
+  page asks for a recheck rather than showing labels it cannot place.
 
 ## Reporting checklists (S4)
 

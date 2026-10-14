@@ -115,6 +115,10 @@ test.describe("recording after a signed-in Word check", () => {
       words: 800,
       document_type: "manuscript",
       counts: { C120: 1, S010: 3, S001: 1, G106: 1, C201: 1, W211: 1 },
+      // Codex review N2: which checks ran, the mode and the checker's version (null when the engine does not say).
+      assessed: null,
+      mode: "revise",
+      ruleset: null,
     });
     for (const p of DOC) if (p.text.length > 12) expect(post.body).not.toContain(p.text.slice(0, 12));
     expect(post.body).not.toContain("user_id");
