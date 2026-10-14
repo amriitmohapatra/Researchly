@@ -2752,3 +2752,68 @@ never reads as a second finding); the outlined cell maps back to its card
 jump, since the reply has no Word location for the cell. Evidence: 7 unit
 tests, 1 e2e; web 472 unit; checker, word, queue and table e2e 95 passed;
 lint, typecheck and the confidentiality boundary clean.
+
+## P44 — 2026-10-14 — The 9 October review's six findings, fixed on this branch
+
+**Why.** The owner's review branch `codex/review-9oct2026` (PR #13) had six
+findings whose CI never finished (the private repository's Actions minutes
+ran out). Owner: "work on the issues raised by codex in this chat. Merge
+that PR here and continue to work here." The branch was merged (fd509d8),
+each finding reproduced against unchanged code first, and fixed in the
+order N1, N6, N2, N3, N4, N5 (PLAN, "Codex review (9 Oct)").
+
+**What.**
+- *N1, checklist matches are possible evidence, never "reported"*
+  (b60eec5 engine, 9687cb2 surfaces). A keyword match is "found, please
+  confirm"; compound questions are checked part by part ("partly there");
+  "not reported", promises and cited prior studies are set aside and shown
+  as such; an absent section says so. Each pack names its edition and item
+  numbers (STROBE 2007, CONSORT 2010, PRISMA 2020, EPIFORGE 2020). Website,
+  Word and the printed report share one wording module
+  (`apps/web/lib/checklists.ts`) and one item view (`ChecklistParts.tsx`);
+  the writer can mark "Confirmed by me" or "Not applicable" for the
+  session only (nothing stored), and Word gained Not applicable.
+- *N6, the export gate opens archives* (f5862cd). ZIP and .docx members
+  get every check (names, text with Word's run boundaries removed,
+  metadata, comment authors, two levels deep); policy and overlay are read
+  from the exported git ref, not the working tree; a missing gitleaks gives
+  INCOMPLETE (exit 3) and never syncs.
+- *N2, progress compares like with like* (eb181b0). The engine reports
+  `assessed_rules` and a `ruleset` fingerprint; progress rows store them
+  with the mode (migration `20261014130000_progress_comparable.sql`). A
+  rule that did not run is a gap on the sparkline (a hollow mark), never a
+  zero; one article type and one ruleset are compared at a time; an
+  unchanged recheck is not recorded twice.
+- *N3, labels name their check and flag* (c849a94). Each successful check
+  starts an attempt (a random id, never text); a changed verdict or a
+  recheck replaces rather than adds; the evaluator
+  (`ml/eval/label_precision.py`) keeps the last attempt per paragraph and
+  the last verdict per flag and reports what it set aside.
+- *N4 + N5, the narrative map* (e562422). Two moves in one sentence are
+  not "out of order", and every order warning explains itself. Expected
+  moves follow the article type; a response to reviewers is described,
+  never judged; "not detected" replaces "missing" (contract, website, Word,
+  print); repeated sections are mapped per instance; an opening-sentence
+  fallback is labelled an assumption.
+
+**Evidence.** Core 1275 passed / 2 skipped; service 239; Supabase two-user
+tests 122 on PostgreSQL 16; web lint, typecheck and 498 unit tests; e2e
+chromium 119 passed / 7 skipped, accounts 51 passed; ml/eval 24; export
+tests 16 passed / 1 skipped and the real gate (gitleaks 8.21.2) CLEAN;
+ruff clean; third-party scan 0 hits. Noise floor: below.
+
+**Deploy order (unchanged in spirit).** Supabase migrations S4c first, then
+`20261014120000_spelling_prediction.sql`, then
+`20261014130000_progress_comparable.sql`; then the engine; then the web
+app. Word: restart and fully quit Word (Cmd-Q) after the deploy.
+
+**Lessons.**
+- A finding that says "overstates" is about words as much as logic: the
+  checklist's engine was fixed first, but the review is only closed when
+  every surface (screen, Word, paper) says the same cautious thing, so the
+  wording lives in one module.
+- A comparison over time needs to record *what was measured*, not only the
+  result; a muted rule looked like progress until the row stored which
+  rules ran.
+- A gate that reads its policy from the working tree can be fooled by an
+  uncommitted edit; read everything from the ref being exported.
