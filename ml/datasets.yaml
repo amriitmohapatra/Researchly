@@ -1292,9 +1292,19 @@ datasets:
     source: "owner-provided, 2026-10-14; the friend says it came from an MIT-licensed source he cannot name, then improved by him"
     location: null
     in_git: false
-    licence: "unknown — verify (claimed MIT; no copyright notice or source available)"
+    licence: "MIT text received, copyright holder redacted — verify (claimed MIT; source unnamed)"
     licence_verified: false
-    licence_evidence: "The friend's statement relayed by the owner (2026-10-14). The files' form (decoded tables, n-grams 'probed' from a hash that cannot be listed, an ONNX ranker with touch-geometry features) points to an app's data, not a published MIT release; see research/05-keyboard-engine-anatomy.md."
+    licence_evidence: >-
+      The friend's statement relayed by the owner (2026-10-14), then a
+      license.md from the friend (2026-10-14): the standard MIT text
+      (retyped with single quotes), "Copyright (c) 2018-2026" with the
+      holder's name and email redacted, and no project name or source. MIT's
+      one condition is to include that notice in every copy, which cannot be
+      met while it is redacted, and nothing ties the file to these data or
+      shows the signer owns them. The files' form (n-grams 'probed' from a
+      hash that cannot be listed, an ONNX ranker with touch-geometry
+      features) fits an app's data; it would also fit an MIT-released binary
+      model that someone later decoded. research/05-keyboard-engine-anatomy.md.
     commercial_ok: unknown
     permitted_use: [private_eval]
     current_use: "Private parity benchmark on the owner's machine or in a scratch folder (ml/eval/spelling_bench.py --pairs); never committed, never trained on for a shipped artefact."

@@ -2334,3 +2334,16 @@ account column; whether prediction ever goes further.
 - Measure a context model with context. Isolated misspelling lists showed
   the ranker as neutral; planted typos in real sentences halved the wrong
   first suggestions.
+
+**Addendum (P40, same day): the friend's licence file.** A `license.md`
+arrived: the standard MIT text, "Copyright (c) 2018-2026", with the
+holder's name and email redacted and no project or source named. Reading:
+the licence type is now stated, but it cannot be relied on yet. MIT's only
+condition is to include the copyright notice in every copy, which a redacted
+notice cannot satisfy, and nothing links the file to these data or shows
+that its signer owns them. The registry entry `keyboard-engine-bundle`
+records it and stays `private_eval`. What would settle it: the unredacted
+notice and where the original was published (URL, package or commit), so
+the data can be matched to it. With those, MIT would allow use and shipping
+with the notice, and the friend's request not to publish his improved files
+can still be honoured (the public export never includes them).
