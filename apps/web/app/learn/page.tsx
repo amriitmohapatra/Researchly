@@ -6,7 +6,7 @@ import { groupedCards } from "@/lib/learn";
 
 export const metadata: Metadata = {
   title: "Lessons | Researchly",
-  description: "Short lessons behind Researchly's suggestions: the principle, a before and after, and a habit to try on your own draft.",
+  description: "Short lessons behind Researchly’s suggestions: the principle, a before and after, and a habit to try on your own draft.",
 };
 
 /** Every Learn card (S4c), grouped in the engine's order. Static: no engine call, no text. */

@@ -38,7 +38,7 @@ export function ChecklistSelect({ id, value, choices, onChange }: Props) {
         data-testid="checklist-select"
       >
         <option value="none">None</option>
-        <option value="auto" title="The checklist your text's own words point to, if any.">
+        <option value="auto" title="The checklist your text’s own words point to, if any.">
           Auto
         </option>
         {/* Only guidelines this page can ask for: a newer engine's extra ids wait for the contract. */}

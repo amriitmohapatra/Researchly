@@ -158,8 +158,8 @@ describe("sign-in messages", () => {
   it("maps Supabase's error codes to plain sentences", () => {
     expect(signInErrorMessage({ status: 429, code: "over_email_send_rate_limit" })).toMatch(/Too many sign-in emails/);
     expect(signInErrorMessage({ status: 400, code: "email_address_invalid" })).toMatch(/valid email address/);
-    expect(signInErrorMessage({ status: 422, code: "otp_disabled" })).toMatch(/can't be sent to this address/);
-    expect(signInErrorMessage({ status: 400, code: "email_address_not_authorized" })).toMatch(/can't be sent/);
+    expect(signInErrorMessage({ status: 422, code: "otp_disabled" })).toMatch(/can’t be sent to this address/);
+    expect(signInErrorMessage({ status: 400, code: "email_address_not_authorized" })).toMatch(/can’t be sent/);
     expect(signInErrorMessage({ name: "AuthRetryableFetchError", status: 0 })).toMatch(/connection/);
     expect(signInErrorMessage({ status: 500 })).toMatch(/could not send the email/);
     // supabase-js wraps 5xx replies as retryable fetch errors too: Supabase

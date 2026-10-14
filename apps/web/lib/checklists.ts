@@ -40,7 +40,7 @@ export const FALLBACK_CHECKLISTS: readonly ChecklistChoiceInfo[] = [
 /** The help line under the selector: what the chosen checklist is for. */
 export function checklistHelp(choices: readonly ChecklistChoiceInfo[], setting: ChecklistSetting): string {
   if (setting === "none") return "";
-  if (setting === "auto") return "The checklist your text's own words point to, if any.";
+  if (setting === "auto") return "The checklist your text’s own words point to, if any.";
   const c = choices.find((x) => x.id === setting);
   return c?.design ? `For ${c.design}.` : "";
 }

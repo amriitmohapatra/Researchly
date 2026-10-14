@@ -3,7 +3,7 @@ import { OFFICE_JS_URL } from "@/lib/security";
 
 export const metadata: Metadata = {
   title: "Researchly for Word",
-  description: "Researchly's Word add-in: explained, section-aware suggestions in a sidebar. It advises; it never drafts.",
+  description: "Researchly’s Word add-in: explained, section-aware suggestions in a sidebar. It advises; it never drafts.",
 };
 
 /**

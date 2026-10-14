@@ -65,6 +65,13 @@ test.describe("Lessons", () => {
     }));
     expect(fonts.quote).toMatch(/Georgia|serif/);
     expect(fonts.lesson).not.toMatch(/Georgia/);
+    // Page scale, set apart from the card's disclosure: a heading-size title, the habit in body text (16px or more).
+    const sizes = await page.evaluate(() => ({
+      title: parseFloat(getComputedStyle(document.querySelector(".lesson-page .lesson-title")!).fontSize),
+      habit: parseFloat(getComputedStyle(document.querySelector(".lesson-page .lesson-habit p")!).fontSize),
+    }));
+    expect(sizes.title).toBeGreaterThanOrEqual(25);
+    expect(sizes.habit).toBeGreaterThanOrEqual(16);
     await page.getByRole("link", { name: "All lessons" }).click();
     await expect(page).toHaveURL(/\/learn$/);
   });

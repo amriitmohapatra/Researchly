@@ -237,6 +237,11 @@ own "Whole document" group so they are never lost. The chooser starts at
 - **Sans** (system UI stack) is the coach: headings, messages, controls.
 - Body 16px minimum on every viewport; explanations at 16px with 1.6 line
   height and a 62ch measure. No font files, no font CDNs.
+- Typography in every string a writer reads: a curly apostrophe (’) and the
+  ellipsis character (…), never ' or ... (tests/unit/typography.test.ts).
+- The card's "The lesson" and the lesson page share class names at two
+  scales: the card's are scoped to the open disclosure, the page's to
+  `.lesson-page`, so neither leaks into the other.
 
 ## Colour
 
@@ -295,7 +300,7 @@ column, the site's tokens, cards and notices; nothing new to learn.
 
 - **Order**: header (brand, Sign in or the email), then one panel with the
   Draft / Revise choice (a two-part segmented control, 8px radius, under it
-  exactly "Draft: check what you've written so far. Revise: check the
+  exactly "Draft: check what you’ve written so far. Revise: check the
   finished manuscript."), **Check document** (the only primary button) beside
   the secondary **Check this section**, its one-line help, and the privacy
   line for the chosen engine. "Check this section" sends the whole document
@@ -366,7 +371,10 @@ loaded or not loadable.
   text column sticky.
 - Below 960px: one column. The key shows only before the first check, so
   results come straight after the composer. Phones are for reading reports:
-  no horizontal scroll at 360px, 16px text, 32px minimum targets.
+  no horizontal scroll at 360px, 16px text, 32px minimum targets. On a
+  phone the composer's selects stack at one full width, as in the Word pane.
+- In the composer's row the labels line up along the top; a help line under
+  one select hangs below it, and the switch and Check keep to the row's foot.
 
 ## Reject
 

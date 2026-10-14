@@ -1043,6 +1043,13 @@ test.describe("the lesson on every card (S4)", () => {
     expect(await lesson.locator(".lesson-quote").first().evaluate((el) => getComputedStyle(el).fontFamily)).toMatch(/Charter|Georgia/);
     await expect(lesson.locator(".lesson-habit")).toContainText(want.habit);
     await expect(lesson.locator(".lesson-source cite")).toHaveText(want.source);
+    // Set at card scale: the lesson page's 2rem title and ruled habit section never leak into a card.
+    const cardScale = await lesson.evaluate((el) => {
+      const px = (sel: string, prop: "fontSize" | "borderTopWidth") => parseFloat(getComputedStyle(el.querySelector(sel)!)[prop]);
+      return { title: px(".lesson-title", "fontSize"), habitRule: px(".lesson-habit", "borderTopWidth") };
+    });
+    expect(cardScale.title).toBeLessThanOrEqual(17);
+    expect(cardScale.habitRule).toBe(0);
     const all = lesson.getByRole("link", { name: /All lessons/ });
     await expect(all).toHaveAttribute("href", "/learn");
     await expect(all).toHaveAttribute("target", "_blank");

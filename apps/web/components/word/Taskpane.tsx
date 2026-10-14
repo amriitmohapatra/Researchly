@@ -104,12 +104,12 @@ function localDownError(e: CheckError): CheckError {
     ...e,
     title: "Researchly is not running on this computer",
     message:
-      "Start the local server (python3 server.py in Researchly's word-addin folder), then check again. Or switch to Researchly cloud under Settings below.",
+      "Start the local server (python3 server.py in Researchly’s word-addin folder), then check again. Or switch to Researchly cloud under Settings below.",
   };
 }
 
 /** Document-wide checks only make sense on a complete draft, so the stage says what each one checks. */
-const MODE_HELP = "Draft: check what you've written so far. Revise: check the finished manuscript.";
+const MODE_HELP = "Draft: check what you’ve written so far. Revise: check the finished manuscript.";
 
 /**
  * The Word add-in's taskpane (S3). Reads the document through Office.js
@@ -486,8 +486,8 @@ export function Taskpane() {
       note(s.id, {
         tone: "ok",
         text: r.tracked
-          ? "Applied as a tracked change. Accept or reject it in Word's Review tab."
-          : "Applied as a direct edit: this version of Word can't track it. Undo with Ctrl+Z (Cmd+Z on a Mac).",
+          ? "Applied as a tracked change. Accept or reject it in Word’s Review tab."
+          : "Applied as a direct edit: this version of Word can’t track it. Undo with Ctrl+Z (Cmd+Z on a Mac).",
       });
     },
     [checked],
@@ -503,7 +503,7 @@ export function Taskpane() {
         setAccountNote({ ok: false, text: r.message });
         return;
       }
-      setAccountNote({ ok: true, text: `Muted “${s.rule_name}”. It stays muted in Word and on the website. Unmute it in the website's Settings.` });
+      setAccountNote({ ok: true, text: `Muted “${s.rule_name}”. It stays muted in Word and on the website. Unmute it in the website’s Settings.` });
       void runCheck();
     },
     [runCheck],
@@ -699,7 +699,7 @@ export function Taskpane() {
                 </select>
                 <p id={ids.checklistHelp} className="help control-help" data-testid="checklist-help">
                   {checklistHelp(checklists, checklist)}
-                  {checklist === "none" && suggestedChecklist ? ` Your text's words point to ${suggestedChecklist}.` : ""}
+                  {checklist === "none" && suggestedChecklist ? ` Your text’s words point to ${suggestedChecklist}.` : ""}
                 </p>
               </div>
 

@@ -27,7 +27,7 @@ checking engine" state.
 | `npm run typecheck` | `tsc --noEmit` (strict, includes the contract package) |
 | `npm test` | Vitest unit tests (`tests/unit`) |
 | `npm run test:e2e` | Playwright against two production builds, engine and Supabase mocked: project `chromium` (S1 build, no Supabase, :3100) and project `accounts` (with Supabase, :3101, `e2e/accounts*.spec.ts`) |
-| `npm run screenshots` | Design screenshots (`SHOTS_DIR=…` to choose where) |
+| `npm run screenshots` | Design screenshots of every page, light and dark, phone and desktop, Word pane at 320px, with axe logged (`SHOTS_DIR=…` to choose where, `SHOT_PREFIX=…` to name a set) |
 
 Playwright is pinned to 1.56.1 to match the pre-installed Chromium; set
 `PLAYWRIGHT_BROWSERS_PATH` if your browsers live elsewhere.
