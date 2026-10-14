@@ -40,6 +40,11 @@ AGGRESSIVENESS = ("light", "standard", "thorough")
 
 LOCALES = ("en-US", "en-GB")
 
+# Which English spelling the writer keeps to (2026-10-14). "auto" follows
+# the document's own majority and flags only mixtures (W210); a choice also
+# flags any spelling of another dialect (W213: "color" in a British paper).
+SPELLINGS = ("auto", "us", "uk", "uk-oxford", "ca", "au")
+
 # Draft / Revise (P1, S3). Draft shows sentence-level checks only; Revise
 # shows everything. A writing stage, not a quality dial: Corrections at
 # sentence level are shown in both.
@@ -55,6 +60,7 @@ class Config:
     document_type: str = "auto"
     aggressiveness: str = "standard"
     mode: str = "revise"
+    spelling: str = "auto"
     # Tier switches. `None` means "use it if it is available" — an explicit
     # False is the user turning it off, which health.py reports differently
     # from "missing".
@@ -80,6 +86,7 @@ class Config:
             "document_type": self.document_type,
             "aggressiveness": self.aggressiveness,
             "mode": self.mode,
+            "spelling": self.spelling,
             "grammar_tier": self.grammar_tier,
             "gec_tier": self.gec_tier,
             "dictionary": list(self.dictionary),
@@ -156,6 +163,10 @@ def _apply(cfg: Config, data: dict) -> Config:
         val = str(doc["locale"])
         if val in LOCALES:
             cfg.locale = val
+    if "spelling" in doc:
+        val = str(doc["spelling"])
+        if val in SPELLINGS:
+            cfg.spelling = val
 
     tiers = data.get("tiers") or {}
     if "grammar" in tiers:
@@ -265,6 +276,7 @@ def dumps(cfg: Config) -> str:
         "[document]",
         f"type = {_toml_str(cfg.document_type)}",
         f"locale = {_toml_str(cfg.locale)}",
+        f"spelling = {_toml_str(cfg.spelling)}",
         "",
         "[tiers]",
     ]

@@ -2238,3 +2238,99 @@ on the branch `claude/vigilant-hawking-hnexgd`. It summarises P1–P39 and
 engineering. It is documentation only. No code, tests or PLAN boxes
 changed, and `main` is untouched. There were no commits between
 2026-10-08 and this entry.
+
+## P40 — 2026-10-14 — The spelling engine, rebuilt from open data; British or American; a prediction experiment
+
+**Why.** The owner was given a "pre-trained engine" by a friend (22 files)
+and asked to (1) learn how it was built, (2) build an engine at parity with
+it, (3) do better for academic writing, checking open-source repositories
+and Grammarly alternatives along the way. Mid-way the owner asked for text
+prediction as an experiment, and for UK/US detection with a choice of style.
+
+**What the bundle is** (`research/05-keyboard-engine-anatomy.md`). A mobile
+keyboard's autocorrect and prediction engine: a 166k-word vocabulary, a
+5-gram model of ~491 billion tokens in a fingerprinted perfect hash, a
+context-dependent noisy-channel error model, a 38-feature MLP ranker (touch
+geometry among its inputs), a 4,698-pair replace list, dialect maps,
+hashed blocklists and 102k email phrase completions. Built for email and
+messaging: no "hypothesis", "In this study" or "confidence interval" among
+its phrases; no "seroprevalence" or "estimand" in its vocabulary; its
+replace list *adds* contractions. Licence: the friend says it came from an
+MIT source he cannot name and allows use but not publication. The files'
+form (n-grams "probed" from a hash that cannot be listed, an ONNX graph
+rewritten as JSON) points to an app's data, so it is registered
+`private_eval` only (`keyboard-engine-bundle`), never committed, and used
+only as a parity benchmark. Asking the friend for the original source is
+on the owner's list.
+
+**Survey** (`research/06-open-resources.md`, sub-agent; ~70 resources,
+every licence opened first-hand). It changed three assumptions: every
+common typo list descends from Wikipedia's CC BY-SA list (so none ships);
+VarCon/ESDB is MIT-like and carries the dialect data; the SymSpell bigram
+file in the symspellpy wheel has undocumented provenance.
+
+**Built.**
+- *Same architecture, open data.* `researchly/spellrank.py`: a noisy-channel
+  ranker, score = error(typed | meant) + log P(meant | previous word) +
+  log P(next word | meant), over SymSpell candidates, the correctly
+  inflected form, and two-word splits the bigram list confirms ("inspite"
+  → "in spite"). S001 now ranks with the words either side.
+- *S001's fallbacks follow English spelling.* The suffix fallback accepted
+  any known base plus any ending, excusing "occured", "begining",
+  "happend", "acess", "personaly"; the prefix fallback excused "untill"
+  (un + till). Now: consonant doubling, -e before -ing/-ed, -es after
+  s/x/z/ch/sh, y → i, -ally/-ely, and an accidental-prefix check on short
+  stems. The letter-swap UK/US fallback (which accepted "rigourous" and
+  "controled") is replaced by VarCon.
+- *Beyond the keyboard engine.* **S002** real-word confusions ("principle
+  component", "a casual relationship", "were effected by"; one-way pairs,
+  ~150× evidence; than/then and from/form left to LanguageTool after they
+  misfired on published prose); **W212** uncountable plurals (softwares,
+  informations, criterias); **W208** now offers the full form and catches
+  "dont"-style contractions a keyboard would "fix" the other way; **W213**
+  + the `spelling` setting (auto, us, uk, uk-oxford, ca, au: TOML, CLI
+  overrides, `options.spelling` on every analysis route, the local Word
+  server); **W210** gets 9,281 sense-aware VarCon pairs, drops curated
+  pairs VarCon contradicts (analyses/analyzes), and resolves a mixture by
+  the document's own detected dialect.
+- *Tools.* `ml/eval/spelling_bench.py` (public lists, fetched at run
+  time, 80/20 split), `ml/eval/spelling_context_bench.py`,
+  `ml/tools/build_variants.py`, `ml/tools/build_spell_errors.py` (refuses
+  sources without `ship_model`; `--experiment` writes only outside the
+  repo). Registry: `varcon`, `symspell-bigram-dictionary`,
+  `mitton-misspelling-corpora`, `norvig-spell-testsets`,
+  `wikipedia-misspellings-for-machines`, `keyboard-engine-bundle`.
+- *Prediction experiment* (`ml/experiments/prediction/`, never imported by
+  the engine). On held-out PMC articles: keystrokes saved 44.6% (academic
+  n-grams) vs 29.6% (general English); section models did not help yet.
+
+**Evidence.**
+
+| Check | Result |
+|---|---|
+| core | 1019 passed, 2 skipped |
+| service | 188 |
+| ml eval + realdocs | 38 (27 + 11 new) |
+| contract (OpenAPI + TS) | regenerated, `spelling` option |
+| ruff, third-party scan | clean, 0 hits |
+| noise floor (8 theses, LT on) | 11.67 → 11.86 (gate OK; baseline updated): W210 +41 genuine mixtures, S001 +10 (rigourous, bootstraping, contre, PDF joins), W212 +3, S002 +2 (both "principle component") |
+| S001 on 115 PMC articles (735k words) | 2,069 → 1,958 flags: ~130 false flags on US/medical spellings gone (anesthesia, hemoglobin, etiology, artifacts); new: precent, proces, acces |
+| S002 on 1.03M words (theses + PMC) | 3 flags, all genuine |
+| Context ranking, 3,000 typos planted in CC BY sentences | first suggestion right: 92.4% (SymSpell) → 96.3% |
+| Public lists, held-out 20% | detection unchanged; top-1 within ±3 points of SymSpell without context; a learned error table (not shipped) adds +2 to +10 |
+| Private parity, the bundle's own 4,414 single-word corrections | S001 catches 96.9% (93.2% before today); first suggestion right 91.9% |
+
+**Owner decisions waiting** (PLAN): the SymSpell bigram file's provenance;
+whether to ship a learned error table derived from CC BY-SA lists; the
+bundle's original source; the spelling selector on the surfaces and an
+account column; whether prediction ever goes further.
+
+**Lessons.**
+- A morphological fallback is a spelling rule or it is a hole: "known
+  word + any ending" excused the commonest misspellings in English for two
+  months.
+- Dialect data must be read by sense. "program" and "meter" are British in
+  one sense, so a word-level UK/US map would have flagged correct British.
+- Measure a context model with context. Isolated misspelling lists showed
+  the ranker as neutral; planted typos in real sentences halved the wrong
+  first suggestions.

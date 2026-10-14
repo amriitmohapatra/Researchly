@@ -217,6 +217,17 @@
             "description": "Include Preference-type suggestions (hidden by default).",
             "title": "Show Preferences",
             "type": "boolean"
+          },
+          "spelling": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Spelling"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The English spelling to keep to. Omitted: the caller's saved setting, else auto."
           }
         },
         "title": "AnalyzeOptions",
@@ -1843,6 +1854,19 @@
         ],
         "title": "Span",
         "type": "object"
+      },
+      "Spelling": {
+        "description": "Which English spelling to keep to (2026-10-14). `auto` follows the\ndocument's own majority and flags only mixtures; a choice also flags\nspellings of other dialects (\"color\" in a British paper).",
+        "enum": [
+          "auto",
+          "us",
+          "uk",
+          "uk-oxford",
+          "ca",
+          "au"
+        ],
+        "title": "Spelling",
+        "type": "string"
       },
       "StructureItem": {
         "additionalProperties": false,

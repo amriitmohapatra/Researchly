@@ -99,7 +99,8 @@ Researchly/
 │   │   │                            abstract_lens.py (AB802); old paths re-export
 │   │   ├── review.py             ← Wallace & Wray critical-reader report
 │   │   ├── transform.py          ← deterministic Polish rewriter
-│   │   ├── spelling.py           ← SymSpell wrapper + guards + user dictionary
+│   │   ├── spelling.py           ← SymSpell wrapper + guards + user dictionary + VarCon dialects
+│   │   ├── spellrank.py          ← noisy-channel ranking of spelling suggestions (P40)
 │   │   ├── lexicons.py           ← ALL word lists (auditable; extend here)
 │   │   ├── metrics.py            ← read-outs incl. hedge/booster meter (never a score)
 │   │   ├── telemetry.py          ← local usage log → `researchly stats`
@@ -191,8 +192,9 @@ at the top of that file.
 Things a future agent will otherwise get wrong:
 
 - **The noise floor is just above target.** With every tier on, accepted
-  theses get **11.67 flags/1000w** (P33 baseline; 12.65 after S2b added
-  its consistency rules, 14.51 before the Q3 tune). Q3's target is ≤ 11.
+  theses get **11.86 flags/1000w** (P40 baseline: W210 learned 9k VarCon
+  pairs and found genuine UK/US mixtures; 11.67 at P33, 12.65 after S2b
+  added its consistency rules, 14.51 before the Q3 tune). Q3's target is ≤ 11.
   Measure with `api.get_nlp()`, never a bare `spacy.load()`: the shared
   pipeline ends a sentence at a blank line (unless the next line carries
   on in lower case), and a runner without it measures a different engine. About 90% of the remaining S001 flags are PDF

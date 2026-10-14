@@ -92,6 +92,8 @@ def build_config(options: Optional[AnalyzeOptions],
             cfg.mode = options.mode.value
         if options.document_type is not None:
             cfg.document_type = options.document_type.value
+        if options.spelling is not None:
+            cfg.spelling = options.spelling.value
     return cfg
 
 

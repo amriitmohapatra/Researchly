@@ -142,7 +142,8 @@ MAX_BODY_BYTES = 64 * 1024 * 1024
 MODES = ("draft", "revise")
 # Every option of the contract's AnalyzeOptions (packages/contract).
 OPTION_KEYS = {"show_preferences", "disabled_rules", "mode",
-               "document_type", "review", "narrative", "checklist"}
+               "document_type", "spelling", "review", "narrative",
+               "checklist"}
 CHECKLISTS = {"auto"} | set(packs_mod.checklists())
 # Tiers whose being off never makes this engine "degraded" (as the hosted one).
 _OPTIONAL_STATES = {"gec": {"missing", "disabled"}}
@@ -234,6 +235,10 @@ def parse_word_request(payload) -> tuple:
     if doc_type is not None and doc_type not in DOCUMENT_TYPES:
         raise bad("document_type must be one of " + ", ".join(DOCUMENT_TYPES))
     extra["document_type"] = doc_type
+    spelling = opts.get("spelling")
+    if spelling is not None and spelling not in config_mod.SPELLINGS:
+        raise bad("spelling must be one of " + ", ".join(config_mod.SPELLINGS))
+    extra["spelling"] = spelling
     for flag in ("review", "narrative"):
         v = opts.get(flag, False)
         if not isinstance(v, bool):
@@ -288,6 +293,8 @@ def analyze_word(payload) -> dict:
         cfg.mode = mode
     if extra["document_type"] is not None:
         cfg.document_type = extra["document_type"]
+    if extra["spelling"] is not None:
+        cfg.spelling = extra["spelling"]
     a = api.analyze(paragraphs, nlp=get_nlp(), cfg=cfg,
                     with_review=extra["review"],
                     with_narrative=extra["narrative"],
@@ -514,7 +521,7 @@ class Handler(SimpleHTTPRequestHandler):
                     cfg = cfg.with_overrides(**{
                         k: payload[k] for k in
                         ("show_preferences", "locale", "document_type",
-                         "aggressiveness", "grammar_tier", "gec_tier",
+                         "spelling", "aggressiveness", "grammar_tier", "gec_tier",
                          "disabled")
                         if k in payload})
                     if not config_mod.save_user(cfg):

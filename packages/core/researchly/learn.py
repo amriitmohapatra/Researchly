@@ -423,7 +423,7 @@ _CARDS = (
          "Before you send a draft, read it aloud once, slowly: the ear "
          "catches doubled words the eye skips.",
          "§6+LanguageTool+symspellpy",
-         rules=("S001", "LT001", "W207", "GEC001", "W210", "W208")),
+         rules=("S001", "S002", "LT001", "W207", "GEC001", "W210", "W213", "W208", "W212")),
     Card("headings", "Headings as structure", "Mechanics",
          "Heading styles for headings only; body styles for text.",
          "In Word, the heading styles build the navigation pane, the table of "

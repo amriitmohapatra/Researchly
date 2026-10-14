@@ -389,11 +389,14 @@
       "source": "The Craft of Scientific Writing (Researchly's founding guide): Language and tone; LanguageTool, open-source grammar checker; SymSpell spelling engine with Researchly's scientific lexicon",
       "rules": [
         "S001",
+        "S002",
         "LT001",
         "W207",
         "GEC001",
         "W210",
-        "W208"
+        "W213",
+        "W208",
+        "W212"
       ],
       "moves": []
     },

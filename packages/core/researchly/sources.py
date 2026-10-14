@@ -85,6 +85,13 @@ WORKS = {
               "Recommendations for the Conduct, Reporting, Editing, and "
               "Publication of Scholarly Work in Medical Journals "
               "(tables and figures)"),
+    "VarCon": ("K. Atkinson, VarCon: variant spellings of American, British, "
+               "Canadian and Australian English (wordlist.aspell.net)"),
+    "Mays1991": ("E. Mays, F. J. Damerau and R. L. Mercer (1991), Context "
+                 "based spelling correction, Information Processing & "
+                 "Management 27(5)"),
+    "Swan": ("M. Swan (2016), Practical English Usage, 4th ed., Oxford "
+             "University Press, on uncountable nouns"),
 }
 
 

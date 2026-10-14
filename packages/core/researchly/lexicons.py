@@ -125,6 +125,56 @@ CONTRACTIONS = (
     "there's", "that's", "let's", "i'm", "you're", "what's", "who's",
 )
 
+# The full form W208 offers. Only contractions with one reading: "it's" is
+# "it is" or "it has" ("it's been"), so the 's forms are expanded only when
+# the next word is not "been" or "got" (see w208_contractions).
+CONTRACTION_EXPANSIONS = {
+    "don't": "do not", "doesn't": "does not", "didn't": "did not",
+    "isn't": "is not", "aren't": "are not", "wasn't": "was not",
+    "weren't": "were not", "can't": "cannot", "couldn't": "could not",
+    "won't": "will not", "wouldn't": "would not",
+    "shouldn't": "should not", "hasn't": "has not", "haven't": "have not",
+    "hadn't": "had not", "we're": "we are", "we've": "we have",
+    "we'll": "we will", "they're": "they are", "let's": "let us",
+    "i'm": "I am", "you're": "you are",
+    "it's": "it is", "there's": "there is", "that's": "that is",
+    "what's": "what is", "who's": "who is",
+}
+
+# Contractions typed without their apostrophe ("dont"). A keyboard restores
+# the apostrophe; in formal prose the full form is the fix. Words that are
+# also real words are left out: cant, wont, lets, its, were, well, shell,
+# hell, id, ill, im (also "IM", intramuscular).
+APOSTROPHELESS_CONTRACTIONS = {
+    "dont": "do not", "doesnt": "does not", "didnt": "did not",
+    "isnt": "is not", "arent": "are not", "wasnt": "was not",
+    "werent": "were not", "couldnt": "could not", "wouldnt": "would not",
+    "shouldnt": "should not", "hasnt": "has not", "havent": "have not",
+    "hadnt": "had not", "mustnt": "must not", "neednt": "need not",
+    "thats": "that is", "theres": "there is", "whats": "what is",
+    "theyre": "they are", "youre": "you are",
+    "couldve": "could have", "wouldve": "would have",
+    "shouldve": "should have",
+}
+
+# --- W212: uncountable nouns given a plural ---------------------------------
+# Mass nouns that standard English does not pluralise: a common slip for
+# writers whose first language counts them ("softwares", "informations"),
+# and Latin plurals given a second, English plural ("criterias").
+# Left out on purpose, because a correct reading exists: verbs
+# ("researches", "evidences", "progresses"), countable uses in a field
+# ("climate feedbacks", "indigenous knowledges"), and plurals that are
+# themselves correct ("data", "criteria", "phenomena", "bacteria").
+UNCOUNTABLE_PLURALS = {
+    "informations": "information", "softwares": "software",
+    "hardwares": "hardware", "equipments": "equipment",
+    "advices": "advice",
+    "datas": "data", "criterias": "criteria", "phenomenas": "phenomena",
+    "bacterias": "bacteria", "stimulis": "stimuli",
+}
+LATIN_PLURALS = frozenset({"data", "criteria", "phenomena", "bacteria",
+                           "stimuli"})
+
 # --- C301: hedges -----------------------------------------------------------
 HEDGE_TOKENS = {
     "may", "might", "could", "possibly", "potentially", "perhaps",
@@ -317,4 +367,44 @@ CONSISTENCY_PAIRS = (
     ("categorised", "categorized"), ("visualisation", "visualization"),
     ("neighbourhood", "neighborhood"), ("neighbourhoods", "neighborhoods"),
     ("favourable", "favorable"), ("favour", "favor"),
+)
+
+# --- S002: real-word confusions ---------------------------------------------
+# Real words a spell checker cannot catch, because both are spelt correctly.
+# Each entry is (typed, probably meant), in the direction the slip is made:
+# "principle component" is a slip, "the school principals" is not, so only
+# principle → principal is listed. Chosen for scientific writing, where
+# "casual" for "causal" or "trail" for "trial" changes the meaning. S002
+# speaks only when the neighbouring words make the other word far more
+# likely (rules_spelling.s002_confusion).
+# Left to LanguageTool's grammar rules, because word pairs alone misjudge
+# them on published prose (2026-10-14, eight theses + 115 PMC articles):
+# than/then ("rather than consider") and from/form ("samples form the
+# posterior").
+CONFUSIONS = (
+    ("affect", "effect"), ("effect", "affect"),
+    ("affects", "effects"), ("effects", "affects"),
+    ("effected", "affected"),
+    ("principle", "principal"),
+    ("complement", "compliment"), ("compliment", "complement"),
+    ("complementary", "complimentary"), ("complimentary", "complementary"),
+    ("discreet", "discrete"),
+    ("dependant", "dependent"),
+    ("weather", "whether"),
+    ("cite", "site"), ("cites", "sites"),
+    ("lead", "led"),
+    ("insure", "ensure"),
+    ("loose", "lose"),
+    ("adverse", "averse"), ("averse", "adverse"),
+    ("precede", "proceed"), ("proceed", "precede"),
+    ("preceded", "proceeded"), ("proceeded", "preceded"),
+    ("illicit", "elicit"), ("elicit", "illicit"),
+    ("casual", "causal"),
+    ("trail", "trial"), ("trails", "trials"),
+    ("statue", "statute"),
+    ("prostrate", "prostate"),
+    ("martial", "marital"),
+    ("rational", "rationale"),
+    ("breathe", "breath"),
+    ("quiet", "quite"),
 )

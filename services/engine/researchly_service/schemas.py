@@ -57,6 +57,18 @@ class DocumentType(str, Enum):
     response_to_reviewers = "response-to-reviewers"
 
 
+class Spelling(str, Enum):
+    """Which English spelling to keep to (2026-10-14). `auto` follows the
+    document's own majority and flags only mixtures; a choice also flags
+    spellings of other dialects ("color" in a British paper)."""
+    auto = "auto"
+    us = "us"
+    uk = "uk"
+    uk_oxford = "uk-oxford"
+    ca = "ca"
+    au = "au"
+
+
 class ChecklistChoice(str, Enum):
     """Reporting checklists of the discipline packs (S4, P3)."""
     auto = "auto"
@@ -106,6 +118,9 @@ class AnalyzeOptions(_Strict):
                           "caller's saved setting, else revise.")
     document_type: Optional[DocumentType] = Field(
         None, description="The article type to check as. Omitted: the "
+                          "caller's saved setting, else auto.")
+    spelling: Optional[Spelling] = Field(
+        None, description="The English spelling to keep to. Omitted: the "
                           "caller's saved setting, else auto.")
     review: bool = Field(
         False, description="Also build the critical reader's brief "

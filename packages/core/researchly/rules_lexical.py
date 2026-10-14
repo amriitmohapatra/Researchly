@@ -178,11 +178,71 @@ def w207_doubled_word(doc, document: Document):
              'emails.'),
       source="§6")
 def w208_contractions(doc, document: Document):
+    text = document.masked
     for word in lx.CONTRACTIONS:
-        for m in _finditer(rf"\b{re.escape(word)}\b", document.masked):
+        for m in _finditer(rf"\b{re.escape(word)}\b", text):
+            full = lx.CONTRACTION_EXPANSIONS.get(word)
+            # "it's been" is "it has been": leave the 's forms to the writer
+            # when a participle follows.
+            if full and word.endswith("'s") and re.match(
+                    r"\s+(?:been|got)\b", text[m.end():m.end() + 8], re.I):
+                full = None
             yield Suggestion(
-                message="Expand the contraction for formal register.",
-                start=m.start(), end=m.end())
+                message=(f"Expand the contraction for formal register: "
+                         f"'{_match_initial(full, m.group(0))}'."
+                         if full else
+                         "Expand the contraction for formal register."),
+                start=m.start(), end=m.end(),
+                replacement=_match_initial(full, m.group(0)) if full else None)
+    # "dont", "doesnt": the apostrophe is missing too. A keyboard would put
+    # it back; in a paper the full form is the fix. S001 leaves these words
+    # to this rule, so the writer sees one card, not two.
+    for m in re.finditer(r"\b[A-Za-z]+\b", text):
+        full = lx.APOSTROPHELESS_CONTRACTIONS.get(m.group(0).lower())
+        if full is None or (m.group(0).isupper() and len(m.group(0)) > 1):
+            continue
+        fixed = _match_initial(full, m.group(0))
+        yield Suggestion(
+            message=f"'{m.group(0)}' is a contraction without its "
+                    f"apostrophe. In formal prose write '{fixed}'.",
+            start=m.start(), end=m.end(), replacement=fixed)
+
+
+def _match_initial(full: str | None, typed: str) -> str | None:
+    """"Don't" → "Do not"; "don't" → "do not"; "I'm" stays "I am"."""
+    if full is None:
+        return None
+    if typed[:1].isupper():
+        return full[:1].upper() + full[1:]
+    return full
+
+
+@rule("W212", "uncountable-plural", Category.CORRECTION,
+      "A noun that has no plural in standard English (softwares, "
+      "informations).",
+      'Mass nouns such as information, software, equipment and advice are '
+      'uncountable in English: they take no -s, and a quantity is given '
+      "with a counter ('three software packages', 'two pieces of "
+      "advice'). Latin plurals such as criteria and phenomena are already "
+      'plural and take no second -s.',
+      plain=("This word has no plural in English. Write 'software', not "
+             "'softwares'; to count, say 'three software packages' or 'two "
+             "pieces of information'."),
+      source="Swan", fix_safety="review")
+def w212_uncountable_plural(doc, document: Document):
+    for m in re.finditer(r"\b[A-Za-z]+\b", document.masked):
+        typed = m.group(0)
+        base = lx.UNCOUNTABLE_PLURALS.get(typed.lower())
+        if base is None or (typed.isupper() and len(typed) > 1):
+            continue
+        fixed = _match_initial(base, typed)
+        if base in lx.LATIN_PLURALS:
+            msg = f"'{base}' is already plural: write '{fixed}'."
+        else:
+            msg = (f"'{typed}' has no plural: write '{fixed}'. To count "
+                   f"it, name a unit ('two pieces of {base}').")
+        yield Suggestion(message=msg, start=m.start(), end=m.end(),
+                         replacement=fixed)
 
 
 @rule("W209", "in-terms-of", Category.PREFERENCE,
@@ -606,20 +666,86 @@ from .discourse import abstract_lens  # noqa: E402,F401
              'keep it the same throughout.'),
       source="§6+lecture")
 def w210_variant_consistency(doc, document: Document):
+    from . import spelling
+    cfg = getattr(document, "config", None)
+    if cfg is not None and getattr(cfg, "spelling", "auto") != "auto":
+        return                  # a chosen spelling: W213 flags every one
     text = document.masked.lower()
     words = re.findall(r"[a-z]+", text)
     from collections import Counter
     counts = Counter(words)
+    # The document's own dialect, from every word that tells the dialects
+    # apart: a mixture is standardised on what the document mostly uses.
+    dialect, agree, telling = spelling.detect_dialect(words)
+    code = spelling.DIALECT_CODES.get(dialect or "", "")
+    table = spelling.variant_words()
+    varcon = set(spelling.variant_pairs())
+    pairs = dict.fromkeys(spelling.variant_pairs())
     for a, b in lx.CONSISTENCY_PAIRS:
+        pair = tuple(sorted((a, b)))
+        # VarCon knows both words and does not pair them: one is right in
+        # both dialects ("analyses" is also the US plural of "analysis").
+        if a in table and b in table and pair not in varcon:
+            continue
+        pairs[pair] = None
+    for a, b in pairs:
         na, nb = counts.get(a, 0), counts.get(b, 0)
         if na == 0 or nb == 0:
             continue
         rare, common = (a, b) if na <= nb else (b, a)
+        reason = ""
+        if code and telling >= 3 and agree / telling >= 0.7:
+            in_a = code in table.get(a, ("", ""))[0]
+            in_b = code in table.get(b, ("", ""))[0]
+            if in_a != in_b:
+                common, rare = (a, b) if in_a else (b, a)
+                reason = (f" The document mostly uses "
+                          f"{spelling.DIALECT_NAMES[dialect]} spelling "
+                          f"({agree} of {telling} words that differ).")
         m = re.search(rf"\b{rare}\b", text)
         if not m:
             continue
         yield Suggestion(
             message=f"Both '{a}' ({na}x) and '{b}' ({nb}x) appear — "
-                    f"standardise on '{common}'.",
+                    f"standardise on '{common}'.{reason}",
             start=m.start(), end=m.end(),
             replacement=common if rare != common else None)
+
+
+@rule("W213", "dialect-spelling", Category.CONVENTION,
+      "A spelling from another English than the one chosen in the "
+      "settings ('color' in a British paper).",
+      'Journals and universities ask for one spelling throughout, British or '
+      'American (some British publishers use -ize, the Oxford style). Once '
+      'you choose one in the settings, every spelling of another dialect is '
+      'flagged, even if it appears only once. The variant lists come from '
+      'VarCon, which also knows where both dialects agree: British English '
+      'writes "meter" for the measuring device and "program" for software.',
+      plain=("This word is spelled the way another English spells it, not the "
+             "one you chose in your settings. For example, British English "
+             "writes 'colour', American English 'color'."),
+      source="VarCon")
+def w213_dialect_spelling(doc, document: Document):
+    from . import spelling
+    cfg = getattr(document, "config", None)
+    choice = getattr(cfg, "spelling", "auto") if cfg is not None else "auto"
+    if choice == "auto":
+        return
+    text = document.masked
+    for m in re.finditer(r"[A-Za-z]+", text):
+        typed = m.group(0)
+        if typed.isupper() and len(typed) > 1:
+            continue
+        # a capital mid-sentence is a name: "Centers for Disease Control"
+        if typed[0].isupper() and not re.search(
+                r"(^|[.!?]\s+|\n\s*)$", text[max(0, m.start() - 4):m.start()]):
+            continue
+        meant = spelling.dialect_spelling(typed.lower(), choice)
+        if meant is None:
+            continue
+        fixed = _match_initial(meant, typed)
+        yield Suggestion(
+            message=f"In {spelling.DIALECT_NAMES[choice]} spelling, write "
+                    f"'{fixed}'.",
+            start=m.start(), end=m.end(), replacement=fixed)
+

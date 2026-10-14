@@ -249,6 +249,8 @@ export interface components {
              * @default false
              */
             show_preferences: boolean;
+            /** @description The English spelling to keep to. Omitted: the caller's saved setting, else auto. */
+            spelling?: components["schemas"]["Spelling"] | null;
         };
         /** AnalyzeRequest */
         AnalyzeRequest: {
@@ -1006,6 +1008,14 @@ export interface components {
              */
             start: number;
         };
+        /**
+         * Spelling
+         * @description Which English spelling to keep to (2026-10-14). `auto` follows the
+         *     document's own majority and flags only mixtures; a choice also flags
+         *     spellings of other dialects ("color" in a British paper).
+         * @enum {string}
+         */
+        Spelling: "auto" | "us" | "uk" | "uk-oxford" | "ca" | "au";
         /**
          * StructureItem
          * @description A figure, table, equation, caption or citation found in the source.

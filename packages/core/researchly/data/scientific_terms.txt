@@ -42,6 +42,10 @@ chemoprophylaxis
 genomic
 phylogenetic
 phylodynamics
+clade
+clades
+subclade
+subclades
 wastewater
 nowcast
 nowcasts
