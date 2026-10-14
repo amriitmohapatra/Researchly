@@ -330,12 +330,19 @@ def _word(doc: Document) -> Structure:
     st = Structure()
     tables = [i for i in doc.structure if i.kind == "table"]
     if not tables:
-        # The add-in sends table cells, not tables: join adjacent cells.
+        # The add-in sends table cells, not tables: join a table's cells by
+        # the table number its cell places give, or, without places, join
+        # cells that sit close together (an empty cell then splits a table).
+        placed = {(a, b): t for a, b, t, *_ in doc.table_cells}
+        last = None
         for a, b in doc.table_spans:
-            if tables and a - tables[-1].end <= 4:
+            key = placed.get((a, b))
+            if tables and (key == last if key is not None
+                           else last is None and a - tables[-1].end <= 4):
                 tables[-1].end = b
             else:
                 tables.append(StructureItem("table", a, b))
+            last = key
     captions = _distinct_captions(doc, [i for i in doc.structure
                                         if i.kind == "caption"])
     claimed: set = set()

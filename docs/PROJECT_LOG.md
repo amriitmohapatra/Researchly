@@ -2436,3 +2436,130 @@ sample). Noise floor 11.86 → **11.74** (gate OK, baseline lowered): S001
 in one thesis (data set/dataset, health care/healthcare, time
 point/timepoint), found because the lexicon knows more closed compounds.
 On the 115 PMC articles S001 is 628 flags (2,069 before P40).
+
+## P42 — 2026-10-14 — Table evidence: X401 checks the cell a sentence names (Codex #7); the Word add-in sends cell places
+
+*(Built on `claude/lucid-clarke-49a6ou` and merged into this branch at the
+owner's request, so the work continues here.)*
+
+**Why.** Codex review #7 (8 October): X401 only asked whether a quoted
+number appears *anywhere* in the cited table. "The treatment mortality was
+12.5% (Table 1)" passed when 12.5% was the control arm's figure. The owner
+asked for the Word add-in to send table cell places. The row and column
+matching it would feed did not exist yet, so the owner chose to build #7
+first, in two stages: first keep table structure, then match prose to
+cells. The owner also passed on a plan with the guard rails followed here:
+- plain rectangular tables only;
+- exact header matches only;
+- numbers compared by type;
+- abstain when more than one cell fits;
+- evidence on the suggestion.
+
+**What.**
+- **Cell places.** A Word paragraph may carry `cell`: `[table, row, col]`
+  or `[table, row, col, colspan]`, 0-based, col in grid columns.
+  - `Document.from_word` keeps them in `Document.table_cells`; malformed
+    places are ignored.
+  - The `.docx` reader places every cell from the XML. It counts
+    `gridSpan` for colspan, and reads rows and cells through content
+    controls.
+  - A table with a vertical merge, `gridBefore` or `gridAfter`, or a table
+    nested in another, gets no places at all.
+  - With places, the add-in's cells are joined into one table by their
+    table number. Before, an empty cell more than 4 characters wide split
+    the table.
+- **`researchly/tables.py`.** A table becomes a grid: row 0 holds the
+  column headers and column 0 the row headers.
+  - A sentence names a cell only when it names exactly one row header and
+    one column header. Either may go unnamed when the table has only one
+    data row or column.
+  - Header matching ignores case, punctuation, a trailing unit ("(%)",
+    "[years]", ", %") and a leading "the". There are no synonyms and no
+    fuzzy matching.
+  - A longer header wins over one inside it ("Mortality at one year" over
+    "Mortality").
+  - No cell is named when a header repeats, when one is both a row and a
+    column header, or when two rows or two columns are named.
+  - Merged cells and tables with no header row or column are unsupported.
+- **X401.** The cell check runs for a sentence that quotes one number, from
+  one table, without deriving it (than, lower, reduced, points, from, by 4,
+  ...).
+  - Numbers are typed: a percentage is compared only with a percentage. A
+    cell is a percentage cell when it or its header says "%".
+  - The old rounding allowance stays: the text may round what the table
+    reports. It now accepts half-up rounding too.
+  - On a mismatch, X401 says "Table 1 reports 8.2% in the Mortality row,
+    Treatment column; this sentence says 12.5%." When the table holds more
+    decimals, the message adds "(8.2% rounded to 1 decimal place)".
+  - A matching number elsewhere in the table no longer hides the mismatch.
+  - Every abstention falls back to the old whole-table check. Abstaining
+    is never shown as a confirmation.
+- **Contract.**
+  - `WordParagraph.cell` is optional: strict whole numbers, at most 100,000,
+    colspan at least 1.
+  - `Suggestion.table_evidence` (`TableEvidence`) carries the table, the
+    headers, the row and column, the cell's offsets and text, the expected
+    and quoted values, and the rounding. The engine's `Suggestion` has the
+    same field, and `to_dict` carries it.
+  - `openapi.json` and `schema.d.ts` are regenerated.
+- **The local Word add-in** (`apps/word-addin/web/taskpane.js`).
+  - On WordApi 1.3 it loads each table paragraph's
+    `parentTableCellOrNullObject` (`rowIndex`, `cellIndex`) and its row's
+    `cellCount`, and sends `cell`. It asks for nothing below 1.3.
+  - Tables are numbered by runs of consecutive table paragraphs: Word
+    merges two tables with nothing between them.
+  - `cellIndex` counts cells along the row, not grid columns. So a table
+    whose rows report different cell counts (merged cells) sends no places,
+    and neither does a nested table, a paragraph Word could not place, or
+    rows out of order.
+  - Any error sends no places; nothing else is lost.
+  - `server.py` validates `cell` on the contract route
+    (`parse_word_request`) and returns `table_evidence`. Its `/check` route
+    passes paragraphs to the engine unchanged.
+
+**Evidence.**
+
+| Check | Result |
+|---|---|
+| core (new: `test_table_cells.py` 39, `test_word_addin_cells.py` 8; the JS runs under Node) | 965 passed, 2 skipped |
+| service (new: `test_table_cells_service.py` 14) | 197 |
+| demo, eval and bench | 56 |
+| contract check (`export_openapi --check`, `npm run check`) | clean |
+| ruff | clean |
+| third-party scan | 0 hits |
+
+- The tests cover:
+  - swapped groups, a wrong row, repeated values, rounding, a unit in the
+    header, incompatible units;
+  - four kinds of ambiguous names, derived numbers, one data column and
+    nested header names;
+  - merged cells, no places, and LaTeX;
+  - malformed places on both routes, the .docx reader (gridSpan, two
+    paragraphs in one cell, vMerge, gridBefore, nested tables), and an
+    end-to-end .docx upload.
+- The noise gate passes at 11.67/1000w, unchanged (the corpus is plain
+  text, and X401 needs a table).
+
+**Not done.**
+- **The add-in the owner uses does not send `cell` yet.** The owner uses
+  the hosted add-in (`manifest.hosted.xml`). Its taskpane is
+  `apps/web/lib/word/office.ts`, and it calls the hosted engine, or
+  `server.py` when "This computer" is chosen. The taskpane change above is
+  in the old local add-in (`apps/word-addin/web/`, maintenance only). The
+  engine, the service and `server.py`'s `/v1/analyze-word` already accept
+  `cell`, so a `.docx` upload gets the cell check once the engine is
+  deployed. Next: port `cellPlaces`/`tablePlaces` into the hosted taskpane
+  (PLAN #7).
+- The cell places have not been tried in real Word.
+- LaTeX `tabular` grids, merged header rows and row groups keep the
+  whole-table check.
+
+**Lessons.**
+- Check that the work a task builds on exists before building on it. The
+  task described row and column matching as done; no branch had it.
+- Office JS `cellIndex` is not a grid column. When a client cannot read
+  colspan reliably, it should send nothing rather than a guess: the engine
+  falls back cleanly.
+- Typed comparison is the cheapest guard against a false "wrong cell"
+  flag. A sentence naming a row and a column by chance rarely also quotes
+  the same kind of number as that cell.

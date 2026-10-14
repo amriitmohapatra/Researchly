@@ -12,6 +12,7 @@ import re
 
 from .document import _RELATION, Document
 from .engine import Category, Suggestion, rule
+from . import tables
 from .structure import Structure, analyse, number_text
 
 # "Figure 3 of Smith et al." / "Table 2 in [12]": another paper's float.
@@ -475,16 +476,19 @@ def _in_table(value: float, decimals: int, table_text: str) -> bool:
 
 
 @rule("X401", "number-not-in-table", Category.CORRECTION,
-      "A number quoted with 'Table N' that Table N does not contain.",
+      "A number quoted with 'Table N' that Table N does not contain, or "
+      "that differs from the cell the sentence names.",
       'When a sentence cites a table and quotes a figure from it, the '
       'reader will look for that number in the table. A mismatch is '
       'usually a typo, a value from an older run, or a number from '
-      'another table. Derived numbers (differences, ratios) are worth a '
-      'word saying so.',
-      plain=('This sentence cites a table and quotes a number, but that number '
-             'is not in the table. It may be a typo, an old value, or a number '
-             'from a different table. If you calculated it from the table, say '
-             'so.'),
+      'another table or another row. Derived numbers (differences, '
+      'ratios) are worth a word saying so.',
+      plain=('This sentence cites a table and quotes a number, but the table '
+             'does not show that number where the sentence says it is: '
+             'either it is not in the table at all, or the row and column '
+             'the sentence names hold a different value. It may be a typo, '
+             'an old value, or a number from a different row or table. If '
+             'you calculated it from the table, say so.'),
       source="§6",
       scope="document")
 def x401_number_not_in_table(doc, document: Document):
@@ -501,11 +505,11 @@ def x401_number_not_in_table(doc, document: Document):
         if not cited:
             continue
         kinds = {f.kind for f in cited}
-        tables = {id(f): f for f in cited if f.kind == "table"}
+        named = {id(f): f for f in cited if f.kind == "table"}
         # One table and nothing else: then the number must come from it.
-        if kinds != {"table"} or len(tables) != 1:
+        if kinds != {"table"} or len(named) != 1:
             continue
-        (t,) = tables.values()
+        (t,) = named.values()
         table_text = document.original[t.start:t.end]
         # A percentage quoted from a table of counts is derived, not
         # copied: only judge the kinds of number the table itself holds.
@@ -514,6 +518,7 @@ def x401_number_not_in_table(doc, document: Document):
         text = document.masked[a:b]
         if _AGGREGATE.search(text):
             continue                 # "altogether 99.9%": summed, not quoted
+        quoted = []
         for m in _VALUE.finditer(text):
             vals = _values(m.group(0))
             if not vals:
@@ -526,13 +531,59 @@ def x401_number_not_in_table(doc, document: Document):
                     or _LEVEL_BEFORE.search(text[max(0, m.start() - 12):
                                                  m.start()])):
                 continue
+            quoted.append((m, written, value, decimals))
+        # The cell the sentence names by its row and column (Codex review
+        # #7): judged only for one quoted number, in a sentence that does
+        # not derive it ("4.3 points lower than"), from a plain table.
+        target = None
+        if len(quoted) == 1 and not _DERIVED.search(text):
+            target = tables.named_cell(
+                tables.grid_within(document, t.start, t.end), text)
+        for m, written, value, decimals in quoted:
+            shown = written.replace("\\%", "%")
+            start, end = a + m.start(), a + m.start() + len(written)
+            if target is not None:
+                (number,) = tables.numbers(shown)
+                c = tables.compare(number, target)
+                if c is not None:
+                    # A matching number elsewhere in the table no longer
+                    # hides a mismatch with the cell the sentence names.
+                    if not c.matches:
+                        yield _cell_mismatch(t, target, c, shown, start, end)
+                    continue
             if _in_table(value, decimals, table_text):
                 continue
-            shown = written.replace("\\%", "%")
             yield Suggestion(
                 message=f"{shown} is not in {t.name} — a typo, an older "
                         "value, or a number from elsewhere?",
-                start=a + m.start(), end=a + m.start() + len(written))
+                start=start, end=end)
+
+
+def _header_text(cell) -> str:
+    return tables.header_name(cell.text) if cell is not None else ""
+
+
+def _cell_mismatch(t, target, c, shown: str, start: int, end: int):
+    row, col = _header_text(target.row_header), _header_text(target.col_header)
+    where = (f"in the {row} row, {col} column" if row and col
+             else f"for {row or col}")
+    value = tables.shown(c.expected, target.percent)
+    if c.rounding:
+        decimals = tables.numbers(shown)[0].decimals
+        rounded = tables.shown(c.expected, target.percent, decimals)
+        value += f" ({rounded} {c.rounding})"
+    cell = target.cell
+    return Suggestion(
+        message=f"{t.name} reports {value} {where}; this sentence says "
+                f"{shown}.",
+        start=start, end=end,
+        table_evidence={
+            "table": t.name, "row": cell.row, "column": cell.col,
+            "row_header": row, "column_header": col,
+            "cell_start": cell.start, "cell_end": cell.end,
+            "cell_text": cell.text,
+            "expected": tables.shown(c.expected, target.percent),
+            "quoted": shown, "rounding": c.rounding})
 
 
 _AGGREGATE = re.compile(
@@ -542,6 +593,13 @@ _LEVEL_AFTER = re.compile(
     r"\s*(?:\\?%)?\s*(?:CI|CrI|UI|PI|HDI|confidence|credible|uncertainty|"
     r"prediction|significance)\b", re.IGNORECASE)
 _LEVEL_BEFORE = re.compile(r"(?:\bp|\bP|α|alpha|level of)\s*[<>=≤≥]?\s*$")
+# A number worked out from the table, not read from one cell: a difference,
+# a change, a ratio. The cell check abstains; the whole-table check stays.
+_DERIVED = re.compile(
+    r"\b(?:than|differen\w*|reduc\w*|increas\w*|decreas\w*|declin\w*|"
+    r"rose|rise[sn]?|rising|fell|fall(?:s|en|ing)?|drop\w*|lower|higher|"
+    r"fewer|ratio|fold|times|relative|change[sd]?|points?|gap|from)\b"
+    r"|\bby\s+\d", re.IGNORECASE)
 
 
 # --- X501: a heading style on body text -------------------------------------------

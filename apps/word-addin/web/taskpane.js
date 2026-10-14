@@ -405,7 +405,7 @@ async function getParagraphs() {
     paras.load(
       "items/text,items/styleBuiltIn,items/style,items/tableNestingLevel");
     await ctx.sync();
-    return paras.items.map((p) => ({
+    const out = paras.items.map((p) => ({
       text: p.text || "",
       style:
         p.styleBuiltIn && p.styleBuiltIn !== "Other"
@@ -416,8 +416,99 @@ async function getParagraphs() {
       // heading's meaning into a data cell.
       kind: p.tableNestingLevel > 0 ? "table" : "body",
     }));
+    const places = await cellPlaces(ctx, paras.items);
+    places.forEach((cell, i) => {
+      if (cell) out[i].cell = cell;
+    });
+    return out;
   });
 }
+
+/**
+ * Where each table paragraph sits ([table, row, col]), so the engine can
+ * compare a number a sentence quotes with the row and column it names
+ * (X401). Optional: without places the engine checks the whole table, so
+ * anything uncertain sends nothing. Needs WordApi 1.3
+ * (parentTableCellOrNullObject); never asked for below it.
+ */
+async function cellPlaces(ctx, items) {
+  const req = Office.context.requirements;
+  if (!req || !req.isSetSupported("WordApi", "1.3")) return [];
+  if (!items.some((p) => p.tableNestingLevel > 0)) return [];
+  try {
+    const cells = items.map((p) =>
+      p.tableNestingLevel > 0 ? p.parentTableCellOrNullObject : null);
+    cells.forEach((c) => c && c.load("rowIndex,cellIndex"));
+    await ctx.sync();
+    const rows = cells.map((c) => (c && !c.isNullObject ? c.parentRow : null));
+    rows.forEach((r) => r && r.load("cellCount"));
+    await ctx.sync();
+    return tablePlaces(items.map((p, i) => {
+      const c = rows[i] ? cells[i] : null;
+      return {
+        level: p.tableNestingLevel,
+        row: c ? c.rowIndex : undefined,
+        cell: c ? c.cellIndex : undefined,
+        cells: rows[i] ? rows[i].cellCount : undefined,
+      };
+    }));
+  } catch (e) {
+    return [];   // a host that cannot report cells loses nothing else
+  }
+}
+
+// <table-places> (run by packages/core/tests/test_word_addin_cells.py)
+/**
+ * Cell places from what Word reports per paragraph: `level`
+ * (tableNestingLevel), `row` and `cell` (rowIndex, cellIndex of its cell)
+ * and `cells` (its row's cellCount). Returns [table, row, col] or null per
+ * paragraph.
+ *
+ * Tables are numbered in order. Word joins two tables with nothing between
+ * them into one, so a run of consecutive table paragraphs is one table.
+ * cellIndex counts cells along the row, not grid columns: a horizontally
+ * merged cell shifts every later column. A table whose rows report
+ * different cell counts has merged cells, and gets no places at all, as
+ * does a table inside a table, or any paragraph Word could not place.
+ */
+function tablePlaces(paras) {
+  const out = paras.map(() => null);
+  let table = -1;
+  let i = 0;
+  while (i < paras.length) {
+    if (!(paras[i].level > 0)) {
+      i += 1;
+      continue;
+    }
+    let j = i;
+    while (j < paras.length && paras[j].level > 0) j += 1;
+    table += 1;
+    const run = paras.slice(i, j);
+    if (placeable(run)) {
+      run.forEach((p, k) => {
+        out[i + k] = [table, p.row, p.cell];
+      });
+    }
+    i = j;
+  }
+  return out;
+}
+
+function placeable(run) {
+  const whole = (n) => Number.isInteger(n) && n >= 0;
+  let count = null;
+  let lastRow = 0;
+  for (const p of run) {
+    if (p.level !== 1) return false;                 // a nested table
+    if (!whole(p.row) || !whole(p.cell) || !whole(p.cells)) return false;
+    if (p.cell >= p.cells || p.row < lastRow) return false;
+    if (count === null) count = p.cells;
+    else if (p.cells !== count) return false;        // merged cells
+    lastRow = p.row;
+  }
+  return true;
+}
+// </table-places>
 
 async function runCheck() {
   if (!state.serverOk || state.checking) return;
