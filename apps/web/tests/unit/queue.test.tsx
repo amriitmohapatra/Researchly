@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { Suggestion } from "@researchly/contract";
 import { CheckProgress } from "@/components/CheckProgress";
-import { PREVIOUS_NOTE, Results } from "@/components/Results";
+import { Results } from "@/components/Results";
+import { PREVIOUS_NOTE, previousMark } from "@/lib/check-session";
 import { PassChooser, RevisionQueue } from "@/components/RevisionQueue";
 import {
   buildQueue,
@@ -26,7 +27,7 @@ import { happyResponse, SAMPLE_TEXT, withDocumentWideResponse } from "../../e2e/
 import { sugg } from "./helpers";
 
 /*
- * Codex review #1, the revision queue: "Correctness first", "Clarity next",
+ * Review proposal 1, the revision queue: "Correctness first", "Clarity next",
  * "Whole-document review"; recurring issues grouped with Next and Previous;
  * no score. The usability test (writers finish a chosen pass without
  * losing findings or context) is the owner's; these tests pin the parts a
@@ -288,7 +289,7 @@ describe("the results view with a pass chosen", () => {
   });
 });
 
-describe("previous results while a newer check runs (Codex review #8)", () => {
+describe("previous results while a newer check runs (review proposal 8)", () => {
   const base = {
     data: happyResponse,
     submittedText: SAMPLE_TEXT,
@@ -307,6 +308,14 @@ describe("previous results while a newer check runs (Codex review #8)", () => {
       expect(html).toContain(PREVIOUS_NOTE[reason]);
     }
     expect(renderToStaticMarkup(<Results {...base} busy={false} />)).not.toContain("previous-note");
+  });
+
+  it("the mark follows the latest check: running, failed, cancelled; none once a new answer is current or nothing is on screen", () => {
+    expect(previousMark(true, { phase: "running", note: null })).toBe("running");
+    expect(previousMark(true, { phase: "error", note: null })).toBe("failed");
+    expect(previousMark(true, { phase: "done", note: "cancelled" })).toBe("cancelled");
+    expect(previousMark(true, { phase: "done", note: null })).toBeNull();
+    expect(previousMark(false, { phase: "running", note: null })).toBeNull();
   });
 
   it("the progress line names the elapsed time outside the live region and says 'still checking' in it only when long", () => {

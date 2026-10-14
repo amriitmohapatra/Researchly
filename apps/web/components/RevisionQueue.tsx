@@ -23,7 +23,7 @@ const fmt = new Intl.NumberFormat("en-GB");
 
 /**
  * "Work through": the ordinary list, or one of the three passes of the
- * revision queue (Codex review #1). Toggle buttons, each with the number of
+ * revision queue (review proposal 1). Toggle buttons, each with the number of
  * findings in its pass: a tally, never a score. Shared by the website and
  * the Word taskpane.
  */

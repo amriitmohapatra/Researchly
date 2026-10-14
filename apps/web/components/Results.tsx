@@ -8,6 +8,7 @@ import type { ChecklistOffer } from "@/lib/checklists";
 import { briefState, narrativeState, profileLine } from "@/lib/profiles";
 import type { ScopeMap } from "@/lib/scope";
 import { resolveSpans, segment } from "@/lib/segments";
+import { PREVIOUS_NOTE, type PreviousMark } from "@/lib/check-session";
 import { buildLocator, isMultiFile } from "@/lib/source";
 import { buildQueue, passCounts, posAt, QUEUE_START, resolveSpot, spotOf, type QueuePos, type QueueState } from "@/lib/queue";
 import {
@@ -61,28 +62,19 @@ interface Props {
   checklistOffer?: ChecklistOffer | null;
   onUseChecklist?: ((id: ChecklistChoice) => void) | null;
   /**
-   * The revision queue (Codex review #1): which pass, and where in it. Held
+   * The revision queue (review proposal 1): which pass, and where in it. Held
    * by the parent so a re-check (after a mute) keeps the writer's place;
    * kept here when no parent holds it. Never stored.
    */
   queue?: QueueState;
   onQueue?: (q: QueueState) => void;
   /**
-   * These results come from an earlier check than the latest one (Codex
-   * review #8): a newer check is running, failed or was cancelled. Said
+   * These results come from an earlier check than the latest one (review
+   * proposal 8): a newer check is running, failed or was cancelled. Said
    * under the heading so they are never taken for the new answer.
    */
   previous?: PreviousMark | null;
 }
-
-/** Why the results on screen are from the previous check. */
-export type PreviousMark = "running" | "cancelled" | "failed";
-
-export const PREVIOUS_NOTE: Readonly<Record<PreviousMark, string>> = {
-  running: "These are the results of your previous check. A new check is running; they stay here until it finishes.",
-  cancelled: "These are the results of your previous check. The new check was cancelled.",
-  failed: "These are the results of your previous check. The new check did not finish.",
-};
 
 type FocusRequest = { id: string; target: "mark" | "card" | "undo"; seq: number };
 /** Bring a highlight into view inside the text column without moving keyboard focus (the queue's Next keeps it). */

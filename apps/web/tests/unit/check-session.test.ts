@@ -4,7 +4,7 @@ import { analyze } from "@/lib/engine";
 import { createCheckSession, elapsedLabel, progressStatus, STILL_CHECKING_AFTER_MS, type CheckTask } from "@/lib/check-session";
 
 /*
- * Codex review #8, long documents. "Done when a large synthetic document
+ * Review proposal 8, long documents. "Done when a large synthetic document
  * survives cancel and retry without showing an old response as current."
  * Every test goes through the real engine client (lib/engine.ts) with a
  * mocked fetch whose replies are released by hand, so the order of the
@@ -98,7 +98,7 @@ function shownTag(s: { result: AnalyzeResponse | null }): string | null {
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe("long checks: request sequencing (Codex review #8)", () => {
+describe("long checks: request sequencing (review proposal 8)", () => {
   const doc = largeDocument();
 
   it("the synthetic document is large: a whole thesis, under the engine's cap", () => {

@@ -1,6 +1,6 @@
 /**
  * One check at a time, and never an old answer shown as the current one
- * (Codex review #8, long documents).
+ * (Review proposal 8, long documents).
  *
  * A check of a whole thesis can take a minute or two. While it runs the
  * previous results stay on screen, marked as previous; Cancel is
@@ -169,6 +169,24 @@ export function createCheckSession<T>(options: SessionOptions = {}): CheckSessio
 }
 
 /* ---------- what the screen says while a check runs ---------- */
+
+/** Why the results on screen are from the previous check. */
+export type PreviousMark = "running" | "cancelled" | "failed";
+
+/** Said under the results heading so the previous check's results are never taken for the new answer. */
+export const PREVIOUS_NOTE: Readonly<Record<PreviousMark, string>> = {
+  running: "These are the results of your previous check. A new check is running; they stay here until it finishes.",
+  cancelled: "These are the results of your previous check. The new check was cancelled.",
+  failed: "These are the results of your previous check. The new check did not finish.",
+};
+
+/** Which note applies: none when nothing is on screen, or when the results on screen are the latest check's. */
+export function previousMark(hasResults: boolean, state: Pick<SessionState<unknown>, "phase" | "note">): PreviousMark | null {
+  if (!hasResults) return null;
+  if (state.phase === "running") return "running";
+  if (state.phase === "error") return "failed";
+  return state.note === "cancelled" ? "cancelled" : null;
+}
 
 /** After this long a check is a long one: the status says "Still checking". */
 export const STILL_CHECKING_AFTER_MS = 8_000;

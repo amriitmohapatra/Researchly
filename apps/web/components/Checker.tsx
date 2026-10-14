@@ -26,7 +26,7 @@ import {
 import { addWord, loadDocumentType, loadSettings, muteRule, saveDocumentType } from "@/lib/account";
 import { getEngineAuth, openSignIn, useAuth } from "@/lib/auth";
 import { checklistOffer, checklistOption, type ChecklistSetting } from "@/lib/checklists";
-import { createCheckSession, type CheckTask } from "@/lib/check-session";
+import { createCheckSession, previousMark, type CheckTask } from "@/lib/check-session";
 import { analyze, analyzeFile, fetchDemoManuscript } from "@/lib/engine";
 import { QUEUE_START, type QueueState } from "@/lib/queue";
 import { loadKeepProgress } from "@/lib/progress";
@@ -53,7 +53,7 @@ import { ChecklistSelect } from "./ChecklistSelect";
 import { FilePanel, type DropHandlers } from "./FilePanel";
 import { ProfileSelect } from "./ProfileSelect";
 import { ReadingKey } from "./ReadingKey";
-import { Results, type PreviousMark } from "./Results";
+import { Results } from "./Results";
 import type { CardActions } from "./SuggestionCard";
 import type { ResultsView } from "./ViewTabs";
 
@@ -130,10 +130,10 @@ export function Checker() {
   const keepProgressRef = useRef(false);
   const [view, setView] = useState<ResultsView>("suggestions");
   const [showPreferences, setShowPreferences] = useState(false);
-  // The revision queue's pass and place (Codex review #1): held here so a re-check keeps it; never stored.
+  // The revision queue's pass and place (review proposal 1): held here so a re-check keeps it; never stored.
   const [queue, setQueue] = useState<QueueState>(QUEUE_START);
   const [problem, setProblem] = useState<InputProblem | null>(null);
-  // One check at a time (Codex review #8): a cancelled or superseded check's late reply is dropped.
+  // One check at a time (review proposal 8): a cancelled or superseded check's late reply is dropped.
   const [session] = useState(() => createCheckSession<AnalyzeResponse>());
   const run = useSyncExternalStore(session.subscribe, session.getState, session.getState);
   const error = run.error;
@@ -500,16 +500,8 @@ export function Checker() {
   const describedBy = [ids.hint, problem ? ids.problem : null].filter(Boolean).join(" ");
   const current = mode === "file" ? fileChecked : checked;
   const signInPrompt = accounts && error?.kind === "sign_in_required";
-  // Results on screen while a newer check runs, failed or was cancelled are the previous check's (Codex review #8).
-  const previous: PreviousMark | null = !current
-    ? null
-    : run.phase === "running"
-      ? "running"
-      : run.phase === "error"
-        ? "failed"
-        : run.note === "cancelled"
-          ? "cancelled"
-          : null;
+  // Results on screen while a newer check runs, failed or was cancelled are the previous check's (review proposal 8).
+  const previous = previousMark(current !== null, run);
 
   // A changed type checks again whatever is on screen, exactly as a stage change does in Word.
   const onTypeChange = (next: DocumentType) => {
@@ -881,8 +873,7 @@ export function Checker() {
       {!loading && run.note === "cancelled" ? (
         <div className="notice notice-quiet cancel-note" data-testid="cancelled-note">
           <p className="notice-text">
-            Check cancelled.{" "}
-            {current ? "The results below are from your previous check." : mode === "paste" ? "Nothing was checked; your text is unchanged." : "Nothing was checked."}{" "}
+            Check cancelled.{current ? "" : mode === "paste" ? " Nothing was checked; your text is unchanged." : " Nothing was checked."}{" "}
             <button type="button" className="btn-link" onClick={retryCheck} data-testid="retry-cancelled">
               Check again
             </button>

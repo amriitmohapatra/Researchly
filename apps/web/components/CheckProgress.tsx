@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import { elapsedLabel, progressStatus, STILL_CHECKING_AFTER_MS } from "@/lib/check-session";
 
 /**
- * A running check (Codex review #8): what is happening, in a polite live
- * region that speaks only when the words change ("Checking…", then "Still
- * checking…" once it runs long), and the time so far, outside the live
- * region so a screen reader is not told every second. Shared by the website
- * and the Word taskpane. The Cancel button stays beside Check.
+ * A running check (review proposal 8): what is happening ("Checking…",
+ * then "Still checking…" once it runs long) and the time so far. Only the
+ * "Still checking" sentence goes to a polite live region, once; the start is
+ * already announced by the page, and the clock is never read out every
+ * second. Shared by the website and the Word taskpane. The Cancel button
+ * stays beside Check.
  */
 export function CheckProgress({
   startedAt,

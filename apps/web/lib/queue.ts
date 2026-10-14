@@ -1,5 +1,5 @@
 /**
- * The revision queue (Codex review #1): three passes over one check's
+ * The revision queue (review proposal 1): three passes over one check's
  * suggestions, so a writer can finish one kind of revision before the next.
  *
  *   Correctness first      every Correction (spelling, grammar, typing

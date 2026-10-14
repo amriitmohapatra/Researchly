@@ -3580,7 +3580,7 @@ main:focus {
   }
 }
 
-/* ---------- revision queue (Codex review #1) ---------- */
+/* ---------- revision queue (review proposal 1) ---------- */
 
 /* "Work through": the ordinary list or one pass. 8px radius (pills are for the category chips). */
 .passes {
@@ -3730,7 +3730,7 @@ main:focus {
   text-align: left;
 }
 
-/* ---------- long checks (Codex review #8) ---------- */
+/* ---------- long checks (review proposal 8) ---------- */
 
 .check-progress {
   display: flex;
