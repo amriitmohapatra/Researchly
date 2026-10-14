@@ -199,7 +199,7 @@ export function saveDocumentType(document_type: DocumentType): Promise<AccountRe
 /**
  * The account's spelling choice (user_settings.spelling), or null when the
  * column holds nothing usable. Read on its own, like the mode and the type,
- * so an account database without the 20261014120000_spelling migration
+ * so an account database without the 20261014120000_spelling_prediction migration
  * fails only this, never the other settings.
  */
 export function loadSpelling(): Promise<AccountResult<Spelling | null>> {

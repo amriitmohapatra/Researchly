@@ -1,19 +1,29 @@
--- Researchly: the English spelling a user keeps to, saved with the account
--- so the web app and the Word add-in share it (PLAN task #15).
+-- Researchly: two settings saved with the account so the web app and the
+-- Word add-in share them (2026-10-14):
+--   * spelling   — the English spelling a user keeps to (PLAN task #15);
+--   * prediction — word prediction (a core feature) on or off.
 --
 -- Apply AFTER 20261008140000_s4_progress.sql: Supabase dashboard -> SQL
 -- Editor -> paste this whole file -> Run. Re-running is safe.
 --
--- Adds one column holding one of seven short codes (researchly/config.py
--- SPELLINGS). "auto" follows the document's own majority and flags only
--- mixtures (W210); any other value also flags every spelling of another
--- dialect (W213). "in" is Indian English, spelled as British. No document
--- text, as before.
+-- spelling holds one of seven short codes (researchly/config.py SPELLINGS).
+-- "auto" follows the document's own majority and flags only mixtures
+-- (W210); any other value also flags every spelling of another dialect
+-- (W213). "in" is Indian English, spelled as British.
+--
+-- prediction is on unless the writer turns it off (Config.prediction,
+-- TOML [features] prediction). It only ever offers a word; a surface
+-- inserts it on the writer's Tab or click.
+--
+-- One short code and one switch. No document text, as before.
 
 begin;
 
 alter table public.user_settings
   add column if not exists spelling text not null default 'auto';
+
+alter table public.user_settings
+  add column if not exists prediction boolean not null default true;
 
 do $$
 begin
@@ -31,8 +41,11 @@ $$;
 
 comment on column public.user_settings.spelling is
   'English spelling to keep to (researchly/config.py SPELLINGS); auto follows the document.';
+comment on column public.user_settings.prediction is
+  'Word prediction on (default) or off (researchly/config.py Config.prediction).';
 
--- my_config() gains "spelling"; otherwise as in the S4 document-type migration.
+-- my_config() gains "spelling" and "prediction"; otherwise as in the S4
+-- document-type migration.
 create or replace function public.my_config()
 returns jsonb
 language sql
@@ -47,6 +60,7 @@ as $$
     'mode',             coalesce(s.mode, 'revise'),
     'document_type',    coalesce(s.document_type, 'auto'),
     'spelling',         coalesce(s.spelling, 'auto'),
+    'prediction',       coalesce(s.prediction, true),
     'dictionary',       coalesce(
       (select pg_catalog.jsonb_agg(w.word order by w.word)
        from (select d.word

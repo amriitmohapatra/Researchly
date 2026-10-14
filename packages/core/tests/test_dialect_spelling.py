@@ -59,7 +59,7 @@ def test_unknown_spelling_value_is_ignored(tmp_path):
 
 def test_account_spelling_reaches_the_config():
     # The hosted engine folds the account's my_config() in (supabase
-    # migration 20261014120000_spelling.sql); every value is accepted...
+    # migration 20261014120000_spelling_prediction.sql); every value is accepted...
     for value in config.SPELLINGS:
         assert config.apply_remote(config.Config(),
                                    {"spelling": value}).spelling == value
@@ -78,10 +78,14 @@ def test_supabase_check_lists_every_spelling():
     import re
     root = pathlib.Path(__file__).resolve().parents[3]
     sql = (root / "supabase" / "migrations"
-           / "20261014120000_spelling.sql").read_text(encoding="utf-8")
+           / "20261014120000_spelling_prediction.sql").read_text(encoding="utf-8")
     listed = re.search(r"check \(spelling in \(([^)]*)\)\)", sql).group(1)
     assert tuple(re.findall(r"'([^']+)'", listed)) == config.SPELLINGS
-    assert "default 'auto'" in sql
+    assert "spelling text not null default 'auto'" in sql
+    # The same migration stores word prediction, on by default as in Config.
+    assert "prediction boolean not null default true" in sql
+    assert config.Config().prediction is True
+    assert "'prediction',       coalesce(s.prediction, true)" in sql
 
 
 # --- W213: a chosen dialect --------------------------------------------------
