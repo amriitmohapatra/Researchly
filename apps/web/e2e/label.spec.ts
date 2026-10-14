@@ -124,7 +124,7 @@ test.describe("Label flags", () => {
     for (const l of data.labels) expect(l.attempt).toMatch(/^[a-z0-9]{10}$/);
     expect(data.labels[0].attempt).toBe(data.labels[1].attempt);
     expect(data.labels[2].attempt).not.toBe(data.labels[0].attempt);
-    expect(data.labels.map(({ attempt: _a, ...rest }: { attempt: string }) => rest)).toEqual([
+    expect(data.labels.map((l: Record<string, unknown>) => Object.fromEntries(Object.entries(l).filter(([k]) => k !== "attempt")))).toEqual([
       { paragraph: 1, rule_id: "C201", category: "convention", section: "discussion", verdict: "useful", flag: 0 },
       { paragraph: 1, rule_id: "S010", category: "correction", section: "discussion", verdict: "unsure", flag: 1 },
       { paragraph: 2, rule_id: "S010", category: "correction", section: "methods", verdict: "wrong", flag: 1 },

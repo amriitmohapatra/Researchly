@@ -106,7 +106,10 @@ export async function recordProgress(data: RowSource, keep: boolean): Promise<Ac
     let { error } = await sb.from("progress_events").insert(row);
     if (missingColumn(error)) {
       // A database without the comparability columns: record the counts as before.
-      const { assessed: _a, mode: _m, ruleset: _r, ...legacy } = row;
+      const legacy: Partial<typeof row> = { ...row };
+      delete legacy.assessed;
+      delete legacy.mode;
+      delete legacy.ruleset;
       ({ error } = await sb.from("progress_events").insert(legacy));
     }
     return error ? { ok: false, message: accountErrorMessage(error) } : { ok: true, data: null };
