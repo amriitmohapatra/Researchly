@@ -146,6 +146,18 @@ own "Whole document" group so they are never lost. The chooser starts at
   number of recorded checks is shown as context. Never a score, a grade
   or a flag total. Off and empty states link to Settings. In the account
   menu.
+- Like with like (Codex review N2, 2026-10-14): each check also records
+  which checks ran (rule ids), Draft or Revise and the checker's version.
+  A rule that did not run in a check (muted, a hidden preference, held back
+  by Draft, off for the article type, its tier down) is a **gap**: the line
+  breaks and a small hollow mark sits on the baseline, "not assessed" in
+  the tooltip and the table; never a zero. Only checks of one article type
+  and one checker version are compared: the latest type by default, a
+  "Compare checks of" select when there are several; earlier versions are
+  counted in a quiet note, not plotted. The help line says the dates
+  compared and calls the view how often flags appeared, not a score. A
+  recheck of unchanged text (a control changed) is not recorded again: an
+  in-memory key of the text, never stored or sent.
 
 ## Labelling flags (S4, `/label`)
 

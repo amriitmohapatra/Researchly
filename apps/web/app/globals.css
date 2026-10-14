@@ -3402,6 +3402,19 @@ main:focus {
 .spark-hit:hover {
   fill: var(--surface-2);
 }
+.spark-gap {
+  fill: var(--surface);
+  stroke: var(--line-strong);
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+.spark-dot {
+  fill: var(--accent);
+  pointer-events: none;
+}
+.progress-compare {
+  margin: 4px 0 8px;
+}
 .spark-end {
   fill: var(--accent);
   stroke: var(--bg);

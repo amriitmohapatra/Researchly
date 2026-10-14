@@ -986,3 +986,40 @@ def test_my_config_does_not_expose_progress(pg):
     with as_user(pg, USER_A) as cur:
         assert "keep_progress" not in my_config(cur)
 
+
+
+# ---------------------------------------------------------------------------
+# progress_events comparability (Codex review N2, 2026-10-14): metadata only
+# ---------------------------------------------------------------------------
+
+def _record_full(cur, assessed, mode="revise", ruleset="0.1.0+2795206d"):
+    cur.execute("insert into public.progress_events (words, document_type, "
+                "counts, assessed, mode, ruleset) values (1200, 'manuscript', "
+                "'{\"G101\": 2}'::jsonb, %s, %s, %s)", (assessed, mode, ruleset))
+
+
+def test_progress_rows_record_what_was_assessed(pg):
+    with as_user(pg, USER_A) as cur:
+        cur.execute("insert into public.user_settings (keep_progress) "
+                    "values (true)")
+        _record_full(cur, ["G101", "C303", "LT001"])
+        _record(cur)                                   # an older-style row
+        cur.execute("select assessed, mode, ruleset from public.progress_events "
+                    "order by id")
+        assert cur.fetchall() == [(["G101", "C303", "LT001"], "revise",
+                                   "0.1.0+2795206d"), (None, None, None)]
+
+
+@pytest.mark.parametrize("assessed,mode,ruleset", [
+    (["We fitted a model"], "revise", "0.1.0+ab"),     # text, not a rule id
+    (["G101"], "sometimes", "0.1.0+ab"),               # unknown mode
+    (["G101"], "draft", "the whole paragraph here"),   # text in the ruleset
+    (["G1%d" % i for i in range(401)], "draft", "0.1"),  # too many
+])
+def test_progress_metadata_holds_no_text(pg, assessed, mode, ruleset):
+    with as_user(pg, USER_A) as cur:
+        cur.execute("insert into public.user_settings (keep_progress) "
+                    "values (true)")
+    with pytest.raises(errors.CheckViolation):
+        with as_user(pg, USER_A) as cur:
+            _record_full(cur, assessed, mode, ruleset)

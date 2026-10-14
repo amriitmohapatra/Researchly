@@ -20,7 +20,7 @@ async function axeSerious(page: Page) {
 }
 
 const HELP =
-  "Records how many times each check fired and how many words were checked, after each check. Never your text. Off by default; switching it off stops recording.";
+  "Records how many times each check fired, how many words were checked, which checks ran, Draft or Revise and the checker’s version, after each check. Never your text. Off by default; switching it off stops recording.";
 
 const rule = (id: string, short: string, learn_ref: string | null = null): RuleInfo => ({
   id,

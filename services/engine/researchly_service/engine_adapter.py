@@ -271,6 +271,8 @@ def run_analysis(source: Union[str, Document], fmt: str,
         elapsed_ms=0,
         warnings=list(a.document.warnings) if a.document is not None else [],
         reading=_reading(a.document),
+        assessed_rules=list(a.assessed_rules),
+        ruleset=a.ruleset,
         **extra,
     )
     out.elapsed_ms = int(round((time.perf_counter() - t0) * 1000))

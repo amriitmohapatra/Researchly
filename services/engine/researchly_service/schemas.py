@@ -587,6 +587,14 @@ class AnalyzeResponse(_Strict):
                                      "degraded tier (CLAUDE.md: no silent tiers).")
     engine: EngineInfo
     elapsed_ms: int = Field(..., ge=0)
+    assessed_rules: List[str] = Field(
+        default_factory=list, description="The rules whose findings this "
+        "check could show (not muted, not off for the article type, not held "
+        "back by Draft, not hidden preferences, not on a tier that is down). "
+        "A rule outside this list was not assessed: not the same as zero.")
+    ruleset: Optional[str] = Field(None, description="Engine version and a "
+                                   "fingerprint of its rules; checks compare "
+                                   "only under the same.")
     reading: Optional[ReadingSummary] = Field(
         None, description="What was read and what was set aside.")
     warnings: List[str] = Field(

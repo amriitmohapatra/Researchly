@@ -23,6 +23,7 @@ import {
   saveSpelling,
 } from "@/lib/account";
 import { loadKeepProgress, recordProgress } from "@/lib/progress";
+import { claimText, textKey } from "@/lib/record-progress";
 import { getEngineAuth, signOut, useAuth } from "@/lib/auth";
 import { ENGINE_URL, LOCAL_ENGINE_URL, reportProblemHref } from "@/lib/config";
 import { analyzeWord, engineHealth } from "@/lib/engine";
@@ -111,6 +112,8 @@ interface Checked {
   focus: SectionFocus | null;
   /** The reporting checklist this check asked for (S4c). */
   checklist: ChecklistPref;
+  /** An in-memory key of the checked text, so a recheck of the same words is not recorded twice (never stored or sent). */
+  progressKey?: string;
 }
 
 type Problem = { title: string; message: string };
@@ -404,7 +407,9 @@ export function Taskpane() {
         );
         if (!r.ok) return { ok: false, error: useEngine === "local" ? localDownError(r.error) : r.error };
         const focus = cursor !== null ? sectionAround(paragraphs, cursor) : null;
-        return { ok: true, data: { seq: 0, data: r.data, engine: useEngine, focus, checklist: useChecklist } };
+        // A recheck of the same document text is not recorded twice (Codex review N2): an in-memory key only.
+        const progressKey = textKey(paragraphs.map((p) => p.text).join("\n"));
+        return { ok: true, data: { seq: 0, data: r.data, engine: useEngine, focus, checklist: useChecklist, progressKey } };
       };
       await session.start(task, {
         onResult: (c) => {
@@ -421,7 +426,7 @@ export function Taskpane() {
           if (signedIn && c.engine === "cloud") {
             const data = c.data;
             void loadKeepProgress()
-              .then((k) => (k.ok && k.data ? recordProgress(data, true) : null))
+              .then((k) => (k.ok && k.data && claimText(c.progressKey) ? recordProgress(data, true) : null))
               .catch(() => undefined);
           }
         },

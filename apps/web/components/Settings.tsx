@@ -599,7 +599,7 @@ function Dictionary({
 
 /** The exact help text under the switch (pinned by tests). */
 export const KEEP_PROGRESS_HELP =
-  "Records how many times each check fired and how many words were checked, after each check. Never your text. Off by default; switching it off stops recording.";
+  "Records how many times each check fired, how many words were checked, which checks ran, Draft or Revise and the checker’s version, after each check. Never your text. Off by default; switching it off stops recording.";
 
 function KeepProgress({
   keep,
@@ -656,7 +656,7 @@ function KeepProgress({
         <ConfirmDelete
           label="Delete my progress…"
           title="Delete your recorded progress?"
-          body="Every recorded check (rule counts and word counts) will be removed from your account. Your settings and dictionary stay. This can’t be undone."
+          body="Every recorded check (rule counts, word counts and which checks ran) will be removed from your account. Your settings and dictionary stay. This can’t be undone."
           keepLabel="Keep it"
           confirmLabel="Delete it"
           busy={busy}

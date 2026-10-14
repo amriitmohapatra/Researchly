@@ -11,6 +11,7 @@ that proves it.
 | `migrations/20261008120000_s4_document_type.sql` | `user_settings.document_type` (the article type); `my_config()` gains it. |
 | `migrations/20261008140000_s4_progress.sql` | The opt-in `keep_progress` switch and the `progress_events` table (rule counts only). |
 | `migrations/20261014120000_spelling_prediction.sql` | `user_settings.spelling`, the English spelling a writer keeps to (`auto`, `us`, `uk`, `uk-oxford`, `ca`, `au`, `in`; PLAN task #15), and `user_settings.prediction`, word prediction on (default) or off; `my_config()` gains both, so the hosted engine applies them. |
+| `migrations/20261014130000_progress_comparable.sql` | `progress_events.assessed` (the rule ids a check could show), `.mode` and `.ruleset`, so the progress view compares like with like (Codex review N2); rule ids, a word and a version string, never text. Older rows keep NULLs. |
 | `tests/shim.sql` | A stand-in for the parts of Supabase the migration needs (`auth.users`, `auth.uid()`, roles `anon` / `authenticated`, Supabase's default privileges), so the test runs on plain PostgreSQL 16. **Test only: never run it in Supabase.** |
 | `tests/test_two_user.py` | The Q7 two-user test (ARCHITECTURE.md §3): user A can never read, create as, update or delete user B's settings or dictionary, and `anon` can do nothing. Also the limits (200 muted rules, valid rule ids, locales and spellings, 1–64-character words, 5,000 words per user) and account-deletion cascade. |
 | `tests/run_local.sh` | Runs the test against a throwaway local PostgreSQL 16; no Docker. |
@@ -43,6 +44,11 @@ table's columns or limits: that needs a new, later-dated migration file.
 Each later migration is applied the same way, once, in date order (the
 file names sort by date): paste the whole file, Run, expect "Success. No
 rows returned". All of them are safe to re-run.
+
+**Comparable progress (2026-10-14):** after the spelling migration, paste
+`migrations/20261014130000_progress_comparable.sql`. Check: **Table Editor →
+progress_events** shows `assessed`, `mode` and `ruleset` columns. Until it is
+applied the website still records progress, without them (older behaviour).
 
 **Spelling and prediction (2026-10-14):** paste
 `migrations/20261014120000_spelling_prediction.sql` after the earlier four.

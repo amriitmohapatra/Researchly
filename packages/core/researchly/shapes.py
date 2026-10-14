@@ -105,6 +105,8 @@ def reading_summary(document) -> Optional[dict]:
 def extras(a) -> dict:
     """Everything an analysis response carries beyond the suggestions."""
     return {
+        "assessed_rules": list(getattr(a, "assessed_rules", []) or []),
+        "ruleset": getattr(a, "ruleset", "") or "",
         "reading": reading_summary(a.document),
         "profile": profile_info(a),
         "review": review_report(a.review),

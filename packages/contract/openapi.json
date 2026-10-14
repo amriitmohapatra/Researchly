@@ -4,6 +4,14 @@
       "AnalyzeFileResponse": {
         "additionalProperties": false,
         "properties": {
+          "assessed_rules": {
+            "description": "The rules whose findings this check could show (not muted, not off for the article type, not held back by Draft, not hidden preferences, not on a tier that is down). A rule outside this list was not assessed: not the same as zero.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Assessed Rules",
+            "type": "array"
+          },
           "checklist": {
             "anyOf": [
               {
@@ -105,6 +113,18 @@
               }
             ],
             "description": "Present when `options.review` was true."
+          },
+          "ruleset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Engine version and a fingerprint of its rules; checks compare only under the same.",
+            "title": "Ruleset"
           },
           "schema_version": {
             "const": "1",
@@ -272,6 +292,14 @@
       "AnalyzeResponse": {
         "additionalProperties": false,
         "properties": {
+          "assessed_rules": {
+            "description": "The rules whose findings this check could show (not muted, not off for the article type, not held back by Draft, not hidden preferences, not on a tier that is down). A rule outside this list was not assessed: not the same as zero.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Assessed Rules",
+            "type": "array"
+          },
           "checklist": {
             "anyOf": [
               {
@@ -371,6 +399,18 @@
             ],
             "description": "Present when `options.review` was true."
           },
+          "ruleset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Engine version and a fingerprint of its rules; checks compare only under the same.",
+            "title": "Ruleset"
+          },
           "schema_version": {
             "const": "1",
             "default": "1",
@@ -456,6 +496,14 @@
       "AnalyzeWordResponse": {
         "additionalProperties": false,
         "properties": {
+          "assessed_rules": {
+            "description": "The rules whose findings this check could show (not muted, not off for the article type, not held back by Draft, not hidden preferences, not on a tier that is down). A rule outside this list was not assessed: not the same as zero.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Assessed Rules",
+            "type": "array"
+          },
           "checklist": {
             "anyOf": [
               {
@@ -557,6 +605,18 @@
               }
             ],
             "description": "Present when `options.review` was true."
+          },
+          "ruleset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Engine version and a fingerprint of its rules; checks compare only under the same.",
+            "title": "Ruleset"
           },
           "schema_version": {
             "const": "1",

@@ -99,6 +99,14 @@ class Analysis:
     health: list = field(default_factory=list)
     config: Config = field(default_factory=Config)
     document: Optional[Document] = None
+    # The rules whose findings this check could show (Codex review N2):
+    # not muted, not off for the article type, not held back by Draft, not
+    # hidden preferences, not on a tier that is down. A rule outside this
+    # list was not assessed, which is not the same as zero findings.
+    assessed_rules: list = field(default_factory=list)
+    # A fingerprint of the engine version and its rule set: two checks are
+    # comparable only under the same one.
+    ruleset: str = ""
 
     @property
     def grammar_ok(self) -> bool:
@@ -123,6 +131,8 @@ class Analysis:
             "sections_detected": list(self.sections_detected),
             "health": [t.to_dict() for t in self.health],
             "config": self.config.to_dict(),
+            "assessed_rules": list(self.assessed_rules),
+            "ruleset": self.ruleset,
         }
 
 
@@ -240,7 +250,10 @@ def analyze(source: Union[str, Path, Sequence[dict], Document],
         narrative = build_narrative(document, spacy_doc=spacy_doc,
                                     profile=profile)
 
+    health = engine_status(cfg, nlp=nlp)
     return Analysis(
+        assessed_rules=assessed_rules(cfg, disabled, health),
+        ruleset=ruleset_id(),
         suggestions=found,
         counts=counts,
         hidden_preferences=0 if cfg.show_preferences else prefs,
@@ -254,10 +267,44 @@ def analyze(source: Union[str, Path, Sequence[dict], Document],
         suggested_checklist=suggested,
         metrics=mets if with_metrics else None,
         sections_detected=sorted({h.section for h in document.headings}),
-        health=engine_status(cfg, nlp=nlp),
+        health=health,
         config=cfg,
         document=document,
     )
+
+
+def assessed_rules(cfg: Config, disabled: set, health: list) -> list:
+    """The rules whose findings a check with these settings could show
+    (Codex review N2): the progress view counts a rule outside this list as
+    not assessed, never as zero."""
+    down = {t.tier for t in health if not t.ok}
+    out = []
+    for r in REGISTRY.values():
+        if r.id in disabled or r.tier in down:
+            continue
+        if r.category is Category.PREFERENCE and not cfg.show_preferences:
+            continue
+        if cfg.mode == "draft" and _scope(r.id) != "sentence":
+            continue
+        out.append(r.id)
+    return sorted(out)
+
+
+_RULESET: Optional[str] = None
+
+
+def ruleset_id() -> str:
+    """A short fingerprint of the engine version and its registered rules:
+    checks are compared only under the same one."""
+    global _RULESET
+    if _RULESET is None:
+        import hashlib
+        from . import __version__
+        ensure_rules_loaded()
+        key = __version__ + "|" + ",".join(sorted(REGISTRY))
+        _RULESET = __version__ + "+" + hashlib.sha256(
+            key.encode()).hexdigest()[:8]
+    return _RULESET
 
 
 # --- word prediction (2026-10-14) ---------------------------------------------

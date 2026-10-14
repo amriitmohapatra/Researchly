@@ -31,7 +31,7 @@ import { createCheckSession, previousMark, type CheckTask } from "@/lib/check-se
 import { analyze, analyzeFile, fetchDemoManuscript } from "@/lib/engine";
 import { QUEUE_START, type QueueState } from "@/lib/queue";
 import { loadKeepProgress } from "@/lib/progress";
-import { recordCheck } from "@/lib/record-progress";
+import { recordCheck, textKey } from "@/lib/record-progress";
 import { loadChecklistSetting, saveChecklistSetting, subscribeChecklistSetting } from "@/lib/results-prefs";
 import { UPLOAD_TYPES_SENTENCE } from "@/lib/errors";
 import { ENGINE_URL } from "@/lib/config";
@@ -305,7 +305,13 @@ export function Checker() {
       }
       // A signed-in writer who keeps their progress: counts only, fire and forget, never in the way.
       // `signed_in` is the engine's word that the account's token came with this check.
-      const record = (data: AnalyzeResponse) => recordCheck(data, { signedIn: data.signed_in === true, keep: keepProgressRef.current });
+      // A recheck of the same words is not recorded twice (Codex review N2); the key stays in this page's memory.
+      const key =
+        target.kind === "file"
+          ? textKey(`file:${target.file.name}:${target.file.size}:${target.file.lastModified}`)
+          : textKey(submitted);
+      const record = (data: AnalyzeResponse) =>
+        recordCheck(data, { signedIn: data.signed_in === true, keep: keepProgressRef.current, textKey: key });
       // Retry runs this same task again: the same text or file, the same options.
       const task: CheckTask<AnalyzeResponse> = (signal) => {
         setAnnouncement(target.kind === "file" ? `Checking ${target.file.name}…` : "Checking your text…");

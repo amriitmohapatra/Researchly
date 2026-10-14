@@ -176,6 +176,11 @@ export interface components {
     schemas: {
         /** AnalyzeFileResponse */
         AnalyzeFileResponse: {
+            /**
+             * Assessed Rules
+             * @description The rules whose findings this check could show (not muted, not off for the article type, not held back by Draft, not hidden preferences, not on a tier that is down). A rule outside this list was not assessed: not the same as zero.
+             */
+            assessed_rules?: string[];
             /** @description Present when `options.checklist` was set and resolved to a checklist. */
             checklist?: components["schemas"]["ChecklistReport"] | null;
             /**
@@ -216,6 +221,11 @@ export interface components {
             reading?: components["schemas"]["ReadingSummary"] | null;
             /** @description Present when `options.review` was true. */
             review?: components["schemas"]["ReviewReport"] | null;
+            /**
+             * Ruleset
+             * @description Engine version and a fingerprint of its rules; checks compare only under the same.
+             */
+            ruleset?: string | null;
             /**
              * Schema Version
              * @default 1
@@ -293,6 +303,11 @@ export interface components {
         };
         /** AnalyzeResponse */
         AnalyzeResponse: {
+            /**
+             * Assessed Rules
+             * @description The rules whose findings this check could show (not muted, not off for the article type, not held back by Draft, not hidden preferences, not on a tier that is down). A rule outside this list was not assessed: not the same as zero.
+             */
+            assessed_rules?: string[];
             /** @description Present when `options.checklist` was set and resolved to a checklist. */
             checklist?: components["schemas"]["ChecklistReport"] | null;
             /**
@@ -333,6 +348,11 @@ export interface components {
             /** @description Present when `options.review` was true. */
             review?: components["schemas"]["ReviewReport"] | null;
             /**
+             * Ruleset
+             * @description Engine version and a fingerprint of its rules; checks compare only under the same.
+             */
+            ruleset?: string | null;
+            /**
              * Schema Version
              * @default 1
              * @constant
@@ -370,6 +390,11 @@ export interface components {
         };
         /** AnalyzeWordResponse */
         AnalyzeWordResponse: {
+            /**
+             * Assessed Rules
+             * @description The rules whose findings this check could show (not muted, not off for the article type, not held back by Draft, not hidden preferences, not on a tier that is down). A rule outside this list was not assessed: not the same as zero.
+             */
+            assessed_rules?: string[];
             /** @description Present when `options.checklist` was set and resolved to a checklist. */
             checklist?: components["schemas"]["ChecklistReport"] | null;
             /**
@@ -410,6 +435,11 @@ export interface components {
             reading?: components["schemas"]["ReadingSummary"] | null;
             /** @description Present when `options.review` was true. */
             review?: components["schemas"]["ReviewReport"] | null;
+            /**
+             * Ruleset
+             * @description Engine version and a fingerprint of its rules; checks compare only under the same.
+             */
+            ruleset?: string | null;
             /**
              * Schema Version
              * @default 1
