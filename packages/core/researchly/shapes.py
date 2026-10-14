@@ -67,10 +67,13 @@ def narrative_map(n: Optional[dict]) -> Optional[dict]:
 def checklist_report(c: Optional[dict]) -> Optional[dict]:
     if c is None:
         return None
-    return {k: c[k] for k in ("id", "label", "design", "source", "suggested",
-                              "reported", "total", "note")} | {
+    return {k: c[k] for k in ("id", "label", "edition", "design", "source",
+                              "suggested", "found", "partial", "total",
+                              "note")} | {
         "items": [{k: i[k] for k in ("id", "topic", "question", "plain",
-                                     "sections", "status", "evidence")}
+                                     "sections", "refs", "status", "evidence",
+                                     "parts", "not_counted",
+                                     "section_absent")}
                   for i in c["items"]]}
 
 

@@ -436,6 +436,23 @@ class NarrativeMap(_Strict):
     source: str
 
 
+class ChecklistPart(_Strict):
+    """One thing a compound question asks for (Codex review N1)."""
+    label: str = Field(..., description='e.g. "the date of the last search".')
+    found: bool
+    evidence: Optional[str] = Field(None, description="The sentence that may "
+                                    "report it (never logged).")
+
+
+class NotCounted(_Strict):
+    """A sentence the signals matched that was not counted as reporting."""
+    reason: Literal["absent", "future", "prior"] = Field(
+        ..., description="absent: it says the thing is not reported; future: "
+        "it promises it for later; prior: it is about earlier studies.")
+    label: str = Field(..., description="The reason in plain words.")
+    quote: str = Field(..., description="The sentence (never logged).")
+
+
 class ChecklistItem(_Strict):
     id: str
     topic: str
@@ -443,11 +460,23 @@ class ChecklistItem(_Strict):
     plain: str
     sections: List[str] = Field(default_factory=list,
                                 description="Where readers look for it.")
-    status: Literal["reported", "needs_check"] = Field(
-        ..., description="needs_check is a prompt, never a verdict: the item "
-        "may be in a table, a figure or the supplement, or not apply.")
+    refs: List[str] = Field(default_factory=list, description="The "
+                            "guideline's own item numbers this question "
+                            "covers; empty = good practice the guideline "
+                            "does not list.")
+    status: Literal["found", "partial", "needs_check"] = Field(
+        ..., description="found: possible evidence for every part, for the "
+        "writer to confirm (a matching sentence is not proof); partial: "
+        "some parts found; needs_check: a prompt, never a verdict (the item "
+        "may be in a table, a figure or the supplement, or not apply).")
     evidence: Optional[str] = Field(None, description="The sentence that "
-                                    "reports it (never logged).")
+                                    "may report it (never logged).")
+    parts: List[ChecklistPart] = Field(default_factory=list, description=
+                                       "For a compound question, each part.")
+    not_counted: Optional[NotCounted] = None
+    section_absent: bool = Field(False, description="The document has "
+                                 "sections, but none of those where readers "
+                                 "look for this item.")
 
 
 class ChecklistReport(_Strict):
@@ -455,12 +484,16 @@ class ChecklistReport(_Strict):
     never the science."""
     id: str
     label: str
+    edition: str = Field(..., description='The guideline version mapped, '
+                         'e.g. "PRISMA 2020".')
     design: str
     source: str
     suggested: bool = Field(..., description="True when the text's own words "
                             "point to this checklist.")
     items: List[ChecklistItem]
-    reported: int = Field(..., ge=0)
+    found: int = Field(..., ge=0, description="Items with possible evidence "
+                       "for every part (to be confirmed by the writer).")
+    partial: int = Field(..., ge=0)
     total: int = Field(..., ge=0)
     note: str
 

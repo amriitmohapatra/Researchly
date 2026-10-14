@@ -682,12 +682,30 @@
                 "type": "null"
               }
             ],
-            "description": "The sentence that reports it (never logged).",
+            "description": "The sentence that may report it (never logged).",
             "title": "Evidence"
           },
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "not_counted": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NotCounted"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "parts": {
+            "description": "For a compound question, each part.",
+            "items": {
+              "$ref": "#/components/schemas/ChecklistPart"
+            },
+            "title": "Parts",
+            "type": "array"
           },
           "plain": {
             "title": "Plain",
@@ -696,6 +714,20 @@
           "question": {
             "title": "Question",
             "type": "string"
+          },
+          "refs": {
+            "description": "The guideline's own item numbers this question covers; empty = good practice the guideline does not list.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Refs",
+            "type": "array"
+          },
+          "section_absent": {
+            "default": false,
+            "description": "The document has sections, but none of those where readers look for this item.",
+            "title": "Section Absent",
+            "type": "boolean"
           },
           "sections": {
             "description": "Where readers look for it.",
@@ -706,9 +738,10 @@
             "type": "array"
           },
           "status": {
-            "description": "needs_check is a prompt, never a verdict: the item may be in a table, a figure or the supplement, or not apply.",
+            "description": "found: possible evidence for every part, for the writer to confirm (a matching sentence is not proof); partial: some parts found; needs_check: a prompt, never a verdict (the item may be in a table, a figure or the supplement, or not apply).",
             "enum": [
-              "reported",
+              "found",
+              "partial",
               "needs_check"
             ],
             "title": "Status",
@@ -729,6 +762,39 @@
         "title": "ChecklistItem",
         "type": "object"
       },
+      "ChecklistPart": {
+        "additionalProperties": false,
+        "description": "One thing a compound question asks for (Codex review N1).",
+        "properties": {
+          "evidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The sentence that may report it (never logged).",
+            "title": "Evidence"
+          },
+          "found": {
+            "title": "Found",
+            "type": "boolean"
+          },
+          "label": {
+            "description": "e.g. \"the date of the last search\".",
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "found"
+        ],
+        "title": "ChecklistPart",
+        "type": "object"
+      },
       "ChecklistReport": {
         "additionalProperties": false,
         "description": "A reporting checklist checked against the text: reporting only,\nnever the science.",
@@ -736,6 +802,17 @@
           "design": {
             "title": "Design",
             "type": "string"
+          },
+          "edition": {
+            "description": "The guideline version mapped, e.g. \"PRISMA 2020\".",
+            "title": "Edition",
+            "type": "string"
+          },
+          "found": {
+            "description": "Items with possible evidence for every part (to be confirmed by the writer).",
+            "minimum": 0.0,
+            "title": "Found",
+            "type": "integer"
           },
           "id": {
             "title": "Id",
@@ -756,9 +833,9 @@
             "title": "Note",
             "type": "string"
           },
-          "reported": {
+          "partial": {
             "minimum": 0.0,
-            "title": "Reported",
+            "title": "Partial",
             "type": "integer"
           },
           "source": {
@@ -779,11 +856,13 @@
         "required": [
           "id",
           "label",
+          "edition",
           "design",
           "source",
           "suggested",
           "items",
-          "reported",
+          "found",
+          "partial",
           "total",
           "note"
         ],
@@ -1549,6 +1628,39 @@
           "expected"
         ],
         "title": "NarrativeSection",
+        "type": "object"
+      },
+      "NotCounted": {
+        "additionalProperties": false,
+        "description": "A sentence the signals matched that was not counted as reporting.",
+        "properties": {
+          "label": {
+            "description": "The reason in plain words.",
+            "title": "Label",
+            "type": "string"
+          },
+          "quote": {
+            "description": "The sentence (never logged).",
+            "title": "Quote",
+            "type": "string"
+          },
+          "reason": {
+            "description": "absent: it says the thing is not reported; future: it promises it for later; prior: it is about earlier studies.",
+            "enum": [
+              "absent",
+              "future",
+              "prior"
+            ],
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason",
+          "label",
+          "quote"
+        ],
+        "title": "NotCounted",
         "type": "object"
       },
       "ProfileChoice": {

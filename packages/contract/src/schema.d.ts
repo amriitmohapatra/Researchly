@@ -465,15 +465,32 @@ export interface components {
         ChecklistItem: {
             /**
              * Evidence
-             * @description The sentence that reports it (never logged).
+             * @description The sentence that may report it (never logged).
              */
             evidence?: string | null;
             /** Id */
             id: string;
+            not_counted?: components["schemas"]["NotCounted"] | null;
+            /**
+             * Parts
+             * @description For a compound question, each part.
+             */
+            parts?: components["schemas"]["ChecklistPart"][];
             /** Plain */
             plain: string;
             /** Question */
             question: string;
+            /**
+             * Refs
+             * @description The guideline's own item numbers this question covers; empty = good practice the guideline does not list.
+             */
+            refs?: string[];
+            /**
+             * Section Absent
+             * @description The document has sections, but none of those where readers look for this item.
+             * @default false
+             */
+            section_absent: boolean;
             /**
              * Sections
              * @description Where readers look for it.
@@ -481,12 +498,30 @@ export interface components {
             sections?: string[];
             /**
              * Status
-             * @description needs_check is a prompt, never a verdict: the item may be in a table, a figure or the supplement, or not apply.
+             * @description found: possible evidence for every part, for the writer to confirm (a matching sentence is not proof); partial: some parts found; needs_check: a prompt, never a verdict (the item may be in a table, a figure or the supplement, or not apply).
              * @enum {string}
              */
-            status: "reported" | "needs_check";
+            status: "found" | "partial" | "needs_check";
             /** Topic */
             topic: string;
+        };
+        /**
+         * ChecklistPart
+         * @description One thing a compound question asks for (Codex review N1).
+         */
+        ChecklistPart: {
+            /**
+             * Evidence
+             * @description The sentence that may report it (never logged).
+             */
+            evidence?: string | null;
+            /** Found */
+            found: boolean;
+            /**
+             * Label
+             * @description e.g. "the date of the last search".
+             */
+            label: string;
         };
         /**
          * ChecklistReport
@@ -496,6 +531,16 @@ export interface components {
         ChecklistReport: {
             /** Design */
             design: string;
+            /**
+             * Edition
+             * @description The guideline version mapped, e.g. "PRISMA 2020".
+             */
+            edition: string;
+            /**
+             * Found
+             * @description Items with possible evidence for every part (to be confirmed by the writer).
+             */
+            found: number;
             /** Id */
             id: string;
             /** Items */
@@ -504,8 +549,8 @@ export interface components {
             label: string;
             /** Note */
             note: string;
-            /** Reported */
-            reported: number;
+            /** Partial */
+            partial: number;
             /** Source */
             source: string;
             /**
@@ -879,6 +924,28 @@ export interface components {
             sentences: number;
             /** Words */
             words: number;
+        };
+        /**
+         * NotCounted
+         * @description A sentence the signals matched that was not counted as reporting.
+         */
+        NotCounted: {
+            /**
+             * Label
+             * @description The reason in plain words.
+             */
+            label: string;
+            /**
+             * Quote
+             * @description The sentence (never logged).
+             */
+            quote: string;
+            /**
+             * Reason
+             * @description absent: it says the thing is not reported; future: it promises it for later; prior: it is about earlier studies.
+             * @enum {string}
+             */
+            reason: "absent" | "future" | "prior";
         };
         /** ProfileChoice */
         ProfileChoice: {
