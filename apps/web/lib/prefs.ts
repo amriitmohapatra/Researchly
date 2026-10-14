@@ -105,6 +105,24 @@ function read(key: string): string | null {
   }
 }
 
+/**
+ * Whether any key starting with `prefix` is stored in this browser: key
+ * names only, never a value, never a write. lib/supabase.ts asks it whether
+ * supabase-js has a session here before loading the library (2026-10-14).
+ * null when storage cannot be read.
+ */
+export function hasStoredKey(prefix: string): boolean | null {
+  try {
+    const store = window.localStorage;
+    for (let i = 0; i < store.length; i++) {
+      if (store.key(i)?.startsWith(prefix)) return true;
+    }
+    return false;
+  } catch {
+    return null; // private mode, blocked storage, SSR
+  }
+}
+
 function write(key: string, value: string): void {
   try {
     window.localStorage.setItem(key, value);

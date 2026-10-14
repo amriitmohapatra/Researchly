@@ -24,6 +24,7 @@ import {
   OTHER_USER_ID,
   reply,
   seedSession,
+  session,
   STORAGE_KEY,
   SUPABASE_URL,
   USER,
@@ -43,6 +44,17 @@ async function pasteAndCheck(page: Page, text = PASTE_TEXT) {
   await page.getByTestId("check").click();
 }
 
+/** Scripts this page fetched that hold supabase-js's auth client (its chunk is the only one naming GoTrueClient). */
+function watchAuthScripts(page: Page): string[] {
+  const found: string[] = [];
+  page.on("response", async (r) => {
+    if (!/\.js(\?|$)/.test(r.url())) return;
+    const body = await r.text().catch(() => "");
+    if (body.includes("GoTrueClient")) found.push(r.url());
+  });
+  return found;
+}
+
 /** Tokens embed a timestamp; compare by the label baked into the signature. */
 const tokenLabel = (h: string | undefined) => h?.match(/\.sig-([a-z]+)$/)?.[1];
 
@@ -59,6 +71,35 @@ test.describe("signed out, with accounts configured", () => {
     // Signed out, cards carry no account actions.
     await expect(page.getByTestId("mute-rule")).toHaveCount(0);
     await expect(page.getByTestId("add-word")).toHaveCount(0);
+  });
+
+  test("supabase-js is not loaded for a signed-out visit, only once a sign-in starts (performance pass)", async ({ page }) => {
+    await mockSupabase(page);
+    await mockEngineAuth(page, (_c, route) => reply(route, 200, { ...signedInPaste, signed_in: false }));
+    const authScripts = watchAuthScripts(page);
+    await page.goto("/");
+    await expect(page.getByTestId("sign-in")).toBeVisible();
+    await pasteAndCheck(page);
+    await expect(page.getByRole("heading", { name: "2 suggestions" })).toBeVisible();
+    await page.waitForLoadState("networkidle");
+    expect(authScripts).toEqual([]);
+    await page.getByTestId("sign-in").click();
+    await page.getByTestId("sign-in-email").fill(USER.email);
+    await page.getByTestId("sign-in-send").click();
+    await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
+    expect(authScripts).toHaveLength(1);
+  });
+
+  test("a session another tab stores signs this tab in, as supabase-js's own cross-tab channel did", async ({ page }) => {
+    await mockSupabase(page);
+    const authScripts = watchAuthScripts(page);
+    await page.goto("/");
+    await expect(page.getByTestId("sign-in")).toBeVisible();
+    const other = await page.context().newPage();
+    await other.goto("/learn");
+    await other.evaluate(([k, v]) => window.localStorage.setItem(k, v), [STORAGE_KEY, JSON.stringify(session("other"))] as const);
+    await expect(page.getByTestId("account-button")).toContainText(USER.email);
+    expect(authScripts.length).toBeGreaterThan(0);
   });
 
   test("choosing a file explains it needs an account, and sends nothing", async ({ page }) => {
