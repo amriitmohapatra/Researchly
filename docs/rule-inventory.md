@@ -143,7 +143,7 @@ F607–F610 are the thesis-aligned, nobody-else-has-this rules. F601 is the one 
 
 ---
 
-## Layer 7 — Course-corpus rules (v0.2; sources: Endo lecture, NG5001, Shehzad 2008, Pallas 2022)
+## Layer 7 — Course-corpus rules (v0.2; sources: Endo lecture, NG5001, Shehzad 2008, Pallas 2023)
 
 | ID | Rule | Type | Sections | Status |
 |---|---|---|---|---|
