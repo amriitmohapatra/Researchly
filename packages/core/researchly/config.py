@@ -202,7 +202,9 @@ def apply_remote(cfg: Config, data: dict) -> Config:
 
     `data` is the shape `my_config()` returns in Supabase:
     {"disabled_rules": [...], "show_preferences": bool, "locale": str,
-     "mode": "draft" | "revise", "dictionary": [...]}. It came over the network, so every value is
+     "mode": "draft" | "revise", "document_type": str, "spelling": str,
+     "prediction": bool,
+     "dictionary": [...]}. It came over the network, so every value is
     checked and anything malformed is dropped rather than trusted; the same
     limits are enforced by the database, so dropping only bites on a bug.
     """
@@ -221,6 +223,8 @@ def apply_remote(cfg: Config, data: dict) -> Config:
         cfg.mode = data["mode"]
     if data.get("document_type") in DOCUMENT_TYPES:
         cfg.document_type = data["document_type"]
+    if data.get("spelling") in SPELLINGS:
+        cfg.spelling = data["spelling"]
     if isinstance(data.get("prediction"), bool):
         cfg.prediction = data["prediction"]
     words = data.get("dictionary")

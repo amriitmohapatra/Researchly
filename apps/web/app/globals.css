@@ -3490,6 +3490,18 @@ main:focus {
   width: 100%;
   min-width: 0;
 }
+
+/* ---- The English spelling to keep to (task #15): beside "Check as", in the
+   taskpane's Settings, and on the settings page ---- */
+.control-spelling .select {
+  min-width: 12rem;
+  max-width: 100%;
+}
+.tp-settings .control-spelling,
+.tp-settings .control-spelling .select {
+  width: 100%;
+  min-width: 0;
+}
 .wchecklist {
   max-width: var(--measure);
 }

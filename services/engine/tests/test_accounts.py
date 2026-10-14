@@ -152,9 +152,35 @@ def test_stored_dictionary_words_are_not_flagged(signed):
                                post(c2, text, tok=token()).json()["suggestions"]}
 
 
+SPELLING_TEXT = ("We analysed the colour of the samples. The color scale and "
+                 "the behaviour data were checked.\n")
+
+
+def dialect_cards(r):
+    return {(s["rule_id"], s["text"]) for s in r.json()["suggestions"]
+            if s["rule_id"] in ("W210", "W213")}
+
+
+def test_stored_spelling_applies_and_a_request_can_choose_another(signed):
+    # The account says British: the American spelling is flagged (W213).
+    c, _ = signed({"spelling": "uk"})
+    r = post(c, SPELLING_TEXT, tok=token())
+    assert r.status_code == 200, r.text
+    assert ("W213", "color") in dialect_cards(r)
+    assert not any(rule == "W210" for rule, _ in dialect_cards(r))
+    # The request's own choice wins for this check (the selector on screen).
+    got = dialect_cards(post(c, SPELLING_TEXT, tok=token(), spelling="us"))
+    assert ("W213", "colour") in got and ("W213", "color") not in got
+    # No stored choice (a row from before the column): auto, mixtures only.
+    c2, _ = signed({})
+    got = dialect_cards(post(c2, SPELLING_TEXT, tok=token()))
+    assert got and all(rule == "W210" for rule, _ in got)
+
+
 def test_malformed_stored_values_are_dropped_not_trusted(signed):
     c, _ = signed({"disabled_rules": ["W204", "'; drop table", 7],
                    "show_preferences": "yes", "locale": "xx",
+                   "spelling": "klingon",
                    "dictionary": ["ok", "has space", "x" * 65, None]})
     r = post(c, tok=token())
     assert r.status_code == 200

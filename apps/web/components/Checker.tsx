@@ -21,9 +21,10 @@ import {
   type ChecklistChoice,
   type DocumentType,
   type Format,
+  type Spelling,
   type Suggestion,
 } from "@researchly/contract";
-import { addWord, loadDocumentType, loadSettings, muteRule, saveDocumentType } from "@/lib/account";
+import { addWord, loadDocumentType, loadSettings, loadSpelling, muteRule, saveDocumentType, saveSpelling } from "@/lib/account";
 import { getEngineAuth, openSignIn, useAuth } from "@/lib/auth";
 import { checklistOffer, checklistOption, type ChecklistSetting } from "@/lib/checklists";
 import { analyze, analyzeFile, fetchDemoManuscript } from "@/lib/engine";
@@ -35,14 +36,18 @@ import { ENGINE_URL } from "@/lib/config";
 import {
   loadDocumentTypeChoice,
   loadFormat,
+  loadSpellingChoice,
   saveDocumentTypeChoice,
   saveFormat,
+  saveSpellingChoice,
   subscribeDocumentType,
   subscribeFormat,
+  subscribeSpelling,
 } from "@/lib/prefs";
 import { useChecklistChoices, useProfileChoices } from "@/lib/registry";
 import { useRuleScopes } from "@/lib/scope";
 import { codePointLength } from "@/lib/segments";
+import { resolveSpelling } from "@/lib/spelling";
 import { ACCEPT_ATTR, checkFile } from "@/lib/source";
 import { FORMATS, isFormat, validateContent, type InputProblem } from "@/lib/validate";
 import { revealNeedsRecheck, shownSuggestions, summarySentence } from "@/lib/view";
@@ -51,6 +56,7 @@ import { FilePanel, type DropHandlers } from "./FilePanel";
 import { ProfileSelect } from "./ProfileSelect";
 import { ReadingKey } from "./ReadingKey";
 import { Results } from "./Results";
+import { SpellingSelect } from "./SpellingSelect";
 import type { CardActions } from "./SuggestionCard";
 import type { ResultsView } from "./ViewTabs";
 
@@ -79,8 +85,8 @@ interface FileChecked {
 
 type AccountNote = { ok: boolean; text: string; settingsLink?: boolean };
 
-/** What a re-check may change: the toggle, the article type, the checklist. */
-type CheckOptions = { showPreferences?: boolean; documentType?: DocumentType; checklist?: ChecklistSetting };
+/** What a re-check may change: the toggle, the article type, the spelling, the checklist. */
+type CheckOptions = { showPreferences?: boolean; documentType?: DocumentType; spelling?: Spelling; checklist?: ChecklistSetting };
 
 /** Rules muted since the results on screen were checked, keyed to those results (they lapse with the next check). */
 type Muted = { key: string; rules: ReadonlySet<string> };
@@ -115,6 +121,14 @@ export function Checker() {
   const [chosenType, setChosenType] = useState<DocumentType | null>(null);
   const documentType: DocumentType = chosenType ?? (signedIn ? accountType : null) ?? storedType ?? "auto";
   const [typeNote, setTypeNote] = useState<string | null>(null);
+  // The English spelling to keep to (task #15), resolved like the article
+  // type. Null when nothing chose one: the check then leaves it to the engine
+  // (the account's saved choice, else Auto).
+  const storedSpelling = useSyncExternalStore(subscribeSpelling, loadSpellingChoice, () => null);
+  const [accountSpelling, setAccountSpelling] = useState<Spelling | null>(null);
+  const [chosenSpelling, setChosenSpelling] = useState<Spelling | null>(null);
+  const spelling = resolveSpelling({ chosen: chosenSpelling, account: accountSpelling, stored: storedSpelling, signedIn });
+  const [spellingNote, setSpellingNote] = useState<string | null>(null);
   const profiles = useProfileChoices(ENGINE_URL);
   // The reporting checklist (S4): this session's choice, else this browser's, else none.
   const storedChecklist = useSyncExternalStore(subscribeChecklistSetting, loadChecklistSetting, () => null);
@@ -157,6 +171,7 @@ export function Checker() {
     problem: useId(),
     format: useId(),
     type: useId(),
+    spelling: useId(),
     checklist: useId(),
     demo: useId(),
     prefs: useId(),
@@ -220,6 +235,18 @@ export function Checker() {
     };
   }, [signedIn]);
 
+  // Signed in: the spelling comes from the account too (shared with the Word add-in).
+  useEffect(() => {
+    if (!signedIn) return;
+    let live = true;
+    void loadSpelling().then((r) => {
+      if (live && r.ok && r.data) setAccountSpelling(r.data);
+    });
+    return () => {
+      live = false;
+    };
+  }, [signedIn]);
+
   const onExample = () => {
     setText(EXAMPLE_DRAFT);
     setProblem(null);
@@ -248,6 +275,7 @@ export function Checker() {
       if (loadingRef.current) return;
       const prefs = opts?.showPreferences ?? showPreferences;
       const type = opts?.documentType ?? documentType;
+      const spell = opts?.spelling ?? spelling;
       const list = checklistOption(opts?.checklist ?? checklist);
       const submitted = text;
       if (target.kind === "paste") {
@@ -286,6 +314,7 @@ export function Checker() {
               format,
               showPreferences: prefs,
               documentType: type,
+              spelling: spell,
               review: true,
               narrative: true,
               checklist: list,
@@ -308,6 +337,7 @@ export function Checker() {
               file: target.file,
               showPreferences: prefs,
               documentType: type,
+              spelling: spell,
               review: true,
               narrative: true,
               checklist: list,
@@ -347,7 +377,7 @@ export function Checker() {
         abortRef.current = null;
       }
     },
-    [text, format, showPreferences, documentType, checklist, checked],
+    [text, format, showPreferences, documentType, spelling, checklist, checked],
   );
 
   /** Check again whatever is on screen: the file, or the editor's text. */
@@ -543,6 +573,22 @@ export function Checker() {
     <ProfileSelect id={ids.type} value={documentType} choices={profiles} onChange={onTypeChange} note={typeNote} />
   );
 
+  // A changed spelling checks again whatever is on screen, like a changed type, and is saved the same way.
+  const onSpellingChange = (next: Spelling) => {
+    if (next === (spelling ?? "auto")) return;
+    setChosenSpelling(next);
+    saveSpellingChoice(next);
+    setSpellingNote(null);
+    if (signedIn) {
+      void saveSpelling(next).then((r) => {
+        if (r.ok) setAccountSpelling(next);
+        else setSpellingNote(`This choice could not be saved to your account, so it applies in this browser only. ${r.message}`);
+      });
+    }
+    if (current) void recheck({ spelling: next });
+  };
+  const spellingControl = <SpellingSelect id={ids.spelling} value={spelling ?? "auto"} onChange={onSpellingChange} note={spellingNote} />;
+
   // A changed checklist checks again whatever is on screen, like a changed type. Remembered in this browser only.
   const onChecklistChange = (next: ChecklistSetting) => {
     if (next === checklist) return;
@@ -582,7 +628,12 @@ export function Checker() {
             problem={fileProblem}
             showPreferences={showPreferences}
             onShowPreferences={onPrefsChange}
-            typeControl={typeControl}
+            typeControl={
+              <>
+                {typeControl}
+                {spellingControl}
+              </>
+            }
             checklistControl={checklistControl}
             onChooseFile={chooseFile}
             onCancel={() => abortRef.current?.abort()}
@@ -725,6 +776,8 @@ export function Checker() {
               </div>
 
               {typeControl}
+
+              {spellingControl}
 
               {checklistControl}
 

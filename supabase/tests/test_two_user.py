@@ -52,6 +52,7 @@ DEFAULT_CONFIG = {
     "locale": "en-US",
     "mode": "revise",
     "document_type": "auto",
+    "spelling": "auto",
     "dictionary": [],
 }
 
@@ -273,7 +274,8 @@ def test_each_user_sees_only_their_own_rows(pg):
         assert sorted(config.pop("dictionary")) == ["Stan", "brms"]
         assert config == {
             "disabled_rules": ["S001", "LT001"], "show_preferences": True,
-            "locale": "en-GB", "mode": "revise", "document_type": "auto"}
+            "locale": "en-GB", "mode": "revise", "document_type": "auto",
+            "spelling": "auto"}
 
     with as_user(pg, USER_B) as cur:
         cur.execute("select user_id from public.user_settings")
@@ -283,7 +285,7 @@ def test_each_user_sees_only_their_own_rows(pg):
         assert my_config(cur) == {
             "disabled_rules": ["AB802"], "show_preferences": False,
             "locale": "en-US", "mode": "revise", "document_type": "auto",
-            "dictionary": ["NumPyro"]}
+            "spelling": "auto", "dictionary": ["NumPyro"]}
 
 
 def test_authenticated_without_sub_sees_nothing_and_cannot_write(pg):
@@ -820,6 +822,54 @@ def test_document_type_is_saved_per_user_and_checked(pg):
     with pytest.raises(errors.CheckViolation):
         with as_user(pg, USER_A) as cur:
             cur.execute("update public.user_settings set document_type = 'poem'")
+
+
+# The spelling setting (PLAN task #15): the engine's config.SPELLINGS, which
+# the CHECK must list exactly (packages/core/tests/test_dialect_spelling.py
+# compares the migration's list with the engine's).
+SPELLINGS = ("auto", "us", "uk", "uk-oxford", "ca", "au", "in")
+
+
+def test_spelling_is_saved_per_user_and_checked(pg):
+    with as_user(pg, USER_A) as cur:
+        cur.execute("insert into public.user_settings (spelling) values ('uk')")
+        assert my_config(cur)["spelling"] == "uk"
+    # B never saved one: the default, and A's choice is not B's.
+    with as_user(pg, USER_B) as cur:
+        assert my_config(cur)["spelling"] == "auto"
+    # A cannot change B's spelling (no row of B's is visible to A).
+    seed(pg, USER_B, words=())
+    with as_user(pg, USER_A) as cur:
+        cur.execute("update public.user_settings set spelling = 'us'"
+                    " where user_id = %s", (USER_B,))
+        assert cur.rowcount == 0
+    assert pg.execute("select spelling from public.user_settings"
+                      " where user_id = %s", (USER_B,)).fetchone()[0] == "auto"
+    with pytest.raises(errors.CheckViolation, match="spelling_known"):
+        with as_user(pg, USER_A) as cur:
+            cur.execute("update public.user_settings set spelling = 'en-GB'")
+
+
+@pytest.mark.parametrize("value", SPELLINGS)
+def test_every_engine_spelling_is_accepted(pg, value):
+    with as_user(pg, USER_A) as cur:
+        cur.execute("insert into public.user_settings (spelling) values (%s)",
+                    (value,))
+        assert my_config(cur)["spelling"] == value
+
+
+@pytest.mark.parametrize("bad", ["UK", "british", "en-US", "", "us "])
+def test_unknown_spelling_rejected(pg, bad):
+    with pytest.raises(errors.CheckViolation, match="spelling_known"):
+        with as_user(pg, USER_A) as cur:
+            cur.execute("insert into public.user_settings (spelling) values (%s)",
+                        (bad,))
+
+
+def test_spelling_cannot_be_null(pg):
+    with pytest.raises(errors.NotNullViolation):
+        with as_user(pg, USER_A) as cur:
+            cur.execute("insert into public.user_settings (spelling) values (null)")
 
 
 # ---------------------------------------------------------------------------

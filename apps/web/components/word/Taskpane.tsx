@@ -6,10 +6,21 @@ import {
   MAX_WORD_PARAGRAPHS,
   type AnalyzeWordResponse,
   type DocumentType,
+  type Spelling,
   type TierHealth,
   type WordSuggestion,
 } from "@researchly/contract";
-import { addWord, loadDocumentType, loadMode, loadSettings, muteRule, saveDocumentType, saveMode } from "@/lib/account";
+import {
+  addWord,
+  loadDocumentType,
+  loadMode,
+  loadSettings,
+  loadSpelling,
+  muteRule,
+  saveDocumentType,
+  saveMode,
+  saveSpelling,
+} from "@/lib/account";
 import { loadKeepProgress, recordProgress } from "@/lib/progress";
 import { getEngineAuth, signOut, useAuth } from "@/lib/auth";
 import { ENGINE_URL, LOCAL_ENGINE_URL, reportProblemHref } from "@/lib/config";
@@ -19,17 +30,21 @@ import { healthBanners } from "@/lib/health";
 import { briefState, narrativeState } from "@/lib/profiles";
 import { useProfileChoices } from "@/lib/registry";
 import { useRuleScopes } from "@/lib/scope";
+import { resolveSpelling } from "@/lib/spelling";
 import {
   isChecklistPref,
   loadChecklistChoice,
   loadDocumentTypeChoice,
   loadEngineChoice,
   loadModeChoice,
+  loadSpellingChoice,
   saveChecklistChoice,
   saveDocumentTypeChoice,
   saveEngineChoice,
   saveModeChoice,
+  saveSpellingChoice,
   subscribeDocumentType,
+  subscribeSpelling,
   subscribeWordPrefs,
   type ChecklistPref,
   type EngineChoice,
@@ -71,6 +86,7 @@ import { HealthBanner } from "../HealthBanner";
 import { NarrativeMap } from "../NarrativeMap";
 import { ProfileSelect } from "../ProfileSelect";
 import { ReviewBrief } from "../ReviewBrief";
+import { SpellingSelect } from "../SpellingSelect";
 import { CodeSignIn } from "./CodeSignIn";
 import { WordCard, type CardNote, type WordCardActions } from "./WordCard";
 import { WordChecklist } from "./WordChecklist";
@@ -138,6 +154,15 @@ export function Taskpane() {
   const [chosenType, setChosenType] = useState<DocumentType | null>(null);
   const documentType: DocumentType = chosenType ?? (signedIn ? accountType : null) ?? storedType ?? "auto";
   const [typeNote, setTypeNote] = useState<string | null>(null);
+  // The English spelling to keep to (task #15), resolved like the type and
+  // shared with the website. Null when nothing chose one: the check leaves it
+  // to the engine (the account's saved choice on the cloud, this computer's
+  // config on the local server, else Auto).
+  const storedSpelling = useSyncExternalStore(subscribeSpelling, loadSpellingChoice, () => null);
+  const [accountSpelling, setAccountSpelling] = useState<Spelling | null>(null);
+  const [chosenSpelling, setChosenSpelling] = useState<Spelling | null>(null);
+  const spelling = resolveSpelling({ chosen: chosenSpelling, account: accountSpelling, stored: storedSpelling, signedIn });
+  const [spellingNote, setSpellingNote] = useState<string | null>(null);
   // The reporting checklist (S4c): this session's choice, else this computer's, else None.
   const storedChecklist = useSyncExternalStore(subscribeWordPrefs, loadChecklistChoice, () => null);
   const [chosenChecklist, setChosenChecklist] = useState<ChecklistPref | null>(null);
@@ -170,6 +195,7 @@ export function Taskpane() {
     mode: useId(),
     modeHelp: useId(),
     type: useId(),
+    spelling: useId(),
     checklist: useId(),
     checklistHelp: useId(),
     tabs: useId(),
@@ -234,6 +260,18 @@ export function Taskpane() {
     };
   }, [signedIn]);
 
+  // Signed in: the spelling comes from the account as well (shared with the website).
+  useEffect(() => {
+    if (!signedIn) return;
+    let live = true;
+    void loadSpelling().then((r) => {
+      if (live && r.ok && r.data) setAccountSpelling(r.data);
+    });
+    return () => {
+      live = false;
+    };
+  }, [signedIn]);
+
   useEffect(() => {
     if (error) errorRef.current?.focus();
   }, [error]);
@@ -255,6 +293,7 @@ export function Taskpane() {
       showPreferences?: boolean;
       section?: boolean;
       documentType?: DocumentType;
+      spelling?: Spelling;
       checklist?: ChecklistPref;
     }) => {
       const api = officeApi();
@@ -262,6 +301,7 @@ export function Taskpane() {
       runningRef.current = true;
       const useMode = opts?.mode ?? mode;
       const useType = opts?.documentType ?? documentType;
+      const useSpelling = opts?.spelling ?? spelling;
       const useChecklist = opts?.checklist ?? checklist;
       const prefs = opts?.showPreferences ?? showPreferences;
       // A re-check (mute, stage change) keeps the current view: section or whole document.
@@ -327,6 +367,7 @@ export function Taskpane() {
             mode: useMode,
             disabledRules,
             documentType: useType,
+            spelling: useSpelling,
             review: useMode === "revise",
             narrative: useMode === "revise",
             checklist: useMode === "revise" && useChecklist !== "none" ? useChecklist : null,
@@ -372,7 +413,7 @@ export function Taskpane() {
         abortRef.current = null;
       }
     },
-    [host, mode, documentType, checklist, showPreferences, engine, signedIn, checked, showWhole, scopes],
+    [host, mode, documentType, spelling, checklist, showPreferences, engine, signedIn, checked, showWhole, scopes],
   );
 
   const onTypeChange = (next: DocumentType) => {
@@ -387,6 +428,20 @@ export function Taskpane() {
       });
     }
     if (checked) void runCheck({ documentType: next });
+  };
+
+  const onSpellingChange = (next: Spelling) => {
+    if (next === (spelling ?? "auto")) return;
+    setChosenSpelling(next);
+    saveSpellingChoice(next);
+    setSpellingNote(null);
+    if (signedIn) {
+      void saveSpelling(next).then((r) => {
+        if (r.ok) setAccountSpelling(next);
+        else setSpellingNote(`This choice could not be saved to your account, so it applies on this computer only. ${r.message}`);
+      });
+    }
+    if (checked) void runCheck({ spelling: next });
   };
 
   const onChecklistChange = (next: ChecklistPref) => {
@@ -974,6 +1029,8 @@ export function Taskpane() {
                   />
                   <span>Show preferences</span>
                 </label>
+
+                <SpellingSelect id={ids.spelling} value={spelling ?? "auto"} onChange={onSpellingChange} note={spellingNote} />
 
                 {accounts ? (
                   <div className="tp-account-settings">

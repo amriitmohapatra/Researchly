@@ -9,9 +9,10 @@
  */
 import "client-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { DocumentType } from "@researchly/contract";
+import type { DocumentType, Spelling } from "@researchly/contract";
 import { isDocumentType } from "./profiles";
 import { isRuleId, normaliseSettings, type UserSettings } from "./settings";
+import { isSpelling } from "./spelling";
 import { getSupabase } from "./supabase";
 
 export type AccountResult<T> = { ok: true; data: T } | { ok: false; message: string };
@@ -189,6 +190,31 @@ export function loadDocumentType(): Promise<AccountResult<DocumentType | null>> 
 export function saveDocumentType(document_type: DocumentType): Promise<AccountResult<null>> {
   return run(async (sb) => {
     const { error } = await sb.from("user_settings").upsert({ document_type }, { onConflict: "user_id" });
+    return error ? { ok: false, message: accountErrorMessage(error) } : { ok: true, data: null };
+  });
+}
+
+/* ---------- the English spelling (task #15), shared by the web app and the Word add-in ---------- */
+
+/**
+ * The account's spelling choice (user_settings.spelling), or null when the
+ * column holds nothing usable. Read on its own, like the mode and the type,
+ * so an account database without the 20261014120000_spelling migration
+ * fails only this, never the other settings.
+ */
+export function loadSpelling(): Promise<AccountResult<Spelling | null>> {
+  return run(async (sb) => {
+    const { data, error } = await sb.from("user_settings").select("spelling").maybeSingle();
+    if (error) return { ok: false, message: accountErrorMessage(error) };
+    const spelling = (data as { spelling?: unknown } | null)?.spelling;
+    return { ok: true, data: isSpelling(spelling) ? spelling : null };
+  });
+}
+
+/** Save the choice to the caller's own row (user_id defaults to auth.uid()). */
+export function saveSpelling(spelling: Spelling): Promise<AccountResult<null>> {
+  return run(async (sb) => {
+    const { error } = await sb.from("user_settings").upsert({ spelling }, { onConflict: "user_id" });
     return error ? { ok: false, message: accountErrorMessage(error) } : { ok: true, data: null };
   });
 }

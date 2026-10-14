@@ -57,6 +57,33 @@ def test_unknown_spelling_value_is_ignored(tmp_path):
     assert config.load(tmp_path / "paper.md").spelling == "auto"
 
 
+def test_account_spelling_reaches_the_config():
+    # The hosted engine folds the account's my_config() in (supabase
+    # migration 20261014120000_spelling.sql); every value is accepted...
+    for value in config.SPELLINGS:
+        assert config.apply_remote(config.Config(),
+                                   {"spelling": value}).spelling == value
+    # ...and anything else is dropped, not trusted.
+    for bad in ("klingon", "UK", "", None, 7, ["uk"]):
+        assert config.apply_remote(config.Config(),
+                                   {"spelling": bad}).spelling == "auto"
+    # A row saved before the column existed simply has no key.
+    assert config.apply_remote(config.Config(), {}).spelling == "auto"
+
+
+def test_supabase_check_lists_every_spelling():
+    # The account column's CHECK must accept exactly the engine's values,
+    # or a choice saved on the website would be refused (or never apply).
+    import pathlib
+    import re
+    root = pathlib.Path(__file__).resolve().parents[3]
+    sql = (root / "supabase" / "migrations"
+           / "20261014120000_spelling.sql").read_text(encoding="utf-8")
+    listed = re.search(r"check \(spelling in \(([^)]*)\)\)", sql).group(1)
+    assert tuple(re.findall(r"'([^']+)'", listed)) == config.SPELLINGS
+    assert "default 'auto'" in sql
+
+
 # --- W213: a chosen dialect --------------------------------------------------
 
 def test_british_choice_flags_the_american_spelling():
