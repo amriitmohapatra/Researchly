@@ -13,6 +13,7 @@ import {
   type FormEvent,
   type KeyboardEvent,
 } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   MAX_CONTENT_CHARS,
@@ -60,7 +61,12 @@ import { FilePanel, type DropHandlers } from "./FilePanel";
 import { PredictionStrip, PredictionToggle } from "./PredictionStrip";
 import { ProfileSelect } from "./ProfileSelect";
 import { ReadingKey } from "./ReadingKey";
-import { Results } from "./Results";
+// The results (cards, the text view, the brief, the map, the checklist, the
+// printable report) show only once a check has answered: they are not part
+// of the page's first load, and are fetched as soon as the browser is idle
+// (2026-10-14 performance pass).
+const loadResults = () => import("./Results").then((m) => m.Results);
+const Results = dynamic(loadResults, { ssr: false });
 import { SpellingSelect } from "./SpellingSelect";
 import type { CardActions } from "./SuggestionCard";
 import type { ResultsView } from "./ViewTabs";
@@ -196,6 +202,12 @@ export function Checker() {
   useEffect(() => {
     if (error) errorRef.current?.focus();
   }, [error]);
+
+  // Fetch the results' code while the writer is still writing, so a check never waits for it.
+  useEffect(() => {
+    const idle = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 1500));
+    idle(() => void loadResults());
+  }, []);
 
   // Nothing is saved anywhere, so leaving the page loses the draft: ask first.
   const hasText = text.trim().length > 0;
