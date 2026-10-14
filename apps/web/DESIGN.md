@@ -25,11 +25,12 @@ system type stacks, no UI kit. Dials: variance 3, motion 2, density 5.
 
 ## Hierarchy (results)
 
-`N suggestions` heading, then one row of filter chips, a Section chooser
-(a select: "All sections" plus each section detected, with counts) and the
-hidden preference note, then two columns: your text on the left (the thing
-being revised), suggestions on the right in document order. Read-outs come
-last; they describe the text and are never a score.
+`N suggestions` heading, then the "Work through" row (All suggestions and
+the three passes of the revision queue), one row of filter chips, a
+Section chooser (a select: "All sections" plus each section detected, with
+counts) and the hidden preference note, then two columns: your text on the
+left (the thing being revised), suggestions on the right in document order.
+Read-outs come last; they describe the text and are never a score.
 
 A card reads top to bottom as: category and section, what was noticed
 (bold), the flagged words (serif), the suggested revision (your call), the
@@ -191,6 +192,70 @@ own "Whole document" group so they are never lost. The chooser starts at
 - Muting a rule (signed in) removes its cards at once, then re-checks as
   before; dismissal is the light action, muting the deliberate one.
 
+## Revision queue (review proposal 1)
+
+- **"Work through"** sits above the filter chips: four toggle buttons
+  (`aria-pressed`, 8px radius, the chosen one in the accent) reading "All
+  suggestions" (the default, the list exactly as before), "Correctness
+  first", "Clarity next" and "Whole-document review", each with its number
+  of findings as a tally. A chosen pass has one help line under the row.
+- **The passes follow the taxonomy.** Correctness: every Correction.
+  Clarity: Improvements that judge one sentence, and Preferences when the
+  writer shows them. Whole document: checks that read the whole text (rule
+  scope "document") and every Convention, whose help line says conventions
+  are not errors. Every suggestion is in exactly one pass; the passes walk
+  what the Section chooser shows (the section and its whole-document
+  checks), whatever the category chip says, so the chips step aside while a
+  pass is chosen.
+- **A pass is a queue** in the suggestions column: the pass's title, a
+  bordered row with "Issue 3 of 9 in this pass" (a polite live region that
+  also reads the message to a screen reader) and Previous issue / Next
+  issue, then for a finding repeated in the text (the same check with the
+  same message) a dashed row "Found 14 times in your text." with Previous
+  / "Occurrence 2 of 14" / Next, then the current suggestion's ordinary
+  card, then "Every issue in this pass" (a closed disclosure listing each
+  issue with its tally in words: once, twice, 14 times). At an end the
+  button stays focusable (`aria-disabled`), so the keyboard never loses its
+  place; nothing wraps. The last issue says so and offers "Go on to" the
+  next pass with findings; the whole-document pass then points to the
+  reviewer's brief and the narrative map.
+- **The text column highlights only the pass's findings**, the current one
+  marked as active and scrolled into view inside the column (never the
+  page, so Next stays under the pointer). Clicking a highlight moves the
+  queue to it.
+- **The place is anchored to the suggestion**, so dismissing a card shows
+  the next occurrence (or the next issue) and Undo returns to it; a muted
+  rule's issue gives way to the one after it; a re-check keeps the pass and
+  the place. Held in memory only, like the view tabs; never stored.
+- No score, no progress bar, no "done" percentage: the position line is the
+  only count.
+
+## Long checks (review proposal 8)
+
+- **While a check runs** a quiet info-blue line under the composer shows a
+  spinner, "Checking your text…" and "Time so far: 12 s" (outside any live
+  region, so it is never read out every second). After 8 seconds it says
+  "Still checking your text. A long document can take a minute or two;
+  your previous results stay below until it finishes.", and that sentence
+  alone goes to a polite live region, once.
+- **The previous results stay** on screen (dimmed, as before) with a line
+  under the heading, set in bold with a dashed rule beside it: "These are
+  the results of your previous check. A new check is running; …". The same
+  line, with its reason, stays after a cancel ("The new check was
+  cancelled.") or a failure ("The new check did not finish."), so an older
+  answer is never taken for the new one.
+- **Cancel** (beside Check, the only Cancel) aborts the request and returns
+  the screen to exactly what it showed, with a quiet note "Check
+  cancelled." and "Check again", which runs the same check again. "Try
+  again" after a failure does the same. A new file cancelled before any
+  result returns to the editor, as before.
+- **Sequenced requests**: every check carries a number; the reply of a
+  cancelled or superseded check is dropped even if the network delivers
+  it. A changed type or checklist during a check supersedes it; pressing
+  Check again while one runs does nothing (the button says "Checking…").
+- In the Word pane the same line and notes appear under the Check panel;
+  "Check again" there reads the document afresh.
+
 ## Demo manuscript
 
 - While the editor is empty, a quiet row under it offers "Try the demo
@@ -326,6 +391,10 @@ column, the site's tokens, cards and notices; nothing new to learn.
   ("Reported", or "Needs your check" in italic) and the writer's own
   sentence in the serif or the plain reason. No colour by status, no
   meters. In Draft the tab offers "Switch to Revise", like the brief.
+- **Revision queue (review proposal 1)**: the "Work through" choices sit
+  under the quiet notes as a two-by-two grid; a pass replaces the cards
+  with the same queue as on the site (one column), and each step selects
+  the finding's words in Word, as clicking its card does.
 - **Sign-in** replaces the main column: email, then the emailed code. No
   dialog (Office's dialog API is not used).
 - **States**: connecting to Word, outside Word, office.js missing, idle,
@@ -359,6 +428,12 @@ needs-your-check and not-applicable items, the checklist offer, a card
 dismissed (with Undo) and every card dismissed, what Draft held back (an
 older engine), a muted rule's cards gone before the re-check, the demo
 loaded or not loadable.
+
+Review proposals 1 and 8 add: a pass chosen (first, middle and last issue; an issue
+found once and one found many times; an empty pass, also in a section),
+a card dismissed inside a pass, a long check (still checking), previous
+results while checking, after a cancel and after a failure, the cancelled
+note with and without earlier results.
 
 ## Responsive
 
