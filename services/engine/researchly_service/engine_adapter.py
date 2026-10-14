@@ -341,10 +341,16 @@ def warm_up(grammar_enabled: bool = True) -> dict:
     t0 = time.perf_counter()
     info = {"rules_loaded": rules_loaded()}
     try:
-        api.get_nlp()
+        # The analysis loads spaCy itself, after it has started the grammar
+        # tier's first request in the background, so a local LanguageTool's
+        # JVM start-up and the spaCy load overlap (2026-10-14).
         run_analysis(WARMUP_TEXT, "plain", AnalyzeOptions(), grammar_enabled)
     except Exception as e:                       # reported by type only
         info["error_type"] = type(e).__name__
+        try:
+            api.get_nlp()                        # a parser even so
+        except Exception:
+            pass
     tiers = health_tiers(grammar_enabled)
     info["tiers"] = {t.tier: t.state for t in tiers}
     info["warmup_ms"] = int(round((time.perf_counter() - t0) * 1000))

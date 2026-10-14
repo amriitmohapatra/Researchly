@@ -1144,6 +1144,19 @@ main:focus {
   outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
+/* A thesis brings a thousand cards or more: the browser skips styling and
+   laying out the ones off screen (2026-10-14 performance pass). "auto"
+   keeps each card's real height once it has been shown; 300px is about the
+   average card. Height only: an estimated width would widen the list in a
+   narrow pane (the 320px Word sidebar). On the card, not its list item: the card's own ring and
+   focus outline are drawn outside it, which the containment this implies
+   would clip from a parent. Screen only: print has its own report. */
+@media screen {
+  .cards > li > .card {
+    content-visibility: auto;
+    contain-intrinsic-block-size: auto 300px;
+  }
+}
 
 .card-head {
   display: flex;
@@ -2118,6 +2131,14 @@ main:focus {
 .tp-cards .card {
   padding: 10px 12px 6px;
   cursor: pointer;
+}
+/* As on the website: skip styling and laying out the cards off screen
+   (2026-10-14 performance pass). */
+@media screen {
+  .tp-cards > .card {
+    content-visibility: auto;
+    contain-intrinsic-block-size: auto 350px;
+  }
 }
 .wcard.is-applied {
   border-left-style: dotted;

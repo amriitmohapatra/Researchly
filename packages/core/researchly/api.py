@@ -35,6 +35,9 @@ MAX_LENGTH = 1_200_000
 
 _NLP = None
 _NLP_LOCK = threading.Lock()
+# Pipeline components nothing in the engine reads. A rule that needs one
+# (doc.ents, token.ent_type_) must take it out of this list.
+NOT_USED_PIPES = ("ner",)
 
 
 def get_nlp(model: str = "en_core_web_sm"):
@@ -47,7 +50,12 @@ def get_nlp(model: str = "en_core_web_sm"):
             if not Language.has_factory("researchly_paragraphs"):
                 Language.component("researchly_paragraphs",
                                    func=paragraph_breaks)
-            nlp = spacy.load(model)
+            # No rule, read-out or report reads named entities, and the
+            # entity recogniser (its own tok2vec, run last) was about 45%
+            # of the parse: 5 s of an 11 s parse on a 30,000-word document.
+            # Leaving it out changes no tag, lemma, dependency or sentence
+            # (2026-10-14 performance pass; tests/test_performance.py).
+            nlp = spacy.load(model, exclude=NOT_USED_PIPES)
             nlp.add_pipe("researchly_paragraphs", before="parser")
             nlp.max_length = MAX_LENGTH
             _NLP = nlp
@@ -205,6 +213,14 @@ def analyze(source: Union[str, Path, Sequence[dict], Document],
                 if guessed else "")
     document.default_section = profile.body_section
     disabled = set(cfg.disabled) | set(profile.rules_off)
+
+    # The grammar tier (LT001) reads the masked text, not the parse: start
+    # its LanguageTool request now so it runs while spaCy parses. The rule
+    # collects it in its usual turn, so nothing about the output changes.
+    ensure_rules_loaded()
+    if "LT001" in REGISTRY and "LT001" not in disabled:
+        from .rules_grammar import start_check
+        start_check(document)
 
     nlp = nlp or get_nlp()
 

@@ -90,7 +90,7 @@ describe("the table cell behind an X401 card", () => {
       location: { paragraph: 0, start: 14, end: 19, snippet: "12.5%", occurrence: 0, exact: true },
     };
     const html = renderToStaticMarkup(
-      <WordCard suggestion={s} active={false} applied={false} busy={false} note={null} actions={null} onSelect={() => {}} onApply={() => {}} />,
+      <WordCard suggestion={s} active={false} applied={false} note={null} actions={null} onSelect={() => {}} onApply={() => {}} />,
     );
     expect(html).toContain('data-testid="card-table-evidence"');
     expect(html).toContain("8.2%");

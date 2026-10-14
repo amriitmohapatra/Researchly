@@ -16,7 +16,7 @@ import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import { ACCOUNTS_ENABLED } from "./config";
 import type { EngineAuth } from "./engine";
 import { signInErrorMessage, signInLinkErrorMessage, verifyCodeErrorMessage, type AuthErrorLike } from "./errors";
-import { getSupabase } from "./supabase";
+import { getSupabase, hasStoredAuth, authStorageKey } from "./supabase";
 
 export type AuthState =
   | { status: "off" }
@@ -43,6 +43,14 @@ const SERVER_SNAPSHOT: AuthSnapshot = Object.freeze<AuthSnapshot>({
 let snapshot: AuthSnapshot = SERVER_SNAPSHOT;
 const listeners = new Set<() => void>();
 let started = false;
+/**
+ * Signed out, with nothing of supabase-js's in this browser: the library is
+ * not loaded until something needs it (2026-10-14 performance pass). It was
+ * about a quarter of every page's JavaScript, fetched by every visitor just
+ * to learn they were signed out. A sign-in action, a sign-in link opened in
+ * this tab, or a session another tab stores wakes it.
+ */
+let deferred = false;
 
 function set(patch: Partial<AuthSnapshot>) {
   snapshot = { ...snapshot, ...patch };
@@ -90,8 +98,47 @@ function cleanUrl(alsoCode: boolean) {
   window.history.replaceState(window.history.state, "", url.toString());
 }
 
+/** The address carries a sign-in result for supabase-js to read (a PKCE code, a token, an error). */
+function urlHasAuth(): boolean {
+  const url = new URL(window.location.href);
+  const hash = new URLSearchParams(url.hash.replace(/^#/, ""));
+  return ["code", "access_token", ...URL_ERROR_KEYS].some((k) => url.searchParams.has(k) || hash.has(k));
+}
+
 async function start() {
-  if (started || !ACCOUNTS_ENABLED) return;
+  if (started || deferred || !ACCOUNTS_ENABLED || typeof window === "undefined") return;
+  if (!hasStoredAuth() && !urlHasAuth()) {
+    deferred = true;
+    window.addEventListener("storage", onStorage);
+    set({ auth: { status: "signed_out" } });
+    return;
+  }
+  await startClient();
+}
+
+/** Another tab signed in (or began to): what supabase-js's cross-tab channel did when loaded. */
+function onStorage(e: StorageEvent) {
+  const key = authStorageKey();
+  if (key && e.key?.startsWith(key) && e.newValue !== null) wake();
+}
+
+/** Load supabase-js now and take up the session state, as start() does. */
+function wake() {
+  if (!deferred) return;
+  deferred = false;
+  window.removeEventListener("storage", onStorage);
+  void startClient();
+}
+
+/** The client for a sign-in action: wakes a deferred start first. */
+function client(): Promise<SupabaseClient> | null {
+  const pending = getSupabase();
+  if (pending) wake();
+  return pending;
+}
+
+async function startClient() {
+  if (started) return;
   started = true;
   const pending = getSupabase();
   if (!pending) return;
@@ -141,7 +188,7 @@ export type SignInResult = { ok: true } | { ok: false; message: string };
 
 /** Ask Supabase to email a magic link that returns to this site. */
 export async function sendMagicLink(email: string): Promise<SignInResult> {
-  const pending = getSupabase();
+  const pending = client();
   if (!pending) return { ok: false, message: "Sign-in is not available on this site." };
   try {
     const sb = await pending;
@@ -171,7 +218,7 @@ export function normaliseCode(raw: string): string {
  * also carries the usual link, which signs the writer in on the website.
  */
 export async function sendEmailCode(email: string): Promise<SignInResult> {
-  const pending = getSupabase();
+  const pending = client();
   if (!pending) return { ok: false, message: "Sign-in is not available here." };
   try {
     const sb = await pending;
@@ -189,7 +236,7 @@ export async function sendEmailCode(email: string): Promise<SignInResult> {
 export async function verifyEmailCode(email: string, rawCode: string): Promise<SignInResult> {
   const code = normaliseCode(rawCode);
   if (!EMAIL_CODE.test(code)) return { ok: false, message: "Enter the code from the email: 6 to 10 digits." };
-  const pending = getSupabase();
+  const pending = client();
   if (!pending) return { ok: false, message: "Sign-in is not available here." };
   try {
     const sb = await pending;
@@ -204,7 +251,7 @@ export async function verifyEmailCode(email: string, rawCode: string): Promise<S
 
 /** Sign out of this browser (the session is revoked; other devices stay signed in). */
 export async function signOut(): Promise<void> {
-  const pending = getSupabase();
+  const pending = client();
   if (!pending) return;
   try {
     const sb = await pending;
@@ -221,22 +268,25 @@ function isTransient(err: AuthErrorLike): boolean {
 
 /** The token source for engine calls; null in a build without accounts. */
 export function getEngineAuth(): EngineAuth | null {
-  const pending = getSupabase();
-  if (!pending) return null;
+  if (!ACCOUNTS_ENABLED || typeof window === "undefined") return null;
+  const pending = () => client() as Promise<SupabaseClient>;
   return {
     async token() {
-      const sb = await pending;
+      // Signed out with nothing stored: supabase-js would answer "no
+      // session" from the same empty storage, so it need not be loaded.
+      if (deferred && !hasStoredAuth()) return null;
+      const sb = await pending();
       const { data } = await sb.auth.getSession();
       return data.session?.access_token ?? null;
     },
     async refresh() {
-      const sb = await pending;
+      const sb = await pending();
       const { data, error } = await sb.auth.refreshSession();
       if (error) return { token: null, transient: isTransient(error) };
       return { token: data.session?.access_token ?? null, transient: false };
     },
     async signOutLocally() {
-      const sb = await pending;
+      const sb = await pending();
       await sb.auth.signOut({ scope: "local" });
       set({ auth: { status: "signed_out" } });
     },
