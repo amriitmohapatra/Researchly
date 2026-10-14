@@ -99,7 +99,7 @@ import { ReviewBrief } from "../ReviewBrief";
 import { SpellingSelect } from "../SpellingSelect";
 import { CodeSignIn } from "./CodeSignIn";
 import { NextWords } from "./NextWords";
-import { WordCard, type CardNote, type WordCardActions } from "./WordCard";
+import { WordBusyContext, WordCard, type CardNote, type WordCardActions } from "./WordCard";
 import { WordChecklist } from "./WordChecklist";
 import { WordTabs, wordViewIds, type WordView } from "./WordTabs";
 
@@ -646,7 +646,6 @@ export function Taskpane() {
       applied={applied.has(s.id)}
       stale={stale.has(s.id)}
       note={notes[s.id] ?? null}
-      busy={wordBusy || busy}
       onSelect={onSelect}
       onApply={onApply}
       actions={cardActions}
@@ -924,6 +923,7 @@ export function Taskpane() {
             ) : null}
 
             {checked ? (
+              <WordBusyContext.Provider value={wordBusy || busy}>
               <section className="tp-results" aria-labelledby="tp-results-title" aria-busy={busy || undefined} data-testid="tp-results">
                 <h2 id="tp-results-title" className="results-title">
                   {listed === 1 ? "1 suggestion" : `${listed.toLocaleString("en-GB")} suggestions`}
@@ -1071,6 +1071,7 @@ export function Taskpane() {
                   </div>
                 )}
               </section>
+              </WordBusyContext.Provider>
             ) : null}
 
             <details className="panel tp-settings" data-testid="tp-settings">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal, flushSync } from "react-dom";
 import type { AnalyzeResponse, ChecklistChoice, SourceInfo, Suggestion } from "@researchly/contract";
 import { CATEGORIES, CATEGORY_ORDER, countByCategory, sectionLabel } from "@/lib/categories";
@@ -163,20 +163,25 @@ export function Results({
   const nDismissed = dismissedCount(allShown, dismissed, mutedRules);
   const counts = useMemo(() => countByCategory(shown), [shown]);
   const effectiveFilter: Filter = filter !== "all" && !showPreferences && filter === "preference" ? "all" : filter;
-  const byCategory = useMemo(() => applyFilter(shown, effectiveFilter), [shown, effectiveFilter]);
   // The whole document was checked; a chosen section only narrows what is listed.
   const detected = useMemo(() => data.sections_detected.filter((name) => sectionLabel(name) !== null), [data.sections_detected]);
   const effectiveSection: SectionFilter = section !== "all" && !detected.includes(section) ? "all" : section;
-  const split = useMemo(() => applySectionFilter(byCategory, effectiveSection, scopes), [byCategory, effectiveSection, scopes]);
+  // The chips and the section chooser answer at once; the list, a thousand
+  // cards on a thesis, follows in a render that never blocks input
+  // (2026-10-14 performance pass: a switch was one 200 ms task).
+  const listFilter = useDeferredValue(effectiveFilter);
+  const listSection = useDeferredValue(effectiveSection);
+  const byCategory = useMemo(() => applyFilter(shown, listFilter), [shown, listFilter]);
+  const split = useMemo(() => applySectionFilter(byCategory, listSection, scopes), [byCategory, listSection, scopes]);
   const sectionCounts = useMemo(() => countBySection(shown), [shown]);
   // The revision queue walks what the writer is looking at (the chosen
   // section and its whole-document checks), in document order, whatever the
   // category chip says: its passes are the grouping.
   const inScope = useMemo(() => {
-    const s = applySectionFilter(shown, effectiveSection, scopes);
+    const s = applySectionFilter(shown, listSection, scopes);
     const keep = new Set([...s.inSection, ...s.wholeDocument].map((x) => x.id));
     return shown.filter((x) => keep.has(x.id));
-  }, [shown, effectiveSection, scopes]);
+  }, [shown, listSection, scopes]);
   const passTotals = useMemo(() => passCounts(inScope, scopes), [inScope, scopes]);
   const pass = queueState.pass;
   const queue = useMemo(() => (pass === "all" ? null : buildQueue(inScope, pass, scopes)), [inScope, pass, scopes]);
@@ -228,8 +233,24 @@ export function Results({
         ? docColRef.current?.querySelector<HTMLElement>(`[data-sids~="${CSS.escape(focusReq.id)}"]`)
         : document.getElementById(`card-${focusReq.id}`);
     if (!el) return;
-    el.scrollIntoView({ block: "center", inline: "nearest", behavior: prefersReducedMotion() ? "auto" : "smooth" });
+    const smooth = !prefersReducedMotion();
+    el.scrollIntoView({ block: "center", inline: "nearest", behavior: smooth ? "smooth" : "auto" });
     el.focus({ preventScroll: true });
+    if (focusReq.target !== "card" || !smooth) return;
+    // Cards off screen are not laid out (globals.css, content-visibility), so
+    // a smooth scroll to a far card aims at estimated heights and can end
+    // away from it as the cards it passes take their real size. When it has
+    // ended, put the card in view if it is not.
+    const settle = () => {
+      const r = el.getBoundingClientRect();
+      if (r.bottom < 0 || r.top > window.innerHeight) el.scrollIntoView({ block: "center", inline: "nearest", behavior: "auto" });
+    };
+    window.addEventListener("scrollend", settle, { once: true });
+    const fallback = window.setTimeout(settle, 1000); // a browser without scrollend
+    return () => {
+      window.removeEventListener("scrollend", settle);
+      window.clearTimeout(fallback);
+    };
   }, [focusReq]);
 
   useEffect(() => {
@@ -585,7 +606,7 @@ export function Results({
                   renderCard={(s) => card(s, true)}
                   counts={passTotals}
                   onPass={onChoosePass}
-                  scopeNote={effectiveSection !== "all" ? `in the ${sectionLabel(effectiveSection)} section` : null}
+                  scopeNote={listSection !== "all" ? `in the ${sectionLabel(listSection)} section` : null}
                   endExtra={
                     queue.pass === "whole" ? (
                       <p className="results-line queue-views" data-testid="queue-views">
@@ -603,12 +624,12 @@ export function Results({
               </div>
             ) : (
             <div className="list-col">
-              <h3 className="col-title">{effectiveSection === "all" ? "Suggestions" : `Suggestions in ${sectionLabel(effectiveSection)}`}</h3>
+              <h3 className="col-title">{listSection === "all" ? "Suggestions" : `Suggestions in ${sectionLabel(listSection)}`}</h3>
               {split.inSection.length === 0 ? (
                 <p className="muted" data-testid="no-cards">
-                  {effectiveSection === "all"
-                    ? `No ${CATEGORIES[effectiveFilter as keyof typeof CATEGORIES]?.plural.toLowerCase() ?? "suggestions"} in this check.`
-                    : `No ${effectiveFilter === "all" ? "suggestions" : CATEGORIES[effectiveFilter].plural.toLowerCase()} in the ${sectionLabel(effectiveSection)} section.`}
+                  {listSection === "all"
+                    ? `No ${CATEGORIES[listFilter as keyof typeof CATEGORIES]?.plural.toLowerCase() ?? "suggestions"} in this check.`
+                    : `No ${listFilter === "all" ? "suggestions" : CATEGORIES[listFilter].plural.toLowerCase()} in the ${sectionLabel(listSection)} section.`}
                 </p>
               ) : (
                 <ol className="cards" aria-label="Suggestions, in document order">
