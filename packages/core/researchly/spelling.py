@@ -143,12 +143,14 @@ _VARIANT_WORDS: dict[str, tuple[str, str]] | None = None
 _VARIANT_PAIRS: list[tuple[str, str]] | None = None
 _PARTNERS: dict[str, list[str]] | None = None
 
-# The spelling setting (config.SPELLINGS) as VarCon dialect codes.
+# The spelling setting (config.SPELLINGS) as VarCon dialect codes. VarCon
+# has no Indian English; Indian English is spelled as British English
+# (owner, 2026-10-14), so "in" uses British's code.
 DIALECT_CODES = {"us": "A", "uk": "B", "uk-oxford": "Z", "ca": "C",
-                 "au": "D"}
+                 "au": "D", "in": "B"}
 DIALECT_NAMES = {"us": "American", "uk": "British",
                  "uk-oxford": "British (Oxford, -ize)", "ca": "Canadian",
-                 "au": "Australian"}
+                 "au": "Australian", "in": "Indian (British)"}
 
 
 def _load_variants() -> None:

@@ -1015,7 +1015,7 @@ export interface components {
          *     spellings of other dialects ("color" in a British paper).
          * @enum {string}
          */
-        Spelling: "auto" | "us" | "uk" | "uk-oxford" | "ca" | "au";
+        Spelling: "auto" | "us" | "uk" | "uk-oxford" | "ca" | "au" | "in";
         /**
          * StructureItem
          * @description A figure, table, equation, caption or citation found in the source.

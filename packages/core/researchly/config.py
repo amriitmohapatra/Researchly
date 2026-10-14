@@ -43,7 +43,8 @@ LOCALES = ("en-US", "en-GB")
 # Which English spelling the writer keeps to (2026-10-14). "auto" follows
 # the document's own majority and flags only mixtures (W210); a choice also
 # flags any spelling of another dialect (W213: "color" in a British paper).
-SPELLINGS = ("auto", "us", "uk", "uk-oxford", "ca", "au")
+# Indian English is spelled as British English (owner, 2026-10-14).
+SPELLINGS = ("auto", "us", "uk", "uk-oxford", "ca", "au", "in")
 
 # Draft / Revise (P1, S3). Draft shows sentence-level checks only; Revise
 # shows everything. A writing stage, not a quality dial: Corrections at

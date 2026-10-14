@@ -42,6 +42,21 @@ DEFAULT_OUT = (ROOT / "packages" / "core" / "researchly" / "data"
                / "spell_errors.json")
 MIN_COUNT = 2
 
+# The shipped table is an adaptation of the Wikipedia list (CC BY-SA 4.0):
+# it carries its attribution and licence with it (ml/datasets.yaml).
+ATTRIBUTION = {
+    "licence": "CC-BY-SA-4.0",
+    "licence_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "attribution": (
+        "Edit probabilities learned from \"Wikipedia:Lists of common "
+        "misspellings/For machines\" by Wikipedia contributors, "
+        "https://en.wikipedia.org/wiki/Wikipedia:Lists_of_common_"
+        "misspellings/For_machines, CC BY-SA 4.0. Modified: the list was "
+        "reduced to counts of character edits with one letter of context "
+        "(ml/tools/build_spell_errors.py). This table is licensed under "
+        "CC BY-SA 4.0; the rest of Researchly is not."),
+}
+
 
 def registry_permits(source_id: str, use: str = "ship_model") -> bool:
     import yaml
@@ -125,6 +140,8 @@ def main(argv: list[str] | None = None) -> int:
         sources.append(source_id)
     model = build(pairs)
     model["sources"] = sources
+    if not args.experiment:
+        model = {**ATTRIBUTION, **model}
     args.out.write_text(json.dumps(model, indent=0, ensure_ascii=False) + "\n",
                         encoding="utf-8")
     print(f"{len(model['edits'])} edits from {model['pairs']} pairs → "

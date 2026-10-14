@@ -1216,8 +1216,9 @@ datasets:
       an MIT-licensed pip dependency, distributed by its maintainer. The
       survey flagged that its provenance is undocumented (the counts look
       like Google Books bigrams). ship_model granted on the package licence;
-      OWNER TO CONFIRM, or replace it with bigrams built from Google Books
-      Ngram v3 (CC BY 3.0, documented) — PLAN Inbox, 2026-10-14.
+      CONFIRMED by the owner on 2026-10-14 ("The two-word frequency list.
+      Add it."). Google Books Ngram v3 (CC BY 3.0, documented) remains the
+      fallback if the provenance question is ever raised.
 
   - id: varcon
     name: "VarCon — variant spellings of American, British, Canadian and Australian English"
@@ -1304,11 +1305,19 @@ datasets:
     licence_verified: true
     licence_evidence: "page footer, read 2026-10-14"
     commercial_ok: true
-    permitted_use: [private_eval, ci_eval, train_experimental]
-    current_use: "ml/eval/spelling_bench.py"
-    shipped_today: false
+    permitted_use: [private_eval, ci_eval, train_experimental, ship_model]
+    current_use: "ml/eval/spelling_bench.py; the train split (80%) trains S001's error model, packages/core/researchly/data/spell_errors.json"
+    shipped_today: true
     sha256: null
-    notes: "Every common typo list found (codespell, misspell, crate-ci/typos words.csv) descends from this one, so none is shipped; a learned error model from them would need a ShareAlike decision by the owner."
+    notes: >-
+      Every common typo list found (codespell, misspell, crate-ci/typos
+      words.csv) descends from this one, so none is shipped as a list.
+      ShareAlike decision (owner, 2026-10-14: "The learned typo model. Sure,
+      no worries there."): the edit-probability table learned from its train
+      split ships as an adaptation under CC BY-SA 4.0, with the attribution
+      and licence inside the file and in NOTICE. Only this list trains it:
+      Mitton's corpora state no licence, and measured on the held-out split
+      they add little the Wikipedia list does not (PROJECT_LOG P42).
 
   - id: keyboard-engine-bundle
     name: "Keyboard autocorrect engine bundle from the owner's friend (22 files)"

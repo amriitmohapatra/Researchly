@@ -68,7 +68,7 @@ def test_error_model_refuses_a_source_without_ship_model(tmp_path, capsys):
     bse = _tool("build_spell_errors")
     pairs = tmp_path / "pairs.tsv"
     pairs.write_text("recieve\treceive\n", encoding="utf-8")
-    rc = bse.main(["--pairs", f"wikipedia-misspellings-for-machines="
+    rc = bse.main(["--pairs", f"mitton-misspelling-corpora="
                               f"{pairs}:tsv",
                    "--out", str(tmp_path / "out.json")])
     assert rc == 2
@@ -144,12 +144,32 @@ def test_shipped_variants_file_is_current_format():
     assert "Kevin Atkinson" in path.read_text(encoding="utf-8")
 
 
-def test_no_learned_error_table_ships_until_the_owner_decides():
-    # PLAN 2026-10-14: the only lists that could train it are CC BY-SA or
-    # unlicensed. Remove this test in the change that ships one.
-    assert not (ROOT / "packages" / "core" / "researchly" / "data"
-                / "spell_errors.json").exists()
+def test_shipped_error_table_carries_its_licence_and_one_source():
+    # Owner, 2026-10-14: ship the learned table under CC BY-SA 4.0. Only
+    # the Wikipedia list (stated licence) may train it: Mitton's corpora
+    # state none (ml/datasets.yaml).
+    import json
+    data = ROOT / "packages" / "core" / "researchly" / "data"
+    table = json.loads((data / "spell_errors.json").read_text(
+        encoding="utf-8"))
+    assert table["licence"] == "CC-BY-SA-4.0"
+    assert "Wikipedia contributors" in table["attribution"]
+    assert table["sources"] == ["wikipedia-misspellings-for-machines"]
+    assert "spell_errors.json" in (data / "NOTICE.md").read_text(
+        encoding="utf-8")
 
+
+def test_shipped_table_is_marked_as_an_attributed_build(tmp_path):
+    bse = _tool("build_spell_errors")
+    pairs = tmp_path / "pairs.txt"
+    pairs.write_text("recieve->receive\nrecieve->receive\n",
+                     encoding="utf-8")
+    out = tmp_path / "out.json"
+    assert bse.main(["--pairs", f"wikipedia-misspellings-for-machines="
+                                f"{pairs}:arrow", "--out", str(out)]) == 0
+    import json
+    assert json.loads(out.read_text(encoding="utf-8"))["licence"] == \
+        "CC-BY-SA-4.0"
 
 
 # --- build_specialist_words --------------------------------------------------

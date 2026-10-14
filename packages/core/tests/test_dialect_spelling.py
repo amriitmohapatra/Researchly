@@ -63,6 +63,16 @@ def test_british_choice_flags_the_american_spelling():
     assert cards(TEXT, "W213", spelling="uk") == [("color", "colour")]
 
 
+def test_indian_choice_is_british_spelling():
+    # owner, 2026-10-14: Indian English is spelled as British English
+    assert cards(TEXT, "W213", spelling="in") == [("color", "colour")]
+    assert spelling.dialect_spelling("color", "in") == "colour"
+    msg = [s.message for s in api.analyze(TEXT, disabled={"LT001"},
+                                          spelling="in").suggestions
+           if s.rule_id == "W213"]
+    assert "Indian" in msg[0]
+
+
 def test_american_choice_flags_every_british_spelling():
     got = dict(cards(TEXT, "W213", spelling="us"))
     assert got == {"analysed": "analyzed", "colour": "color",

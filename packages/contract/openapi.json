@@ -1863,7 +1863,8 @@
           "uk",
           "uk-oxford",
           "ca",
-          "au"
+          "au",
+          "in"
         ],
         "title": "Spelling",
         "type": "string"

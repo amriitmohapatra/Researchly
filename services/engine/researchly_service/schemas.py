@@ -67,6 +67,7 @@ class Spelling(str, Enum):
     uk_oxford = "uk-oxford"
     ca = "ca"
     au = "au"
+    in_ = "in"      # Indian English: spelled as British English
 
 
 class ChecklistChoice(str, Enum):
