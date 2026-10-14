@@ -19,9 +19,9 @@ Every actionable heuristic in the writing guide, converted into a typed rule ent
 
 **Plain explanations (P35, 2026-10-08):** every rule carries a `plain=` text beside its `why=`: the same advice in everyday words, for a writer who knows their science but not the grammar vocabulary (owner feedback from the first real use). The cards show the plain text first and the technical why behind it. Neither may mention this repository's internals: `tests/test_explanations.py` fails on a section number, a course code, a lecturer's name, a book citation or a command-line instruction in any user-visible text. Citations live on the Source line only.
 
-**Scope and Draft mode (S3, 2026-10-04):** every rule declares a scope. *Sentence* rules judge the sentence in front of the writer; *document* rules need the whole document. Draft mode (P1) shows sentence-level rules only and says how many document-level suggestions it held back; Revise shows everything. Document-level today: X101–X104, X202, X301, X401, X501, F601, F612, F613, N101, W211, D902, AB802 (`GET /v1/rules` reports each rule's `scope`).
+**Scope and Draft mode (S3, 2026-10-04):** every rule declares a scope. *Sentence* rules judge the sentence in front of the writer; *document* rules need the whole document. Draft mode (P1) shows sentence-level rules only and says how many document-level suggestions it held back; Revise shows everything. Document-level today: X101–X104, X202, X301, X401, X501, F601, F612, F613, N101, W211, D902, D903, AB802 (`GET /v1/rules` reports each rule's `scope`).
 
-**Article-type profiles (S4, 2026-10-08; owner request):** `researchly/profiles.py`. A profile says what kind of document the sections belong to: which checks do not apply (each with a plain reason the cards show), what section unheaded prose is in, and what a reader of that kind expects (the review lens). Types: auto, general, manuscript, thesis-chapter, abstract, commentary, policy-brief, grant, response-to-reviewers. Commentary and policy brief (the owner's field first) switch off the abstract moves (AB801, AB802), the gap statement (D902) and the hedging prompts (C302, C303), and read their body as argued like a Discussion; "abstract" judges a pasted abstract whole; response-to-reviewers drops the float checks (X101–X104). "auto" guesses only from strong signals (IMRaD headings, a chapter, a recommendations heading) and is otherwise "general", the engine as before. `GET /v1/rules` lists the profiles; `options.document_type` chooses one per request and the account saves it.
+**Article-type profiles (S4, 2026-10-08; owner request):** `researchly/profiles.py`. A profile says what kind of document the sections belong to: which checks do not apply (each with a plain reason the cards show), what section unheaded prose is in, and what a reader of that kind expects (the review lens). Types: auto, general, manuscript, thesis-chapter, abstract, commentary, policy-brief, grant, response-to-reviewers. Commentary and policy brief (the owner's field first) switch off the abstract moves (AB801, AB802), the gap statement (D902, and D903 since 2026-10-14) and the hedging prompts (C302, C303), and read their body as argued like a Discussion; "abstract" judges a pasted abstract whole; response-to-reviewers drops the float checks (X101–X104). "auto" guesses only from strong signals (IMRaD headings, a chapter, a recommendations heading) and is otherwise "general", the engine as before. `GET /v1/rules` lists the profiles; `options.document_type` chooses one per request and the account saves it.
 
 **Learn cards and reporting checklists (S4c, 2026-10-08):** every rule's suggestion carries a `learn_ref` to one of 26 Learn cards (`researchly/learn.py`; provenance in `knowledge-base.md` §12). The epidemiology pack (`researchly/packs/`) adds STROBE, CONSORT, PRISMA and EPIFORGE checklists, requested with `options.checklist` or suggested from the text. They are not rules: each item says "reported" with its sentence or "needs your check", never "missing", and none enters the flag counts or the noise floor.
 
@@ -157,6 +157,9 @@ F607–F610 are the thesis-aligned, nobody-else-has-this rules. F601 is the one 
 | AB801 | "Results will be discussed" — vague abstract forward reference | Convention | Abstract | MVP |
 | L901 | "There are many studies on…" — serial-summary lit-review opener | Improvement | all | MVP |
 | D902 | Introduction lacks a detectable gap statement (Shehzad niche signals) | Improvement | doc-level | MVP |
+| D903 | Gap stated as a bare absence ("remains underexplored", "has been overlooked", "little is known") with no stake in it, the sentence before or the two after (what fails, who pays, what is decided without the answer, an untested assumption) | Improvement | Introduction (doc-level) | 2026-10-14 |
+| D904 | "Fills / addresses / bridges the gap" (a knowledge gap) with no ruling: say closed, narrowed, reframed or reopened | Improvement | Discussion, Conclusion | 2026-10-14 |
+| D905 | Generic call for future research ("Further research is needed", "Future work should explore this") naming nothing that is still open | Improvement | Discussion, Limitations, Conclusion | 2026-10-14 |
 
 All aggregate per section where repetition would nag (E701, E704–E707,
 AB801, L901). E703 fires only when the preceding sentence is ≥18 words
@@ -164,6 +167,29 @@ AB801, L901). E703 fires only when the preceding sentence is ≥18 words
 in-sentence citation; E705 by a "to our knowledge" softener; D902 requires
 an Introduction section of substance and searches for Shehzad's three
 signal classes (contrastives; limited/few/little; none-of/not-been/no-study).
+
+**The gap as an argument (2026-10-14; a thesis-writing workshop, shown to
+users as the owner's learnings, with Alvesson & Sandberg 2011, Sandberg &
+Alvesson 2011, Bunton 2005, Kwan 2006 and Lim 2006 by name; provenance in
+`knowledge-base.md` §13).** D903–D905 aggregate per section and offer no
+replacement (nothing is drafted for the writer). D903 runs on an
+Introduction heading only, stays quiet when any stake signal is near the
+gap (`lexicons.STAKE_RX`, deliberately broad), leaves question-raising
+gaps ("it is unclear whether") alone, defers to E705 on an unsoftened "has
+not been studied" (one card per span), and is off for commentary, policy
+brief and response to reviewers. D904 skips a partial or negated claim
+("partly fills", "does not fill"), an aim ("to fill this gap"), "closes the
+gap" (a ruling) and literal gaps ("the immunity gap", "the gap between
+modelling and policy", "this gap in coverage"). D905 fires only when every
+word of the sentence other than the call itself is generic
+(`lexicons.GENERIC_FUTURE_WORDS`). Not rules, and not counted in the noise
+floor: **strangers**, sources cited in two or more sentences of the
+Discussion and nowhere before it, shown as the narrative map's
+`stranger_sources` link and in the brief's question D
+(`discourse/citations.py`; abstains without a review section or with fewer
+than three readable citations in it); and two thesis-chapter moves on the
+map, Methods "what the design cannot show" and Conclusion "what is still
+open".
 
 ## Layer 8 — Structure and consistency (S2b, 2026-10-04; owner decisions P2, P4)
 
