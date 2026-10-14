@@ -120,6 +120,9 @@ Researchly/
 │   │   ├── transform.py          ← deterministic Polish rewriter
 │   │   ├── spelling.py           ← SymSpell wrapper + guards + user dictionary + VarCon dialects
 │   │   ├── spellrank.py          ← noisy-channel ranking of spelling suggestions (P40)
+│   │   ├── predict.py            ← word prediction (n-grams; data/predict.sqlite; P42)
+│   │   ├── reading.py            ← pasted code, inline maths, other languages → masked (P42)
+│   │   ├── tables.py             ← tables as rows × columns for X401 (P42)
 │   │   ├── lexicons.py           ← ALL word lists (auditable; extend here)
 │   │   ├── metrics.py            ← read-outs incl. hedge/booster meter (never a score)
 │   │   ├── telemetry.py          ← local usage log → `researchly stats`

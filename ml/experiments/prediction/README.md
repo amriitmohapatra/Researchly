@@ -1,4 +1,11 @@
-# Text prediction: an experiment, not a feature
+# Text prediction: the experiment it grew from
+
+> **Update, 2026-10-14:** the owner made word prediction a core feature
+> (CLAUDE.md #1, as amended). The product's version is
+> `packages/core/researchly/predict.py`, trained by
+> `ml/tools/build_prediction_model.py` on ~2,500 licence-checked CC BY / CC0
+> articles. This folder stays as the record of the experiment that
+> justified it; nothing here ships.
 
 **Owner decision, 2026-10-14:** test next-word prediction as an experiment.
 CLAUDE.md non-negotiable #1 keeps generative drafting out of the product, and
