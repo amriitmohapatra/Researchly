@@ -2436,3 +2436,92 @@ sample). Noise floor 11.86 → **11.74** (gate OK, baseline lowered): S001
 in one thesis (data set/dataset, health care/healthcare, time
 point/timepoint), found because the lexicon knows more closed compounds.
 On the 115 PMC articles S001 is 628 flags (2,069 before P40).
+
+## P42 — 2026-10-14 — Word prediction becomes a core feature; spelling choice everywhere; revision queue; tables by row and column; the research gap as an argument
+
+**Why.** The owner's decisions after P41: ship the two-word list and the
+learned typo model, treat Indian English as British, make text prediction
+"a core feature of the app", and "Engineering you can do, please do, NOW".
+Mid-batch the owner added workshop slides on the research gap ("Check if
+anything is relevant to be added to researchly's brain").
+
+**What.**
+- *Owner decisions recorded.* SymSpell bigram list confirmed (registry).
+  The learned typo table ships: `data/spell_errors.json`, edit
+  probabilities learned from the Wikipedia misspelling list's train split
+  only (Mitton's corpora state no licence), CC BY-SA 4.0 with attribution in
+  the file and `data/NOTICE.md`. Held-out top-1 rose 2–7 points on every
+  list (Birkbeck 44.0 → 46.2%, Holbrook 34.4 → 41.5, Aspell 63.3 → 67.8,
+  norvig2 77.6 → 81.2, Wikipedia 87.0 → 91.4); the Mitton-trained variant
+  added a little more and was not shipped. Spelling option `in` (Indian
+  English, British spelling) in engine, service and contract.
+- *Word prediction (CLAUDE.md #1, AGENTS.md and ADR-07 amended with the
+  owner's decision and its limits).* `researchly/predict.py`: stupid-backoff
+  n-grams (contexts of up to three words) in a read-only SQLite file;
+  completes the word being typed, offers the next word, or a fixed term of
+  at most three words when the model is sure; follows the chosen or
+  detected spelling and the word's usual case. Model: `data/predict.sqlite`
+  (37 MB) built by `ml/tools/build_prediction_model.py` from 2,543 Europe
+  PMC open-access research articles (18.5M words; 3,000 found, 207 refused
+  on their own `<license>`: 193 named no CC BY/CC0 licence, 14 NC/ND/SA).
+  Every kept sequence occurs in ≥3 articles. Attribution for each article:
+  `data/predict_sources.tsv`. Registry: `europepmc-oa-prediction-corpus`.
+  `api.complete()` offers nothing in maths, code, citations, URLs, headings
+  or unfinished markup, and nothing when the writer turns it off
+  (`[features] prediction`, account `user_settings.prediction`); a health
+  tier says when the model is missing. `POST /v1/complete` (own rate
+  budget, 240/min), canary scenarios, LSP completion items,
+  `researchly complete`. Website: a strip under the editor (Tab, click,
+  Esc; stale replies dropped). Word: a "Next words" panel (WordApi 1.3
+  checked) and `/v1/complete` on the local server.
+- *Reading.* `researchly/reading.py`: pasted code (R, Python, Stan,
+  console), inline maths and `code`, and paragraphs in another language
+  are masked in plain text and Word; an English-only notice; every reply
+  carries a reading summary (words checked, what was set aside), shown as
+  one quiet line on the website and in Word.
+- *Spelling choice everywhere* (helper): selector on the website and in
+  both Word taskpanes; migration `20261014120000_spelling_prediction.sql`
+  adds `user_settings.spelling` and `.prediction`; `my_config()` returns
+  both; two-user test 117 passed against a real PostgreSQL.
+- *Revision queue and long checks* (helper; Codex #1, #8): passes
+  (Correctness first, Clarity next, Whole-document review), repeats grouped
+  with Next/Previous; numbered check sessions so a late reply never shows as
+  current; previous results kept and marked; Cancel and Check again.
+- *X401 by row and column* (helper; Codex #7): `researchly/tables.py`;
+  the cell, its value and the rounding in the message; falls back or
+  abstains when the named row or column is unclear.
+- *The research gap* (helper; from the slides, paraphrased, credited in
+  `docs/knowledge-base.md` §13): D903 gap without a stake (Introduction),
+  D904 "fills the gap" (Discussion, Conclusion), D905 generic future
+  research; "stranger" sources that drive the Discussion but never appear
+  earlier, on the narrative map and the brief; two Learn cards; two
+  thesis-only map questions. Key-noun drift and orphan sections recorded as
+  research-grade (not reliable enough).
+- *Clean-ups.* Pallas 2023; the S001 message names no command; JFLEG and
+  CWEB licences corrected; 25 cosmetic lint findings fixed and `ruff.toml`
+  widened (F401, F541; `_to_delete` excluded).
+
+**Evidence.**
+
+| Check | Result |
+|---|---|
+| core | 1237 passed, 2 skipped |
+| service | 225 passed |
+| web (vitest) | 450 passed; lint, typecheck, confidentiality boundary clean |
+| Playwright (helpers, merged branches) | 152 passed (checker, word, prediction, queue, accounts ×3) |
+| ml/eval | 19 passed; third-party scan 0 hits; ruff clean |
+| prediction, 20,002 held-out words (articles never trained on) | next word top-1 **20.2%**, top-3 30.9%, keystrokes saved **46.9%** (experiment: 14.3%, 22.9%, 44.6%; everyday English 11.4%, 19.1%, 29.6%) |
+| prediction latency | ~1 ms per request once loaded (first call ~0.2 s) |
+
+**Lessons.**
+- Count n-grams in shards: the first build counted 18.5M words at once and
+  the container killed it (and a helper's Java with it). Sixteen hash
+  shards of the context, pruned as they finish, peaked near 1 GB.
+- An evaluation that is slower than the feature hides a feature bug: the
+  held-out run scanned 40,000 words per keystroke prefix, which a writer
+  would have felt too; a sorted index with bisect fixed both.
+- An attribution list is bibliographic data that theses also cite: the
+  third-party scan matched author lists, so the file is skipped by name.
+- Three helpers on one website conflict in the same composer; merging one
+  branch and asking the next helper to merge onto it worked better than
+  resolving eight files by hand.

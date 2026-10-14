@@ -37,7 +37,7 @@ import panel_html  # noqa: E402
 
 try:
     import objc  # noqa: F401
-    from AppKit import (  # noqa: E402
+    from AppKit import (  # noqa: E402,F401
         NSApplication, NSApp, NSObject, NSStatusBar,
         NSVariableStatusItemLength, NSMenu, NSMenuItem, NSImage,
         NSPanel, NSMakeRect, NSBackingStoreBuffered,
@@ -123,7 +123,7 @@ def _decode_ax_frame(element):
     defensive; callers fall back to a screen-corner badge."""
     try:
         from ApplicationServices import AXValueGetValue
-        import Quartz
+        import Quartz  # noqa: F401  (probe: the framework must load)
         k_point = getattr(__import__("ApplicationServices"),
                           "kAXValueCGPointType", 1)
         k_size = getattr(__import__("ApplicationServices"),

@@ -27,12 +27,9 @@ import json
 import sys
 from pathlib import Path
 
-from .document import Document
-from .engine import REGISTRY, Category, check
+from .engine import REGISTRY, Category
 from . import api
 from . import config as config_mod
-from . import metrics as metrics_mod
-from .health import summary_line
 from .ingest import IngestError, source_position
 
 # --- ANSI ----------------------------------------------------------------

@@ -24,15 +24,12 @@ from typing import List, Optional, Union
 
 from . import _core  # noqa: F401  (import path + isolation first)
 from . import __version__ as SERVICE_VERSION
-from .schemas import (AnalyzeOptions, AnalyzeResponse, AnalyzeWordResponse,
-                      Category, CompleteOptions, CompleteResponse,
+from .schemas import (AnalyzeOptions, AnalyzeResponse, Category, CompleteOptions, CompleteResponse,
                       CompletionCandidate, ChecklistChoiceInfo, ChecklistReport,
-                      Coverage, DocumentType, EngineInfo, FixSafety,
-                      HedgingPoint, LearnCard, Metrics, MissingLink, Mode,
-                      NarrativeMap, NarrativeMove, NarrativeSection,
-                      ProfileChoice, ProfileInfo, ReadingSummary,
-                      ReviewQuestion,
-                      ReviewReport, ReviewRuleCount, RuleInfo, Scope, Span,
+                      Coverage, EngineInfo, FixSafety,
+                      LearnCard, Metrics, Mode,
+                      NarrativeMap, ProfileChoice, ProfileInfo, ReadingSummary,
+                      ReviewReport, RuleInfo, Scope, Span,
                       Suggestion, TierHealth, WordLocation, WordSuggestion)
 
 import researchly
@@ -283,8 +280,11 @@ def _reading(document) -> Optional[ReadingSummary]:
 
 
 # Tiers that never make the service "degraded" by being off: gec is opt-in
-# (no model ships), so missing/disabled is its normal state.
-_OPTIONAL_STATES = {"gec": {"missing", "disabled"}}
+# (no model ships), so missing/disabled is its normal state. Word prediction
+# helps the writer type; without its model every check still runs, so its
+# absence is reported on its own tier, not as a degraded service.
+_OPTIONAL_STATES = {"gec": {"missing", "disabled"},
+                    "prediction": {"missing", "disabled"}}
 
 
 def health_tiers(grammar_enabled: bool = True) -> List[TierHealth]:

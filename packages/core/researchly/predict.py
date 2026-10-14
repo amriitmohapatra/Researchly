@@ -24,6 +24,8 @@ three words, as in the experiment it grew from (ml/experiments/prediction).
 
 from __future__ import annotations
 
+import bisect
+import heapq
 import json
 import re
 import sqlite3
@@ -79,6 +81,7 @@ class Model:
         self._local = threading.local()
         self._unigrams: list[tuple[str, int]] | None = None
         self._uni_total = 1
+        self._uni_sorted: list[tuple[str, int]] | None = None
         self._forms: dict[str, str] | None = None
         self._lock = threading.Lock()
 
@@ -114,6 +117,22 @@ class Model:
                                       if w not in ("<num>", ",")]
         return self._unigrams
 
+    def _unigram_candidates(self, prefix: str, k: int
+                            ) -> list[tuple[str, int]]:
+        """The k commonest words starting with `prefix`, from a sorted
+        index (a prefix keystroke must not scan 40,000 words)."""
+        ranked = self._unigram_list()
+        if not prefix:
+            return ranked[:k]
+        if self._uni_sorted is None:
+            with self._lock:
+                if self._uni_sorted is None:
+                    self._uni_sorted = sorted(ranked)
+        table = self._uni_sorted
+        lo = bisect.bisect_left(table, (prefix,))
+        hi = bisect.bisect_left(table, (prefix + "\uffff",))
+        return heapq.nlargest(k, table[lo:hi], key=lambda t: t[1])
+
     def display(self, word: str) -> str:
         """The word's usual case: "bayesian" → "Bayesian"."""
         if self._forms is None:
@@ -132,7 +151,7 @@ class Model:
         weight = 1.0
         for order in range(len(seq), -1, -1):
             if order == 0:
-                words = self._unigram_list()
+                words = self._unigram_candidates(prefix, k + 2)
                 total = self._uni_total
                 if not words:
                     break

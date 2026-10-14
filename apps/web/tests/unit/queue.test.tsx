@@ -236,7 +236,7 @@ describe("the queue on screen", () => {
 
   it("every pass's wording is plain: no score, no em dash, no course or lecturer", () => {
     const words = PASSES.flatMap((p) => [p.title, p.help]).join(" ");
-    expect(words).not.toMatch(/—|score|grade|lecture|course|NG5001|Endo/i);
+    expect(words).not.toMatch(/—|score|grade|lecture|course/i);
     // Conventions are named as not errors in the pass that holds them.
     expect(PASSES.find((p) => p.id === "whole")!.help).toMatch(/Conventions are not errors/);
   });

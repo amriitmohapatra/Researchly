@@ -13,6 +13,7 @@ Three steps, each re-runnable:
     python3.10 ml/tools/build_prediction_model.py fetch --cache DIR
     # 3. count, prune, evaluate on held-out articles and write the model
     python3.10 ml/tools/build_prediction_model.py build --cache DIR
+    # (re-measure a built model: ... evaluate --cache DIR)
 
 **Licence, per article.** Europe PMC's licence filter is only a search
 hint. Each article's own ``<license>`` element is read, and the article is
@@ -416,9 +417,89 @@ def evaluate(model_path: Path, test: list[list[str]],
             "keystrokes_saved": round(1 - typed / max(letters, 1), 4)}
 
 
+SHARDS = 16
+_S, _NUM, _COMMA = 0, 1, 2          # reserved ids in the encoded corpus
+
+
+def encode(train, vocab: dict[str, int], forms: dict[int, Counter],
+           ) -> list[list]:
+    """Each article as runs of word ids (lower case), so 18 million tokens
+    fit in memory; `forms` collects the case each word is written in away
+    from a sentence start."""
+    from array import array
+
+    out = []
+    for _, runs in train:
+        enc = []
+        for run in runs:
+            ids = array("i")
+            for i, t in enumerate(run):
+                low = "<num>" if t == "<num>" else t.lower()
+                wid = vocab.setdefault(low, len(vocab))
+                ids.append(wid)
+                if i and t != low and t not in ("<num>", ","):
+                    forms[wid][t] += 1
+                elif i:
+                    forms[wid][low] += 1
+            enc.append(ids)
+        out.append(enc)
+    return out
+
+
+def count_shard(articles: list[list], shard: int):
+    """Counts and article frequencies of the n-grams whose context falls in
+    this shard (a hash of the context), in word-id space."""
+    counts: dict[tuple, Counter] = defaultdict(Counter)
+    docs: Counter = Counter()
+    for runs in articles:
+        seen: set = set()
+        for ids in runs:
+            seq = (_S,) + tuple(ids)
+            for i in range(1, len(seq)):
+                w = seq[i]
+                for k in range(ORDER):
+                    if i - k < 0:
+                        break
+                    ctx = seq[i - k:i]
+                    if hash(ctx) % SHARDS != shard:
+                        continue
+                    counts[ctx][w] += 1
+                    seen.add(ctx + (w,))
+        docs.update(seen)
+    return counts, docs
+
+
+def prune_shard(counts, docs, words: list[str], known) -> list[tuple]:
+    """Rows (order, context words, total, [(word, count), ...]) to keep."""
+    rows = []
+    for ctx, nxt in counts.items():
+        k = len(ctx)
+        need = MIN_UNIGRAM_DOCS if k == 0 else MIN_DOCS
+        keep = []
+        for w, n in nxt.most_common():
+            if n < need:
+                break               # too rare to be in enough articles
+            if docs[ctx + (w,)] < need:
+                continue
+            if w not in (_NUM, _COMMA) and not known(w):
+                continue
+            keep.append((words[w], n))
+            if len(keep) >= TOP_K[k]:
+                break
+        if keep:
+            rows.append((k, tuple(words[i] for i in ctx),
+                         sum(nxt.values()), keep))
+    return rows
+
+
 def build(cache: Path, out: Path, sources_out: Path) -> int:
+    from researchly import spelling
+
     rows = {r["pmcid"]: r for r in read_index(cache)}
+    vocab: dict[str, int] = {"<s>": _S, "<num>": _NUM, ",": _COMMA}
+    forms: dict[int, Counter] = defaultdict(Counter)
     train, test, used, refused = [], [], [], Counter()
+    words_total = 0
     for path in sorted((cache / "xml").glob("*.xml")):
         pmcid = path.stem
         xml = path.read_bytes()
@@ -437,23 +518,46 @@ def build(cache: Path, out: Path, sources_out: Path) -> int:
         if held_out(pmcid):
             test += runs
             continue
-        train.append((pmcid, runs))
+        words_total += sum(len(r) for r in runs)
+        train += encode([(pmcid, runs)], vocab, forms)
         row = dict(rows.get(pmcid, {"pmcid": pmcid}))
         row["licence"] = lic
         used.append(row)
-    words = sum(len(r) for _, runs in train for r in runs)
-    print(f"training articles {len(train)} ({words:,} tokens); held out "
-          f"{len(test)} sentences; refused {dict(refused)}", file=sys.stderr)
-    counts, docs, forms = count(train)
-    model = prune(counts, docs)
-    meta = {"version": 1, "articles": len(train), "tokens": words,
+    print(f"training articles {len(train)} ({words_total:,} tokens); held "
+          f"out {len(test)} sentences; refused {dict(refused)}",
+          file=sys.stderr)
+
+    words = [""] * len(vocab)
+    for w, i in vocab.items():
+        words[i] = w
+    known_cache: dict[int, bool] = {}
+
+    def known(wid: int) -> bool:
+        if wid not in known_cache:
+            known_cache[wid] = spelling.known_with_fallbacks(words[wid])
+        return known_cache[wid]
+
+    model: dict[int, dict] = {k: {} for k in range(ORDER)}
+    for shard in range(SHARDS):
+        counts, docs = count_shard(train, shard)
+        for k, ctx, total, keep in prune_shard(counts, docs, words, known):
+            model[k][ctx] = (total, keep)
+        del counts, docs
+        print(f"shard {shard + 1}/{SHARDS}: "
+              f"{sum(len(t) for t in model.values()):,} contexts kept",
+              file=sys.stderr)
+    shown = {}
+    for wid, c in forms.items():
+        form, n = c.most_common(1)[0]
+        if form != words[wid] and n >= 0.6 * sum(c.values()):
+            shown[words[wid]] = form
+    meta = {"version": 1, "articles": len(train), "tokens": words_total,
             "order": ORDER, "min_docs": MIN_DOCS, "top_k": TOP_K,
             "registry": REGISTRY_ID, "built": time.strftime("%Y-%m-%d"),
             "attribution": "data/predict_sources.tsv"}
-    write_model(out, model, display_forms(forms), meta)
+    write_model(out, model, shown, meta)
     write_sources(sources_out, used)
     result = evaluate(out, test)
-    meta["heldout"] = result
     db = sqlite3.connect(out)
     db.execute("insert or replace into meta values ('heldout', ?)",
                (json.dumps(result),))
@@ -464,16 +568,42 @@ def build(cache: Path, out: Path, sources_out: Path) -> int:
     return 0
 
 
+def evaluate_only(cache: Path, out: Path) -> int:
+    """Re-measure a built model on the held-out articles and record the
+    result in its meta table."""
+    test = []
+    for path in sorted((cache / "xml").glob("*.xml")):
+        if not held_out(path.stem):
+            continue
+        xml = path.read_bytes()
+        if licence_of(xml)[0] is None:
+            continue
+        try:
+            test += article_runs(xml)
+        except Exception:
+            continue
+    result = evaluate(out, test)
+    db = sqlite3.connect(out)
+    db.execute("insert or replace into meta values ('heldout', ?)",
+               (json.dumps(result),))
+    db.commit()
+    db.execute("vacuum")
+    db.close()
+    print(f"held out: {result}", file=sys.stderr)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("find", "fetch", "build"):
+    for name in ("find", "fetch", "build", "evaluate"):
         p = sub.add_parser(name)
         p.add_argument("--cache", type=Path, required=True)
         if name == "find":
             p.add_argument("--max", type=int, default=3000)
-        if name == "build":
+        if name in ("build", "evaluate"):
             p.add_argument("--out", type=Path, default=DEFAULT_OUT)
+        if name == "build":
             p.add_argument("--sources", type=Path, default=SOURCES_OUT)
     args = ap.parse_args(argv)
     if ROOT in args.cache.resolve().parents or args.cache.resolve() == ROOT:
@@ -484,6 +614,8 @@ def main(argv: list[str] | None = None) -> int:
         return find(args.cache, args.max)
     if args.cmd == "fetch":
         return fetch(args.cache)
+    if args.cmd == "evaluate":
+        return evaluate_only(args.cache, args.out)
     return build(args.cache, args.out, args.sources)
 
 

@@ -1,7 +1,6 @@
 """Tests for the W0 engine changes: suggestion enrichment, overlap
 resolution between correction tiers, and the safe-fix declaration."""
 
-import pytest
 import spacy
 
 from researchly import engine as engine_mod

@@ -36,7 +36,7 @@ from pygls.server import LanguageServer
 from . import api
 from . import config as config_mod
 from .document import Document
-from .engine import REGISTRY, Category, check
+from .engine import REGISTRY, Category
 from . import (rules_lexical, rules_syntax,  # noqa: F401  (register)
                rules_spelling, rules_grammar)
 

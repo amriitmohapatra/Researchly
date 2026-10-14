@@ -5,7 +5,6 @@ import pytest
 from researchly import api
 from researchly import config as config_mod
 from researchly.config import Config
-from researchly.document import Document
 from researchly.engine import Category
 
 NLP = api.get_nlp()

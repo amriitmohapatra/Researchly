@@ -1,7 +1,5 @@
 """Tests for v0.2: telemetry, engine aggregation, abbreviation-list awareness."""
 
-import importlib
-import json
 import sys
 from pathlib import Path
 
@@ -13,7 +11,7 @@ from researchly.engine import check
 from researchly import telemetry
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "apps" / "word-addin"))
-import server as addin_server  # noqa: E402
+import server as addin_server  # noqa: E402,F401
 
 NLP = spacy.load("en_core_web_sm")
 
