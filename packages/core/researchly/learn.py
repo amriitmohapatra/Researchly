@@ -409,6 +409,42 @@ _CARDS = (
          "Mark the five moves in your discussion's margin: finding, meaning, "
          "comparison, limitation, implication.",
          "§2+WW+§9.8"),
+    Card("gap-stake", "Say what the gap costs", "Structure and argument",
+         "Missing is not enough: say what goes wrong without the answer.",
+         "Plenty of questions are unstudied because nobody needs the answer. "
+         "A gap earns its place when the introduction says what not knowing "
+         "costs: an estimate that may be biased, a decision taken without "
+         "evidence, or an assumption a model takes on trust. Three checks "
+         "help. Does something fail while the question stays open? Could "
+         "evidence settle it? Who would use the answer once you have it?",
+         "Little is known about dengue transmission in Oldmere. We therefore "
+         "set out to estimate it.",
+         "Little is known about dengue transmission in Oldmere. The regional "
+         "plan assumes it matches Marrowick, so if it is higher, Oldmere's "
+         "spraying budget is set too low. We therefore set out to estimate "
+         "it.",
+         "Under your gap sentence, write one that starts 'If this stays "
+         "unknown, ...'. If you cannot finish it, the gap needs more thought.",
+         "workshop-S2+Sandberg2011+Alvesson2011", rules=("D903",)),
+    Card("carry-the-gap", "Carry the gap to the end", "Structure and argument",
+         "Rule on the gap, say what is still open, keep the review's sources.",
+         "The gap the introduction opens is the one the last pages answer. "
+         "The methods say what the design can show and what it cannot. The "
+         "discussion gives a verdict on the gap, closed, narrowed, reframed "
+         "or reopened, with a reason, instead of saying the findings fill "
+         "it. The conclusion says what was known before, what is known now "
+         "and what is still open, instead of asking for more research. The "
+         "sources the discussion leans on should already be in the review.",
+         "Our estimates fill the gap in the literature on dengue in "
+         "Oldmere. Further research is needed.",
+         "These findings narrow the gap: transmission in Oldmere was higher "
+         "than assumed in the wet season, but weekly counts cannot show "
+         "whether that held in the dry season. A dry-season serosurvey "
+         "would settle it.",
+         "Put your gap sentence, the last sentence of your discussion and "
+         "the last of your conclusion on one page. They should be about the "
+         "same thing, and the last should know more than the first.",
+         "workshop-S2+Bunton2005+Kwan2006+Lim2006", rules=("D904", "D905")),
     # --- Mechanics ------------------------------------------------------------------
     Card("spelling-and-grammar", "Spelling, grammar and slips", "Mechanics",
          "Small slips cost trust out of proportion to their size.",
@@ -451,7 +487,8 @@ _SECTION_CARD = {
     "discussion": "discussion", "limitations": "discussion",
     "conclusion": "discussion",
 }
-_MOVE_CARD = {"interpretation": "warranting"}
+_MOVE_CARD = {"interpretation": "warranting",
+              "design_limit": "carry-the-gap", "still_open": "carry-the-gap"}
 # The argument's missing links (discourse/argument.py codes).
 LINK_CARD = {
     "claim_without_warrant": "warranting",
@@ -459,6 +496,8 @@ LINK_CARD = {
     "evidence_without_interpretation": "warranting",
     "limitation_not_reflected_in_claim_strength": "hedging",
     "contribution_unclear": "discussion",
+    # The review's link to the Discussion (discourse/citations.py).
+    "stranger_sources": "carry-the-gap",
 }
 
 

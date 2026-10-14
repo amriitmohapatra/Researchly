@@ -131,6 +131,30 @@ _ANALYSIS = (
     r"calculated|simulated|calibrated)\b",
 )
 
+# What the design cannot show, said in the Methods (thesis chapters).
+_DESIGN_LIMIT = (
+    r"\b(?:cannot|can ?not|could not|does not|do not|did not|will not)\s+"
+    r"(?:\w+\s+){0,2}(?:show|tell|distinguish|separate|identify|establish|"
+    r"determine|capture|detect|estimate|measure|observe|answer|resolve|"
+    r"rule out|account for|generali[sz]e|disentangle)\b",
+    r"\b(?:unable|not designed|not powered|not intended|not able) to\b",
+    r"\blimitations? of (?:this|the|our) (?:design|approach|method|methods|"
+    r"study|model|data)\b",
+    r"\b(?:un|non-?)identifiable\b", r"\bnot identifiable\b",
+    r"\b(?:beyond|outside) the scope\b",
+)
+
+# What is still open, said in the Conclusion (thesis chapters).
+_STILL_OPEN = (
+    r"\bstill (?:cannot|can ?not|do(?:es)? not know|unknown|unclear|open|"
+    r"unanswered|unresolved|untested)\b",
+    r"\b(?:remains?|is still|are still) (?:an )?(?:open|unknown|unclear|"
+    r"unanswered|unresolved|untested)\b",
+    r"\b(?:open|unanswered|unresolved|outstanding) (?:question|questions|"
+    r"problem|problems)\b",
+    r"\bcannot yet\b", r"\bnot yet (?:known|clear|possible|able)\b",
+)
+
 MOVES: dict = {m.id: m for m in (
     Move("territory", "Why it matters",
          "Does the opening say why this area matters?",
@@ -281,6 +305,30 @@ MOVES: dict = {m.id: m for m in (
          "out the contribution for themselves.",
          "“This work adds [contribution] to [the field].”",
          tuple(_R["contribution"]) + _CONTRIBUTION),
+    Move("design_limit", "What the design cannot show",
+         "Do the Methods say what this design can show that earlier ones "
+         "could not, and what it still cannot show?",
+         "workshop-S2+Lim2006",
+         "A design is chosen for what it lets you see. Say what earlier "
+         "designs missed and how this one reaches it, then say plainly what "
+         "it still cannot show, so the reader takes the results within "
+         "those bounds.",
+         "“Earlier studies used [design], which cannot [what it missed]. "
+         "We use [design], which can [what it adds] but cannot [what it "
+         "still misses].”",
+         _DESIGN_LIMIT),
+    Move("still_open", "What is still open",
+         "Does the Conclusion say what is still unknown after this work, "
+         "and what would settle it?",
+         "workshop-S2+Bunton2005",
+         "A conclusion hands the question on. Say what was known before "
+         "this work, what is known now, and what is still open, with the "
+         "study or data that would answer it. That helps the next "
+         "researcher more than a general call for more research.",
+         "“Before this work, [what was known]. It is now clear that [what "
+         "this work adds]. What is still open is [the question], which "
+         "[a named study or data] could settle.”",
+         _STILL_OPEN),
 )}
 
 # What each section is expected to do, in order. Sections not listed
@@ -297,6 +345,24 @@ SCHEMAS: dict = {
     "conclusion": ("contribution", "implications"),
 }
 
+# A thesis carries one gap through every chapter, so its Methods also say
+# what the design cannot show and its Conclusion what is still open. A
+# journal article usually keeps both for the Discussion's limitations, so
+# the moves are expected of a thesis chapter only.
+PROFILE_SCHEMAS: dict = {
+    "thesis-chapter": {
+        "methods": ("data", "analysis", "design_limit"),
+        "conclusion": ("contribution", "implications", "still_open"),
+    },
+}
+
+
+def schema_for(section: str, profile_id=None) -> tuple:
+    """The moves expected of a section, for this kind of document."""
+    return PROFILE_SCHEMAS.get(profile_id or "", {}).get(
+        section, SCHEMAS.get(section, ()))
+
+
 # Where the order of the moves is itself the advice.
 ORDERED = frozenset({"abstract", "introduction"})
 
@@ -307,11 +373,12 @@ SECTION_LABELS = {
 }
 
 
-def label_moves(sentence: str, section: str, first: bool = False) -> list:
+def label_moves(sentence: str, section: str, first: bool = False,
+                schema=None) -> list:
     """The ids of the section's expected moves this sentence makes. The
     section's first sentence also makes its opening move (what is known,
     why it matters) when it makes none of the later moves."""
-    schema = SCHEMAS.get(section, ())
+    schema = SCHEMAS.get(section, ()) if schema is None else schema
     found = [m for m in schema if MOVES[m].matches(sentence)]
     if first and not found:
         found = [m for m in schema if MOVES[m].opening]

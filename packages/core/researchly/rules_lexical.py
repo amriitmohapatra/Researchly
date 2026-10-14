@@ -654,6 +654,148 @@ def d902_missing_niche(doc, document: Document):
         start=start, end=start + len(intro[0].text))
 
 
+# ---------------------------------------------------------------------------
+# D903–D905 — the gap as an argument, carried to the end (2026-10-14).
+# Section-gated on the headings themselves: a pasted paragraph with no
+# heading cannot say whether "fills the gap" is an aim or a verdict.
+# ---------------------------------------------------------------------------
+
+def _sentences_in(doc, document: Document, sections) -> list:
+    """(index, sentence) of every sentence in `sections`, plus the full
+    sentence list, so a rule can look at the neighbours."""
+    sents = list(doc.sents)
+    return sents, [(i, s) for i, s in enumerate(sents)
+                   if document.section_at(s.start_char) in sections]
+
+
+def _muted(document: Document, rule_id: str) -> bool:
+    cfg = getattr(document, "config", None)
+    return rule_id in set(getattr(cfg, "disabled", ()) or ())
+
+
+@rule("D903", "gap-without-stake", Category.IMPROVEMENT,
+      "A gap stated as a bare absence, with nothing on what is at stake.",
+      'Something missing from the literature is not yet a research gap: '
+      'the gap is the case for why the missing answer matters. "No study '
+      'has examined X" or "X remains underexplored" records only that '
+      'something is missing, and much is missing for good reason. The '
+      'case rests on the cost of not knowing: which model, policy or '
+      'theory fails while the question stays open, and who will use the '
+      'answer. Name the decision made without it, the estimate it biases, '
+      'or the untested assumption a model rests on, in the gap sentence '
+      'or the one after it.',
+      plain=("This sentence says something has not been studied, but not "
+             "why that matters. Many things are unstudied for good reason. "
+             "Say what goes wrong, or who is left guessing, if the question "
+             "stays open."),
+      sections_only=("introduction",),
+      source="workshop-S2+Sandberg2011+Alvesson2011", aggregate=True,
+      scope="document")
+def d903_gap_without_stake(doc, document: Document):
+    sents, intro = _sentences_in(doc, document, ("introduction",))
+    e705_live = not _muted(document, "E705")
+    for i, sent in intro:
+        text = sent.text
+        m = None
+        for rx in lx.ABSENCE_GAP_RX:
+            m = re.search(rx, text, re.IGNORECASE)
+            if m:
+                break
+        if not m:
+            continue
+        low = text.lower()
+        # An unsoftened "has not been studied" is E705's card already: one
+        # card per span, and its fix comes first.
+        if e705_live and not any(s in low for s in lx.KNOWLEDGE_SOFTENERS) \
+                and any(re.search(rx, text, re.IGNORECASE)
+                        for rx in lx.NOVELTY_RX):
+            continue
+        window = [sents[j].text for j in range(max(0, i - 1),
+                                               min(len(sents), i + 3))
+                  if document.section_at(sents[j].start_char)
+                  == "introduction"]
+        if any(re.search(rx, w, re.IGNORECASE)
+               for rx in lx.STAKE_RX for w in window):
+            continue
+        start = sent.start_char + m.start()
+        yield Suggestion(
+            message="What goes wrong if this stays unknown? Say who pays, "
+                    "or what is decided without the answer.",
+            start=start, end=start + len(m.group(0)))
+
+
+@rule("D904", "fills-the-gap", Category.IMPROVEMENT,
+      "'These findings fill the gap' — rule on the gap instead.",
+      'A Discussion should return to the gap it opened with and give a '
+      'verdict on it. "Fills the gap" claims the question is settled '
+      'without saying to what extent, and few studies settle one. Give a '
+      'verdict and its '
+      'reason: closed (the question is answered), narrowed (answered for '
+      'some settings or groups), reframed (the question turned out to be a '
+      'different one) or reopened (the findings unsettle what was thought '
+      'known).',
+      plain=("'Fills the gap' says the question is settled but not how far. "
+             "Say whether your findings closed it, narrowed it, changed the "
+             "question, or opened it again, and why."),
+      sections_only=("discussion", "conclusion"),
+      source="workshop-S2", aggregate=True)
+def d904_fills_the_gap(doc, document: Document):
+    _, sents = _sentences_in(doc, document, ("discussion", "conclusion"))
+    for _, sent in sents:
+        text = sent.text
+        for rx in lx.FILL_GAP_RX:
+            m = re.search(rx, text, re.IGNORECASE)
+            if not m:
+                continue
+            if re.search(lx.FILL_GAP_RULING_RX, text[:m.start()],
+                         re.IGNORECASE):
+                break
+            start = sent.start_char + m.start()
+            yield Suggestion(
+                message="How far did the gap close? Say closed, narrowed, "
+                        "reframed or reopened, and why.",
+                start=start, end=start + len(m.group(0)))
+            break
+
+
+def _content_words(text: str) -> list:
+    return [w for w in re.findall(r"[a-z]+", text.lower())
+            if len(w) > 2 and w not in lx.GENERIC_FUTURE_WORDS]
+
+
+@rule("D905", "generic-future-research", Category.IMPROVEMENT,
+      "'Further research is needed' with nothing on what is still open.",
+      'The end of a Discussion or a Conclusion hands the question on. '
+      '"Further research is needed" or "future work could explore this" '
+      'is true of every study and tells the next researcher nothing. Say '
+      'what the field could say before this work, what it can say now, and '
+      'what it still cannot say; then name the study, data or comparison '
+      'that would settle what is left.',
+      plain=("'Further research is needed' is true of every study, so it "
+             "tells the reader nothing. Say what is still unknown after "
+             "your work, and what kind of study would answer it."),
+      sections_only=("discussion", "limitations", "conclusion"),
+      source="workshop-S2+Bunton2005", aggregate=True)
+def d905_generic_future(doc, document: Document):
+    _, sents = _sentences_in(doc, document,
+                             ("discussion", "limitations", "conclusion"))
+    for _, sent in sents:
+        text = sent.text
+        for rx in lx.FUTURE_RESEARCH_RX:
+            m = re.search(rx, text, re.IGNORECASE)
+            if not m:
+                continue
+            rest = text[:m.start()] + " " + text[m.end():]
+            if _content_words(rest):
+                break               # it names what is open: specific
+            start = sent.start_char + m.start()
+            yield Suggestion(
+                message="Name what is still unknown after this work, and "
+                        "the study that would settle it.",
+                start=start, end=start + len(m.group(0)))
+            break
+
+
 # ensure the abstract lens registers wherever the rule pack loads
 from .discourse import abstract_lens  # noqa: E402,F401
 

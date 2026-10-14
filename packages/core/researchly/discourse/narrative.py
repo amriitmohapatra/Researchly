@@ -18,7 +18,9 @@ from .. import lexicons as lx
 from .. import sources
 from ..document import Document
 from . import argument as argument_mod
-from .moves import MOVES, ORDERED, SCHEMAS, SECTION_LABELS, label_moves
+from . import citations as citations_mod
+from .moves import (MOVES, ORDERED, SCHEMAS, SECTION_LABELS, label_moves,
+                    schema_for)
 
 SOURCE = sources.cite("Swales+WW+§2")
 _SENT_SPLIT = re.compile(r"(?<=[.!?])\s+")
@@ -68,12 +70,13 @@ def _move_entry(move_id: str, status: str, evidence: Optional[str] = None,
     }
 
 
-def _section_map(section: str, sents: list) -> dict:
-    schema = SCHEMAS[section]
+def _section_map(section: str, sents: list, profile_id=None) -> dict:
+    schema = schema_for(section, profile_id)
     first: dict = {}          # move -> index of its first sentence
     evidence: dict = {}
     for i, (_, _, text) in enumerate(sents):
-        for mid in label_moves(text, section, first=(i == 0)):
+        for mid in label_moves(text, section, first=(i == 0),
+                               schema=schema):
             if mid not in first:
                 first[mid] = i
                 evidence[mid] = _quote(text)
@@ -196,7 +199,8 @@ def build_narrative(document: Document, spacy_doc=None,
             order.append(section)
         by_section[section].append((start, end, text))
 
-    sections = [_section_map(s, by_section[s]) for s in order
+    profile_id = getattr(profile, "id", None)
+    sections = [_section_map(s, by_section[s], profile_id) for s in order
                 if s in SCHEMAS]
     unmapped = [s for s in order if s not in SCHEMAS
                 and s not in ("front", "references")]
@@ -216,6 +220,7 @@ def build_narrative(document: Document, spacy_doc=None,
                              for a, b in obj.link_spans.get(code, [])[:3]],
                 "source": sources.cite("WW+Toulmin+§4"),
             })
+    links += _review_links(document, spacy_doc)
 
     if not sections:
         if not document.headings:
@@ -244,6 +249,25 @@ def build_narrative(document: Document, spacy_doc=None,
         "profile": getattr(profile, "id", None),
         "source": SOURCE,
     }
+
+
+def _review_links(document: Document, spacy_doc=None) -> list:
+    """The review's link to the Discussion: sources that carry the
+    Discussion but were never cited before it (`citations.strangers`).
+    Nothing when the citations cannot be read reliably."""
+    found = citations_mod.strangers(document, spacy_doc)
+    if not found["items"]:
+        return []
+    return [{
+        "section": "discussion",
+        "label": SECTION_LABELS["discussion"],
+        "code": "stranger_sources",
+        "message": citations_mod.message(found),
+        "learn_ref": learn.card_for_link("stranger_sources"),
+        "evidence": [_quote(document.original[a:b])
+                     for a, b in (e["evidence"] for e in found["items"][:3])],
+        "source": sources.cite("workshop-S2+Kwan2006"),
+    }]
 
 
 def render_narrative(n: dict) -> str:
