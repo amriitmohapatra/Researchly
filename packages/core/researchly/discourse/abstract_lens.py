@@ -1,6 +1,6 @@
 """The abstract lens — Belcher/Pallas six-part completeness check.
 
-From the owner's course materials (Belcher 2021; Pallas 2022 ch.7): a good
+From the owner's course materials (Belcher 2021; Pallas 2023 ch.7): a good
 SciQua abstract contains six moves —
 
   1. background      — the conventional wisdom on the topic
@@ -16,7 +16,7 @@ as a single aggregate rule (AB802) on abstracts, and in full detail via
 missing move. Deterministic and explainable, like everything else.
 
 The frames below are Researchly's own wording. The idea of giving the
-writer one fill-in frame per move is Pallas's (2022, ch. 7); her frames
+writer one fill-in frame per move is Pallas's (2023, ch. 7); her frames
 are not reproduced (all rights reserved — see PLAN.md S0).
 """
 
@@ -99,7 +99,7 @@ SIGNALS: dict[str, list[str]] = {
     ],
 }
 
-# Fill-in frames, one per move (structure after Pallas 2022, ch. 7; the
+# Fill-in frames, one per move (structure after Pallas 2023, ch. 7; the
 # wording is original to Researchly).
 FRAMES = {
     "background": "“Studies of [topic] generally find that [current "

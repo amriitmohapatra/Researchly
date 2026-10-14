@@ -318,9 +318,9 @@ patterns of good research writing across disciplines, not just epidemiology.
   - [x] 2026-10-04 (P33, from the owner's PDF-converted manuscript): **12.65 → 11.67**, all removals of wrong flags. A blank line ends a sentence unless the next line continues in lower case (G106 648 → 529, G101 559 → 482: "sentences" run across headings, table cells, lists and equations; every flag diffed before/after); aligned-column and flattened-equation lines masked; G107 says a repeated stack once; title capitals, URLs, the noun "leverage" left alone. Bench 14.65 → 13.69
 - [ ] Clean the 20 cosmetic ruff findings (17 unused imports, 3 placeholder-less f-strings) in a dedicated change, then widen `ruff.toml`
 - [ ] `language_tool_python` client is GPL-3.0-only: fine server-side; check before bundling it into any distributed desktop installer
-- [ ] Correct `docs/eval-corpora.md`: JFLEG and CWEB *do* declare CC BY-NC-SA 4.0 (registry audit, 2026-10-03)
+- [x] Correct `docs/eval-corpora.md`: JFLEG and CWEB *do* declare CC BY-NC-SA 4.0 (registry audit, 2026-10-03) — 2026-10-14, corrected
 - [ ] PubMed-RCT declares no licence — decide before training anything shippable on it (S5)
 - [ ] `_to_delete/` holds tarballs that include thesis text; owner to confirm deletion **(Amriit)**
-- [ ] Pallas citation year: the book says © 2023; the repo says 2022 throughout — fix in one pass (code + docs)
+- [x] Pallas citation year: the book says © 2023; the repo said 2022 — 2026-10-14, fixed in code, tests and docs (PROJECT_LOG keeps its history)
 - [ ] Four course PDFs are scans with no text layer (`…ng5001_getting_started_on_critical_reading.pdf`, `Week 2 Reading.pdf`, `Writing conference abstract.pdf` and its `_compressed` copy), so the third-party scan can't see them; OCR them (or confirm nothing derives from them)
 - [ ] `docs/rule-inventory.md` may still quote old why-texts / Pallas frames — re-sync with the paraphrased versions

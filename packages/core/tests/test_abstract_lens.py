@@ -9,7 +9,7 @@ from researchly.engine import check
 NLP = spacy.load("en_core_web_sm")
 
 # A synthetic exemplar written for this suite. It follows the six-move
-# structure of the worked example in Pallas (2022, ch. 7) — conventional
+# structure of the worked example in Pallas (2023, ch. 7) — conventional
 # wisdom, problematization, question, design, findings, significance — but
 # none of her wording (her text is all-rights-reserved; see PLAN.md S0).
 EXEMPLAR = (

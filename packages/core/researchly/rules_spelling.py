@@ -187,8 +187,8 @@ def s001_spelling(doc, document: Document):
             msg = f"Did you mean '{top}'?{rest}"
             repl = top
         else:
-            msg = ("Not in any dictionary — if this is your term, "
-                   "`researchly dict add` it.")
+            msg = ("Not in any dictionary. If this is your term, add it "
+                   "to your dictionary.")
             repl = None
         yield Suggestion(
             message=msg,
