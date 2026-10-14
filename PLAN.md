@@ -328,7 +328,7 @@ patterns of good research writing across disciplines, not just epidemiology.
   - [ ] Topical top-level sections ("Experiment 1: the baseline SEIR") stay "other", so a methods report gets passive-voice flags meant for Discussion. Wire `document_type` (e.g. "methods report") into section defaults
   - [x] LanguageTool's own misreads on technical prose — 2026-10-04 (P31): counted on the theses and the owner's report (all 11 of its LT001 flags were misreads); rules that misfired repeatedly are skipped (`SKIP_MISREAD_RULES`). One-off misreads ("who meets whom" → "meet", "No fit is…" → "now") stay until they repeat
 - [ ] **From the real-document bench (P29), not yet fixed:**
-  - [ ] No language detection: a Portuguese document gets hundreds of spelling flags. Detect the language and say "Researchly checks English" instead of checking
+  - [x] No language detection — 2026-10-14, f68e9c5: `researchly/reading.py` names the language of each paragraph; a paragraph in another language is masked and noted, a whole text in another language says Researchly checks English (`tests/test_reading.py`: other languages named, English stays English, foreign paragraph masked, whole text notice). Was: a Portuguese document gets hundreds of spelling flags. Detect the language and say "Researchly checks English" instead of checking
   - [ ] A 1.8 MB LaTeX book chapter exceeds the 1M-character cap; consider per-chapter checking of large projects
   - [ ] One project (custom `\Set` macro in maths) still needs the regex reader; the parser's `$` tracking is thrown off. Collect more cases before special-casing
   - [~] JATS format parity on 11 eLife articles: G104 fires ~2× more and C303 ~3.5× less in docx/tex than plain — the nested-heading section bug, fixed 2026-10-04; re-measure in the next CI run
@@ -343,7 +343,7 @@ patterns of good research writing across disciplines, not just epidemiology.
   - [ ] Pasted code and maths in plain text and Word (R listings, `log=T`): detect code-like paragraphs and mask them like LaTeX code
   - [ ] G106 (648) and G101 (559) are now mostly real advice on long sentences; reaching 11 must not come from hiding it
   - [x] 2026-10-04 (P33, from the owner's PDF-converted manuscript): **12.65 → 11.67**, all removals of wrong flags. A blank line ends a sentence unless the next line continues in lower case (G106 648 → 529, G101 559 → 482: "sentences" run across headings, table cells, lists and equations; every flag diffed before/after); aligned-column and flattened-equation lines masked; G107 says a repeated stack once; title capitals, URLs, the noun "leverage" left alone. Bench 14.65 → 13.69
-- [ ] Clean the 20 cosmetic ruff findings (17 unused imports, 3 placeholder-less f-strings) in a dedicated change, then widen `ruff.toml`
+- [x] Clean the 20 cosmetic ruff findings — 2026-10-14, 6bb456a: `ruff.toml` widened with F401 and F541, ruff clean. Was: clean the 20 cosmetic ruff findings (17 unused imports, 3 placeholder-less f-strings) in a dedicated change, then widen `ruff.toml`
 - [ ] `language_tool_python` client is GPL-3.0-only: fine server-side; check before bundling it into any distributed desktop installer
 - [x] Correct `docs/eval-corpora.md`: JFLEG and CWEB *do* declare CC BY-NC-SA 4.0 (registry audit, 2026-10-03) — 2026-10-14, corrected
 - [ ] PubMed-RCT declares no licence — decide before training anything shippable on it (S5)
