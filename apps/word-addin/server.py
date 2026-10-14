@@ -42,6 +42,7 @@ from researchly import transform                       # noqa: E402
 from researchly import wordloc                         # noqa: E402
 from researchly import packs as packs_mod              # noqa: E402
 from researchly import shapes                          # noqa: E402
+from researchly.document import cell_place            # noqa: E402
 from researchly.profiles import DOCUMENT_TYPES         # noqa: E402
 
 _NLP_LOCK = threading.Lock()
@@ -198,8 +199,9 @@ def parse_word_request(payload) -> tuple:
     clean = []
     total = 0
     for i, p in enumerate(paras):
-        if not isinstance(p, dict) or set(p) - {"text", "style", "kind"}:
-            raise bad(f"paragraph {i} must be {{text, style, kind}}")
+        if not isinstance(p, dict) or set(p) - {"text", "style", "kind",
+                                                "cell"}:
+            raise bad(f"paragraph {i} must be {{text, style, kind, cell}}")
         text = p.get("text", "")
         style = p.get("style", "")
         kind = p.get("kind", "body")
@@ -210,8 +212,13 @@ def parse_word_request(payload) -> tuple:
                       f"{MAX_STYLE_CHARS} characters")
         if kind not in ("body", "table"):
             raise bad(f"paragraph {i}: kind must be body or table")
+        cell = p.get("cell")
+        if cell is not None and cell_place(cell) is None:
+            raise bad(f"paragraph {i}: cell must be [table, row, col] or "
+                      "[table, row, col, colspan] of whole numbers")
         total += len(text)
-        clean.append({"text": text, "style": style, "kind": kind})
+        clean.append({"text": text, "style": style, "kind": kind,
+                      "cell": cell})
     if total > MAX_CONTENT_CHARS:
         raise ContractError(413, "payload_too_large",
                             f"at most {MAX_CONTENT_CHARS:,} characters at a time")
@@ -268,6 +275,7 @@ def _word_suggestion(s, doc, paragraphs: list) -> dict:
         "replacement": s.replacement,
         "fix_safety": "safe" if s.fix_safety == "safe" else "review",
         "confidence": min(1.0, max(0.0, conf)),
+        "table_evidence": s.table_evidence,
         "location": wordloc.locate(doc, paragraphs, s.start, s.end),
     }
 
