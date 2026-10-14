@@ -27,6 +27,7 @@ import type {
   Mode,
   ProfileChoice,
   RuleInfo,
+  Spelling,
   WordParagraph,
 } from "@researchly/contract";
 import { ENGINE_URL } from "./config";
@@ -57,6 +58,8 @@ export interface CheckParams {
   showPreferences: boolean;
   /** The article type to check as (S4). Omitted: "auto", the engine's guess from the headings. */
   documentType?: DocumentType | null;
+  /** The English spelling to keep to. Omitted: the account's saved choice (signed in), else "auto". */
+  spelling?: Spelling | null;
   /** Also ask for the critical reader's brief (a whole-document read; Revise only). */
   review?: boolean;
   /** Also ask for the narrative map (S4b): a whole-document read, sent exactly like the brief. */
@@ -76,6 +79,7 @@ export interface CheckParams {
 export function analysisOptions(p: {
   showPreferences: boolean;
   documentType?: DocumentType | null;
+  spelling?: Spelling | null;
   review?: boolean;
   narrative?: boolean;
   checklist?: ChecklistChoice | null;
@@ -88,6 +92,9 @@ export function analysisOptions(p: {
     narrative: p.narrative ?? false,
     ...(p.checklist ? { checklist: p.checklist } : {}),
     ...(p.mode ? { mode: p.mode } : {}),
+    // Only when the writer (or their account, or this browser) has a choice:
+    // leaving it out lets the engine apply the account's saved one.
+    ...(p.spelling ? { spelling: p.spelling } : {}),
   };
 }
 
@@ -135,7 +142,7 @@ export async function withBearer<T>(
 }
 
 export function buildRequest(
-  p: Pick<CheckParams, "content" | "format" | "showPreferences" | "documentType" | "review" | "narrative" | "checklist" | "mode">,
+  p: Pick<CheckParams, "content" | "format" | "showPreferences" | "documentType" | "spelling" | "review" | "narrative" | "checklist" | "mode">,
 ): AnalyzeRequest {
   return {
     content: p.content,
@@ -264,6 +271,7 @@ export interface FileCheckParams {
   file: File;
   showPreferences: boolean;
   documentType?: DocumentType | null;
+  spelling?: Spelling | null;
   review?: boolean;
   narrative?: boolean;
   checklist?: ChecklistChoice | null;
@@ -322,6 +330,7 @@ export async function analyzeFile(
         {
           showPreferences: p.showPreferences,
           documentType: p.documentType,
+          spelling: p.spelling,
           review: p.review,
           narrative: p.narrative,
           checklist: p.checklist,
@@ -422,6 +431,8 @@ export interface WordCheckParams {
   disabledRules?: string[];
   /** The article type to check as (S4); omitted: "auto". */
   documentType?: DocumentType | null;
+  /** The English spelling to keep to; omitted: the account's saved choice (cloud, signed in), else this computer's config. */
+  spelling?: Spelling | null;
   /** The critical reader's brief: asked for in Revise, never in Draft (a whole-document read). */
   review?: boolean;
   /** The narrative map (S4b): asked for in Revise only, like the brief. */
@@ -432,7 +443,10 @@ export interface WordCheckParams {
 }
 
 export function buildWordRequest(
-  p: Pick<WordCheckParams, "paragraphs" | "showPreferences" | "mode" | "disabledRules" | "documentType" | "review" | "narrative" | "checklist">,
+  p: Pick<
+    WordCheckParams,
+    "paragraphs" | "showPreferences" | "mode" | "disabledRules" | "documentType" | "spelling" | "review" | "narrative" | "checklist"
+  >,
 ): AnalyzeWordRequest {
   return {
     paragraphs: p.paragraphs,

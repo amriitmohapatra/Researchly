@@ -108,7 +108,7 @@ The corpus-based anatomy of gap statements:
 - "Move 2 is the hinge… builds up a demand for the current contribution" →
   D902's explanation text.
 
-## 6. Pallas 2022, *Doctoral Student Skills* (`Doctoral Student Skills….pdf`; ch. 7 duplicated as `Writing conference abstract.pdf`)
+## 6. Pallas 2023, *Doctoral Student Skills* (`Doctoral Student Skills….pdf`; ch. 7 duplicated as `Writing conference abstract.pdf`)
 
 - **The 6-part abstract structure + fill-in sentence frames** → AB801's
   rationale + the planned abstract lens; the frames belong in a future

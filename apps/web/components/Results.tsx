@@ -8,7 +8,9 @@ import type { ChecklistOffer } from "@/lib/checklists";
 import { briefState, narrativeState, profileLine } from "@/lib/profiles";
 import type { ScopeMap } from "@/lib/scope";
 import { resolveSpans, segment } from "@/lib/segments";
+import { PREVIOUS_NOTE, type PreviousMark } from "@/lib/check-session";
 import { buildLocator, isMultiFile } from "@/lib/source";
+import { buildQueue, passCounts, posAt, QUEUE_START, resolveSpot, spotOf, type QueuePos, type QueueState } from "@/lib/queue";
 import {
   applyFilter,
   applySectionFilter,
@@ -30,6 +32,7 @@ import { NarrativeMap } from "./NarrativeMap";
 import { PrintReport } from "./PrintReport";
 import { ReadingSummary } from "./ReadingSummary";
 import { ReviewBrief } from "./ReviewBrief";
+import { PassChooser, RevisionQueue } from "./RevisionQueue";
 import { SuggestionCard, type CardActions } from "./SuggestionCard";
 import { BASE_VIEWS, ViewTabs, viewIds, type ResultsView } from "./ViewTabs";
 
@@ -59,9 +62,24 @@ interface Props {
   /** The quiet offer of the checklist the text's words point to (none chosen). */
   checklistOffer?: ChecklistOffer | null;
   onUseChecklist?: ((id: ChecklistChoice) => void) | null;
+  /**
+   * The revision queue (review proposal 1): which pass, and where in it. Held
+   * by the parent so a re-check (after a mute) keeps the writer's place;
+   * kept here when no parent holds it. Never stored.
+   */
+  queue?: QueueState;
+  onQueue?: (q: QueueState) => void;
+  /**
+   * These results come from an earlier check than the latest one (review
+   * proposal 8): a newer check is running, failed or was cancelled. Said
+   * under the heading so they are never taken for the new answer.
+   */
+  previous?: PreviousMark | null;
 }
 
 type FocusRequest = { id: string; target: "mark" | "card" | "undo"; seq: number };
+/** Bring a highlight into view inside the text column without moving keyboard focus (the queue's Next keeps it). */
+type RevealRequest = { id: string; seq: number };
 type DismissNote = { kind: "dismissed"; id: string } | { kind: "restored"; n: number } | null;
 
 const secondsFmt = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 1 });
@@ -90,7 +108,13 @@ export function Results({
   onRunRevise = null,
   checklistOffer = null,
   onUseChecklist = null,
+  queue: heldQueue,
+  onQueue: onHeldQueue,
+  previous = null,
 }: Props) {
+  const [ownQueue, setOwnQueue] = useState<QueueState>(QUEUE_START);
+  const queueState = heldQueue ?? ownQueue;
+  const setQueue = onHeldQueue ?? setOwnQueue;
   const [filter, setFilter] = useState<Filter>("all");
   // The section the writer is working on. Starts at "all" for every check
   // (the component remounts per check) and is never stored anywhere.
@@ -106,6 +130,7 @@ export function Results({
   const heldBack = heldBackSentence(data.hidden_by_mode ?? 0);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [focusReq, setFocusReq] = useState<FocusRequest | null>(null);
+  const [revealReq, setRevealReq] = useState<RevealRequest | null>(null);
   const docColRef = useRef<HTMLDivElement>(null);
   const undoRef = useRef<HTMLButtonElement>(null);
   // The printable report (S4) is mounted only while printing: from the
@@ -140,8 +165,24 @@ export function Results({
   const detected = useMemo(() => data.sections_detected.filter((name) => sectionLabel(name) !== null), [data.sections_detected]);
   const effectiveSection: SectionFilter = section !== "all" && !detected.includes(section) ? "all" : section;
   const split = useMemo(() => applySectionFilter(byCategory, effectiveSection, scopes), [byCategory, effectiveSection, scopes]);
-  const visible = useMemo(() => [...split.inSection, ...split.wholeDocument], [split]);
   const sectionCounts = useMemo(() => countBySection(shown), [shown]);
+  // The revision queue walks what the writer is looking at (the chosen
+  // section and its whole-document checks), in document order, whatever the
+  // category chip says: its passes are the grouping.
+  const inScope = useMemo(() => {
+    const s = applySectionFilter(shown, effectiveSection, scopes);
+    const keep = new Set([...s.inSection, ...s.wholeDocument].map((x) => x.id));
+    return shown.filter((x) => keep.has(x.id));
+  }, [shown, effectiveSection, scopes]);
+  const passTotals = useMemo(() => passCounts(inScope, scopes), [inScope, scopes]);
+  const pass = queueState.pass;
+  const queue = useMemo(() => (pass === "all" ? null : buildQueue(inScope, pass, scopes)), [inScope, pass, scopes]);
+  const spot = queue ? resolveSpot(queue, queueState.at) : null;
+  const queueCurrent = queue && spot ? queue.groups[spot.group]!.items[spot.occurrence]! : null;
+  const visible = useMemo(
+    () => (queue ? queue.groups.flatMap((g) => g.items) : [...split.inSection, ...split.wholeDocument]),
+    [queue, split],
+  );
   const resolved = useMemo(() => resolveSpans(submittedText, visible), [submittedText, visible]);
   const segments = useMemo(() => segment(submittedText, resolved), [submittedText, resolved]);
   const placeable = useMemo(() => new Set(resolved.map((r) => r.id)), [resolved]);
@@ -177,16 +218,55 @@ export function Results({
     el.focus({ preventScroll: true });
   }, [focusReq]);
 
+  useEffect(() => {
+    if (!revealReq) return;
+    const el = docColRef.current?.querySelector<HTMLElement>(`[data-sids~="${CSS.escape(revealReq.id)}"]`);
+    const box = el?.closest<HTMLElement>(".doc");
+    if (!el || !box || box.scrollHeight <= box.clientHeight) return;
+    // Only the text column scrolls: the page stays where the writer's Next button is.
+    const r = el.getBoundingClientRect();
+    const b = box.getBoundingClientRect();
+    box.scrollTo({
+      top: box.scrollTop + r.top - b.top - b.height / 2 + r.height / 2,
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+    });
+  }, [revealReq]);
+
+  const onQueueMove = useCallback(
+    (pos: QueuePos) => {
+      setQueue({ pass: queueState.pass, at: pos });
+      setRevealReq((r) => ({ id: pos.id, seq: (r?.seq ?? 0) + 1 }));
+    },
+    [queueState.pass, setQueue],
+  );
+  const onChoosePass = useCallback(
+    (p: QueueState["pass"]) => {
+      setQueue({ pass: p, at: null });
+      setActiveId(null);
+    },
+    [setQueue],
+  );
+
   const onSelectFromText = useCallback(
     (ids: readonly string[]) => {
       if (ids.length === 0) return;
+      if (queue) {
+        // In a pass, a highlight moves the queue to that finding (repeated clicks cycle overlapping ones).
+        const i = queueCurrent ? ids.indexOf(queueCurrent.id) : -1;
+        const id = i >= 0 && ids.length > 1 ? ids[(i + 1) % ids.length]! : ids[0]!;
+        const at = spotOf(queue, id);
+        if (!at) return;
+        setQueue({ pass: queue.pass, at: posAt(queue, at) });
+        setFocusReq((r) => ({ id, target: "card", seq: (r?.seq ?? 0) + 1 }));
+        return;
+      }
       // Overlapping highlights: repeated clicks cycle through every suggestion on that stretch.
       const i = activeId ? ids.indexOf(activeId) : -1;
       const next = i >= 0 && ids.length > 1 ? ids[(i + 1) % ids.length]! : ids[0]!;
       setActiveId(next);
       setFocusReq((r) => ({ id: next, target: "card", seq: (r?.seq ?? 0) + 1 }));
     },
-    [activeId],
+    [activeId, queue, queueCurrent, setQueue],
   );
 
   const onShowInText = useCallback((id: string) => {
@@ -244,10 +324,10 @@ export function Results({
   }, []);
 
   const sections = detected.map(sectionLabel).filter((s): s is string => s !== null);
-  const card = (s: Suggestion) => (
+  const card = (s: Suggestion, current = false) => (
     <SuggestionCard
       suggestion={s}
-      active={s.id === activeId}
+      active={current || s.id === activeId}
       placeable={placeable.has(s.id)}
       onShowInText={onShowInText}
       location={locations?.get(s.id) ?? null}
@@ -310,6 +390,11 @@ export function Results({
           </span>
         </p>
       </div>
+      {previous ? (
+        <p className="previous-note" data-testid="previous-note" data-reason={previous}>
+          {PREVIOUS_NOTE[previous]}
+        </p>
+      ) : null}
       {profileText ? (
         <p className="profile-line muted" data-testid="profile-line">
           {profileText}
@@ -393,7 +478,9 @@ export function Results({
         </div>
       ) : (
         <div role="tabpanel" {...panelIds("suggestions")}>
+          <PassChooser choice={pass} counts={passTotals} onChoose={onChoosePass} />
           <div className="toolbar">
+            {queue ? null : (
             <div className="filters" role="group" aria-label="Filter suggestions by category">
               {chips.map((c) => {
                 const n = c === "all" ? shown.length : counts[c];
@@ -414,6 +501,7 @@ export function Results({
                 );
               })}
             </div>
+            )}
             {detected.length > 0 ? (
               <div className="control section-control">
                 <label htmlFor={sectionId} className="control-label">
@@ -438,7 +526,9 @@ export function Results({
             {hiddenNote}
           </div>
           <p className="filter-blurb muted">
-            {effectiveFilter === "all"
+            {queue
+              ? "One pass at a time; nothing is lost: every suggestion is in exactly one pass, and All suggestions lists them together."
+              : effectiveFilter === "all"
               ? "Conventions are research-writing norms you may choose to follow. They are not errors."
               : CATEGORIES[effectiveFilter].blurb}
             {effectiveSection !== "all" ? (
@@ -461,11 +551,37 @@ export function Results({
               </p>
               <DocumentView
                 segments={segments}
-                activeId={activeId}
+                activeId={queueCurrent?.id ?? activeId}
                 onSelect={onSelectFromText}
                 label={source ? "Text read from your file, with highlighted suggestions" : undefined}
               />
             </div>
+            {queue ? (
+              <div className="list-col">
+                <RevisionQueue
+                  queue={queue}
+                  at={queueState.at}
+                  onMove={onQueueMove}
+                  renderCard={(s) => card(s, true)}
+                  counts={passTotals}
+                  onPass={onChoosePass}
+                  scopeNote={effectiveSection !== "all" ? `in the ${sectionLabel(effectiveSection)} section` : null}
+                  endExtra={
+                    queue.pass === "whole" ? (
+                      <p className="results-line queue-views" data-testid="queue-views">
+                        <span>The reviewer&rsquo;s brief and the narrative map read the whole document too.</span>
+                        <button type="button" className="btn-link" onClick={() => onView("brief")}>
+                          Open the reviewer&rsquo;s brief
+                        </button>
+                        <button type="button" className="btn-link" onClick={() => onView("narrative")}>
+                          Open the narrative map
+                        </button>
+                      </p>
+                    ) : null
+                  }
+                />
+              </div>
+            ) : (
             <div className="list-col">
               <h3 className="col-title">{effectiveSection === "all" ? "Suggestions" : `Suggestions in ${sectionLabel(effectiveSection)}`}</h3>
               {split.inSection.length === 0 ? (
@@ -498,6 +614,7 @@ export function Results({
                 </section>
               ) : null}
             </div>
+            )}
           </div>
         </div>
       )}

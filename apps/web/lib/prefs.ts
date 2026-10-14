@@ -1,7 +1,8 @@
 /**
  * The only things this app remembers in the browser: the chosen input format,
- * the article type to check as (S4; shared by the website and the Word add-in,
- * which are one origin) and, in the Word add-in, the engine choice and
+ * the article type to check as (S4) and the English spelling to keep to (both
+ * shared by the website and the Word add-in, which are one origin) and, in
+ * the Word add-in, the engine choice and
  * Draft/Revise and (S4c) the reporting checklist; whether word prediction is
  * on (2026-10-14, only once the writer switches it); on the Label page, the
  * verdicts given so far (rule ids and verdicts, never text). The document
@@ -9,12 +10,14 @@
  * for text) — scripts/check-boundary.mjs enforces that storage APIs are used
  * in this file only.
  */
-import type { ChecklistChoice, DocumentType, Format } from "@researchly/contract";
+import type { ChecklistChoice, DocumentType, Format, Spelling } from "@researchly/contract";
 import { isDocumentType } from "./profiles";
+import { isSpelling } from "./spelling";
 import { isFormat } from "./validate";
 
 const FORMAT_KEY = "researchly.format";
 const DOCUMENT_TYPE_KEY = "researchly.document-type";
+const SPELLING_KEY = "researchly.spelling";
 
 export function loadFormat(): Format | null {
   try {
@@ -58,6 +61,27 @@ export function saveDocumentTypeChoice(v: DocumentType): void {
 export function subscribeDocumentType(onChange: () => void): () => void {
   const handler = (e: StorageEvent) => {
     if (e.key === DOCUMENT_TYPE_KEY) onChange();
+  };
+  window.addEventListener("storage", handler);
+  return () => window.removeEventListener("storage", handler);
+}
+
+/* ---------- the English spelling (task #15): one choice for both surfaces, never text ---------- */
+
+/** The spelling chosen on this computer, or null when never chosen (signed in, the account's choice wins). */
+export function loadSpellingChoice(): Spelling | null {
+  const v = read(SPELLING_KEY);
+  return isSpelling(v) ? v : null;
+}
+
+export function saveSpellingChoice(v: Spelling): void {
+  write(SPELLING_KEY, v);
+}
+
+/** For useSyncExternalStore: the website and the taskpane share this choice, so one changing it updates the other. */
+export function subscribeSpelling(onChange: () => void): () => void {
+  const handler = (e: StorageEvent) => {
+    if (e.key === SPELLING_KEY) onChange();
   };
   window.addEventListener("storage", handler);
   return () => window.removeEventListener("storage", handler);

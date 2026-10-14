@@ -90,6 +90,7 @@ function applyConfig(config, health) {
   $("setPrefs").checked = !!config.show_preferences;
   $("setDocType").value = config.document_type || "auto";
   $("setAggr").value = config.aggressiveness || "standard";
+  $("setSpelling").value = config.spelling || "auto";
   $("setLocale").value = config.locale || "en-US";
   $("setGrammar").checked = config.grammar_tier !== false;
   $("setGec").checked = config.gec_tier === true;
@@ -123,6 +124,8 @@ function initSettingsHandlers() {
     saveSetting({ document_type: $("setDocType").value });
   $("setAggr").onchange = () =>
     saveSetting({ aggressiveness: $("setAggr").value });
+  $("setSpelling").onchange = () =>
+    saveSetting({ spelling: $("setSpelling").value });
   $("setLocale").onchange = () =>
     saveSetting({ locale: $("setLocale").value });
   $("setPrefs").onchange = () =>

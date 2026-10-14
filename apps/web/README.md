@@ -63,6 +63,14 @@ the contract compiles as first-party source.
 - **Health**: a degraded grammar tier (or any tier in `error`/`unstarted`)
   gets a calm banner with the engine's detail and remedy. The learned `gec`
   tier being absent is normal and not shown.
+- **One check at a time** (`lib/check-session.ts`, review proposal 8): every
+  check has a sequence number and an AbortController. Cancel aborts it and
+  puts the previous results back as current; a newer check supersedes an
+  older one; a reply that arrives for a cancelled or superseded check is
+  dropped, even when the network ignored the abort. Retry reruns the same
+  check (the website resends the same snapshot; Word reads the document
+  afresh). `tests/unit/check-session.test.ts` proves it with a mocked fetch
+  and a ~120,000-word synthetic document.
 - **Rule scopes**: after the first results the page asks `GET /v1/rules`
   once (no text) so the section view knows which rules read the whole
   document (`lib/scope.ts`); without a registry the engine's known
@@ -201,13 +209,17 @@ app/            layout (dynamic, for CSP nonces), page (static chrome), globals.
                 word/ (the Word add-in's taskpane, S3)
 components/     Checker (form + state), ReadingKey (idle "how to read the
                 feedback" key), Results, DocumentView, SuggestionCard,
-                HealthBanner, MetricsPanel, CategoryIcon, PredictionStrip
+                HealthBanner, MetricsPanel, CategoryIcon, RevisionQueue
+                (pass chooser + queue, shared with Word), CheckProgress
+                (running-check line, shared with Word), PredictionStrip
                 (word prediction + its switch), PredictionSettings, ReadingSummary
 components/word/ Taskpane, WordCard, CodeSignIn, NextWords (word prediction)
 lib/word/       office (every Office.js call), view (taskpane helpers)
 lib/            engine (fetch), segments (offsets + highlight segmentation),
-                prediction (window, offsets, scheduler), use-prediction, reading,
-                categories, health, errors, validate, view, prefs, config, security
+                categories, health, errors, validate, view, prefs, config, security,
+                queue (the revision queue's passes and positions),
+                check-session (one check at a time; late replies dropped),
+                prediction (window, offsets, scheduler), use-prediction, reading
 proxy.ts        CSP nonce
 scripts/        check-boundary.mjs (confidentiality lint)
 tests/unit/     Vitest

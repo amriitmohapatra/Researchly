@@ -3,6 +3,9 @@ Synthetic text only."""
 
 from __future__ import annotations
 
+import pathlib
+import re
+
 from researchly.config import SPELLINGS
 from researchly_service.schemas import AnalyzeResponse, Spelling
 
@@ -18,6 +21,16 @@ def post(client, **options):
 
 def test_the_contract_lists_every_engine_spelling():
     assert tuple(s.value for s in Spelling) == SPELLINGS
+
+
+def test_the_typescript_contract_lists_them_in_the_same_order():
+    # packages/contract/src/index.ts SPELLINGS feeds the selectors on the
+    # website and in the Word add-in.
+    root = pathlib.Path(__file__).resolve().parents[3]
+    src = (root / "packages" / "contract" / "src" / "index.ts").read_text(
+        encoding="utf-8")
+    listed = re.search(r"export const SPELLINGS = \[([^\]]*)\]", src).group(1)
+    assert tuple(re.findall(r'"([^"]+)"', listed)) == SPELLINGS
 
 
 def test_a_chosen_spelling_reaches_the_engine(client):

@@ -99,6 +99,7 @@ export interface SupabaseState {
     locale: string;
     mode?: string;
     document_type?: string;
+    spelling?: string;
     keep_progress?: boolean;
   } | null;
   words: string[];

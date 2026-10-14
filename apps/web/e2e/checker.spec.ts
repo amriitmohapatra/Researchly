@@ -776,6 +776,8 @@ test.describe("accessibility", () => {
     await page.keyboard.press("Tab");
     await expect(page.getByLabel("Check as")).toBeFocused();
     await page.keyboard.press("Tab");
+    await expect(page.getByLabel("Spelling", { exact: true })).toBeFocused();
+    await page.keyboard.press("Tab");
     await expect(page.getByLabel("Reporting checklist")).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(page.getByLabel("Show preferences")).toBeFocused();

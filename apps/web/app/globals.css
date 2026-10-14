@@ -3490,6 +3490,18 @@ main:focus {
   width: 100%;
   min-width: 0;
 }
+
+/* ---- The English spelling to keep to (task #15): beside "Check as", in the
+   taskpane's Settings, and on the settings page ---- */
+.control-spelling .select {
+  min-width: 12rem;
+  max-width: 100%;
+}
+.tp-settings .control-spelling,
+.tp-settings .control-spelling .select {
+  width: 100%;
+  min-width: 0;
+}
 .wchecklist {
   max-width: var(--measure);
 }
@@ -3578,6 +3590,194 @@ main:focus {
   .header-end .account-button {
     max-width: 27vw;
   }
+}
+
+/* ---------- revision queue (review proposal 1) ---------- */
+
+/* "Work through": the ordinary list or one pass. 8px radius (pills are for the category chips). */
+.passes {
+  margin-top: 16px;
+}
+.passes-label {
+  margin-bottom: 4px;
+}
+.pass-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pass-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 4px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.pass-btn:hover {
+  background: var(--surface-2);
+}
+.pass-btn[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+.pass-count {
+  font-variant-numeric: tabular-nums;
+  min-width: 1.5em;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+}
+.pass-help {
+  margin-top: 6px;
+  max-width: var(--measure);
+}
+
+.queue {
+  display: grid;
+  gap: 12px;
+}
+.queue .col-title {
+  margin-bottom: 0;
+}
+.queue-nav,
+.queue-occurrences {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+}
+.queue-nav {
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+.queue-occurrences {
+  border: 1px dashed var(--line-strong);
+}
+.queue-pos {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.queue-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.queue-buttons .btn[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: default;
+}
+.queue-total {
+  margin-top: -4px;
+}
+.queue-occ-line,
+.queue-occ-pos,
+.queue-end {
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+}
+.queue-occ-pos {
+  font-variant-numeric: tabular-nums;
+}
+.queue-end {
+  max-width: var(--measure);
+}
+.queue-views {
+  margin-top: 0;
+}
+.queue-all summary {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.queue-list {
+  display: grid;
+  gap: 2px;
+  margin: 8px 0 0;
+  padding-left: 1.5em;
+}
+.queue-pick {
+  display: inline;
+  min-height: 0;
+  padding: 4px 0;
+  text-align: left;
+  font-weight: 500;
+}
+.queue-pick[aria-current] {
+  font-weight: 700;
+}
+.queue-times {
+  font-size: 0.875rem;
+}
+
+/* The Word pane: one narrow column, the four choices as a 2 by 2 grid. */
+.queue-compact .queue-nav,
+.queue-compact .queue-occurrences {
+  padding: 8px 10px;
+}
+.tp-passes .pass-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.tp-passes .pass-btn {
+  justify-content: space-between;
+  text-align: left;
+}
+
+/* ---------- long checks (review proposal 8) ---------- */
+
+.check-progress {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--info-line);
+  border-radius: var(--radius);
+  background: var(--info-bg);
+}
+.check-progress .spinner {
+  flex: none;
+  margin-top: 4px;
+}
+.check-progress-status {
+  font-weight: 600;
+  max-width: var(--measure);
+}
+.check-progress-time {
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+/* Results from the previous check while a newer one runs, failed or was cancelled: said in words, a dashed rule beside. */
+.previous-note {
+  margin-top: 8px;
+  padding: 6px 12px;
+  border-left: 3px dashed var(--line-strong);
+  color: var(--ink);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  max-width: var(--measure);
+}
+.cancel-note {
+  margin-top: 16px;
 }
 
 /* ---------- word prediction (2026-10-14) ---------- */
