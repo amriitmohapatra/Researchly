@@ -28,9 +28,9 @@ interface Props {
 /**
  * The reporting checklist in the Word pane (S4c; cautious statuses since
  * Codex review N1): the website's checklist in a narrow column. The
- * guideline, "Selected themes of <edition> — not a full compliance check",
+ * guideline, "Selected themes of <edition>, not a full compliance check",
  * the tally in words and the engine's note; then one row per item with its
- * topic and status ("Found — please confirm", "Partly there", "Needs your
+ * topic and status ("Found: please confirm", "Partly there", "Needs your
  * check", or the writer's call), the guideline's item numbers, the
  * question, and what it rests on: each part of a compound question with
  * its state, the writer's own sentence quoted, or the plain reason it

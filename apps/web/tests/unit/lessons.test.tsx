@@ -81,7 +81,7 @@ describe("the checklist view", () => {
   };
 
   it("reads as a document: edition, tally, the note, every item in order with topic, item numbers, question and a cautious status, then the source and the scope line", () => {
-    expect(screen).toContain('data-testid="checklist-edition">Selected themes of EPIFORGE 2020 — not a full compliance check.</p>');
+    expect(screen).toContain('data-testid="checklist-edition">Selected themes of EPIFORGE 2020, not a full compliance check.</p>');
     expect(screen).toContain('data-testid="checklist-tally">1 of 6 with possible evidence · 1 partly there · confirmed by you: 0</p>');
     expect(screen).toContain(esc(CHECKLIST.note));
     expect([...screen.matchAll(/data-item="([a-z-]+)"/g)].map((m) => m[1])).toEqual(CHECKLIST.items.map((i) => i.id));
@@ -90,7 +90,7 @@ describe("the checklist view", () => {
       expect(screen).toContain(esc(it.question));
     }
     expect(statuses(screen)).toEqual([
-      "Found — please confirm",
+      "Found: please confirm",
       "Needs your check",
       "Needs your check",
       "Partly there",
@@ -177,7 +177,7 @@ describe("the checklist view", () => {
     expect(paper).not.toContain("aria-live");
     expect(paper).toContain('class="checklist checklist-print"');
     expect(statuses(paper)).toEqual([
-      "Found — please confirm",
+      "Found: please confirm",
       "Needs your check",
       "Not applicable (the writer’s call)",
       "Confirmed by the writer",
@@ -185,6 +185,6 @@ describe("the checklist view", () => {
       "Needs your check",
     ]);
     expect(paper).toContain("1 of 6 with possible evidence · 1 partly there · confirmed by the writer: 1 · not applicable (the writer’s call): 1");
-    expect(paper).toContain("Selected themes of EPIFORGE 2020 — not a full compliance check.");
+    expect(paper).toContain("Selected themes of EPIFORGE 2020, not a full compliance check.");
   });
 });

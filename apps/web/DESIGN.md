@@ -201,7 +201,7 @@ own "Whole document" group so they are never lost. The chooser starts at
   checks again and opens the Checklist tab.
 - **The Checklist tab** (a fourth tab, only when a checklist ran) reads as
   a document at the reading measure with the brief's dividers: the label
-  and design; "Selected themes of PRISMA 2020 — not a full compliance
+  and design; "Selected themes of PRISMA 2020, not a full compliance
   check." (the engine's edition); the tally in words, semibold with
   tabular figures ("4 of 16 with possible evidence · 2 partly there ·
   confirmed by you: 1", then "not applicable (your call): N" when there
@@ -211,7 +211,7 @@ own "Whole document" group so they are never lost. The chooser starts at
   a numbered item"), its question, and the status in italic words.
 - **Cautious statuses (Codex review N1).** A matching sentence is possible
   evidence, never proof, so nothing is ever "reported" and nothing is a
-  score. "Found — please confirm": the writer's sentence quoted in the
+  score. "Found: please confirm": the writer's sentence quoted in the
   serif, with "Possible evidence:" for screen readers. "Partly there": a
   compound question part by part, each "Found:" (semibold, its sentence
   quoted under it) or "Needs your check:" (italic), then the reason in
@@ -382,7 +382,7 @@ jump.
   on its own page when one ran, and a footer saying nothing was stored.
   The checklist on paper uses the screen's cautious statuses, with the
   edition line and the tally, and no controls; it keeps four states apart
-  in words for whoever the page is handed to: "Found — please confirm"
+  in words for whoever the page is handed to: "Found: please confirm"
   (not confirmed), "Confirmed by the writer", "Not applicable (the
   writer's call)" and "Needs your check" (the tally says "confirmed by the
   writer: N").
@@ -502,7 +502,7 @@ column, the site's tokens, cards and notices; nothing new to learn.
   with its help line. A fourth tab, "Checklist", appears only when one
   was asked for, in the website's words (Codex review N1): the edition
   line and the tally, then per item its topic with the status beside it
-  ("Found — please confirm", "Partly there", or "Needs your check" in
+  ("Found: please confirm", "Partly there", or "Needs your check" in
   italic; the writer's call upright), the guideline's item numbers, the
   question, and the same detail as the site (parts, the quoted sentence or
   the plain reason, a sentence not counted, an absent section). "Confirmed

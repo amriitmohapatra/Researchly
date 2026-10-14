@@ -1118,11 +1118,11 @@ test.describe("reporting checklists (S4)", () => {
       await expect(items.nth(i).locator(".checklist-question")).toHaveText(it.question);
     }
     // Cautious statuses (Codex review N1): possible evidence to confirm, partly there, a prompt. Never "reported".
-    await expect(view.getByTestId("checklist-edition")).toHaveText("Selected themes of EPIFORGE 2020 — not a full compliance check.");
+    await expect(view.getByTestId("checklist-edition")).toHaveText("Selected themes of EPIFORGE 2020, not a full compliance check.");
     const tally = view.getByTestId("checklist-tally");
     await expect(tally).toHaveText("1 of 6 with possible evidence · 1 partly there · confirmed by you: 0");
     await expect(view.getByTestId("checklist-status")).toHaveText([
-      "Found — please confirm",
+      "Found: please confirm",
       "Needs your check · readers look in Introduction, Methods",
       "Needs your check · readers look in Results, Methods",
       "Partly there",
@@ -1162,7 +1162,7 @@ test.describe("reporting checklists (S4)", () => {
     await expect(view.getByTestId("checklist-live")).toHaveText("Model description: confirmed by you.");
     await page.keyboard.press("Space");
     await expect(confirm).toHaveAttribute("aria-pressed", "false");
-    await expect(items.nth(0).getByTestId("checklist-status")).toHaveText("Found — please confirm");
+    await expect(items.nth(0).getByTestId("checklist-status")).toHaveText("Found: please confirm");
     await expect(view.getByTestId("checklist-live")).toHaveText("Model description: confirmation undone.");
 
     // "Not applicable": the writer's call, this session only.
@@ -1326,7 +1326,7 @@ test.describe("the printed report's context (review R8)", () => {
     await expect(list.getByTestId("checklist-item")).toHaveCount(CHECKLIST.items.length);
     // Found but unconfirmed, not applicable, needs check, confirmed by the writer: kept apart on paper.
     await expect(list.locator(".checklist-status-word")).toHaveText([
-      "Found — please confirm",
+      "Found: please confirm",
       "Not applicable (the writer’s call)",
       "Needs your check",
       "Confirmed by the writer",
@@ -1336,7 +1336,7 @@ test.describe("the printed report's context (review R8)", () => {
     await expect(list.getByTestId("checklist-tally")).toHaveText(
       "1 of 6 with possible evidence · 1 partly there · confirmed by the writer: 1 · not applicable (the writer’s call): 1",
     );
-    await expect(list.getByTestId("checklist-edition")).toHaveText("Selected themes of EPIFORGE 2020 — not a full compliance check.");
+    await expect(list.getByTestId("checklist-edition")).toHaveText("Selected themes of EPIFORGE 2020, not a full compliance check.");
     await expect(list.getByRole("button")).toHaveCount(0);
     await expect(list).toContainText("This checks reporting only, never the science.");
     await page.emulateMedia({ media: "screen" });

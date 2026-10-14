@@ -645,10 +645,10 @@ test.describe("Word taskpane: the reporting checklist", () => {
     const items = list.getByTestId("checklist-item");
     await expect(items).toHaveCount(WORD_CHECKLIST.items.length);
     // The website's cautious words (Codex review N1), never "Reported".
-    await expect(list.getByTestId("checklist-edition")).toHaveText("Selected themes of STROBE (2007) — not a full compliance check.");
+    await expect(list.getByTestId("checklist-edition")).toHaveText("Selected themes of STROBE (2007), not a full compliance check.");
     const tally = list.getByTestId("checklist-tally");
     await expect(tally).toHaveText("1 of 4 with possible evidence · 1 partly there · confirmed by you: 0");
-    await expect(list.getByTestId("checklist-status")).toHaveText(["Partly there", "Needs your check", "Found — please confirm", "Needs your check"]);
+    await expect(list.getByTestId("checklist-status")).toHaveText(["Partly there", "Needs your check", "Found: please confirm", "Needs your check"]);
     await expect(list).not.toContainText("Reported");
     await expect(items.nth(0)).toContainText("Statistical methods");
     await expect(items.nth(0).getByTestId("checklist-refs")).toHaveText("STROBE (2007) item 12a");

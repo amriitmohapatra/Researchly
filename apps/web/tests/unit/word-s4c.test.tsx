@@ -97,16 +97,16 @@ describe("the reporting checklist in Word (S4c)", () => {
 
   it("renders the website's cautious list in a narrow column: edition, tally, topic and status, item numbers, question, what it rests on, the source", () => {
     const html = renderToStaticMarkup(<WordChecklist state={{ kind: "ready", report: REPORT }} />);
-    expect(itemStatusWord(REPORT.items[0]!)).toBe("Found — please confirm");
+    expect(itemStatusWord(REPORT.items[0]!)).toBe("Found: please confirm");
     expect(itemStatusWord(REPORT.items[1]!)).toBe("Needs your check");
     expect(itemStatusWord(REPORT.items[2]!)).toBe("Partly there");
     expect(itemStatusWord(REPORT.items[0]!, "confirmed")).toBe("Confirmed by you");
     expect(itemStatusWord(REPORT.items[1]!, "confirmed")).toBe("Needs your check"); // nothing found, nothing to confirm
     expect(itemStatusWord(REPORT.items[1]!, "not_applicable")).toBe("Not applicable (your call)");
     // An older engine's "reported" is still only possible evidence.
-    expect(itemStatusWord({ status: "reported" } as unknown as Pick<ChecklistItem, "status">)).toBe("Found — please confirm");
+    expect(itemStatusWord({ status: "reported" } as unknown as Pick<ChecklistItem, "status">)).toBe("Found: please confirm");
     expect(html).not.toMatch(/>Reported</);
-    expect(html).toContain('data-testid="checklist-edition">Selected themes of STROBE (2007) — not a full compliance check.</p>');
+    expect(html).toContain('data-testid="checklist-edition">Selected themes of STROBE (2007), not a full compliance check.</p>');
     expect(html).toContain('data-testid="checklist-tally">1 of 3 with possible evidence · 1 partly there · confirmed by you: 0</p>');
     expect(html).toContain("STROBE (2007) item 5");
     expect(html).toContain("Good practice, not a numbered item");

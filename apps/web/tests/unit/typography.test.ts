@@ -5,7 +5,8 @@ import { describe, expect, it } from "vitest";
 /**
  * The house typography for words a writer reads (Web Interface Guidelines;
  * DESIGN.md): a curly apostrophe (’), never a straight one, and the ellipsis
- * character (…), never three dots. Checked in the string literals and JSX
+ * character (…), never three dots, and no em dash (DESIGN.md's Reject
+ * list: a colon or a comma reads more calmly). Checked in the string literals and JSX
  * text of every source file a page is built from. Comments are skipped, and
  * so is lib/config.ts, whose messages fail a build and are read by a
  * developer, not a writer.
@@ -49,6 +50,10 @@ describe("typography in user-visible text", () => {
 
   it("uses the ellipsis character, never three dots (spread syntax aside)", () => {
     expect(FILES.flatMap((f) => offences(f, /\.\.\.(?![A-Za-z_$[({])/))).toEqual([]);
+  });
+
+  it("uses no em dash in UI copy", () => {
+    expect(FILES.flatMap((f) => offences(f, /—/))).toEqual([]);
   });
 
   it("catches what it is meant to", () => {

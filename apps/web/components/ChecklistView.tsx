@@ -30,10 +30,10 @@ interface Props {
  * The reporting checklist (S4; cautious statuses since Codex review N1):
  * the fourth view of a check, shown only when a checklist ran. Read top to
  * bottom as a document: the guideline and design, "Selected themes of
- * <edition> — not a full compliance check", the tally in words, the
+ * <edition>, not a full compliance check", the tally in words, the
  * engine's note, then every item in the guideline's order with its topic,
  * the guideline's own item numbers, its question and its status in words:
- * "Found — please confirm" (a matching sentence is possible evidence, not
+ * "Found: please confirm" (a matching sentence is possible evidence, not
  * proof), "Partly there" (each part of a compound question with its
  * state) or "Needs your check" (a prompt, never a verdict). The writer
  * can say "Confirmed by me" or "Not applicable" for this session; the

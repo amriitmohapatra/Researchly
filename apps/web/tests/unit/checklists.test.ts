@@ -101,7 +101,7 @@ describe("the checklist's words (Codex review N1)", () => {
 
   it("says every status in cautious words: possible evidence to confirm, partly there, or a prompt; never 'reported'", () => {
     expect(CHECKLIST_STATUS_WORD).toEqual({
-      found: "Found — please confirm",
+      found: "Found: please confirm",
       partial: "Partly there",
       needs_check: "Needs your check",
     });
@@ -116,7 +116,7 @@ describe("the checklist's words (Codex review N1)", () => {
     const found = item({ status: "found" });
     const partial = item({ status: "partial" });
     const open = item({ status: "needs_check" });
-    expect(statusWords(found, undefined)).toBe("Found — please confirm");
+    expect(statusWords(found, undefined)).toBe("Found: please confirm");
     expect(statusWords(found, "confirmed")).toBe("Confirmed by you");
     expect(statusWords(partial, "confirmed", "print")).toBe("Confirmed by the writer");
     expect(statusWords(open, "confirmed")).toBe("Needs your check");
@@ -141,8 +141,8 @@ describe("the checklist's words (Codex review N1)", () => {
 
   it("names the edition and the guideline's own item numbers, or says the item is good practice", () => {
     const r = { edition: "PRISMA 2020", label: "PRISMA" };
-    expect(editionLine(r)).toBe("Selected themes of PRISMA 2020 — not a full compliance check.");
-    expect(editionLine({ edition: "", label: "PRISMA" })).toBe("Selected themes of PRISMA — not a full compliance check.");
+    expect(editionLine(r)).toBe("Selected themes of PRISMA 2020, not a full compliance check.");
+    expect(editionLine({ edition: "", label: "PRISMA" })).toBe("Selected themes of PRISMA, not a full compliance check.");
     expect(itemRefsLine(item({ refs: ["6"] }), r)).toBe("PRISMA 2020 item 6");
     expect(itemRefsLine(item({ refs: ["13a", "13b"] }), r)).toBe("PRISMA 2020 items 13a and 13b");
     expect(itemRefsLine(item({ refs: ["1", "2", "3"] }), r)).toBe("PRISMA 2020 items 1, 2 and 3");

@@ -95,7 +95,7 @@ export function itemStatus(item: Pick<ChecklistItem, "status">): ItemStatus {
 
 /** The status in words, on screen and on paper alike: never "reported", never a colour, never a score. */
 export const CHECKLIST_STATUS_WORD: Record<ItemStatus, string> = {
-  found: "Found — please confirm",
+  found: "Found: please confirm",
   partial: "Partly there",
   needs_check: "Needs your check",
 };
@@ -137,9 +137,9 @@ function editionOf(report: Pick<ChecklistReport, "edition" | "label">): string {
   return (report.edition ?? "").trim() || report.label;
 }
 
-/** The guideline and its version, and what the list is not: "Selected themes of PRISMA 2020 — not a full compliance check." */
+/** The guideline and its version, and what the list is not: "Selected themes of PRISMA 2020, not a full compliance check." */
 export function editionLine(report: Pick<ChecklistReport, "edition" | "label">): string {
-  return `Selected themes of ${editionOf(report)} — not a full compliance check.`;
+  return `Selected themes of ${editionOf(report)}, not a full compliance check.`;
 }
 
 function joinWith(xs: readonly string[], last: string): string {
