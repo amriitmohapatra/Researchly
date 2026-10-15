@@ -46,7 +46,7 @@ from researchly import wordloc                         # noqa: E402
 from researchly import packs as packs_mod              # noqa: E402
 from researchly import shapes                          # noqa: E402
 from researchly.document import cell_place            # noqa: E402
-from researchly.profiles import DOCUMENT_TYPES         # noqa: E402
+from researchly.profiles import DOCUMENT_TYPES, SCOPES  # noqa: E402
 
 _NLP_LOCK = threading.Lock()
 
@@ -147,7 +147,7 @@ MODES = ("draft", "revise")
 # Every option of the contract's AnalyzeOptions (packages/contract).
 OPTION_KEYS = {"show_preferences", "disabled_rules", "mode",
                "document_type", "spelling", "review", "narrative",
-               "checklist"}
+               "checklist", "document_scope"}
 CHECKLISTS = {"auto"} | set(packs_mod.checklists())
 # The live check's limits, as the hosted engine's (services/engine
 # schemas.py, packages/contract MAX_LIVE_*): a service test posts the
@@ -281,6 +281,10 @@ def _parse_options(opts: dict) -> tuple:
     if checklist is not None and checklist not in CHECKLISTS:
         raise bad("checklist must be one of " + ", ".join(sorted(CHECKLISTS)))
     extra["checklist"] = checklist
+    scope = opts.get("document_scope")
+    if scope is not None and scope not in SCOPES:
+        raise bad("document_scope must be one of " + ", ".join(SCOPES))
+    extra["document_scope"] = scope
     return prefs, disabled, mode, extra
 
 
@@ -441,7 +445,8 @@ def analyze_word(payload) -> dict:
     a = api.analyze(paragraphs, nlp=get_nlp(), cfg=cfg,
                     with_review=extra["review"],
                     with_narrative=extra["narrative"],
-                    checklist=extra["checklist"])
+                    checklist=extra["checklist"],
+                    document_scope=extra["document_scope"])
     doc = a.document
     out = {
         "schema_version": SCHEMA_VERSION,
@@ -459,7 +464,7 @@ def analyze_word(payload) -> dict:
         "elapsed_ms": 0,
         "warnings": list(doc.warnings) if doc is not None else [],
         "coverage": wordloc.coverage(paragraphs, doc),
-        **shapes.extras(a),
+        **shapes.extras(a, locate=wordloc.locator(doc, paragraphs)),
     }
     out["elapsed_ms"] = int(round((time.perf_counter() - t0) * 1000))
     return out

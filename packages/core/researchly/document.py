@@ -101,7 +101,7 @@ def resolve_sections(headings: list["Heading"]) -> None:
     for h in sorted(headings, key=lambda h: h.start):
         if not h.keyword:
             h.keyword = h.section
-        own, named = h.keyword, is_section_name(h.text)
+        own, named = h.inferred or h.keyword, is_section_name(h.text)
         if h.level is None:
             stack = []
             h.section = own
@@ -149,6 +149,11 @@ class Heading:
     # The heading's own classification; `section` is the effective one
     # after resolve_sections().
     keyword: str = ""
+    # For a topical heading ("Experiment 1: the baseline SEIR"), the section
+    # its own wording reads as ("methods", "results"), set by
+    # profiles.infer_topical_sections; "" otherwise. It stands in for the
+    # keyword the heading lacks (Codex review #4).
+    inferred: str = ""
 
 
 @dataclass

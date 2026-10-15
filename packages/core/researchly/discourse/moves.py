@@ -155,6 +155,60 @@ _STILL_OPEN = (
     r"\bcannot yet\b", r"\bnot yet (?:known|clear|possible|able)\b",
 )
 
+# A policy brief's units (discourse/units.py; Codex review #4). The
+# signals are deliberately plain: a unit's move is "present" only when its
+# wording says so, and the map never judges a brief by a research paper's
+# moves.
+_PROBLEM = (
+    r"\b(?:is|are|remains?|has become|have become) (?:a |an |the )?(?:major|"
+    r"growing|serious|persistent|rising|leading|urgent|costly|key)\b",
+    r"\b(?:rising|rose|falling|fell|increased|decreased|declined|doubled|"
+    r"halved|grew)\b",
+    r"\b(?:each|every|per|a) (?:year|month|week|season)\b",
+    r"\b(?:costs?|burden|deaths|cases|outbreaks?|admissions|shortfall|"
+    r"backlog)\b",
+    r"\b(?:now|currently|at present|this year|since 20\d\d)\b",
+)
+_BRIEF_EVIDENCE = (
+    r"\b\d+(?:\.\d+)?\s?(?:%|per cent|percent)",
+    r"\b(?:studies|trials?|surveys?|evaluations?|reviews?|data|evidence|"
+    r"modelling|modeling) (?:show|shows|showed|found|find|suggest|suggests|"
+    r"indicate|indicates|from)\b",
+    r"\b(?:table|figure) \d+\b", r"\bet al\b", r"\((?:19|20)\d{2}[a-z]?\)",
+    r"\[\d+(?:[,–-]\s?\d+)*\]",
+    r"\b(?:compared with|relative to|than in)\b",
+)
+_OPTIONS = (
+    r"\boption (?:\d+|[a-c]|one|two|three)\b",
+    r"\b(?:first|second|third|another|an alternative|the alternative|"
+    r"a further) (?:option|approach|choice|policy)\b",
+    r"\b(?:options?|alternatives?) (?:are|is|include|would|could)\b",
+    r"\b(?:alternatively|instead)\b",
+)
+_TRADEOFFS = (
+    r"\b(?:would|could|might|will) (?:cost|save|avert|prevent|reduce|"
+    r"increase|require|need|take|reach|delay|raise|lower)\b",
+    r"\btrade-?offs?\b", r"\bat (?:a|the) (?:cost|price|expense) of\b",
+    r"\b(?:costs?|benefits?|risks?|downsides?|feasib\w+|affordab\w+|"
+    r"acceptab\w+)\b",
+)
+_RECOMMEND = (
+    r"\b(?:should|must|ought to|needs? to)\b",
+    r"\b(?:we|the authors) (?:recommend|propose|urge|call on|advise)\b",
+    r"\b(?:is|are) (?:recommended|advised|urged)\b",
+    r"\brecommend(?:s|ed)? that\b",
+)
+_RECOMMEND_WHO = (
+    r"\b(?:the )?(?:ministry|ministries|government|governments|department|"
+    r"agency|agencies|council|councils|authority|authorities|regulator|"
+    r"providers?|clinics?|hospitals?|schools?|employers?|funders?|"
+    r"programmes?|programs?|parliament|legislators?|policymakers|"
+    r"commissioners?|managers?|boards?)\b[^.;]*\b(?:should|must|needs? to|"
+    r"ought to|is (?:asked|urged) to)\b",
+    r"\b(?:within|by|before|over the next) (?:\w+ )?(?:days?|weeks?|months?|"
+    r"years?|20\d\d)\b",
+)
+
 MOVES: dict = {m.id: m for m in (
     Move("territory", "Why it matters",
          "Does the opening say why this area matters?",
@@ -329,6 +383,62 @@ MOVES: dict = {m.id: m for m in (
          "this work adds]. What is still open is [the question], which "
          "[a named study or data] could settle.”",
          _STILL_OPEN),
+    Move("problem", "The problem, and why now",
+         "Does the Context say what the problem is, for whom, and why it "
+         "needs a decision now?",
+         "YoungQuinn2002",
+         "A decision-maker reads a brief because something needs deciding. "
+         "Open with the problem in plain terms: its size, who it affects, "
+         "and what makes it urgent now.",
+         "“[Problem] affects [who] in [setting], and [what has changed] "
+         "makes a decision needed by [when].”",
+         _PROBLEM),
+    Move("brief_evidence", "What the evidence shows",
+         "Does the Evidence give the numbers or studies the "
+         "recommendations rest on?",
+         "YoungQuinn2002+§9.8",
+         "A recommendation is only as strong as what stands behind it. "
+         "Give the few numbers that matter, where they come from, and how "
+         "certain they are.",
+         "“[Source] found that [finding, with its size and its "
+         "uncertainty] in [setting].”",
+         _BRIEF_EVIDENCE),
+    Move("options_set_out", "The options",
+         "Do the Options set out more than one course of action?",
+         "YoungQuinn2002",
+         "A brief that offers one option asks for a signature, not a "
+         "decision. Set out the realistic choices, including keeping the "
+         "current policy, so the reader can see what is being weighed.",
+         "“Option 1 is to [action]. Option 2 is to [action]. A third "
+         "choice is to keep [the current policy].”",
+         _OPTIONS),
+    Move("tradeoffs", "What each option would cost or achieve",
+         "Do the Options say what each one would achieve, and at what "
+         "cost or risk?",
+         "YoungQuinn2002",
+         "Options are compared on what they would do: the benefit, the "
+         "cost, who carries it, and how feasible it is. Say it for each "
+         "option, in the same terms, so they can be weighed.",
+         "“[Option] would [benefit] at a cost of [cost], but [risk or "
+         "limit].”",
+         _TRADEOFFS),
+    Move("recommendation", "A clear recommendation",
+         "Do the Recommendations say what should be done?",
+         "YoungQuinn2002+§9.8",
+         "End with the action you recommend, stated as an action, not as "
+         "a hope: what should be done, and which option it follows from.",
+         "“We recommend that [who] [does what], because [the evidence "
+         "above].”",
+         _RECOMMEND),
+    Move("who_when", "Who acts, and by when",
+         "Does each recommendation name who should act, and by when?",
+         "YoungQuinn2002",
+         "A recommendation nobody owns is not acted on. Name the body that "
+         "should act and a time frame, so the reader knows what is being "
+         "asked of whom.",
+         "“[The ministry / the agency] should [action] within [time "
+         "frame].”",
+         _RECOMMEND_WHO),
 )}
 
 # What each section is expected to do, in order. Sections not listed
@@ -354,6 +464,16 @@ PROFILE_SCHEMAS: dict = {
         "methods": ("data", "analysis", "design_limit"),
         "conclusion": ("contribution", "implications", "still_open"),
     },
+}
+
+
+# A policy brief's units (discourse/units.py): mapped instead of the
+# research sections when the brief is organised by them (Codex review #4).
+UNIT_SCHEMAS: dict = {
+    "context": ("problem",),
+    "evidence": ("brief_evidence",),
+    "options": ("options_set_out", "tradeoffs"),
+    "recommendations": ("recommendation", "who_when"),
 }
 
 

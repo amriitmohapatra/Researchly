@@ -21,6 +21,7 @@ import type {
   AnalyzeWordResponse,
   CheckParagraphsRequest,
   CheckParagraphsResponse,
+  DocumentScope,
   DocumentType,
   Format,
   HealthResponse,
@@ -66,6 +67,8 @@ export interface CheckParams {
   narrative?: boolean;
   /** A reporting checklist to check against (S4): a guideline's id, or "auto". Omitted: none. */
   checklist?: ChecklistChoice | null;
+  /** How much of the document the text is (Codex review #4). Omitted or "auto": the engine infers it. */
+  documentScope?: DocumentScope | null;
   /**
    * Draft or Revise. The website is the revision studio and always sends
    * "revise", so a Draft choice saved from Word never silently hides the
@@ -83,6 +86,7 @@ export function analysisOptions(p: {
   review?: boolean;
   narrative?: boolean;
   checklist?: ChecklistChoice | null;
+  documentScope?: DocumentScope | null;
   mode?: Mode;
 }): AnalyzeOptions {
   return {
@@ -95,6 +99,9 @@ export function analysisOptions(p: {
     // Only when the writer (or their account, or this browser) has a choice:
     // leaving it out lets the engine apply the account's saved one.
     ...(p.spelling ? { spelling: p.spelling } : {}),
+    // Only a writer's own choice: "auto" is the engine's default, and an
+    // engine from before scopes would refuse a field it does not know.
+    ...(p.documentScope && p.documentScope !== "auto" ? { document_scope: p.documentScope } : {}),
   };
 }
 
@@ -142,7 +149,10 @@ export async function withBearer<T>(
 }
 
 export function buildRequest(
-  p: Pick<CheckParams, "content" | "format" | "showPreferences" | "documentType" | "spelling" | "review" | "narrative" | "checklist" | "mode">,
+  p: Pick<
+    CheckParams,
+    "content" | "format" | "showPreferences" | "documentType" | "spelling" | "review" | "narrative" | "checklist" | "documentScope" | "mode"
+  >,
 ): AnalyzeRequest {
   return {
     content: p.content,
@@ -275,6 +285,7 @@ export interface FileCheckParams {
   review?: boolean;
   narrative?: boolean;
   checklist?: ChecklistChoice | null;
+  documentScope?: DocumentScope | null;
   mode?: Mode;
   signal?: AbortSignal;
 }
@@ -334,6 +345,7 @@ export async function analyzeFile(
           review: p.review,
           narrative: p.narrative,
           checklist: p.checklist,
+          documentScope: p.documentScope,
           mode: p.mode,
         },
         token,
@@ -439,13 +451,15 @@ export interface WordCheckParams {
   narrative?: boolean;
   /** A reporting checklist (S4): a guideline's id, or "auto"; omitted: none. */
   checklist?: ChecklistChoice | null;
+  /** How much of the document this is (Codex review #4); omitted or "auto": inferred. */
+  documentScope?: DocumentScope | null;
   signal?: AbortSignal;
 }
 
 export function buildWordRequest(
   p: Pick<
     WordCheckParams,
-    "paragraphs" | "showPreferences" | "mode" | "disabledRules" | "documentType" | "spelling" | "review" | "narrative" | "checklist"
+    "paragraphs" | "showPreferences" | "mode" | "disabledRules" | "documentType" | "spelling" | "review" | "narrative" | "checklist" | "documentScope"
   >,
 ): AnalyzeWordRequest {
   return {

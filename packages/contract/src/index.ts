@@ -61,6 +61,13 @@ export type LearnResponse = S["LearnResponse"];
 export type ReadingSummary = S["ReadingSummary"];
 export type TableEvidence = S["TableEvidence"];
 export type SetAside = S["SetAside"];
+// Evidence-linked brief and genre-native profiles (Codex review #3, #4).
+export type EvidenceSpan = S["EvidenceSpan"];
+export type EvidenceLink = S["EvidenceLink"];
+export type ReviewerUnit = S["ReviewerUnit"];
+export type DocumentScope = S["DocumentScope"];
+export type ScopeInfo = S["ScopeInfo"];
+export type TopicalSection = S["TopicalSection"];
 
 // The live check (S4d R3): POST /v1/check-paragraphs.
 export type CheckParagraphsRequest = S["CheckParagraphsRequest"];
