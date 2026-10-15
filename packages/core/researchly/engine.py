@@ -216,6 +216,11 @@ def check(document: Document, nlp, *,
         for s in r.func(spacy_doc, document):
             if not _trim_to_prose(s, document):
                 continue
+            # A LaTeX footnote is read where it is cited, spliced into the
+            # sentence it interrupts; evidence that reads across the splice
+            # ("every district Counts", "counts Counts") is not the writer's.
+            if document.asides and document.crosses_aside(s.start, s.end):
+                continue
             s.rule_id, s.rule_name, s.category = r.id, r.name, r.category
             # Carry the explanation and provenance on the suggestion itself.
             # Every surface used to re-join these out of REGISTRY by hand.

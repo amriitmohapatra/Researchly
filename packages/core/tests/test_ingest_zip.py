@@ -52,6 +52,11 @@ def assert_round_trip(doc, files):
         assert seg.start == pos and seg.end > seg.start
         src = files[seg.path]
         n = seg.end - seg.start
+        if seg.source_start == len(src) and not src.endswith("\n"):
+            # TeX's end of line after an input file that lacks one
+            assert doc.original[seg.start:seg.end] == "\n"
+            pos = seg.end
+            continue
         assert doc.original[seg.start:seg.end] == \
             src[seg.source_start:seg.source_start + n]
         pos = seg.end
@@ -109,6 +114,43 @@ def test_section_awareness_and_spelling_survive_the_project():
     assert [s.section for s in g104] == ["results"]   # Methods stays quiet
     spelled = [doc.original[s.start:s.end] for s in out if s.rule_id == "S001"]
     assert spelled == ["mispeled"]
+
+
+def test_tex_ends_an_input_file_with_an_end_of_line():
+    # PLAN S2 known gap: a child whose last line is a `%` comment with no
+    # final newline swallowed the text after `\input{x}` on the same line.
+    main = ("\\documentclass{article}\n\\begin{document}\n"
+            "\\section{Results}\n"
+            "\\input{note} The weekly counts rose in every ward.\n"
+            "\\input{tail}continued here.\n"
+            "\\end{document}\n")
+    files = {"main.tex": main,
+             "note.tex": "Cases were counted each week. % a draft remark",
+             "tail.tex": "The rate fell and it"}
+    doc = load(files)
+    assert_round_trip(doc, files)
+    assert "The weekly counts rose in every ward." in doc.masked
+    assert "it\ncontinued here." in doc.masked        # not "itcontinued"
+    out = check(doc, NLP, show_preferences=True, disabled={"LT001"})
+    assert not [s for s in out if s.rule_id == "S001"]
+    at = doc.original.find("The weekly counts")
+    assert source_position(doc.segments, doc.original, at)[:2] == \
+        ("main.tex", 4)
+    at = doc.original.find("continued here")
+    assert source_position(doc.segments, doc.original, at)[:2] == \
+        ("main.tex", 5)
+
+
+def test_an_input_file_is_joined_as_before_when_nothing_follows_it():
+    # Only text after the command on the same line needs TeX's end of line:
+    # otherwise the combined text is the files' text, character for character.
+    files = {"main.tex": "\\documentclass{article}\n\\begin{document}\n"
+                         "\\input{a}\n\\end{document}\n",
+             "a.tex": "No final newline here % a remark"}
+    doc = load(files)
+    assert len(doc.segments) == 3
+    assert doc.original == files["main.tex"].replace(
+        "\\input{a}", "\\input{a}" + files["a.tex"])
 
 
 def test_missing_cycle_and_depth_skip_with_warnings():

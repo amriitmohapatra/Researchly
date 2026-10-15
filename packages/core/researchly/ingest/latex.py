@@ -173,10 +173,44 @@ class LatexMask:
     # \footnote{...} is read as prose where it is cited; the coverage
     # summary says so ("including 3 footnotes").
     footnotes: int = 0
+    # The text of each footnote (inside its braces): read where it is cited,
+    # but not part of the sentence it interrupts (Document.asides).
+    asides: list[tuple[int, int]] = field(default_factory=list)
 
 
 _FOOTNOTE = re.compile(r"\\footnote(?:text)?\s*[\[{]")
 _COMMENT_START = re.compile(r"(?<!\\)%")
+
+
+def _footnote_spans(text: str) -> list[tuple[int, int]]:
+    """The inside of every `\\footnote{...}` outside comments, by brace
+    matching: the asides the simpler readers report."""
+    spans = []
+    for m in _FOOTNOTE.finditer(text):
+        line_start = text.rfind("\n", 0, m.start()) + 1
+        if _COMMENT_START.search(text, line_start, m.start()):
+            continue
+        p = m.end() - 1
+        if text[p] == "[":                       # \footnote[3]{...}
+            close = text.find("]", p)
+            p = text.find("{", close) if close != -1 else -1
+            if p == -1:
+                continue
+        depth, q = 0, p
+        while q < len(text):
+            c = text[q]
+            if c == "\\":
+                q += 2
+                continue
+            if c == "{":
+                depth += 1
+            elif c == "}":
+                depth -= 1
+                if depth == 0:
+                    spans.append((p + 1, q))
+                    break
+            q += 1
+    return spans
 
 
 def _count_footnotes(text: str) -> int:
@@ -227,7 +261,8 @@ def mask_latex(text: str,
     except Exception:
         pass
     return LatexMask(masked, headings, [], [reason],
-                     inline_atoms(text, "latex"), _count_footnotes(text))
+                     inline_atoms(text, "latex"), _count_footnotes(text),
+                     _footnote_spans(text))
 
 
 # On the P29 projects the lenient parse kept 99% of the words where it
@@ -424,6 +459,74 @@ def _context():
     return db
 
 
+# A macro the document defines for itself: `\newcommand{\Set}[1]{...}`,
+# `\renewcommand\H{...}`, `\def\H{H}`, `\def\pair#1#2{...}`.
+_DEFINES = re.compile(
+    r"\\(?:(?:renew|provide|new)command|DeclareRobustCommand)\*?\s*"
+    r"(?:\{\s*\\([A-Za-z]+)\s*\}|\\([A-Za-z]+))\s*(?:\[\s*(\d)\s*\])?"
+    r"|\\[gex]?def\s*\\([A-Za-z]+)((?:#\d)*)\s*\{")
+# Macros whose argument structure the reader itself depends on: a document
+# that redefines one keeps the parser's reading of it.
+_STRUCTURAL = (HEADING_MACROS | CAPTION_MACROS | CITE_MACROS | MASK_WHOLE
+               | CODE_MACROS | {"footnote", "footnotetext", "href", "begin",
+                                "end", "item"})
+_REDEFINED: dict = {}
+
+
+def redefined_macros(text: str) -> dict[str, int]:
+    """Built-in macros the document redefines to take FEWER arguments than
+    pylatexenc expects, with the count the document gives them.
+
+    pylatexenc knows `\\H` as the Hungarian accent, which takes one
+    argument; a paper that says `\\def\\H{H}` and writes `$\\H$` lost its
+    closing `$` to the accent, and every `$` after it was read the wrong
+    way round (P29: the "custom `\\Set` macro" project, where `\\Set` was
+    innocent). Only fewer arguments matter: a macro read with too few
+    leaves its extra `{...}` as an ordinary group, which reads the same."""
+    base = _context()
+    found: dict[str, int] = {}
+    for line in text.splitlines():
+        line = _COMMENT_START.split(line, 1)[0]
+        if "\\" not in line:
+            continue
+        for m in _DEFINES.finditer(line):
+            name = m.group(1) or m.group(2) or m.group(4)
+            if m.group(4):
+                n = m.group(5).count("#")
+            else:
+                n = int(m.group(3) or 0)
+            if name in _STRUCTURAL:
+                continue
+            spec = base.get_macro_spec(name)
+            if spec is None or spec is base.unknown_macro_spec:
+                continue
+            argspec = getattr(spec.args_parser, "argspec", None)
+            if argspec is None:
+                continue
+            if argspec.count("{") > n:
+                found[name] = n
+    return found
+
+
+def _document_context(text: str):
+    """The shared context, or a copy that reads the document's own
+    redefinitions of built-in macros the way the document defines them."""
+    over = redefined_macros(text)
+    if not over:
+        return _context()
+    key = tuple(sorted(over.items()))
+    if key not in _REDEFINED:
+        from pylatexenc.macrospec import MacroSpec
+        db = _context().filter_context()
+        db.add_context_category(
+            "document", prepend=True,
+            macros=[MacroSpec(name, "{" * n) for name, n in key])
+        if len(_REDEFINED) > 64:          # bounded: one per distinct set
+            _REDEFINED.clear()
+        _REDEFINED[key] = db
+    return _REDEFINED[key]
+
+
 # ---------------------------------------------------------------------------
 # The walk
 # ---------------------------------------------------------------------------
@@ -460,11 +563,13 @@ class _Masker:
         # Brace groups still to drop after a DEFINITION_MACROS call.
         self.skip_definition = 0
         self.footnotes = 0
+        self.asides: list[tuple[int, int]] = []
 
     def run(self) -> LatexMask:
         from pylatexenc import latexwalker as lw
         self.lw = lw
-        walker = lw.LatexWalker(self.text, latex_context=_context(),
+        walker = lw.LatexWalker(self.text,
+                                latex_context=_document_context(self.text),
                                 tolerant_parsing=self.tolerant)
         # With a \begin{document}, only its body is prose and only it is
         # parsed: the preamble is configuration (and full of definitions
@@ -491,7 +596,9 @@ class _Masker:
         return LatexMask("".join(self.out[:self.n]), self.headings,
                          self.structure, [],
                          [(a, min(b, self.n)) for a, b in self.atoms if a < self.n],
-                         self.footnotes)
+                         self.footnotes,
+                         [(a, min(b, self.n)) for a, b in self.asides
+                          if a < self.n])
 
     # -- primitives ---------------------------------------------------------
 
@@ -593,6 +700,9 @@ class _Masker:
         if name in ("footnote", "footnotetext") and prose and args \
                 and args[-1] is not None:
             self.footnotes += 1
+            arg = args[-1]
+            if self.text[arg.pos:arg.pos + 1] == "{":
+                self.asides.append((arg.pos + 1, arg.pos + arg.len - 1))
         if name in HEADING_MACROS:
             if prose and args and args[-1] is not None:
                 self.heading(n, args[-1])

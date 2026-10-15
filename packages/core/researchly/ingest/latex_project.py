@@ -19,11 +19,12 @@ ignored. A missing or non-UTF-8 input, a cycle or nesting deeper than
 MAX_DEPTH is skipped with a warning rather than failing the whole project.
 TeX is never executed and nothing is extracted to disk.
 
-Known approximation: TeX ends every input file with an implicit end of
-line; here the child's text is joined to the parent's directly (inserting a
-character would break the segment map). It only matters when text follows
-`\\input{x}` on the same line and x ends in a `%` comment with no final
-newline: that text is then masked as part of the comment.
+TeX ends every input file with an end of line, whether or not the file
+does. When text follows `\\input{x}` on the same line and x has no final
+newline, that end of line is added as a one-character segment of x's own,
+at x's end (the only segment that is not a slice of its file); without it
+the text was joined to x's last word, or masked as part of x's closing `%`
+comment.
 """
 
 from __future__ import annotations
@@ -214,6 +215,17 @@ def expand(files: dict[str, str | None],
                                 source_start=a))
         total += b - a
 
+    def end_of_line(path: str) -> None:
+        """TeX's implicit end of line after an input file that lacks one."""
+        nonlocal total
+        src = files[path]
+        if not src or src.endswith("\n"):
+            return
+        parts.append("\n")
+        segments.append(Segment(path=path, start=total, end=total + 1,
+                                source_start=len(src)))
+        total += 1
+
     def warn(message: str) -> None:
         if message not in warnings:
             warnings.append(message)
@@ -246,6 +258,10 @@ def expand(files: dict[str, str | None],
                      "files deep; skipped.")
             else:
                 visit(child, stack + [child])
+                eol = src.find("\n", m.end())
+                rest = src[m.end():eol if eol != -1 else len(src)]
+                if rest.strip():          # text follows on the same line
+                    end_of_line(child)
         emit(path, src, pos, len(src))
 
     if files[main] is None:
