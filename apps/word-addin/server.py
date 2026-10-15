@@ -4,12 +4,14 @@ Serves the taskpane web app and a /check endpoint, all on localhost.
 Everything runs on your machine — no document text ever leaves it.
 
 S3: it is also the hosted add-in's "This computer" engine (ADR-02 local
-mode). `POST /v1/analyze-word` and `GET /v1/health` answer with the same
-contract shapes as the hosted engine (packages/contract), so the taskpane
+mode). `POST /v1/analyze-word`, `POST /v1/check-paragraphs` (the live
+check of the desktop overlays, S4d R3) and `GET /v1/health` answer with the
+same contract shapes as the hosted engine (packages/contract), so the taskpane
 at https://researchly-chi.vercel.app/word can check against this machine
 instead of the cloud. Only that page's origin (and the dev server's) may
 call them from a browser (CORS, with the private-network preflight a
-public HTTPS page needs to reach localhost).
+public HTTPS page needs to reach localhost). A native client (the macOS and
+Windows overlays) sends no Origin header and is accepted only over loopback.
 
 Usage:
     python server.py            # http://localhost:3517
@@ -25,6 +27,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
 import threading
 import time
@@ -146,6 +149,20 @@ OPTION_KEYS = {"show_preferences", "disabled_rules", "mode",
                "document_type", "spelling", "review", "narrative",
                "checklist"}
 CHECKLISTS = {"auto"} | set(packs_mod.checklists())
+# The live check's limits, as the hosted engine's (services/engine
+# schemas.py, packages/contract MAX_LIVE_*): a service test posts the
+# service's own refused and accepted bodies here.
+MAX_LIVE_PARAGRAPHS = 50
+MAX_LIVE_CHARS = 20_000
+MAX_LIVE_HEADING_CHARS = 300
+MAX_REVISION = 2 ** 53 - 1
+PARAGRAPH_ID = re.compile(r"[A-Za-z0-9._:-]{1,64}")
+LIVE_KEYS = {"id", "text", "style", "heading"}
+# A request without an Origin header comes from a native client (the
+# desktop overlays); only this machine's own may use this engine.
+LOOPBACK = frozenset({"127.0.0.1", "::1", "::ffff:127.0.0.1"})
+V1_POST_ROUTES = ("/v1/analyze-word", "/v1/check-paragraphs")
+_LIVE_LOCK = threading.Lock()
 # Tiers whose being off never makes this engine "degraded" (as the hosted one).
 _OPTIONAL_STATES = {"gec": {"missing", "disabled"}}
 
@@ -227,6 +244,15 @@ def parse_word_request(payload) -> tuple:
     opts = payload.get("options") or {}
     if not isinstance(opts, dict) or set(opts) - OPTION_KEYS:
         raise bad("options must be {" + ", ".join(sorted(OPTION_KEYS)) + "}")
+    prefs, disabled, mode, extra = _parse_options(opts)
+    return clean, prefs, disabled, mode, extra
+
+
+def _parse_options(opts: dict) -> tuple:
+    """The contract's AnalyzeOptions, validated: (show_preferences,
+    disabled_rules, mode, extra). Keys outside the contract are left to the
+    caller: /v1/analyze-word refuses them, the live check ignores them."""
+    bad = lambda msg: ContractError(422, "invalid_request", msg)  # noqa: E731
     prefs = opts.get("show_preferences", False)
     if not isinstance(prefs, bool):
         raise bad("show_preferences must be true or false")
@@ -255,7 +281,7 @@ def parse_word_request(payload) -> tuple:
     if checklist is not None and checklist not in CHECKLISTS:
         raise bad("checklist must be one of " + ", ".join(sorted(CHECKLISTS)))
     extra["checklist"] = checklist
-    return clean, prefs, disabled, mode, extra
+    return prefs, disabled, mode, extra
 
 
 def _word_suggestion(s, doc, paragraphs: list) -> dict:
@@ -285,15 +311,10 @@ def _word_suggestion(s, doc, paragraphs: list) -> dict:
     }
 
 
-def analyze_word(payload) -> dict:
-    """POST /v1/analyze-word: an AnalyzeWordResponse, computed here.
-
-    Settings: this computer's shared config (~/.researchly/config.toml,
-    which every local surface reads), plus the request's options, which can
-    only ADD mutes (as on the hosted engine); the request's mode wins.
-    """
-    t0 = time.perf_counter()
-    paragraphs, prefs, disabled, mode, extra = parse_word_request(payload)
+def _config(prefs: bool, disabled: list, mode, extra: dict):
+    """This computer's shared config (~/.researchly/config.toml, which every
+    local surface reads), plus a request's options, which can only ADD
+    mutes (as on the hosted engine); the request's own choices win."""
     cfg = config_mod.load()
     cfg.show_preferences = bool(cfg.show_preferences or prefs)
     cfg.disabled = set(cfg.disabled) | set(disabled)
@@ -303,6 +324,120 @@ def analyze_word(payload) -> dict:
         cfg.document_type = extra["document_type"]
     if extra["spelling"] is not None:
         cfg.spelling = extra["spelling"]
+    return cfg
+
+
+def _degraded(tiers: list) -> bool:
+    """A tier this engine is set to run is not ok (as the hosted engine's
+    engine_adapter.is_degraded): one switched off, or the opt-in learned
+    tier without a model, is not an outage."""
+    return any(
+        not t["ok"] and t["state"] != "disabled"
+        and t["state"] not in _OPTIONAL_STATES.get(t["tier"], set())
+        for t in tiers)
+
+
+def parse_live_request(payload) -> tuple:
+    """Validate a CheckParagraphsRequest by hand, with the hosted engine's
+    limits: (revision, paragraphs, show_preferences, disabled, extra).
+    Option keys this engine does not know are ignored, as there; a known
+    one with a bad value is refused. A service test posts the hosted
+    engine's own refused and accepted bodies here."""
+    bad = lambda msg: ContractError(422, "invalid_request", msg)  # noqa: E731
+    if not isinstance(payload, dict):
+        raise bad("the body must be a JSON object")
+    extra_keys = set(payload) - {"revision", "paragraphs", "options"}
+    if extra_keys:
+        raise bad(f"unknown field(s): {', '.join(sorted(extra_keys))}")
+    revision = payload.get("revision")
+    if (isinstance(revision, bool) or not isinstance(revision, int)
+            or not 0 <= revision <= MAX_REVISION):
+        raise bad("revision must be a whole number from 0 to 2^53 - 1")
+    paras = payload.get("paragraphs")
+    if (not isinstance(paras, list) or not paras
+            or len(paras) > MAX_LIVE_PARAGRAPHS):
+        raise bad(f"paragraphs must be a list of 1 to "
+                  f"{MAX_LIVE_PARAGRAPHS} paragraphs")
+    clean, seen, total = [], set(), 0
+    for i, p in enumerate(paras):
+        if not isinstance(p, dict) or set(p) - LIVE_KEYS:
+            raise bad(f"paragraph {i} must be {{id, text, style, heading}}")
+        pid, text = p.get("id"), p.get("text")
+        style, heading = p.get("style", ""), p.get("heading", "")
+        if not isinstance(pid, str) or not PARAGRAPH_ID.fullmatch(pid):
+            raise bad(f"paragraph {i}: id must be 1 to 64 letters, digits "
+                      "or . _ : -")
+        if not isinstance(text, str) or len(text) > MAX_LIVE_CHARS:
+            raise bad(f"paragraph {i}: text must be a string of at most "
+                      f"{MAX_LIVE_CHARS:,} characters")
+        if not isinstance(style, str) or len(style) > MAX_STYLE_CHARS:
+            raise bad(f"paragraph {i}: style must be a string of at most "
+                      f"{MAX_STYLE_CHARS} characters")
+        if not isinstance(heading, str) or len(heading) > MAX_LIVE_HEADING_CHARS:
+            raise bad(f"paragraph {i}: heading must be a string of at most "
+                      f"{MAX_LIVE_HEADING_CHARS} characters")
+        if pid in seen:
+            raise bad("each paragraph needs its own id")
+        seen.add(pid)
+        total += len(text)
+        clean.append({"id": pid, "text": text, "style": style,
+                      "heading": heading})
+    if total > MAX_LIVE_CHARS:
+        raise bad(f"the paragraphs are longer than {MAX_LIVE_CHARS:,} "
+                  "characters together")
+    opts = payload.get("options", {})
+    if not isinstance(opts, dict):
+        raise bad("options must be an object")
+    prefs, disabled, mode, extra = _parse_options(
+        {k: v for k, v in opts.items() if k in OPTION_KEYS})
+    return revision, clean, prefs, disabled, extra
+
+
+def check_paragraphs_v1(payload) -> dict:
+    """POST /v1/check-paragraphs: a CheckParagraphsResponse, computed here
+    by the same core call and shaping as the hosted engine
+    (engine_adapter.run_paragraph_check). Text is held for this request
+    only and never written anywhere (no telemetry on this path)."""
+    t0 = time.perf_counter()
+    revision, paragraphs, prefs, disabled, extra = parse_live_request(payload)
+    # The live check runs sentence-level rules only: mode, review,
+    # narrative and checklist have no effect here, as on the hosted engine.
+    cfg = _config(prefs, disabled, None, extra)
+    with _LIVE_LOCK:
+        res = api.check_paragraphs(paragraphs, nlp=get_nlp(), cfg=cfg)
+    health = [t.to_dict() for t in res.health]
+    out = {
+        "schema_version": SCHEMA_VERSION,
+        "revision": revision,
+        "paragraphs": shapes.live_paragraphs(res),
+        "state": "partial" if _degraded(health) else "ok",
+        "health": health,
+        "hidden_preferences": res.hidden_preferences,
+        "signed_in": False,
+        "assessed_rules": list(res.assessed_rules),
+        "ruleset": res.ruleset,
+        "elapsed_ms": 0,
+    }
+    out["elapsed_ms"] = int(round((time.perf_counter() - t0) * 1000))
+    return out
+
+
+def native_allowed(origin, client_host: str) -> bool:
+    """A request without an Origin header (a native client) is served only
+    when it comes over loopback; browsers are governed by CORS instead."""
+    return origin is not None or client_host in LOOPBACK
+
+
+def analyze_word(payload) -> dict:
+    """POST /v1/analyze-word: an AnalyzeWordResponse, computed here.
+
+    Settings: this computer's shared config (~/.researchly/config.toml,
+    which every local surface reads), plus the request's options, which can
+    only ADD mutes (as on the hosted engine); the request's mode wins.
+    """
+    t0 = time.perf_counter()
+    paragraphs, prefs, disabled, mode, extra = parse_word_request(payload)
+    cfg = _config(prefs, disabled, mode, extra)
     a = api.analyze(paragraphs, nlp=get_nlp(), cfg=cfg,
                     with_review=extra["review"],
                     with_narrative=extra["narrative"],
@@ -333,11 +468,7 @@ def analyze_word(payload) -> dict:
 def health_v1() -> dict:
     """GET /v1/health: HealthResponse (no probe: it must answer at once)."""
     tiers = [t.to_dict() for t in api.status(config_mod.load(), probe=False)]
-    degraded = any(
-        not t["ok"] and t["state"] != "disabled"
-        and t["state"] not in _OPTIONAL_STATES.get(t["tier"], set())
-        for t in tiers)
-    return {"status": "degraded" if degraded else "ok", "tiers": tiers,
+    return {"status": "degraded" if _degraded(tiers) else "ok", "tiers": tiers,
             "engine": _engine_info()}
 
 
@@ -385,7 +516,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_OPTIONS(self):
         # CORS preflight for the hosted taskpane's local mode (S3).
-        if self._route() not in ("/v1/analyze-word", "/v1/health"):
+        if self._route() not in V1_POST_ROUTES + ("/v1/health",):
             self.send_response(404)
             self.send_header("Content-Length", "0")
             self.end_headers()
@@ -397,15 +528,20 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", "0")
         self.end_headers()
 
-    def _v1_post(self):
-        """POST /v1/analyze-word. Text is held for this request only and
-        never written anywhere (no telemetry on this path)."""
+    def _v1_post(self, handle):
+        """POST /v1/analyze-word and /v1/check-paragraphs. Text is held for
+        this request only and never written anywhere (no telemetry on
+        these paths)."""
         cors = self._cors()
         origin = self.headers.get("Origin")
         if origin is not None and not cors:
             return self._json(403, error_body(
                 "origin_not_allowed",
                 "This page may not use Researchly on this computer."))
+        if not native_allowed(origin, self.client_address[0]):
+            return self._json(403, error_body(
+                "origin_not_allowed",
+                "Only apps on this computer may use this engine."))
         try:
             length = int(self.headers.get("Content-Length", "0"))
         except ValueError:
@@ -420,7 +556,7 @@ class Handler(SimpleHTTPRequestHandler):
             return self._json(422, error_body(
                 "invalid_request", "The body is not valid JSON."), cors)
         try:
-            return self._json(200, analyze_word(payload), cors)
+            return self._json(200, handle(payload), cors)
         except ContractError as e:
             return self._json(e.status, error_body(e.code, e.message), cors)
         except Exception as e:  # reported by type only: messages can quote text
@@ -461,7 +597,9 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         if self._route() == "/v1/analyze-word":
-            return self._v1_post()
+            return self._v1_post(analyze_word)
+        if self._route() == "/v1/check-paragraphs":
+            return self._v1_post(check_paragraphs_v1)
         try:
             length = int(self.headers.get("Content-Length", "0"))
             payload = json.loads(self.rfile.read(length) or b"{}")
