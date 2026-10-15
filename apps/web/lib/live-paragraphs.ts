@@ -246,6 +246,83 @@ export function splitParagraphs(
   return { paragraphs, headings };
 }
 
+/** Length of the common start of two strings, compared in native chunks first. */
+export function commonPrefix(a: string, b: string): number {
+  const max = Math.min(a.length, b.length);
+  let i = 0;
+  for (let step = 4096; step >= 1; step >>= 2) {
+    while (i + step <= max && a.slice(i, i + step) === b.slice(i, i + step)) i += step;
+  }
+  while (i < max && a.charCodeAt(i) === b.charCodeAt(i)) i++;
+  return i;
+}
+
+/** Length of the common end of two strings, never reaching into the first `floor` characters of either. */
+export function commonSuffix(a: string, b: string, floor: number): number {
+  const max = Math.min(a.length, b.length) - floor;
+  let i = 0;
+  for (let step = 4096; step >= 1; step >>= 2) {
+    while (i + step <= max && a.slice(a.length - i - step, a.length - i) === b.slice(b.length - i - step, b.length - i)) i += step;
+  }
+  while (i < max && a.charCodeAt(a.length - 1 - i) === b.charCodeAt(b.length - 1 - i)) i++;
+  return i;
+}
+
+/**
+ * The paragraphs after an edit inside one line of one paragraph (a typed or
+ * deleted character, a pasted phrase): that paragraph's text and key, and
+ * every later offset moved, without splitting the whole text again. Null
+ * whenever the edit could change the structure (a line break, a line
+ * becoming blank, a heading or a fence), and the caller splits afresh.
+ * The result always equals `splitParagraphs(after, format)` (unit-tested
+ * against it on random edits).
+ */
+export function updateParagraphs(
+  doc: LiveDocument,
+  before: string,
+  after: string,
+  format: LiveFormat,
+  keyOf: (heading: string, text: string) => string = paragraphKey,
+): LiveDocument | null {
+  if (doc.paragraphs.length === 0) return null;
+  const p = commonPrefix(before, after);
+  const s = commonSuffix(before, after, p);
+  const removed = before.slice(p, before.length - s);
+  const inserted = after.slice(p, after.length - s);
+  if (removed.includes("\n") || inserted.includes("\n") || removed.includes("\r") || inserted.includes("\r")) return null;
+  // The paragraph holding the edit (its end counts: typing at the end of a paragraph).
+  let lo = 0;
+  let hi = doc.paragraphs.length - 1;
+  let at = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (doc.paragraphs[mid]!.start <= p) {
+      at = mid;
+      lo = mid + 1;
+    } else hi = mid - 1;
+  }
+  const para = at >= 0 ? doc.paragraphs[at]! : null;
+  const editEnd = before.length - s;
+  if (!para || editEnd > para.end || p < para.start) return null;
+  // The edited line, after the edit: still prose, not a heading, a fence or blank.
+  const lineStart = after.lastIndexOf("\n", p - 1) + 1;
+  let lineEnd = after.indexOf("\n", p);
+  if (lineEnd === -1) lineEnd = after.length;
+  const line = after.slice(lineStart, lineEnd);
+  if (line.trim() === "") return null;
+  if (format === "plain" && plainHeading(line) !== null) return null;
+  if (format === "markdown" && (MD_HEADING.test(line) || MD_FENCE.test(line) || /^:{3,}/.test(line) || /^---/.test(line))) return null;
+  // The old line may have been one of those too (a heading being edited stays out of the paragraphs).
+  const delta = after.length - before.length;
+  const text = after.slice(para.start, para.end + delta);
+  const edited: LiveParagraph = { ...para, end: para.end + delta, text, key: keyOf(para.heading, text) };
+  const paragraphs = doc.paragraphs.map((q, i) =>
+    i < at ? q : i === at ? edited : { ...q, start: q.start + delta, end: q.end + delta },
+  );
+  const headings = doc.headings.map((h) => (h.start > para.end ? { ...h, start: h.start + delta, end: h.end + delta } : h));
+  return { paragraphs, headings };
+}
+
 /* ---------- keys ---------- */
 
 /** Two 32-bit FNV-1a passes with different seeds, over heading, a separator and text. */

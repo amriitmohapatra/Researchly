@@ -4,6 +4,8 @@ import {
   asSuggestion,
   carryItems,
   classifyHeading,
+  commonPrefix,
+  commonSuffix,
   fromLive,
   isLiveFormat,
   isSectionName,
@@ -18,6 +20,7 @@ import {
   snapUtf16,
   splitParagraphs,
   textToSend,
+  updateParagraphs,
   visibleItems,
   type LiveItem,
 } from "@/lib/live-paragraphs";
@@ -346,5 +349,54 @@ describe("reading an underline out", () => {
     expect(s.replacement).toBe("a");
     expect(s.span).toEqual({ start: 2, end: 5, line: 0, col: 0 });
     expect(asSuggestion(item({ begin: 0, end: 1 })).replacement).toBeNull();
+  });
+});
+
+describe("updating the paragraphs after a keystroke", () => {
+  /** A small seeded PRNG, so a failure can be replayed. */
+  function rng(seed: number) {
+    return () => {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      return seed / 0x7fffffff;
+    };
+  }
+  const PIECES = ["a", "e ", "the ", ".", "\n", "\n\n", "Methods", "# ", "```", "🦟", "x́", " ", "", "Discussion\n", "**", "---"];
+
+  for (const format of ["plain", "markdown"] as const) {
+    it(`${format}: whatever the edit, the result equals a fresh split (or it declines)`, () => {
+      const r = rng(format === "plain" ? 7 : 11);
+      let text =
+        format === "plain"
+          ? "Methods\nWe fit a model.\nIt converged.\n\nDiscussion\nIn order to see the the end.\n\nMore here 🦟.\n"
+          : "# Results\n\n## Model fit\n\nThe fit was **good**.\n\n```r\nx <- 1\n```\n\n# Discussion\n\nIn order to see.\n";
+      let doc = splitParagraphs(text, format);
+      let reused = 0;
+      for (let n = 0; n < 2000; n++) {
+        const at = Math.floor(r() * (text.length + 1));
+        const cut = r() < 0.4 ? Math.floor(r() * 4) : 0;
+        const piece = r() < 0.85 ? PIECES[Math.floor(r() * 6)]! : PIECES[Math.floor(r() * PIECES.length)]!;
+        const next = text.slice(0, at) + piece + text.slice(Math.min(text.length, at + cut));
+        const fresh = splitParagraphs(next, format);
+        const fast = updateParagraphs(doc, text, next, format);
+        if (fast) {
+          reused++;
+          expect(fast.paragraphs).toEqual(fresh.paragraphs);
+          expect(fast.headings.map((h) => [h.start, h.end, h.text, h.section, h.sendAs])).toEqual(
+            fresh.headings.map((h) => [h.start, h.end, h.text, h.section, h.sendAs]),
+          );
+        }
+        text = next.length > 3000 ? next.slice(0, 1500) : next;
+        doc = splitParagraphs(text, format);
+      }
+      expect(reused).toBeGreaterThan(300);
+    });
+  }
+
+  it("finds common starts and ends in long strings", () => {
+    const a = "x".repeat(10000) + "A" + "y".repeat(9000);
+    const b = "x".repeat(10000) + "BC" + "y".repeat(9000);
+    expect(commonPrefix(a, b)).toBe(10000);
+    expect(commonSuffix(a, b, 10000)).toBe(9000);
+    expect(commonSuffix("aa", "aaa", 2)).toBe(0);
   });
 });

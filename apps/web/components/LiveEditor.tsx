@@ -21,7 +21,6 @@ import {
   useCallback,
   useEffect,
   useId,
-  useDeferredValue,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -309,10 +308,22 @@ export function LiveEditor({ session, value, format, onChange, textareaRef, id, 
   const [listOpen, setListOpen] = useState(false);
   const marks = useMemo(() => (snap.enabled ? session.drawnCount() : 0), [session, snap]);
   const hasMarks = marks > 0;
-  // The mirror follows in the frame after a keystroke, never in it: the textarea answers the key first
-  // (typing latency, P45). Text and paragraphs are deferred together, so they always agree.
-  const mirrorText = useDeferredValue(value);
-  const mirrorSnap = useDeferredValue(snap);
+  // The mirror follows just after the frame that shows a keystroke, never in it: the textarea answers
+  // the key first (typing latency, P45). Text and paragraphs move together, so they always agree.
+  const [mirror, setMirror] = useState({ text: value, snap });
+  useLayoutEffect(() => {
+    if (!hasMarks || (mirror.text === value && mirror.snap === snap)) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const frame = requestAnimationFrame(() => {
+      timer = setTimeout(() => setMirror({ text: value, snap }), 0);
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      if (timer !== undefined) clearTimeout(timer);
+    };
+  }, [value, snap, mirror, hasMarks]);
+  const mirrorText = mirror.text;
+  const mirrorSnap = mirror.snap;
   const drawn = useMemo(() => (listOpen && snap.enabled ? session.drawn() : []), [listOpen, session, snap]);
 
   // The session reads every change of the text (typed, pasted, loaded or applied) before the browser paints.

@@ -33,6 +33,7 @@ import {
   paragraphKey,
   splitParagraphs,
   textToSend,
+  updateParagraphs,
   visibleItems,
   type LiveDocument,
   type LiveFormat,
@@ -241,11 +242,16 @@ export class LiveSession {
     const live = isLiveFormat(format) ? format : null;
     if (text === this.text && live === this.format) return;
     const before = this.doc;
+    const beforeText = this.text;
     const formatChanged = live !== this.format;
     this.text = text;
     this.format = live;
-    // Switched off, the text is not even split: typing costs nothing extra.
-    this.doc = live && this.wanted ? splitParagraphs(text, live, this.keyOf) : { paragraphs: [], headings: [] };
+    // Switched off, the text is not even split: typing costs nothing extra. A keystroke inside a
+    // paragraph moves the offsets after it instead of splitting the whole text again.
+    this.doc =
+      live && this.wanted
+        ? ((!formatChanged && updateParagraphs(before, beforeText, text, live, this.keyOf)) || splitParagraphs(text, live, this.keyOf))
+        : { paragraphs: [], headings: [] };
     const was = this.keys;
     this.keys = new Set(this.doc.paragraphs.map((p) => p.key));
     this.changed = this.doc.paragraphs.filter((p) => !was.has(p.key)).map((p) => p.key);
