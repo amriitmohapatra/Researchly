@@ -622,25 +622,25 @@ test.describe("settings page", () => {
     await expect(page.getByTestId("settings-status")).toHaveText("Removed “Rt” from your dictionary.");
     expect(sb.words).toEqual(["nowcasting", "serial-interval"]);
 
-    await page.getByTestId("delete-open").click();
-    const dialog = page.getByTestId("delete-dialog");
+    // "Clear my dictionary" (PLAN #12): the words only, by the caller's own id; the settings stay.
+    await page.getByTestId("clear-dictionary-open").click();
+    const dialog = page.getByTestId("clear-dictionary-dialog");
     await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText("All 2 words will be removed from your dictionary");
     await expect(dialog.getByRole("button", { name: "Keep them" })).toBeFocused();
     expect(await axeSerious(page)).toEqual([]);
-    await dialog.getByTestId("delete-confirm").click();
-    await expect(page.getByTestId("settings-status")).toHaveText("Your settings, dictionary and progress were deleted.");
+    await dialog.getByTestId("clear-dictionary-confirm").click();
+    await expect(page.getByTestId("settings-status")).toHaveText("Your dictionary was cleared.");
     await expect(dialog).toBeHidden();
-    await expect(page.getByTestId("muted-empty")).toBeVisible();
     await expect(page.getByTestId("word-count")).toHaveText("Your dictionary is empty.");
-    expect(sb.settings).toBeNull();
+    await expect(page.getByTestId("clear-dictionary-open")).toHaveCount(0);
+    await expect(muted).toHaveCount(1);
     expect(sb.words).toEqual([]);
+    expect(sb.settings?.disabled_rules).toEqual(["G101"]);
 
     const deletes = sb.sent.filter((r) => r.method === "DELETE");
-    // "Delete my data": progress first (S4c), then the dictionary and the settings, each by the caller's own id.
     const wholesale = deletes.filter((r) => r.search.includes(`user_id=eq.${USER.id}`)).map((r) => r.path);
-    expect(wholesale[0]).toBe("/rest/v1/progress_events");
-    expect(deletes.some((r) => r.path === "/rest/v1/user_settings" && r.search.includes(`user_id=eq.${USER.id}`))).toBe(true);
-    expect(deletes.some((r) => r.path === "/rest/v1/dictionary_words" && r.search.includes(`user_id=eq.${USER.id}`))).toBe(true);
+    expect(wholesale).toEqual(["/rest/v1/dictionary_words"]);
     // Never another user's id; inserts and upserts carry no user id at all (the column defaults to auth.uid()).
     for (const r of sb.sent) {
       expect(r.body + r.search).not.toContain(OTHER_USER_ID);
@@ -727,8 +727,9 @@ for (const width of [375, 1280]) {
       expect(await noOverflow(page)).toBeLessThanOrEqual(0);
       await page.screenshot({ path: `${shots}/accounts-settings-${width}.png`, fullPage: true });
 
-      await page.getByTestId("delete-open").click();
-      await expect(page.getByTestId("delete-dialog")).toBeVisible();
+      await page.getByTestId("delete-account-open").click();
+      await expect(page.getByTestId("delete-account-dialog")).toBeVisible();
+      expect(await noOverflow(page)).toBeLessThanOrEqual(0);
       await page.screenshot({ path: `${shots}/accounts-delete-dialog-${width}.png` });
     });
 

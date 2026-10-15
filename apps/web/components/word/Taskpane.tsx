@@ -7,6 +7,7 @@ import {
   type AnalyzeWordResponse,
   type Capabilities,
   type DocumentType,
+  type EvidenceSpan,
   type Spelling,
   type TierHealth,
   type WordParagraph,
@@ -36,6 +37,8 @@ import { buildQueue, passCounts, QUEUE_START, type QueueState } from "@/lib/queu
 import { capabilityLine } from "@/lib/capabilities";
 import { healthBanners } from "@/lib/health";
 import { briefState, narrativeState } from "@/lib/profiles";
+import type { ScopeChoice } from "@/lib/evidence";
+import { ScopeLine } from "../ScopeLine";
 import { useProfileChoices } from "@/lib/registry";
 import { useRuleScopes } from "@/lib/scope";
 import { resolveSpelling } from "@/lib/spelling";
@@ -199,6 +202,8 @@ export function Taskpane() {
   const storedType = useSyncExternalStore(subscribeDocumentType, loadDocumentTypeChoice, () => null);
   const [accountType, setAccountType] = useState<DocumentType | null>(null);
   const [chosenType, setChosenType] = useState<DocumentType | null>(null);
+  // How much of the document this is (Codex review #4): "auto" infers it; never stored.
+  const [documentScope, setDocumentScope] = useState<ScopeChoice>("auto");
   const documentType: DocumentType = chosenType ?? (signedIn ? accountType : null) ?? storedType ?? "auto";
   const [typeNote, setTypeNote] = useState<string | null>(null);
   // The English spelling to keep to (task #15), resolved like the type and
@@ -464,6 +469,7 @@ export function Taskpane() {
       documentType?: DocumentType;
       spelling?: Spelling;
       checklist?: ChecklistPref;
+      documentScope?: ScopeChoice;
     }) => {
       const api = officeApi();
       if (readingRef.current || !api || host?.status !== "word") return;
@@ -471,6 +477,7 @@ export function Taskpane() {
       const useType = opts?.documentType ?? documentType;
       const useSpelling = opts?.spelling ?? spelling;
       const useChecklist = opts?.checklist ?? checklist;
+      const useScope = opts?.documentScope ?? documentScope;
       const prefs = opts?.showPreferences ?? showPreferences;
       // A re-check (mute, stage change) keeps the current view: section or whole document.
       const wantSection = opts?.section ?? (checked?.focus !== null && checked?.focus !== undefined && !showWhole);
@@ -555,6 +562,7 @@ export function Taskpane() {
             review: useMode === "revise",
             narrative: useMode === "revise",
             checklist: useMode === "revise" && useChecklist !== "none" ? useChecklist : null,
+            documentScope: useScope,
             signal,
           },
           engineUrlFor(useEngine),
@@ -604,8 +612,15 @@ export function Taskpane() {
       });
 
     },
-    [session, host, mode, documentType, spelling, checklist, showPreferences, engine, signedIn, checked, showWhole, scopes],
+    [session, host, mode, documentType, spelling, checklist, documentScope, showPreferences, engine, signedIn, checked, showWhole, scopes],
   );
+
+  /** "Read as" beside the brief and the map (Codex review #4): this session only, never stored. */
+  const onDocumentScope = (next: ScopeChoice) => {
+    if (next === documentScope) return;
+    setDocumentScope(next);
+    if (checked) void runCheck({ documentScope: next });
+  };
 
   const cancelCheck = () => {
     if (session.cancel()) {
@@ -686,6 +701,36 @@ export function Taskpane() {
       else delete next[id];
       return next;
     });
+
+  /**
+   * "Show in text" from the brief or the map (Codex review #3): select the
+   * sentence in Word, as a card's words are selected. A sentence without a
+   * Word location has no button (canShowInWord).
+   */
+  const [evidenceNote, setEvidenceNote] = useState<string | null>(null);
+  const onShowInWord = useCallback(async (span: EvidenceSpan) => {
+    const api = officeApi();
+    if (!api || !span.location) return;
+    setWordBusy(true);
+    const r = await selectSpan(api, span.location);
+    setWordBusy(false);
+    if (!r.ok) setEvidenceNote(r.message);
+    else if (r.approximate) setEvidenceNote("The match is approximate: this sentence is too long for Word to find whole, so only its start is selected.");
+    else {
+      setEvidenceNote(null);
+      setAnnouncement("Selected in the document.");
+    }
+  }, []);
+
+  const canShowInWord = useCallback((span: EvidenceSpan) => !!span.location && span.location.snippet.length > 0, []);
+  const evidenceNoteLine = evidenceNote ? (
+    <p className="tp-note" role="status" data-testid="evidence-word-note">
+      {evidenceNote}
+    </p>
+  ) : null;
+  const wordScopeLine = checked ? (
+    <ScopeLine scope={checked.data.profile?.scope} value={documentScope} onChange={onDocumentScope} disabled={phase === "reading" || phase === "checking"} />
+  ) : null;
 
   const onSelect = useCallback(async (s: WordSuggestion) => {
     const api = officeApi();
@@ -1316,7 +1361,14 @@ export function Taskpane() {
                     className="view-panel"
                     data-testid="brief-panel"
                   >
-                    <ReviewBrief state={briefState(checked.data)} onSwitchToRevise={() => onModeChange("revise")} />
+                    {evidenceNoteLine}
+                    <ReviewBrief
+                      state={briefState(checked.data)}
+                      onSwitchToRevise={() => onModeChange("revise")}
+                      onShowInText={(span) => void onShowInWord(span)}
+                      canShow={canShowInWord}
+                      scopeLine={wordScopeLine}
+                    />
                   </div>
                 ) : shownView === "narrative" ? (
                   <div
@@ -1326,7 +1378,14 @@ export function Taskpane() {
                     className="view-panel"
                     data-testid="narrative-panel"
                   >
-                    <NarrativeMap state={narrativeState(checked.data)} onSwitchToRevise={() => onModeChange("revise")} />
+                    {evidenceNoteLine}
+                    <NarrativeMap
+                      state={narrativeState(checked.data)}
+                      onSwitchToRevise={() => onModeChange("revise")}
+                      onShowInText={(span) => void onShowInWord(span)}
+                      canShow={canShowInWord}
+                      scopeLine={wordScopeLine}
+                    />
                   </div>
                 ) : (
                   <div
@@ -1527,6 +1586,14 @@ export function Taskpane() {
                         <p>
                           Signed in as <strong className="break-anywhere">{auth.email}</strong>. Muted rules and your
                           dictionary are managed in the website&rsquo;s Settings.
+                        </p>
+                        <p className="muted" data-testid="tp-account-controls">
+                          To reset your preferences or delete your account, use{" "}
+                          <Link className="inline-link" href="/settings" target="_blank" rel="noopener" data-testid="tp-settings-link">
+                            Settings on the website
+                            <span className="sr-only"> (opens in a new window)</span>
+                          </Link>
+                          .
                         </p>
                         <button type="button" className="btn btn-quiet btn-compact" onClick={() => void signOut()} data-testid="tp-sign-out">
                           Sign out

@@ -1,12 +1,20 @@
 "use client";
 
-import type { ReviewQuestion } from "@researchly/contract";
+import type { ReactNode } from "react";
+import type { EvidenceSpan, ReviewQuestion } from "@researchly/contract";
 import { briefStatusWord, timesPhrase, type BriefState } from "@/lib/profiles";
+import { EvidenceLinks, type ShowInText } from "./EvidenceLinks";
 
 interface Props {
   state: BriefState;
   /** When the surface has a Draft/Revise control: switches to Revise and checks again. */
   onSwitchToRevise?: () => void;
+  /** "Show in text" on each sentence a question rests on (Codex review #3); absent on paper. */
+  onShowInText?: ShowInText | null;
+  /** Whether this surface can show a span (the website: in the checked text; Word: with a location). */
+  canShow?: (span: EvidenceSpan) => boolean;
+  /** What the check assumed about how much of the document this is, with its override (Codex review #4). */
+  scopeLine?: ReactNode;
 }
 
 /**
@@ -21,7 +29,7 @@ interface Props {
  * no numbers but a rule's tally, no meters, no colour by verdict or status.
  * Question A is the writer's to answer and is rendered as the engine gives it.
  */
-export function ReviewBrief({ state, onSwitchToRevise }: Props) {
+export function ReviewBrief({ state, onSwitchToRevise, onShowInText = null, canShow, scopeLine = null }: Props) {
   if (state.kind === "needs_revise") {
     return (
       <p className="brief-line" data-testid="brief-needs-revise">
@@ -47,10 +55,11 @@ export function ReviewBrief({ state, onSwitchToRevise }: Props) {
       <p className="help brief-intro">
         Five questions a critical reader asks of any document, answered from your text alone. Not a score.
       </p>
+      {scopeLine}
       <ol className="brief-questions">
         {r.questions.map((q) => (
           <li key={q.id} className="brief-q" data-testid="brief-question" data-question={q.id}>
-            <Question q={q} />
+            <Question q={q} onShow={onShowInText} canShow={canShow} />
           </li>
         ))}
       </ol>
@@ -80,9 +89,19 @@ export function ReviewBrief({ state, onSwitchToRevise }: Props) {
   );
 }
 
-function Question({ q }: { q: ReviewQuestion }) {
+function Question({
+  q,
+  onShow,
+  canShow,
+}: {
+  q: ReviewQuestion;
+  onShow: ShowInText | null;
+  canShow?: (span: EvidenceSpan) => boolean;
+}) {
   const points = (q.points ?? []).filter((p) => p.trim());
-  const evidence = (q.evidence ?? []).filter((e) => e.trim());
+  // Placed sentences replace the bare quotes they repeat; an older engine's quotes still show.
+  const links = (q.links ?? []).filter((l) => l.claim && l.claim.text.trim());
+  const evidence = links.length > 0 ? [] : (q.evidence ?? []).filter((e) => e.trim());
   const status = briefStatusWord(q.status);
   return (
     <>
@@ -113,6 +132,7 @@ function Question({ q }: { q: ReviewQuestion }) {
           ))}
         </ul>
       ) : null}
+      <EvidenceLinks links={links} where={q.id} onShow={onShow} canShow={canShow} />
       {evidence.length > 0 ? (
         <ul className="brief-evidence" aria-label={`Evidence for question ${q.id}, quoted from your text`}>
           {evidence.map((e, i) => (

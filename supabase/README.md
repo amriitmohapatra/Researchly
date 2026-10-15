@@ -12,8 +12,9 @@ that proves it.
 | `migrations/20261008140000_s4_progress.sql` | The opt-in `keep_progress` switch and the `progress_events` table (rule counts only). |
 | `migrations/20261014120000_spelling_prediction.sql` | `user_settings.spelling`, the English spelling a writer keeps to (`auto`, `us`, `uk`, `uk-oxford`, `ca`, `au`, `in`; PLAN task #15), and `user_settings.prediction`, word prediction on (default) or off; `my_config()` gains both, so the hosted engine applies them. |
 | `migrations/20261014130000_progress_comparable.sql` | `progress_events.assessed` (the rule ids a check could show), `.mode` and `.ruleset`, so the progress view compares like with like (Codex review N2); rule ids, a word and a version string, never text. Older rows keep NULLs. |
+| `migrations/20261015120000_account_controls.sql` | Account controls (PLAN #12): `reset_my_preferences()` puts the caller's choices back to the column defaults and keeps their dictionary, progress and "Keep my progress" switch (SECURITY INVOKER, RLS decides); `delete_my_account()` deletes the caller's sign-in from `auth.users`, and every row they own goes with it by `ON DELETE CASCADE` (SECURITY DEFINER, one row, `where id = (select auth.uid())`). Neither takes an argument; both are for `authenticated` only. |
 | `tests/shim.sql` | A stand-in for the parts of Supabase the migration needs (`auth.users`, `auth.uid()`, roles `anon` / `authenticated`, Supabase's default privileges), so the test runs on plain PostgreSQL 16. **Test only: never run it in Supabase.** |
-| `tests/test_two_user.py` | The Q7 two-user test (ARCHITECTURE.md §3): user A can never read, create as, update or delete user B's settings or dictionary, and `anon` can do nothing. Also the limits (200 muted rules, valid rule ids, locales and spellings, 1–64-character words, 5,000 words per user) and account-deletion cascade. |
+| `tests/test_two_user.py` | The Q7 two-user test (ARCHITECTURE.md §3): user A can never read, create as, update or delete user B's settings or dictionary, and `anon` can do nothing. Also the limits (200 muted rules, valid rule ids, locales and spellings, 1–64-character words, 5,000 words per user) and account-deletion cascade. Also the account controls: a reset touches only the caller's preferences, deletion removes the caller's sign-in and every row in every table (and nothing of user B's), `anon` and a token without a user id can do neither, and every per-user table cascades from `auth.users`. |
 | `tests/run_local.sh` | Runs the test against a throwaway local PostgreSQL 16; no Docker. |
 
 ## What is stored, and what is not
@@ -26,7 +27,11 @@ that proves it.
 No document text, ever. No `profiles`, usage or feedback tables yet: a table
 that exists invites data into it, so each arrives with the feature that needs
 it. No row is created at sign-up; a missing settings row means defaults.
-Deleting a user in Supabase (Authentication → Users) deletes their rows.
+Deleting a user deletes their rows, whether the user does it ("Delete my
+account" on the website's Settings, `delete_my_account()`) or the owner does
+(Authentication → Users). A new per-user table must reference `auth.users`
+with `on delete cascade`; without it account deletion fails (loudly), and
+the two-user test names the table.
 
 ## Applying the migration (owner, once per project)
 
@@ -44,6 +49,18 @@ table's columns or limits: that needs a new, later-dated migration file.
 Each later migration is applied the same way, once, in date order (the
 file names sort by date): paste the whole file, Run, expect "Success. No
 rows returned". All of them are safe to re-run.
+
+**Account controls (2026-10-15, PLAN #12):** after the comparable-progress
+migration, paste `migrations/20261015120000_account_controls.sql`. Check:
+**Database → Functions** lists `reset_my_preferences` and
+`delete_my_account`; and in the SQL Editor
+`select has_table_privilege('postgres', 'auth.users', 'DELETE');` returns
+`true` (`delete_my_account` runs as `postgres`, the file's owner, and needs
+it; Supabase grants it today). Until the migration is applied the website's
+"Reset preferences" and "Delete my account" say they are not available yet,
+and nothing changes. An access token issued before a deletion stays valid
+until it expires (at most an hour) but reaches no rows; the website signs
+the browser out at once.
 
 **Comparable progress (2026-10-14):** after the spelling migration, paste
 `migrations/20261014130000_progress_comparable.sql`. Check: **Table Editor →

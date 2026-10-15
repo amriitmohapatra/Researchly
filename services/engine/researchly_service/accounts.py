@@ -16,6 +16,14 @@ Failures are distinct, because they need different responses:
 - the token is fine but settings won't load → the check runs with
   defaults and the `account` health tier says so (no silent tier).
 
+A token naming a key id the cached key set lacks makes the engine fetch the
+keys again (Supabase rotates them), at most once per REFETCH_COOLDOWN_S
+whoever asks; inside the cooldown such a token gets 503 auth_unavailable
+("try again in a minute"), never a sign-out (PLAN #12).
+
+The middleware verifies the token before the body is read and limits
+signed-in callers per user (middleware.py); the routes reuse that caller.
+
 Nothing here logs the token, the user id or the settings.
 """
 
@@ -23,6 +31,8 @@ from __future__ import annotations
 
 import json
 import re
+import threading
+import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -40,20 +50,34 @@ LEEWAY_S = 30                  # clock skew between Supabase and Cloud Run
 HTTP_TIMEOUT_S = 3.0
 UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 MAX_TOKEN_CHARS = 8192
+MAX_KID_CHARS = 256
+# A token naming a key id the cached key set lacks makes the engine fetch
+# Supabase's keys again (a rotation), at most once per this many seconds,
+# whoever asks. Anyone can mint such a token, so without the cooldown each
+# one would be a request to Supabase. One timestamp: bounded memory.
+REFETCH_COOLDOWN_S = 60.0
 
 
 class AuthError(Exception):
-    """A request the engine must refuse. `message` is user-safe."""
+    """A request the engine must refuse. `message` is user-safe.
 
-    def __init__(self, status: int, code: str, message: str):
+    `charge` is True when the client is to blame (a bad token, or a key id
+    nobody has published): the middleware counts it against the caller's
+    IP address, so forged tokens cannot be sent without limit."""
+
+    def __init__(self, status: int, code: str, message: str,
+                 charge: Optional[bool] = None):
         super().__init__(message)
         self.status = status
         self.code = code
         self.message = message
+        self.charge = (status == 401) if charge is None else charge
 
 
 UNAUTHORIZED = ("Your sign-in has expired or is not valid. Sign in again; "
                 "your text is still here.")
+UNAVAILABLE = ("Researchly could not check your sign-in just now. "
+               "Try again in a minute.")
 
 
 class SettingsUnavailable(Exception):
@@ -101,26 +125,66 @@ class Accounts:
 
     def __init__(self, supabase_url: str, publishable_key: str, *,
                  jwks_client: Optional[jwt.PyJWKClient] = None,
-                 fetch: Optional[Fetch] = None):
+                 fetch: Optional[Fetch] = None,
+                 refetch_cooldown_s: float = REFETCH_COOLDOWN_S,
+                 clock: Callable[[], float] = time.monotonic):
         self.url = supabase_url.rstrip("/")
         self.issuer = f"{self.url}/auth/v1"
         self.publishable_key = publishable_key
-        # PyJWKClient caches the key set and re-fetches when it meets a key
-        # id it has not seen (Supabase key rotation).
+        # PyJWKClient caches the key set (refreshed every 10 minutes). A key
+        # id it has not seen (Supabase key rotation) is looked up again by
+        # _signing_key, under our own cooldown, not the library's.
         self._jwks = jwks_client or jwt.PyJWKClient(
             f"{self.issuer}/.well-known/jwks.json", cache_keys=True,
             lifespan=600, timeout=HTTP_TIMEOUT_S)
         self._fetch = fetch or _http_post_json
+        self.refetch_cooldown_s = refetch_cooldown_s
+        self._clock = clock
+        self._refetch_lock = threading.Lock()
+        self._last_refetch: Optional[float] = None
+        self.refetches = 0
+
+    def _may_refetch(self) -> bool:
+        """True at most once per cooldown, across every thread."""
+        now = self._clock()
+        with self._refetch_lock:
+            if (self._last_refetch is not None
+                    and now - self._last_refetch < self.refetch_cooldown_s):
+                return False
+            self._last_refetch = now
+            self.refetches += 1
+            return True
+
+    def _signing_key(self, token: str) -> jwt.PyJWK:
+        """The published key the token names. Raises AuthError."""
+        try:
+            kid = jwt.get_unverified_header(token).get("kid")
+        except jwt.InvalidTokenError:          # incl. DecodeError, a bad kid type
+            raise AuthError(401, "unauthorized", UNAUTHORIZED) from None
+        if not isinstance(kid, str) or not kid or len(kid) > MAX_KID_CHARS:
+            raise AuthError(401, "unauthorized", UNAUTHORIZED)
+        try:
+            key = self._jwks.match_kid(self._jwks.get_signing_keys(), kid)
+            if key is None:
+                if not self._may_refetch():
+                    # Unknown, and the keys were fetched moments ago. It may
+                    # be a key published since (try again shortly) or a
+                    # forgery; either way it is not checked now. 503, not
+                    # 401: a real user is asked to wait, never signed out.
+                    raise AuthError(503, "auth_unavailable", UNAVAILABLE,
+                                    charge=True)
+                key = self._jwks.match_kid(
+                    self._jwks.get_signing_keys(refresh=True), kid)
+        except jwt.PyJWKClientConnectionError:
+            raise AuthError(503, "auth_unavailable", UNAVAILABLE) from None
+        except jwt.PyJWKClientError:
+            raise AuthError(401, "unauthorized", UNAUTHORIZED) from None
+        if key is None:                    # not among the published keys
+            raise AuthError(401, "unauthorized", UNAUTHORIZED)
+        return key
 
     def verify(self, token: str) -> Caller:
-        try:
-            key = self._jwks.get_signing_key_from_jwt(token)
-        except jwt.PyJWKClientConnectionError:
-            raise AuthError(503, "auth_unavailable",
-                            "Researchly could not check your sign-in just now. "
-                            "Try again in a minute.") from None
-        except (jwt.PyJWKClientError, jwt.DecodeError, jwt.InvalidTokenError):
-            raise AuthError(401, "unauthorized", UNAUTHORIZED) from None
+        key = self._signing_key(token)
         # Pin the algorithm to the one the key itself declares, so a token's
         # own `alg` header can never choose how it is checked.
         if key.algorithm_name not in ALGORITHMS:

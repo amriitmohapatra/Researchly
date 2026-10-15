@@ -39,6 +39,29 @@ def locate(doc: Document, paragraphs: list[dict], start: int,
             "snippet": snippet, "occurrence": occurrence, "exact": exact}
 
 
+def locator(doc: Document, paragraphs: list[dict]):
+    """f(start, end) -> the location of a span of `doc` in Word, with
+    `begin16`/`end16` in UTF-16 within its paragraph, or None when the span
+    is not in a paragraph's text (Codex review #3: the brief's and the
+    map's evidence is selected in Word as a suggestion is)."""
+    from .utf16 import Utf16Index
+    indexes: dict = {}
+
+    def locate_span(start: int, end: int):
+        if not paragraphs or not doc.para_offsets:
+            return None
+        loc = locate(doc, paragraphs, start, end)
+        i = loc["paragraph"]
+        if i >= len(paragraphs) or not loc["snippet"]:
+            return None
+        if i not in indexes:
+            indexes[i] = Utf16Index(paragraphs[i].get("text") or "")
+        index = indexes[i]
+        return {**loc, "begin16": index(loc["start"]),
+                "end16": index(loc["end"])}
+    return locate_span
+
+
 def coverage(paragraphs: list[dict], doc: Document) -> dict:
     return {"paragraphs": len(paragraphs),
             "table_paragraphs": len(getattr(doc, "table_spans", [])),

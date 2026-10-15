@@ -209,6 +209,17 @@
             "title": "Disabled Rules",
             "type": "array"
           },
+          "document_scope": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DocumentScope"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How much of the document the text is: whole, chapter or excerpt. Omitted or `auto`: inferred from the headings (`profile.scope` says what was assumed). An excerpt is asked for no missing sections; a chapter for no abstract. A choice about this check only, never stored."
+          },
           "document_type": {
             "anyOf": [
               {
@@ -1181,6 +1192,17 @@
         "title": "Coverage",
         "type": "object"
       },
+      "DocumentScope": {
+        "description": "How much of a document the text is (Codex review #4), separate from\nits article type: a whole manuscript, one chapter, or an excerpt.\n`auto` infers it from the headings.",
+        "enum": [
+          "auto",
+          "whole",
+          "chapter",
+          "excerpt"
+        ],
+        "title": "DocumentScope",
+        "type": "string"
+      },
       "DocumentType": {
         "description": "Article-type profile (S4). `auto` guesses from the headings and is\notherwise `general`; the others switch off the checks that do not\napply to that kind of document and say what section unheaded prose is\nin (a commentary is argued like a Discussion).",
         "enum": [
@@ -1259,6 +1281,163 @@
           "error"
         ],
         "title": "ErrorResponse",
+        "type": "object"
+      },
+      "EvidenceLink": {
+        "additionalProperties": false,
+        "description": "One point of the brief, placed in the text: the sentence it rests on\n(`claim`) and, for a claim, the evidence proposed beside it. A point\nthat cannot be placed has no link (it abstains).",
+        "properties": {
+          "claim": {
+            "$ref": "#/components/schemas/EvidenceSpan"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceSpan"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The nearest sentence in the same section that reports a number, a citation or a finding, within two sentences; absent when none was detected or none is needed."
+          },
+          "evidence_note": {
+            "default": "",
+            "description": "One line saying what the evidence is, or what was not detected.",
+            "title": "Evidence Note",
+            "type": "string"
+          },
+          "evidence_status": {
+            "default": "not_applicable",
+            "description": "detected (evidence proposed beside the claim), not_detected (none was found nearby: not proof there is none), not_applicable (a statement that needs no evidence beside it).",
+            "enum": [
+              "detected",
+              "not_detected",
+              "not_applicable"
+            ],
+            "title": "Evidence Status",
+            "type": "string"
+          },
+          "kind": {
+            "description": "What the sentence is, e.g. causal_claim, aim, gap, stranger, claim_without_grounds.",
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "description": "The kind, in plain words.",
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "label",
+          "claim"
+        ],
+        "title": "EvidenceLink",
+        "type": "object"
+      },
+      "EvidenceSpan": {
+        "additionalProperties": false,
+        "description": "Where in the text a statement of the brief or the map rests (Codex\nreview #3): code-point offsets into the checked text like `Span`, the\nsentence quoted, and for clients that count in UTF-16 (Word, browsers)\n`begin16`/`end16`. On the Word routes `location` finds it in Word as a\nsuggestion's does. Document text: never logged.",
+        "properties": {
+          "begin16": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`start` in UTF-16 code units.",
+            "title": "Begin16"
+          },
+          "col": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Col",
+            "type": "integer"
+          },
+          "end": {
+            "minimum": 0.0,
+            "title": "End",
+            "type": "integer"
+          },
+          "end16": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`end` in UTF-16 code units.",
+            "title": "End16"
+          },
+          "file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a project of several files (an Overleaf .zip): the file the sentence is in.",
+            "title": "File"
+          },
+          "file_line": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The 1-based line in `file`.",
+            "title": "File Line"
+          },
+          "line": {
+            "default": 0,
+            "description": "1-based line of `start`; 0 if unknown.",
+            "minimum": 0.0,
+            "title": "Line",
+            "type": "integer"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WordLocation"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Word routes only: the paragraph and snippet to select."
+          },
+          "start": {
+            "minimum": 0.0,
+            "title": "Start",
+            "type": "integer"
+          },
+          "text": {
+            "description": "The sentence, quoted (one line, at most 180 characters).",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "text"
+        ],
+        "title": "EvidenceSpan",
         "type": "object"
       },
       "FixSafety": {
@@ -1513,6 +1692,17 @@
             "maxItems": 200,
             "title": "Disabled Rules",
             "type": "array"
+          },
+          "document_scope": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DocumentScope"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How much of the document the text is: whole, chapter or excerpt. Omitted or `auto`: inferred from the headings (`profile.scope` says what was assumed). An excerpt is asked for no missing sections; a chapter for no abstract. A choice about this check only, never stored."
           },
           "document_type": {
             "anyOf": [
@@ -1888,6 +2078,14 @@
           "source": {
             "title": "Source",
             "type": "string"
+          },
+          "spans": {
+            "description": "Where those sentences are in the text.",
+            "items": {
+              "$ref": "#/components/schemas/EvidenceSpan"
+            },
+            "title": "Spans",
+            "type": "array"
           }
         },
         "required": [
@@ -1962,6 +2160,14 @@
           "source": {
             "title": "Source",
             "type": "string"
+          },
+          "units": {
+            "description": "For a response to reviewers: each comment beside its reply, in order.",
+            "items": {
+              "$ref": "#/components/schemas/ReviewerUnit"
+            },
+            "title": "Units",
+            "type": "array"
           },
           "unmapped": {
             "description": "Sections found that have no expected moves (topical headings).",
@@ -2039,6 +2245,17 @@
           "source": {
             "title": "Source",
             "type": "string"
+          },
+          "span": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceSpan"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where `evidence` is in the text, when it can be placed."
           },
           "status": {
             "$ref": "#/components/schemas/MoveStatus"
@@ -2286,6 +2503,25 @@
             },
             "title": "Rules Off",
             "type": "array"
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScopeInfo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How much of the document the text was taken to be. Additive: older engines omit it."
+          },
+          "topical": {
+            "description": "Topical headings (\"Experiment 1: the baseline SEIR\") read as a section from the wording under them, so the section-aware checks treat them as that section.",
+            "items": {
+              "$ref": "#/components/schemas/TopicalSection"
+            },
+            "title": "Topical",
+            "type": "array"
           }
         },
         "required": [
@@ -2350,6 +2586,14 @@
             "description": "A to E.",
             "title": "Id",
             "type": "string"
+          },
+          "links": {
+            "description": "The points that rest on a sentence, each placed in the text (\"Show in text\"). Additive.",
+            "items": {
+              "$ref": "#/components/schemas/EvidenceLink"
+            },
+            "title": "Links",
+            "type": "array"
           },
           "points": {
             "items": {
@@ -2462,6 +2706,54 @@
           "count"
         ],
         "title": "ReviewRuleCount",
+        "type": "object"
+      },
+      "ReviewerUnit": {
+        "additionalProperties": false,
+        "description": "A response letter's unit (Codex review #4): a reviewer's comment and\nthe reply under it. Described, never judged.",
+        "properties": {
+          "comment": {
+            "$ref": "#/components/schemas/EvidenceSpan"
+          },
+          "kind": {
+            "const": "reviewer_comment",
+            "default": "reviewer_comment",
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "description": "e.g. \"Reviewer 1, comment 2\".",
+            "title": "Label",
+            "type": "string"
+          },
+          "learn_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Learn Ref"
+          },
+          "reply": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceSpan"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Absent when no reply was recognised under the comment."
+          }
+        },
+        "required": [
+          "label",
+          "comment"
+        ],
+        "title": "ReviewerUnit",
         "type": "object"
       },
       "RuleInfo": {
@@ -2601,6 +2893,43 @@
         ],
         "title": "Scope",
         "type": "string"
+      },
+      "ScopeInfo": {
+        "additionalProperties": false,
+        "description": "How much of the document the check took the text to be (Codex\nreview #4), and why.",
+        "properties": {
+          "guessed": {
+            "description": "True when inferred (auto).",
+            "title": "Guessed",
+            "type": "boolean"
+          },
+          "id": {
+            "enum": [
+              "whole",
+              "chapter",
+              "excerpt"
+            ],
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "description": "One line saying what was assumed and what it changes, for the brief and the map.",
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "guessed"
+        ],
+        "title": "ScopeInfo",
+        "type": "object"
       },
       "Segment": {
         "additionalProperties": false,
@@ -3125,6 +3454,27 @@
           "state"
         ],
         "title": "TierHealth",
+        "type": "object"
+      },
+      "TopicalSection": {
+        "additionalProperties": false,
+        "description": "A topical heading read as Methods or Results from its own wording.",
+        "properties": {
+          "heading": {
+            "description": "The heading as written (never logged).",
+            "title": "Heading",
+            "type": "string"
+          },
+          "section": {
+            "title": "Section",
+            "type": "string"
+          }
+        },
+        "required": [
+          "heading",
+          "section"
+        ],
+        "title": "TopicalSection",
         "type": "object"
       },
       "ValidationError": {

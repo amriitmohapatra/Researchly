@@ -30,6 +30,21 @@ export function profileSummary(choices: readonly ProfileChoice[], id: DocumentTy
 }
 
 /**
+ * Topical headings the engine read as a section from the wording under them
+ * (Codex review #4): "Read from the wording under them: “Experiment 1” as
+ * Methods." Null when there are none, so the writer can see, and question,
+ * why passive voice was not flagged there.
+ */
+export function topicalLine(profile: ProfileInfo | null | undefined): string | null {
+  const items = (profile?.topical ?? []).filter((t) => t.heading.trim());
+  if (items.length === 0) return null;
+  const name = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+  const parts = items.map((t) => `“${t.heading.trim()}” as ${name(t.section)}`);
+  const list = parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
+  return `Topical ${items.length === 1 ? "heading" : "headings"} read from the wording under ${items.length === 1 ? "it" : "them"}: ${list}.`;
+}
+
+/**
  * The one quiet line under the results heading saying what the check was
  * run as. The engine's note already reads "Checked as a commentary: …", so
  * when there is one it stands alone. A guessed "general" says nothing: that

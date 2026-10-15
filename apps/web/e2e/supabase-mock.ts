@@ -111,6 +111,10 @@ export interface SupabaseState {
   verify: { status: number; body: unknown } | null;
   /** Make the refresh-token grant fail (a revoked session). */
   refreshFails: boolean;
+  /** delete_my_account ran: the sign-in and every row are gone (PLAN #12). */
+  accountDeleted: boolean;
+  /** Answer these database functions with an error instead (e.g. PGRST202, not migrated yet). */
+  rpcErrors: Record<string, { status: number; body: unknown }>;
   /** Every request this browser sent to Supabase, for assertions. */
   sent: SentRequest[];
 }
@@ -124,6 +128,8 @@ export async function mockSupabase(page: Page, init: Partial<SupabaseState> = {}
     otp: null,
     verify: null,
     refreshFails: false,
+    accountDeleted: false,
+    rpcErrors: {},
     sent: [],
     ...init,
   };
@@ -184,6 +190,34 @@ export async function mockSupabase(page: Page, init: Partial<SupabaseState> = {}
       else if (!state.settings) return reply(route, 200, null);
       state.settings = { ...base, disabled_rules: rules };
       return reply(route, 200, rules);
+    }
+    if (p.startsWith("/rest/v1/rpc/") && state.rpcErrors[p.slice("/rest/v1/rpc/".length)]) {
+      const e = state.rpcErrors[p.slice("/rest/v1/rpc/".length)]!;
+      return reply(route, e.status, e.body);
+    }
+    if (p === "/rest/v1/rpc/reset_my_preferences") {
+      // As the migration: every preference back to its column default; the
+      // dictionary, progress and keep_progress stay. No row: nothing to do.
+      if (state.settings) {
+        state.settings = {
+          ...state.settings,
+          disabled_rules: [],
+          show_preferences: false,
+          locale: "en-US",
+          mode: "revise",
+          document_type: "auto",
+          spelling: "auto",
+        };
+      }
+      return reply(route, 204);
+    }
+    if (p === "/rest/v1/rpc/delete_my_account") {
+      // As the migration: the auth user goes, and every row with it (cascade).
+      state.accountDeleted = true;
+      state.settings = null;
+      state.words = [];
+      state.progress = [];
+      return reply(route, 204);
     }
     if (p === "/rest/v1/progress_events") {
       if (req.method() === "GET") {

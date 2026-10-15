@@ -76,12 +76,22 @@ spec:
             # (the real client); entries left of it are client-supplied.
             - name: RESEARCHLY_TRUSTED_PROXY_HOPS
               value: "1"
+            # Anonymous callers, per client IP (and failed sign-ins per IP).
             - name: RESEARCHLY_RATE_LIMIT_PER_MIN
               value: "30"
             # The live check (/v1/check-paragraphs, S4d R3) runs after each
             # typing pause (~1.5 s): its own budget, about two a second.
             - name: RESEARCHLY_LIVE_RATE_LIMIT_PER_MIN
               value: "120"
+            # Signed in (PLAN #12): per user, keyed on the verified token,
+            # so people behind one address (a university) never share a
+            # budget. Full checks, the live check and uploads apart.
+            - name: RESEARCHLY_USER_RATE_LIMIT_PER_MIN
+              value: "30"
+            - name: RESEARCHLY_USER_LIVE_RATE_LIMIT_PER_MIN
+              value: "120"
+            - name: RESEARCHLY_USER_UPLOAD_RATE_LIMIT_PER_MIN
+              value: "10"
             # Accounts (S2). Both are public by design (the browser has
             # them too); Row-Level Security protects the data. Empty = the
             # engine runs without accounts.

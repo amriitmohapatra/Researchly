@@ -21,6 +21,7 @@ import { dismissedCount, heldBackSentence, shownSuggestions, withoutSetAside } f
 import { ChecklistView } from "./ChecklistView";
 import { NarrativeMap } from "./NarrativeMap";
 import { ReviewBrief } from "./ReviewBrief";
+import { ScopeLine } from "./ScopeLine";
 
 const NONE: ReadonlySet<string> = new Set();
 
@@ -216,7 +217,7 @@ export function PrintReport({
       <section className="print-brief" aria-label="Reviewer’s brief">
         <h2>Reviewer&rsquo;s brief</h2>
         {brief.kind === "ready" ? (
-          <ReviewBrief state={brief} />
+          <ReviewBrief state={brief} scopeLine={<ScopeLine scope={data.profile?.scope} />} />
         ) : brief.kind === "needs_revise" ? (
           <p className="print-muted">This check ran in Draft mode, which has no brief. Check again in Revise mode to include it.</p>
         ) : (
@@ -227,7 +228,7 @@ export function PrintReport({
       <section className="print-narrative" aria-label="Narrative map" data-testid="print-narrative">
         <h2>Narrative map</h2>
         {narrative.kind === "ready" ? (
-          <NarrativeMap state={narrative} variant="print" />
+          <NarrativeMap state={narrative} variant="print" scopeLine={<ScopeLine scope={data.profile?.scope} />} />
         ) : narrative.kind === "needs_revise" ? (
           <p className="print-muted">This check ran in Draft mode, which has no narrative map. Check again in Revise mode to include it.</p>
         ) : (

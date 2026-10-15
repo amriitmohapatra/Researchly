@@ -163,6 +163,15 @@ def guess_with_evidence(document) -> tuple:
         # of its own is the signal here.
         policy = [m.group().strip()
                   for m in _POLICY_LINE.finditer(document.original)]
+    if "methods" not in sections:
+        # A response letter: two or more reviewer comments, at least one
+        # with a reply under it (Codex review #4). Checked before the policy
+        # headings: a letter may quote a "Recommendations" heading.
+        from .discourse.units import reviewer_units
+        found = reviewer_units(document)
+        if len(found) >= 2 and any(u["reply_span"] for u in found):
+            return ("response-to-reviewers",
+                    ", ".join(u["label"] for u in found[:3])[:120])
     if policy and "methods" not in sections:
         return "policy-brief", ", ".join(policy)[:120]
     return "general", ""
@@ -186,3 +195,197 @@ def listing() -> list:
     """For a selector: every type a user can pick, in display order."""
     return [{"id": p.id, "label": p.label, "summary": p.summary}
             for p in PROFILES.values()]
+
+
+# --- scope: how much of the document this is (Codex review #4) ---------------
+#
+# The article type says what KIND of document the text belongs to; the
+# scope says how much of it was handed over. A Methods section pasted on its
+# own is a research article's excerpt, not a research article missing its
+# Introduction; one chapter of a thesis has no abstract of its own. The two
+# are separate choices: "auto" infers the scope from the headings, and the
+# surfaces say what was assumed, with an override beside the brief and the
+# map.
+
+SCOPES = ("auto", "whole", "chapter", "excerpt")
+SCOPE_LABELS = {"whole": "Whole document", "chapter": "Chapter",
+                "excerpt": "Excerpt"}
+# Types whose sections are a research paper's, so a lone section is an
+# excerpt and a topical heading may be read from its wording.
+RESEARCH_TYPES = frozenset({"general", "manuscript", "thesis-chapter",
+                            "grant"})
+_MAIN = ("abstract", "introduction", "methods", "results", "discussion",
+         "limitations", "conclusion")
+_NAMES = {"abstract": "Abstract", "introduction": "Introduction",
+          "methods": "Methods", "results": "Results",
+          "discussion": "Discussion", "limitations": "Limitations",
+          "conclusion": "Conclusion"}
+_CHAPTER = re.compile(r"^\s*chapter\s+(?:\d+|[ivxlc]+|one|two|three|four|"
+                      r"five|six|seven|eight|nine|ten)\b", re.IGNORECASE)
+
+
+@dataclass(frozen=True)
+class Scope:
+    id: str              # whole | chapter | excerpt
+    guessed: bool
+    reason: str = ""     # plain words: what an inferred scope rests on
+
+    @property
+    def label(self) -> str:
+        return SCOPE_LABELS[self.id]
+
+    @property
+    def note(self) -> str:
+        """One line for the surfaces: what was assumed, and what it does."""
+        how = (f" ({self.reason})" if self.guessed and self.reason
+               else "" if self.guessed else ", as you chose")
+        if self.id == "excerpt":
+            return (f"Read as an excerpt{how}: sections that are not in it "
+                    "are not asked for.")
+        if self.id == "chapter":
+            return (f"Read as a chapter{how}: no abstract is asked for, and "
+                    "each section is read where it stands.")
+        return (f"Read as a whole document{how}: the sections a reader of "
+                "this kind of document expects are asked for.")
+
+
+def _short(text: str, n: int = 60) -> str:
+    text = " ".join(text.split())
+    return text if len(text) <= n else text[:n - 1].rstrip() + "…"
+
+
+def resolve_scope(choice: Optional[str], document, profile: Profile) -> Scope:
+    """The scope a check runs under. An explicit choice wins; "auto" (or
+    nothing) infers it:
+
+    - a thesis chapter, or a document that opens a chapter (a LaTeX
+      \\chapter, a "Chapter 3" heading), is a chapter;
+    - research prose with no section headings, or with only one kind of
+      section (a Methods section and its subsections), is an excerpt;
+    - anything else is the whole document. A commentary or policy brief
+      without headings is a whole piece, read as one.
+    """
+    if choice in ("whole", "chapter", "excerpt"):
+        return Scope(choice, False)
+    heads = list(getattr(document, "headings", []) or []) if document else []
+    if profile.id == "thesis-chapter":
+        return Scope("chapter", True, "checked as a thesis chapter")
+    chapter = next((h for h in heads if h.level == 0
+                    or _CHAPTER.match(h.text)), None)
+    if chapter is not None:
+        return Scope("chapter", True,
+                     f"it opens a chapter, “{_short(chapter.text)}”")
+    if profile.id in RESEARCH_TYPES and document is not None:
+        kinds = []
+        for h in sorted(heads, key=lambda h: h.start):
+            if h.section in _MAIN and h.section not in kinds:
+                kinds.append(h.section)
+        if not heads:
+            return Scope("excerpt", True, "it has no section headings")
+        if len(kinds) == 1:
+            return Scope("excerpt", True,
+                         f"its only section is {_NAMES[kinds[0]]}")
+        if len(kinds) > 1:
+            return Scope("whole", True,
+                         "its headings: " + ", ".join(_NAMES[k]
+                                                      for k in kinds))
+    return Scope("whole", True)
+
+
+def topical_sections(document) -> list:
+    """Headings that name no section and were not read as one: a topical
+    title ("Transmission in Oldmere") at the top of its own subtree."""
+    return [h for h in getattr(document, "headings", []) or []
+            if h.section == "other" and h.level is not None and h.level > 0]
+
+
+def expected_sections(profile: Profile, scope: Scope, document=None) -> tuple:
+    """The sections a reader of this kind of document, at this scope,
+    expects to find. An excerpt is asked for none; a chapter for no
+    abstract. Where the document's own sections are topical ("Experiment
+    1", "A model of measles"), its Methods and Results may stand under
+    other names, so neither is asked for by name."""
+    if scope.id == "excerpt":
+        return ()
+    expected = tuple(profile.expected)
+    if scope.id == "chapter":
+        expected = tuple(s for s in expected if s != "abstract")
+    if document is not None and topical_sections(document):
+        expected = tuple(s for s in expected if s not in ("methods",
+                                                          "results"))
+    return expected
+
+
+def limitations_expected(profile: Profile, scope: Scope) -> bool:
+    return profile.limitations_expected and scope.id != "excerpt"
+
+
+# --- topical headings (PLAN: the owner's first real .tex upload) -------------
+#
+# "Experiment 1: the baseline SEIR" names no section, so its prose used to be
+# "other" and got the advice meant for argued text (passive voice flagged as
+# if in the Discussion). For a research type, a topical heading whose prose
+# plainly reports (what was done, what was found) and plainly does not argue
+# is read as Methods or Results. Only those two: reading a section as an
+# Introduction or Discussion would switch on checks the writer did not ask
+# for, so an argued or mixed section stays as it was (precision over
+# recall). Nested headings inherit as they do under a named section.
+
+_SPLIT = re.compile(r"(?<=[.!?])\s+")
+_ARGUING = frozenset({"claim", "warrant", "implication", "limitation",
+                      "rebuttal", "contribution"})
+
+
+def _role_from_cues(text: str) -> Optional[str]:
+    from .discourse import moves as moves_mod
+    from .discourse.argument import label_sentence
+    method_rx = moves_mod._DATA + moves_mod._ANALYSIS
+    method = result = arguing = total = 0
+    for sent in _SPLIT.split(text):
+        sent = " ".join(sent.split())
+        if len(sent.split()) < 4:
+            continue
+        total += 1
+        roles = set(label_sentence(sent)[2])
+        is_method = "method" in roles or any(
+            re.search(rx, sent, re.IGNORECASE) for rx in method_rx)
+        is_result = "result" in roles
+        if roles & _ARGUING:
+            arguing += 1
+        elif is_method and not is_result:
+            method += 1
+        elif is_result:
+            result += 1
+    reporting = method + result
+    if reporting < 2 or reporting < 2 * arguing or reporting * 5 < total * 2:
+        return None
+    return "methods" if method >= result else "results"
+
+
+def infer_topical_sections(document, profile: Profile) -> list:
+    """Read each topical heading of a research document from its own
+    prose (see above); returns [{"heading", "section"}] for those read,
+    after nested headings have inherited. Changes nothing for other types,
+    for plain text (whose headings are only the named ones) or when the
+    wording is mixed."""
+    if profile.id not in RESEARCH_TYPES:
+        return []
+    heads = sorted(getattr(document, "headings", []) or [],
+                   key=lambda h: h.start)
+    changed = []
+    for i, h in enumerate(heads):
+        if h.section != "other" or h.level is None or h.level <= 0:
+            continue
+        end = next((g.start for g in heads[i + 1:]
+                    if g.level is None or g.level <= h.level),
+                   len(document.masked))
+        role = _role_from_cues(document.masked[h.start:end])
+        if role:
+            h.inferred = role
+            changed.append(h)
+    if not changed:
+        return []
+    from .document import resolve_sections
+    resolve_sections(document.headings)
+    return [{"heading": _short(h.text, 80), "section": h.section}
+            for h in changed]
