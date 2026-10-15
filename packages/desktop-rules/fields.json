@@ -1,0 +1,18 @@
+{
+  "$comment": "Researchly's own eligibility rules for text fields (docs/inline-review-design.md section 6). Written from scratch for Researchly, 2026-10-15. The overlay clients never attach to a field that is secure, or whose label, placeholder, identifier or (for forms) an ancestor's name contains one of these terms. Matching is case-insensitive, on word boundaries for Latin scripts and as substrings for the others. Add terms here, not in code.",
+  "version": 1,
+  "never_secure_fields": true,
+  "keywords": {
+    "en": ["password", "passcode", "passphrase", "pin", "pin code", "card number", "credit card", "debit card", "cvv", "cvc", "security code", "expiry", "expiration date", "one-time code", "verification code", "otp", "2fa", "sign in", "sign-in", "log in", "login", "username", "user name", "date of birth", "birthday", "phone", "mobile number", "social security", "nric", "passport number", "bank account", "iban", "routing number", "search"],
+    "fr": ["mot de passe", "code pin", "numéro de carte", "carte bancaire", "code de sécurité", "code de vérification", "connexion", "se connecter", "identifiant", "nom d'utilisateur", "date de naissance", "téléphone", "rechercher"],
+    "de": ["passwort", "kennwort", "pin-code", "kartennummer", "kreditkarte", "sicherheitscode", "bestätigungscode", "anmelden", "anmeldung", "benutzername", "geburtsdatum", "telefon", "suchen"],
+    "es": ["contraseña", "clave", "código pin", "número de tarjeta", "tarjeta de crédito", "código de seguridad", "código de verificación", "iniciar sesión", "usuario", "nombre de usuario", "fecha de nacimiento", "teléfono", "buscar"],
+    "pt": ["senha", "código pin", "número do cartão", "cartão de crédito", "código de segurança", "código de verificação", "entrar", "iniciar sessão", "nome de usuário", "utilizador", "data de nascimento", "telefone", "pesquisar"],
+    "zh": ["密码", "口令", "卡号", "信用卡", "安全码", "验证码", "登录", "用户名", "出生日期", "电话", "手机号", "搜索"],
+    "hi": ["पासवर्ड", "पिन", "कार्ड नंबर", "क्रेडिट कार्ड", "सुरक्षा कोड", "सत्यापन कोड", "लॉग इन", "साइन इन", "उपयोगकर्ता नाम", "जन्म तिथि", "फ़ोन", "खोजें"],
+    "ms": ["kata laluan", "nombor kad", "kad kredit", "kod keselamatan", "kod pengesahan", "log masuk", "nama pengguna", "tarikh lahir", "telefon", "cari"]
+  },
+  "scripts_matched_as_substrings": ["zh", "hi"],
+  "min_field_characters": 1,
+  "max_field_characters": 1000000
+}
