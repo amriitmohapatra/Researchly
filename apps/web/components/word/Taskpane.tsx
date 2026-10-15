@@ -1510,6 +1510,14 @@ export function Taskpane() {
                           Signed in as <strong className="break-anywhere">{auth.email}</strong>. Muted rules and your
                           dictionary are managed in the website&rsquo;s Settings.
                         </p>
+                        <p className="muted" data-testid="tp-account-controls">
+                          To reset your preferences or delete your account, use{" "}
+                          <Link className="inline-link" href="/settings" target="_blank" rel="noopener" data-testid="tp-settings-link">
+                            Settings on the website
+                            <span className="sr-only"> (opens in a new window)</span>
+                          </Link>
+                          .
+                        </p>
                         <button type="button" className="btn btn-quiet btn-compact" onClick={() => void signOut()} data-testid="tp-sign-out">
                           Sign out
                         </button>

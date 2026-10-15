@@ -21,6 +21,8 @@
 --     without BYPASSRLS (the strictest case). Whether Supabase's `postgres`
 --     holds BYPASSRLS does not change any Q7 guarantee: clients never act as
 --     the owner.
+--   * migration_owner may SELECT and DELETE auth.users, as Supabase's
+--     `postgres` may: delete_my_account() runs with its privileges.
 --   * Default privileges: Supabase grants ALL on new public tables,
 --     functions and sequences to anon and authenticated. We reproduce that
 --     so the test proves the migration's explicit revokes actually work.
@@ -51,6 +53,10 @@ create table auth.users (
 alter table auth.users owner to supabase_auth_admin;
 -- The migration's foreign keys need REFERENCES on auth.users.
 grant references on auth.users to migration_owner;
+-- delete_my_account() (SECURITY DEFINER, owned by the migration's owner)
+-- deletes the caller's row. In Supabase the `postgres` role holds these
+-- privileges on auth.users (supabase/README.md says how to check).
+grant select, delete on auth.users to migration_owner;
 
 create function auth.uid() returns uuid
 language sql stable

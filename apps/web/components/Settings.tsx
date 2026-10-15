@@ -5,22 +5,23 @@ import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from "rea
 import type { RuleInfo, Spelling } from "@researchly/contract";
 import {
   addWord,
-  deleteMyData,
+  clearDictionary,
+  deleteMyAccount,
   listWords,
   loadSettings,
   loadSpelling,
   removeWord,
+  resetPreferences,
   saveSettings,
   saveSpelling,
   unmuteRule,
 } from "@/lib/account";
-import { openSignIn, useAuth } from "@/lib/auth";
+import { openSignIn, signOut, useAuth } from "@/lib/auth";
 import { deleteProgress, loadKeepProgress, saveKeepProgress } from "@/lib/progress";
 import { CATEGORIES, categoryMeta } from "@/lib/categories";
 import { listRules } from "@/lib/engine";
-import { saveSpellingChoice } from "@/lib/prefs";
+import { saveDocumentTypeChoice, saveSpellingChoice } from "@/lib/prefs";
 import {
-  DEFAULT_SETTINGS,
   LOCALES,
   MAX_DICTIONARY_WORDS,
   validateWord,
@@ -29,6 +30,7 @@ import {
 } from "@/lib/settings";
 import { SPELLING_LABELS } from "@/lib/spelling";
 import { CategoryIcon } from "./CategoryIcon";
+import { AccountDeleted, DeleteAccount } from "./DeleteAccount";
 import { ConfirmDelete } from "./pages/ConfirmDelete";
 import { SpellingSelect } from "./SpellingSelect";
 
@@ -45,7 +47,14 @@ type Status = { ok: boolean; text: string } | null;
  */
 export function Settings() {
   const { auth } = useAuth();
+  /** The account was deleted on this page: say so, then sign this browser out. */
+  const [deleted, setDeleted] = useState(false);
 
+  useEffect(() => {
+    if (deleted) void signOut();
+  }, [deleted]);
+
+  if (deleted) return <AccountDeleted />;
   if (auth.status === "loading" || auth.status === "off") {
     return (
       <div className="loading-card" aria-hidden="true">
@@ -69,10 +78,10 @@ export function Settings() {
       </section>
     );
   }
-  return <SignedInSettings key={auth.email} />;
+  return <SignedInSettings key={auth.email} onAccountDeleted={() => setDeleted(true)} />;
 }
 
-function SignedInSettings() {
+function SignedInSettings({ onAccountDeleted }: { onAccountDeleted: () => void }) {
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [words, setWords] = useState<string[] | null>(null);
   const [rules, setRules] = useState<Map<string, RuleInfo> | null>(null);
@@ -265,6 +274,12 @@ function SignedInSettings() {
             },
           )
         }
+        onClear={() =>
+          act(clearDictionary, () => {
+            setWords([]);
+            return "Your dictionary was cleared.";
+          })
+        }
       />
 
       <KeepProgress
@@ -288,24 +303,27 @@ function SignedInSettings() {
         onDelete={() => act(deleteProgress, () => "Your recorded progress was deleted.")}
       />
 
-      <DeleteData
+      <AccountControls
         busy={busy}
-        onDelete={() =>
-          act(
-            async () => {
-              // Progress first: it is the only thing that refers to past checks.
-              const progress = await deleteProgress();
-              return progress.ok ? deleteMyData() : progress;
-            },
-            () => {
-              setSettings({ ...DEFAULT_SETTINGS, disabled_rules: [] });
-              setWords([]);
-              setKeep(false);
-              setSpelling("auto"); // the row is gone, so the column's default applies
-              return "Your settings, dictionary and progress were deleted.";
-            },
-          )
+        onReset={() =>
+          act(resetPreferences, (s) => {
+            setSettings(s);
+            setSpelling("auto");
+            // This browser follows too, so the checker and the taskpane agree before their next sign-in load.
+            saveSpellingChoice("auto");
+            saveDocumentTypeChoice("auto");
+            return "Your preferences were reset. Your dictionary and progress are as they were.";
+          })
         }
+        onDeleteAccount={async () => {
+          if (busy) return "Wait for the last change to finish, then try again.";
+          setBusy(true);
+          const r = await deleteMyAccount();
+          setBusy(false);
+          if (!r.ok) return r.message;
+          onAccountDeleted();
+          return null;
+        }}
       />
     </div>
   );
@@ -469,11 +487,13 @@ function Dictionary({
   busy,
   onAdd,
   onRemove,
+  onClear,
 }: {
   words: readonly string[];
   busy: boolean;
   onAdd: (word: string) => Promise<boolean>;
   onRemove: (word: string) => void;
+  onClear: () => Promise<boolean>;
 }) {
   const [draft, setDraft] = useState("");
   const [problem, setProblem] = useState<string | null>(null);
@@ -590,6 +610,21 @@ function Dictionary({
         </ul>
       ) : null}
       {words.length > 0 && shown.length === 0 ? <p className="muted">No word matches &ldquo;{filter}&rdquo;.</p> : null}
+      {words.length > 0 ? (
+        <div className="setting-row">
+          <ConfirmDelete
+            label="Clear my dictionary…"
+            title="Clear your dictionary?"
+            body={`All ${nf.format(words.length)} ${words.length === 1 ? "word" : "words"} will be removed from your dictionary on every device, so they can be flagged as spelling mistakes again. Your other settings and your progress stay. This can’t be undone.`}
+            keepLabel="Keep them"
+            confirmLabel="Clear it"
+            workingLabel="Clearing…"
+            busy={busy}
+            onConfirm={onClear}
+            testId="clear-dictionary"
+          />
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -665,82 +700,53 @@ function KeepProgress({
   );
 }
 
-function DeleteData({ busy, onDelete }: { busy: boolean; onDelete: () => Promise<boolean> }) {
-  const ref = useRef<HTMLDialogElement>(null);
-  const openerRef = useRef<HTMLButtonElement>(null);
-  const keepRef = useRef<HTMLButtonElement>(null);
-  const ids = { title: useId(), body: useId() };
-  const [working, setWorking] = useState(false);
+/** What "Reset preferences" changes and what it keeps (pinned by tests). */
+export const RESET_PREFERENCES_BODY =
+  "Every muted rule is unmuted, preferences are hidden again, and grammar checks, spelling, Draft or Revise and the article type go back to their defaults, on every device. Your dictionary, your recorded progress and the Keep my progress switch stay as they are.";
 
+/**
+ * The account as a whole (PLAN #12): two separate actions, worded apart.
+ * Resetting keeps the account and its words; deleting removes everything,
+ * and asks for a typed word as well as a second click.
+ */
+function AccountControls({
+  busy,
+  onReset,
+  onDeleteAccount,
+}: {
+  busy: boolean;
+  onReset: () => Promise<boolean>;
+  onDeleteAccount: () => Promise<string | null>;
+}) {
   return (
-    <section className="panel settings-section" aria-labelledby="delete-title" data-testid="delete-data">
-      <h2 id="delete-title" className="panel-title">
-        Delete my settings and dictionary
+    <section className="panel settings-section" aria-labelledby="account-title" data-testid="account-controls">
+      <h2 id="account-title" className="panel-title">
+        Your account
       </h2>
-      <p className="muted section-intro">
-        Removes your muted rules, your display choices, every word in your dictionary and any recorded progress. You
-        stay signed in and can start again; Researchly never had any of your text to delete.
-      </p>
-      <button
-        ref={openerRef}
-        type="button"
-        className="btn btn-secondary"
-        aria-disabled={busy || undefined}
-        onClick={() => {
-          if (busy) return;
-          ref.current?.showModal();
-          // The safe choice takes focus (showModal would pick the first button).
-          keepRef.current?.focus();
-        }}
-        data-testid="delete-open"
-      >
-        Delete my data…
-      </button>
-      <dialog
-        ref={ref}
-        className="dialog"
-        aria-labelledby={ids.title}
-        aria-describedby={ids.body}
-        onClose={() => openerRef.current?.focus()}
-        data-testid="delete-dialog"
-      >
-        <div className="dialog-body">
-          <h2 id={ids.title} className="dialog-title">
-            Delete your settings and dictionary?
-          </h2>
-          <p id={ids.body}>
-            Your muted rules, display choices, dictionary words and recorded progress will be removed from your account on
-            every device. This can&rsquo;t be undone.
-          </p>
-          <div className="dialog-actions">
-            <button ref={keepRef} type="button" className="btn btn-secondary" onClick={() => ref.current?.close()}>
-              Keep them
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              aria-disabled={working || undefined}
-              onClick={async () => {
-                if (working) return;
-                setWorking(true);
-                await onDelete();
-                setWorking(false);
-                ref.current?.close();
-              }}
-              data-testid="delete-confirm"
-            >
-              {working ? (
-                <>
-                  <span className="spinner" aria-hidden="true" />
-                  Deleting…
-                </>
-              ) : (
-                "Delete them"
-              )}
-            </button>
-          </div>
-        </div>
-      </dialog>
+      <div className="setting-row" data-testid="reset-preferences">
+        <h3 className="field-label">Reset preferences</h3>
+        <p className="help section-intro">{RESET_PREFERENCES_BODY}</p>
+        <ConfirmDelete
+          label="Reset preferences…"
+          title="Reset your preferences?"
+          body={RESET_PREFERENCES_BODY}
+          keepLabel="Keep them"
+          confirmLabel="Reset them"
+          workingLabel="Resetting…"
+          busy={busy}
+          onConfirm={onReset}
+          testId="reset-preferences"
+        />
+      </div>
+      <div className="setting-row" data-testid="delete-account">
+        <h3 className="field-label">Delete my account</h3>
+        <p className="help section-intro">
+          Deletes your sign-in, settings, dictionary and any recorded progress. It can&rsquo;t be undone. To keep the
+          account and start again, reset your preferences instead.
+        </p>
+        <DeleteAccount busy={busy} onDelete={onDeleteAccount} />
+      </div>
     </section>
   );
 }
+

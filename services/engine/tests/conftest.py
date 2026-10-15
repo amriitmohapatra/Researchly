@@ -31,7 +31,8 @@ PREFERENCE_TEXT = "Results\n\nThe effect was very large in every district."
 def make_settings(**kw) -> settings_mod.Settings:
     base = dict(env="production", allowed_origins=[], grammar_enabled=True,
                 max_body_bytes=4 * 1024 * 1024, rate_limit_per_min=0,
-                live_rate_limit_per_min=0,
+                live_rate_limit_per_min=0, user_rate_limit_per_min=0,
+                user_live_rate_limit_per_min=0, user_upload_rate_limit_per_min=0,
                 trusted_proxy_hops=0, warmup=True)
     base.update(kw)
     return settings_mod.Settings(**base)
