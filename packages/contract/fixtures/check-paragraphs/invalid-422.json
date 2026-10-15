@@ -1,0 +1,25 @@
+{
+  "about": "Two paragraphs with the same id: refused with 422 invalid_request. Sending it again will not help: show it, and wait for an edit.",
+  "request": {
+    "revision": 5,
+    "paragraphs": [
+      {
+        "id": "p1",
+        "text": "We fitted a renewal model to weekly case counts."
+      },
+      {
+        "id": "p1",
+        "text": "The model was calibrated by the authors using weekly data."
+      }
+    ]
+  },
+  "status": 422,
+  "headers": {},
+  "response": {
+    "error": {
+      "code": "invalid_request",
+      "message": "body is invalid (value_error).",
+      "request_id": "5045c6ca1fb14f96bd88a1c34a387e89"
+    }
+  }
+}

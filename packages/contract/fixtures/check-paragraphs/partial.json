@@ -1,0 +1,180 @@
+{
+  "about": "The grammar tier is down (ok false, state error): state partial. The suggestions of the tiers that ran are still sent.",
+  "request": {
+    "revision": 3,
+    "paragraphs": [
+      {
+        "id": "s.1",
+        "text": "The data was recieved from each district, and in order to estimate the the reproduction number the models was fitted weekly.",
+        "heading": "Results"
+      }
+    ]
+  },
+  "status": 200,
+  "headers": {},
+  "response": {
+    "schema_version": "1",
+    "revision": 3,
+    "paragraphs": [
+      {
+        "id": "s.1",
+        "section": "results",
+        "suggestions": [
+          {
+            "id": "88dbd83cc08bf904",
+            "rule_id": "S001",
+            "rule_name": "spelling",
+            "category": "correction",
+            "critical": true,
+            "tier": "spelling",
+            "begin": 13,
+            "end": 21,
+            "text": "recieved",
+            "section": "results",
+            "message": "Did you mean 'received'? (also: relieved)",
+            "plain": "This word is not in the dictionary, so it may be a typo. Scientific terms, names and abbreviations are usually recognised. If it is a real word you use, add it to your dictionary from this card and it will not be flagged again.",
+            "why": "Spelling against a frequency dictionary plus a scientific lexicon (seroprevalence, covariates, nowcasting are not errors here). Proper nouns, acronyms, UK/US variants, and terms you use repeatedly are skipped. A false alarm on your own terminology: 'Add to dictionary' on the card teaches it the word.",
+            "source": "SymSpell spelling engine with Researchly's scientific lexicon",
+            "learn_ref": "spelling-and-grammar",
+            "replacements": [
+              "received"
+            ],
+            "fix_safety": "review"
+          },
+          {
+            "id": "b6ba107d7052bb3b",
+            "rule_id": "W202",
+            "rule_name": "wordy-phrase",
+            "category": "improvement",
+            "critical": false,
+            "tier": "craft",
+            "begin": 46,
+            "end": 57,
+            "text": "in order to",
+            "section": "results",
+            "message": "Tighter: 'to'.",
+            "plain": "This phrase can be shorter: 'because' instead of 'due to the fact that'. Shorter is easier to read, and the meaning stays the same.",
+            "why": "Cut ruthlessly, but second: on a revision pass, try to remove ten per cent of the words without losing meaning. You almost always can, and the prose tightens every time.",
+            "source": "The Craft of Scientific Writing (Researchly's founding guide): Language and tone",
+            "learn_ref": "concise-words",
+            "replacements": [
+              "to"
+            ],
+            "fix_safety": "safe"
+          },
+          {
+            "id": "5ec9fe1b6515b72b",
+            "rule_id": "W207",
+            "rule_name": "doubled-word",
+            "category": "correction",
+            "critical": true,
+            "tier": "craft",
+            "begin": 67,
+            "end": 74,
+            "text": "the the",
+            "section": "results",
+            "message": "Doubled word — delete one.",
+            "plain": "A word is repeated by accident, like 'the the'. Delete one.",
+            "why": "A mechanical slip the eye forgives and the reader stumbles on; the read-aloud test catches these.",
+            "source": "The Craft of Scientific Writing (Researchly's founding guide): A practical workflow to beat the blank page",
+            "learn_ref": "spelling-and-grammar",
+            "replacements": [
+              "the"
+            ],
+            "fix_safety": "safe"
+          }
+        ]
+      }
+    ],
+    "state": "partial",
+    "health": [
+      {
+        "tier": "parser",
+        "label": "Sentence parser",
+        "ok": true,
+        "state": "ready",
+        "detail": "en_core_web_sm loaded",
+        "remedy": ""
+      },
+      {
+        "tier": "spelling",
+        "label": "Spelling",
+        "ok": true,
+        "state": "ready",
+        "detail": "SymSpell + scientific lexicon",
+        "remedy": ""
+      },
+      {
+        "tier": "grammar",
+        "label": "Grammar",
+        "ok": false,
+        "state": "error",
+        "detail": "LanguageTool check failed (RuntimeError)",
+        "remedy": "see OPTIONAL-grammar-tier.md"
+      },
+      {
+        "tier": "gec",
+        "label": "Learned corrections",
+        "ok": false,
+        "state": "missing",
+        "detail": "no local model in this build (the tier abstains entirely)",
+        "remedy": ""
+      }
+    ],
+    "hidden_preferences": 0,
+    "signed_in": false,
+    "assessed_rules": [
+      "AB801",
+      "C301",
+      "C302",
+      "C303",
+      "C304",
+      "C305",
+      "D904",
+      "D905",
+      "E701",
+      "E702",
+      "E703",
+      "E704",
+      "E705",
+      "E706",
+      "E707",
+      "G101",
+      "G102",
+      "G103",
+      "G104",
+      "G105",
+      "G106",
+      "G107",
+      "G108",
+      "GN101",
+      "GN102",
+      "GN103",
+      "GN104",
+      "GN105",
+      "GN201",
+      "GN202",
+      "GN203",
+      "GN204",
+      "GN205",
+      "GN206",
+      "L901",
+      "N102",
+      "S001",
+      "S002",
+      "W201",
+      "W202",
+      "W203",
+      "W205",
+      "W206",
+      "W207",
+      "W208",
+      "W210",
+      "W212",
+      "W213",
+      "X302"
+    ],
+    "ruleset": "0.1.0+077e92be",
+    "elapsed_ms": 15
+  }
+}
