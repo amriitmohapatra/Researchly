@@ -2891,3 +2891,96 @@ link replaces the page and drops a pasted draft; the Word pane names
   turns it off.
 - Two pages sharing class names is a bug that no accessibility scan sees;
   only looking at the screenshots found it.
+
+## P46 — 2026-10-15 — Inline review: word prediction out, underlines in (S4d, R1–R8)
+
+**Why.** Owner: "We'll remove the word suggestion part. It does not make
+sense to include it in the app when any person can simply use copilot or
+other word based tools." In its place, design lessons from the owner's
+private study of a commercial field assistant (kept outside the repo), to
+reach parity "and then improve and make it unique to our case". Grammar
+written by Claude "at build time (not LLM)" as "Researchly grammar notes";
+desktop clients for Mac and Windows as source folders the owner builds;
+open source (D9); "All Steps. No step deferred." Plan: PLAN S4d,
+`docs/inline-review-design.md` (our own words; no vendor values, names or
+strings), ADR-09 to ADR-11, D5 reopened.
+
+**What.**
+- *R1, prediction removed* from engine, service, contract, website, Word
+  pane, local server, LSP and CLI; the engine image is 37.65 MB smaller.
+  The Supabase column stays, unused and ignored.
+- *R2, one design language.* `packages/design-tokens/tokens.json`
+  (primitive → semantic → component, light and dark) generates CSS, TS,
+  Swift and C#. 214 contrast pairs are checked in CI; one colour moved (the
+  Preference line, 2.80 → 3.28:1). The six states (hidden, checking,
+  issues, clear, partial, offline) are one reducer and one mark.
+- *R3, live check.* `POST /v1/check-paragraphs` takes paragraphs with
+  their nearest heading and returns sentence-scope findings with UTF-16
+  offsets and stable opaque ids. It gives the same results as the full
+  check (30 tests). A 200-word paragraph takes p50 114 ms with grammar on,
+  35 ms with it off. It accepts native clients without an Origin, has its
+  own rate limit and is canary-tested. `/v1/analyze` gains `critical` and
+  `begin16`/`end16`.
+- *R4, Word.* Underlines in the document through Word's annotations API.
+  The colour is set by category, and the popup offers a revision only when
+  it is safe to take unread. A hover or click selects the card in the pane.
+  Live checks run after a 1.5 s pause on changed paragraphs; stale replies
+  are dropped. The six states show in the pane header. Without WordApi 1.7
+  or Microsoft 365, the pane works as before. "This computer" works too; an
+  older `server.py` falls back with a clear line. The manifest gains six
+  strings (re-sideload once).
+- *R5, website.* Underlines in the editor while writing: a native textarea
+  over a mirror. The ladder is teaser → full card → revision queue. Accept
+  goes through the browser's own edit, so undo works. The website never
+  sweeps the whole text, and LaTeX is off with one line. Typing with 1,212
+  underlines: p50 24–25 ms (off: 21–23 ms).
+- *R6, Researchly grammar notes.* 15 rules, GN101–GN208:
+  - regional conventions, gated by the writer's chosen English;
+  - research-writing grammar;
+  - 120 tests.
+
+  On the theses, all 44 new flags were read and judged true, so the noise
+  floor moved 11.74 → 11.89 and the baseline was accepted with that note.
+  LanguageTool's duplicate a/an card is dropped for the listed
+  abbreviations.
+- *R7/R8, desktop overlay clients.*
+  - Mac: `apps/desktop-overlay-mac`, Swift and AppKit, through
+    Accessibility. 91 core tests pass on Linux with Swift 6. The shell is
+    type-checked against stubs.
+  - Windows: `apps/desktop-overlay-win`, C#/.NET 8 WPF, through UI
+    Automation. 200 core tests pass. The WPF build compiles here.
+  - Both share our own eligibility rules (`packages/desktop-rules`: field
+    keywords in eight languages, per-app rules) and the contract fixtures
+    in `packages/contract/fixtures/check-paragraphs`.
+  - Build scripts and manual checklists are for the owner. The workflows
+    are manual-dispatch only.
+
+**Evidence (merged branch).**
+- Python: core 1406 passed / 2 skipped; service 312.
+- Website: lint, typecheck, token and contract checks clean; 577 unit
+  tests.
+- e2e (chromium + accounts): 204 passed / 37 skipped. Two Word checklist
+  layout tests failed under full-machine load and passed on rerun.
+- Desktop cores: Swift 91, .NET 200.
+- Third-party scan 0 hits; ruff clean; noise gate OK at 11.89.
+
+**For the owner.**
+- Deploy the engine. The live route is new; R3 sets
+  `RESEARCHLY_LIVE_RATE_LIMIT_PER_MIN`.
+- Re-sideload the Word manifest (`install-mac.sh hosted`, then clear Word's
+  cache). Underlines need Word 16.79+ and Microsoft 365; the popup needs
+  16.85+.
+- Build the desktop clients from their READMEs.
+- Exit check: underlines in Word after pauses; accept and undo; the six
+  states, including offline with Wi-Fi off.
+
+**Lessons.**
+- Two helpers can independently build the same client function. Telling
+  the second one to reuse the first's (`lib/live-check.ts`) mid-flight
+  avoided a duplicate network layer.
+- Clients written against a spec before the server exists need a shared
+  fixture captured from the real server. It caught a health-reading bug in
+  the Windows client (every reply would have read "partial") and request
+  sizes above the engine's limit.
+- A noise floor is a false-flag alarm, not a quota: when new flags are read
+  and found true, the baseline moves, with the evidence in its note.
