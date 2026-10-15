@@ -82,7 +82,7 @@ public class SettingsTests
     [InlineData("http://127.0.0.1:3517", true, "http://127.0.0.1:3517")]
     [InlineData("http://localhost:8080/", true, "http://localhost:8080")]
     [InlineData("http://engine.example.invalid", false, "")]       // plain http over the network: refused
-    [InlineData("https://user:pw@engine.example.invalid", false, "")]
+    [InlineData("https://user:pw@engine.example.org", false, "")]  // credentials in the address: refused
     [InlineData("https://engine.example.invalid/?x=1", false, "")]
     [InlineData("ftp://engine.example.invalid", false, "")]
     [InlineData("not a url", false, "")]
