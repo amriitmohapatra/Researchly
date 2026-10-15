@@ -1,0 +1,14 @@
+# Laya harness only (ml/critics/laya/). Never installed into packages/: the
+# engine's own requirements are packages/core/requirements.txt, and a promoted
+# critic reaches the engine as a pinned ONNX file, not as these libraries.
+# Licences: laya Apache-2.0 (Convai Innovations); torch BSD-3-Clause;
+# transformers Apache-2.0; onnx/onnxruntime MIT; huggingface_hub Apache-2.0.
+#
+# Pins: the versions measured on 2026-10-15 (docs/s5-laya.md). transformers 5.x
+# failed to import AutoTokenizer next to torch 2.5.1 there, so it stays on 4.x.
+# On a GPU (Kaggle) install torch from the CUDA index instead of the CPU one.
+laya[onnx]==0.4.8
+torch>=2.5,<2.9
+transformers>=4.48,<5
+huggingface_hub>=0.20
+numpy>=1.24

@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "labels": [
+    {"paragraph": 1, "rule_id": "LT001", "category": "correction", "section": "introduction", "verdict": "useful", "attempt": "synth01", "flag": 0},
+    {"paragraph": 1, "rule_id": "C305", "category": "convention", "section": "introduction", "verdict": "useful", "attempt": "synth01", "flag": 1},
+    {"paragraph": 2, "rule_id": "G106", "category": "improvement", "section": "methods", "verdict": "wrong", "attempt": "synth02", "flag": 0},
+    {"paragraph": 3, "rule_id": "W202", "category": "improvement", "section": "results", "verdict": "wrong", "attempt": "synth03", "flag": 0},
+    {"paragraph": 3, "rule_id": "W202", "category": "improvement", "section": "results", "verdict": "useful", "attempt": "synth04", "flag": 0},
+    {"paragraph": 3, "rule_id": "S001", "category": "correction", "section": "results", "verdict": "useful", "attempt": "synth04", "flag": 1},
+    {"paragraph": 3, "rule_id": "E707", "category": "improvement", "section": "results", "verdict": "wrong", "attempt": "synth04", "flag": 2},
+    {"paragraph": 3, "rule_id": "W207", "category": "correction", "section": "results", "verdict": "useful", "attempt": "synth04", "flag": 3},
+    {"paragraph": 4, "rule_id": "C301", "category": "improvement", "section": "discussion", "verdict": "useful", "attempt": "synth05", "flag": 0},
+    {"paragraph": 4, "rule_id": "C301", "category": "improvement", "section": "discussion", "verdict": "unsure", "attempt": "synth05", "flag": 1},
+    {"paragraph": 6, "rule_id": "C305", "category": "convention", "section": "conclusion", "verdict": "useful", "attempt": "synth06", "flag": 0},
+    {"paragraph": 6, "rule_id": "W202", "category": "improvement", "section": "conclusion", "verdict": "useful", "attempt": "synth06", "flag": 1},
+    {"paragraph": 6, "rule_id": "LT001", "category": "correction", "section": "conclusion", "verdict": "useful", "attempt": "synth06", "flag": 2}
+  ]
+}

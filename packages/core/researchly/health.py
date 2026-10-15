@@ -498,6 +498,49 @@ def _gec_status(cfg: Optional[Config]) -> TierStatus:
         f"local edit tagger ({gec.get_backend().version}) — {where}")
 
 
+def critic_status() -> TierStatus:
+    """The learned critic (ADR-06, PLAN S5b): installed or not, which model
+    version, and the SHA-256 it is pinned to. Until a model passes the
+    promotion gate nothing is installed and every critic abstains, which
+    changes nothing: the narrative pass uses authored rules only."""
+    from . import critics
+
+    s = critics.status()
+    label = "Learned critic"
+    sha = s.get("sha256") or ""
+    pinned = f", sha256 {sha[:12]}…" if sha else ""
+    if s["state"] == "missing":
+        return TierStatus(
+            "critic", label, False, "missing",
+            "not installed: no critic model has passed the promotion gate "
+            "yet, so every critic abstains and the narrative pass uses "
+            "authored rules only",
+            "nothing to do until a critic is promoted (ARCHITECTURE.md "
+            f"ADR-06); it installs to {critics.model_dir()}")
+    if s["state"] == "error":
+        return TierStatus(
+            "critic", label, False, "error",
+            f"installed critic refused: {s['detail']}",
+            f"reinstall the critic's {critics.DESCRIPTOR} and ONNX file "
+            f"together, or remove {critics.model_dir()} to run without it")
+    if s["state"] == "disabled":
+        return TierStatus(
+            "critic", label, False, "disabled",
+            f"{s['model_version']}{pinned}: {s['detail']}", "")
+    where = ("runs inside the engine; text is never stored"
+             if service_mode() else "nothing leaves this machine")
+    return TierStatus("critic", label, True, "ready",
+                      f"{s['model_version']}{pinned} — {where}")
+
+
+def _critic_if_installed() -> Optional[TierStatus]:
+    """critic_status() for engine_status(): reported only once something is
+    installed, so builds without a critic (all of them, today) answer
+    exactly as before."""
+    status = critic_status()
+    return None if status.state == "missing" else status
+
+
 def _files_status() -> Optional[TierStatus]:
     """The file readers (researchly.ingest). Reported only when degraded:
     every surface reads LaTeX, but most never read a file, so a "ready"
@@ -527,6 +570,7 @@ def engine_status(cfg: Optional[Config] = None, nlp=None,
                _spelling_status,
                lambda: _grammar_status(cfg, probe),
                lambda: _gec_status(cfg),
+               _critic_if_installed,
                _files_status):
         try:
             status = fn()
