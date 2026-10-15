@@ -119,6 +119,13 @@ For text that must not leave your Mac (ADR-02 local mode):
 3. If it says "Researchly is not running on this computer", the server is
    not started (or not on port 3517).
 
+The same server is the desktop overlays' "This computer" engine
+(`apps/desktop-overlay-mac`, `apps/desktop-overlay-win`): since 2026-10-15
+it also answers their live check, `POST /v1/check-paragraphs`, with the
+hosted engine's limits and reply. Apps without a web origin (the overlays)
+are served only from this computer itself. After updating the checkout,
+restart it.
+
 The choice is remembered on this computer. Signed in, your muted rules are
 sent along to the local engine; your sign-in token is not. The server
 answers only pages from `https://researchly-chi.vercel.app` (and the web
