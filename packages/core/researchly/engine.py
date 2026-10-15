@@ -173,7 +173,7 @@ def load_rules() -> int:
     # Imported here, not at the top, to avoid an import cycle.
     from . import (rules_lexical, rules_syntax,  # noqa: F401
                    rules_spelling, rules_grammar, rules_gec, rules_structure,
-                   rules_consistency)
+                   rules_consistency, rules_grammar_notes)
     return len(REGISTRY)
 
 

@@ -1,0 +1,93 @@
+{
+  "$comment": "Researchly's own per-app rules for the macOS overlay client (docs/inline-review-design.md section 6; schema in packages/desktop-rules/README.md). Written from scratch for Researchly, 2026-10-15. Adding an app means adding an entry here, not shipping a release. Every key except bundle_ids is optional and falls back to defaults. Offsets are points inward from the widget's corner.",
+  "version": 1,
+  "defaults": {
+    "enabled": true,
+    "priority": "normal",
+    "roles": ["AXTextArea"],
+    "widget": { "corner": "bottom-right", "offset": [6, 6], "forbidden_corners": [] },
+    "write_back": ["accessibility", "typing", "paste"],
+    "needs_polling": false,
+    "enhanced_accessibility": null
+  },
+  "apps": [
+    {
+      "name": "Microsoft Word",
+      "bundle_ids": ["com.microsoft.Word"],
+      "widget": { "corner": "bottom-right", "offset": [22, 10], "forbidden_corners": ["top-right"] },
+      "write_back": ["accessibility", "paste", "typing"],
+      "needs_polling": true,
+      "note": "The document body; the Researchly Word add-in gives the full card and the brief. Value notifications are not reliable, so the field is polled as well. The right edge holds the scroll bar, hence the larger inward offset."
+    },
+    {
+      "name": "Pages",
+      "bundle_ids": ["com.apple.iWork.Pages"],
+      "widget": { "corner": "bottom-right", "offset": [20, 10], "forbidden_corners": [] },
+      "needs_polling": true
+    },
+    {
+      "name": "TextEdit",
+      "bundle_ids": ["com.apple.TextEdit"],
+      "widget": { "corner": "bottom-right", "offset": [20, 8], "forbidden_corners": [] }
+    },
+    {
+      "name": "Mail",
+      "bundle_ids": ["com.apple.mail"],
+      "roles": ["AXTextArea", "AXWebArea"],
+      "write_back": ["accessibility", "paste", "typing"],
+      "note": "The message body is a web view; the subject and address fields are single-line and are left alone."
+    },
+    {
+      "name": "Notes",
+      "bundle_ids": ["com.apple.Notes"],
+      "widget": { "corner": "bottom-right", "offset": [16, 8], "forbidden_corners": ["top-right"] }
+    },
+    {
+      "name": "Safari",
+      "bundle_ids": ["com.apple.Safari", "com.apple.SafariTechnologyPreview"],
+      "write_back": ["accessibility", "paste", "typing"],
+      "needs_polling": true,
+      "note": "Text areas and editable regions of web pages. Address and search fields are refused by the field keyword list."
+    },
+    {
+      "name": "Google Chrome",
+      "bundle_ids": ["com.google.Chrome", "com.google.Chrome.beta", "com.google.Chrome.dev", "com.google.Chrome.canary"],
+      "write_back": ["accessibility", "paste", "typing"],
+      "needs_polling": true,
+      "enhanced_accessibility": "AXEnhancedUserInterface"
+    },
+    {
+      "name": "Firefox",
+      "bundle_ids": ["org.mozilla.firefox", "org.mozilla.firefoxdeveloperedition", "org.mozilla.nightly"],
+      "write_back": ["paste", "typing"],
+      "needs_polling": true,
+      "enhanced_accessibility": "AXEnhancedUserInterface",
+      "note": "Setting selected text through Accessibility is not relied on here; the replacement is pasted."
+    },
+    {
+      "name": "Arc",
+      "bundle_ids": ["company.thebrowser.Browser"],
+      "write_back": ["accessibility", "paste", "typing"],
+      "needs_polling": true,
+      "enhanced_accessibility": "AXEnhancedUserInterface"
+    },
+    {
+      "name": "Slack",
+      "bundle_ids": ["com.tinyspeck.slackmacgap"],
+      "priority": "low",
+      "write_back": ["paste", "typing"],
+      "needs_polling": true,
+      "enhanced_accessibility": "AXManualAccessibility",
+      "widget": { "corner": "top-right", "offset": [8, 6], "forbidden_corners": ["bottom-right", "bottom-left"] },
+      "note": "Checked, with a longer pause and smaller requests. The message box's bottom edge holds Slack's own buttons."
+    },
+    { "name": "Terminal", "bundle_ids": ["com.apple.Terminal"], "enabled": false },
+    { "name": "iTerm", "bundle_ids": ["com.googlecode.iterm2"], "enabled": false },
+    { "name": "Visual Studio Code", "bundle_ids": ["com.microsoft.VSCode", "com.microsoft.VSCodeInsiders"], "enabled": false, "note": "Researchly's language server serves code editors." },
+    { "name": "Xcode", "bundle_ids": ["com.apple.dt.Xcode"], "enabled": false },
+    { "name": "1Password", "bundle_ids": ["com.1password.1password", "com.agilebits.onepassword7", "com.1password.*"], "enabled": false },
+    { "name": "Keychain Access", "bundle_ids": ["com.apple.keychainaccess"], "enabled": false },
+    { "name": "Passwords", "bundle_ids": ["com.apple.Passwords"], "enabled": false },
+    { "name": "Researchly Overlay", "bundle_ids": ["org.researchly.overlay"], "enabled": false }
+  ]
+}

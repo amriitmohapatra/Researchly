@@ -1,0 +1,15 @@
+{
+  "paragraphs": [
+    {
+      "id": "p9",
+      "suggestions": [
+        {"begin": 3, "end": 8, "category": "improvement", "replacement": "shorter"},
+        {"begin": "three", "end": 8, "category": "improvement"},
+        {"begin": 10, "end": 12, "category": "newfangled", "message": "A category this client has never seen."},
+        {"begin": 0, "end": 1}
+      ]
+    },
+    {"id": "p10"},
+    {"no_id": true}
+  ]
+}

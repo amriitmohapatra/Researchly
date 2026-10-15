@@ -1,0 +1,52 @@
+{
+  "revision": 7,
+  "engine": {"version": "test"},
+  "paragraphs": [
+    {
+      "id": "p1",
+      "text_hash": "ignored-by-the-client",
+      "suggestions": [
+        {
+          "id": "S100:0:4:3f2a",
+          "rule_id": "S100",
+          "begin": 0,
+          "end": 4,
+          "category": "correction",
+          "critical": true,
+          "message": "Possible spelling mistake.",
+          "plain": "This word may be misspelt.",
+          "why": "A synthetic explanation written for this test.",
+          "source": "Researchly grammar notes",
+          "replacements": ["Their", "There"],
+          "section": "results",
+          "fix_safety": "review",
+          "tier": "spelling",
+          "confidence": 0.93
+        },
+        {
+          "id": "G210:16:28:aa01",
+          "begin": 16,
+          "end": 28,
+          "category": "convention",
+          "critical": false,
+          "message": "Spell out numbers that begin a sentence.",
+          "plain": "Write the number in words here.",
+          "why": "Another synthetic explanation.",
+          "source": "Researchly grammar notes",
+          "replacements": [],
+          "section": "results",
+          "fix_safety": "safe"
+        }
+      ]
+    },
+    {"id": "p2", "suggestions": []}
+  ],
+  "health": {
+    "status": "degraded",
+    "tiers": [
+      {"tier": "parser", "label": "Parser", "ok": true, "state": "ready"},
+      {"tier": "grammar", "label": "Grammar", "ok": false, "state": "missing", "detail": "The grammar engine is starting.", "remedy": "Try again in a minute."}
+    ]
+  },
+  "state": "issues"
+}
