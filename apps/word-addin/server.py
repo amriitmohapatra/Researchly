@@ -147,7 +147,7 @@ MODES = ("draft", "revise")
 # Every option of the contract's AnalyzeOptions (packages/contract).
 OPTION_KEYS = {"show_preferences", "disabled_rules", "mode",
                "document_type", "spelling", "review", "narrative",
-               "checklist", "document_scope"}
+               "checklist", "document_scope", "main_file"}
 CHECKLISTS = {"auto"} | set(packs_mod.checklists())
 # The live check's limits, as the hosted engine's (services/engine
 # schemas.py, packages/contract MAX_LIVE_*): a service test posts the
@@ -285,6 +285,12 @@ def _parse_options(opts: dict) -> tuple:
     if scope is not None and scope not in SCOPES:
         raise bad("document_scope must be one of " + ", ".join(SCOPES))
     extra["document_scope"] = scope
+    # An Overleaf project's main file: meaningless for Word paragraphs, so
+    # checked for shape and otherwise ignored (as the hosted engine does).
+    main_file = opts.get("main_file")
+    if main_file is not None and (not isinstance(main_file, str)
+                                  or len(main_file) > 512):
+        raise bad("main_file must be a file name")
     return prefs, disabled, mode, extra
 
 
@@ -471,10 +477,18 @@ def analyze_word(payload) -> dict:
 
 
 def health_v1() -> dict:
-    """GET /v1/health: HealthResponse (no probe: it must answer at once)."""
-    tiers = [t.to_dict() for t in api.status(config_mod.load(), probe=False)]
+    """GET /v1/health: HealthResponse (no probe: it must answer at once),
+    with `capabilities`: what this computer checks and what it contacts
+    over the network, from the same settings and health the checks run on
+    (Codex review #11; the Word pane's Settings shows it)."""
+    from researchly import capabilities
+    cfg = config_mod.load()
+    statuses = api.status(cfg, probe=False)
+    tiers = [t.to_dict() for t in statuses]
     return {"status": "degraded" if _degraded(tiers) else "ok", "tiers": tiers,
-            "engine": _engine_info()}
+            "engine": _engine_info(),
+            "capabilities": capabilities.describe(cfg, statuses,
+                                                  "local_server")}
 
 
 def cors_headers(origin, private_network: bool = False) -> dict:

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useId, useMemo, useReducer, useRef, useState, u
 import {
   MAX_WORD_PARAGRAPHS,
   type AnalyzeWordResponse,
+  type Capabilities,
   type DocumentType,
   type EvidenceSpan,
   type Spelling,
@@ -33,6 +34,7 @@ import { INITIAL_STATUS, reduceCheckState, type CheckEvent, type CheckStatus } f
 import { createCheckSession, PREVIOUS_NOTE, previousMark, type CheckTask } from "@/lib/check-session";
 import { type CheckError } from "@/lib/errors";
 import { buildQueue, passCounts, QUEUE_START, type QueueState } from "@/lib/queue";
+import { capabilityLine } from "@/lib/capabilities";
 import { healthBanners } from "@/lib/health";
 import { briefState, narrativeState } from "@/lib/profiles";
 import type { ScopeChoice } from "@/lib/evidence";
@@ -63,6 +65,7 @@ import {
 } from "@/lib/prefs";
 import {
   applyReplacement,
+  countUnread,
   officeApi,
   readParagraphsAndIds,
   readSelectionParagraph,
@@ -71,6 +74,7 @@ import {
   officeGlobal,
   waitForOffice,
   type HostStatus,
+  type UnreadPart,
 } from "@/lib/word/office";
 import {
   checklistHelp,
@@ -134,6 +138,8 @@ interface Checked {
   progressKey?: string;
   /** S4d R4: the paragraphs as checked, with their keys and headings (memory only): underlines and live checks refer to them. */
   snapshot: SnapshotParagraph[];
+  /** What the check left out (footnotes, comments, text boxes), counted in Word without reading them. */
+  unread?: UnreadPart[];
 }
 
 type Problem = { title: string; message: string };
@@ -228,7 +234,7 @@ export function Taskpane() {
   /** The revision queue's pass and place (review proposal 1): survives a re-check, never stored. */
   const [queue, setQueue] = useState<QueueState>(QUEUE_START);
   const [problem, setProblem] = useState<Problem | null>(null);
-  const [health, setHealth] = useState<{ engine: EngineChoice; tiers: TierHealth[] | null; reachable: boolean } | null>(null);
+  const [health, setHealth] = useState<{ engine: EngineChoice; tiers: TierHealth[] | null; reachable: boolean; capabilities?: Capabilities | null } | null>(null);
   const [notes, setNotes] = useState<Record<string, CardNote>>({});
   const [applied, setApplied] = useState<ReadonlySet<string>>(new Set());
   /** Cards an edit has made out of date (their paragraph changed, or an Apply ended unknown): no Apply until a re-check. */
@@ -357,7 +363,7 @@ export function Taskpane() {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 15_000);
     void engineHealth(engineUrlFor(engine), ctrl.signal)
-      .then((r) => setHealth({ engine, tiers: r.ok ? r.data.tiers : null, reachable: r.ok }))
+      .then((r) => setHealth({ engine, tiers: r.ok ? r.data.tiers : null, reachable: r.ok, capabilities: r.ok ? (r.data.capabilities ?? null) : null }))
       .catch(() => {
         /* aborted: the engine choice changed or the pane closed */
       })
@@ -484,6 +490,7 @@ export function Taskpane() {
       setAnnouncement("Reading the document…");
       let paragraphs: WordParagraph[];
       let snapshot: SnapshotParagraph[];
+      let unread: UnreadPart[] = [];
       let cursor: number | null = null;
       let disabledRules: string[] = [];
       try {
@@ -510,6 +517,8 @@ export function Taskpane() {
           setProblem({ title: "Word did not hand over the document", message: "Nothing was sent. Click in the document, then check again." });
           return;
         }
+        // Counts only, never sent: the reading line says what the check left out.
+        unread = await countUnread(api);
         if (!paragraphs.some((p) => p.text.trim())) {
           setProblem({ title: "This document is empty", message: "Write or paste some text into the document, then check again." });
           return;
@@ -563,7 +572,7 @@ export function Taskpane() {
         const focus = cursor !== null ? sectionAround(paragraphs, cursor) : null;
         // A recheck of the same document text is not recorded twice (Codex review N2): an in-memory key only.
         const progressKey = textKey(paragraphs.map((p) => p.text).join("\n"));
-        return { ok: true, data: { seq: 0, data: r.data, engine: useEngine, focus, checklist: useChecklist, progressKey, snapshot } };
+        return { ok: true, data: { seq: 0, data: r.data, engine: useEngine, focus, checklist: useChecklist, progressKey, snapshot, unread } };
       };
       await session.start(task, {
         onResult: (c) => {
@@ -953,6 +962,8 @@ export function Taskpane() {
   // After a check, its own report of the tiers; before, the engine's health.
   const tiers = checked && checked.engine === engine ? checked.data.health : health?.engine === engine ? health.tiers : null;
   const localDown = engine === "local" && health?.engine === "local" && !health.reachable;
+  // What "This computer" runs and what it contacts, in its own words (GET /v1/health; Codex review #11).
+  const localCapabilities = health?.engine === "local" && health.reachable ? capabilityLine(health.capabilities) : null;
   const suggestedChecklist = checked ? checklistLabel(checklists, checked.data.suggested_checklist) : null;
   // The Checklist tab: when this check asked for one, or one came back.
   const checklistTab = Boolean(checked && (checked.checklist !== "none" || checked.data.checklist));
@@ -1325,7 +1336,7 @@ export function Taskpane() {
                     {profileText}
                   </p>
                 ) : null}
-                <ReadingSummary reading={checked.data.reading} />
+                <ReadingSummary reading={checked.data.reading} notChecked={checked.unread} />
                 <WordTabs view={shownView} onChange={setResultsView} idBase={ids.tabs} checklist={checklistTab} />
                 {shownView === "checklist" ? (
                   <div
@@ -1509,10 +1520,17 @@ export function Taskpane() {
                     <span>
                       <span className="tp-radio-title">This computer</span>
                       <span className="help">
-                        Nothing leaves your computer. Needs Researchly&rsquo;s local server running (python3 server.py).
+                        {/* Unless the local server itself says it sends text somewhere (a grammar server it was set up to use). */}
+                        {health?.engine === "local" && health.capabilities?.network.sends_text ? "" : "Nothing leaves your computer. "}
+                        Needs Researchly&rsquo;s local server running (python3 server.py).
                       </span>
                     </span>
                   </label>
+                  {engine === "local" && localCapabilities ? (
+                    <p className="help tp-capabilities" data-testid="local-capabilities">
+                      {localCapabilities}
+                    </p>
+                  ) : null}
                 </fieldset>
 
                 <label className="control control-toggle" htmlFor={ids.prefs}>

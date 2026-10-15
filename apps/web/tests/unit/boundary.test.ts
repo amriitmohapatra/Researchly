@@ -96,4 +96,28 @@ describe("confidentiality boundary (ADR-02): the Next.js app never receives docu
     const root = fixture({ "components/C.tsx": "export const f = (t: string) => console.log(t);" });
     expect(checkBoundary(root).join("\n")).toMatch(/no console logging/);
   });
+
+  it("S6: only public/sw.js may fetch outside lib/engine.ts, and only it may use Cache Storage", () => {
+    const guarded =
+      "async function f(r){ const res = await fetch(r); if (isCacheable(r, res)) { await c.put(r, res); } return res; }";
+    expect(checkBoundary(fixture({ "public/sw.js": guarded }))).toEqual([]);
+    const out = checkBoundary(
+      fixture({
+        "public/other-worker.js": "self.onfetch = (e) => fetch(e.request);",
+        "components/Cache.tsx": "export const keep = (r: Response) => caches.open('x').then((c) => c.put('/', r));",
+      }),
+    ).join("\n");
+    expect(out).toMatch(/public\/other-worker\.js: network calls belong in lib\/engine\.ts/);
+    expect(out).toMatch(/components\/Cache\.tsx: the Cache Storage API is for the service worker/);
+  });
+
+  it("S6: the service worker stores in one place, behind isCacheable()", () => {
+    const unguarded = "async function f(r){ const res = await fetch(r); await c.put(r, res.clone()); await c.put('/x', res); }";
+    expect(checkBoundary(fixture({ "public/sw.js": unguarded })).join("\n")).toMatch(/exactly one place, guarded by isCacheable/);
+  });
+
+  it("S6: a service worker is registered only by components/ServiceWorker.tsx", () => {
+    const root = fixture({ "components/Other.tsx": "navigator.serviceWorker.register('/evil.js');" });
+    expect(checkBoundary(root).join("\n")).toMatch(/service workers are registered only by components\/ServiceWorker\.tsx/);
+  });
 });

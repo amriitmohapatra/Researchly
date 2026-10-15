@@ -151,6 +151,12 @@ class AnalyzeOptions(_Strict):
                           "assumed). An excerpt is asked for no missing "
                           "sections; a chapter for no abstract. A choice "
                           "about this check only, never stored.")
+    main_file: Optional[str] = Field(
+        None, max_length=512,
+        description="/v1/analyze-file with an Overleaf .zip: the project's "
+                    "main .tex file, by its path in the .zip (one of "
+                    "`document.main_candidates`). Omitted: Researchly "
+                    "chooses. Ignored for other files and requests.")
 
 
 class AnalyzeRequest(_Strict):
@@ -620,11 +626,35 @@ class SetAside(_Strict):
     label: str = Field(..., description="What it is, in plain words.")
 
 
+class NotChecked(_Strict):
+    kind: Literal["footnotes", "endnotes", "comments", "text_boxes",
+                  "headers_footers", "skipped_files"]
+    count: int = Field(..., ge=0)
+    label: str = Field(..., description="What it is, in plain words.")
+
+
+class Included(_Strict):
+    kind: Literal["footnotes"]
+    count: int = Field(..., ge=0)
+    label: str = Field(..., description="What it is, in plain words.")
+
+
 class ReadingSummary(_Strict):
     """What the checks read and what they set aside (2026-10-14): code,
     maths, layout, paragraphs in another language. Counts only."""
     words_checked: int = Field(..., ge=0)
     set_aside: List[SetAside] = Field(default_factory=list)
+    not_checked: List[NotChecked] = Field(
+        default_factory=list,
+        description="Parts of an uploaded file the checks did not read: a "
+                    ".docx's footnotes, endnotes, comments, text boxes and "
+                    "headers or footers with words in them; files an "
+                    "Overleaf project includes that could not be read. "
+                    "Counted, never read as text.")
+    included: List[Included] = Field(
+        default_factory=list,
+        description="Parts read where they stand that a writer might think "
+                    "were skipped (LaTeX footnotes).")
 
 
 class AnalyzeResponse(_Strict):
@@ -883,10 +913,57 @@ class SourceInfo(_Strict):
     warnings: List[str] = Field(default_factory=list,
                                 description="Things skipped or approximated while "
                                             "reading the file; never document text.")
+    main_file: Optional[str] = Field(
+        None, description="An Overleaf project: the main .tex file that was "
+                          "read (with every \\input in it).")
+    main_candidates: List[str] = Field(
+        default_factory=list,
+        description="An Overleaf project with more than one file that starts "
+                    "a document (\\documentclass): all of them, so the writer "
+                    "can choose another (options.main_file). Empty otherwise.")
 
 
 class AnalyzeFileResponse(AnalyzeResponse):
     document: SourceInfo
+
+
+class CapabilityCheck(_Strict):
+    id: Literal["rules", "spelling", "grammar", "gec", "document", "brief"]
+    label: str = Field(..., description="Plain words: \"writing rules\", "
+                       "\"whole-document checks\".")
+    on: bool
+    note: str = Field("", description="Why it is off, in plain words; empty "
+                      "when on.")
+
+
+class NetworkContact(_Strict):
+    what: str = Field(..., description="What is contacted, in plain words.")
+    when: str = ""
+    sends_text: bool = Field(..., description="Does the document's text go "
+                             "there?")
+    leaves_computer: bool = Field(..., description="Over the network (true), "
+                                  "or to another program on the same "
+                                  "computer (false)?")
+
+
+class NetworkUse(_Strict):
+    sends_text: bool = Field(..., description="True when any check sends "
+                             "the text off this computer (for the hosted "
+                             "engine: beyond the engine).")
+    contacts: List[NetworkContact] = Field(default_factory=list)
+
+
+class Capabilities(_Strict):
+    """What this engine checks and what it contacts over the network (Codex
+    review #11): the local server's \"This computer\" promise, stated from
+    the same health and settings the checks run on."""
+    route: Literal["local_server", "overlay", "lsp", "cli", "service"]
+    label: str
+    where: Literal["this_computer", "service"]
+    checks: List[CapabilityCheck]
+    network: NetworkUse
+    summary: str = Field(..., description="One plain line, for logs and "
+                         "the command line.")
 
 
 class HealthResponse(_Strict):
@@ -895,6 +972,9 @@ class HealthResponse(_Strict):
                          "run is not ok.")
     tiers: List[TierHealth]
     engine: EngineInfo
+    capabilities: Optional[Capabilities] = Field(
+        None, description="What this engine checks and what it contacts. "
+                          "Missing from an older local server.")
 
 
 class RuleInfo(_Strict):

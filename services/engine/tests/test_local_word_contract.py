@@ -42,6 +42,7 @@ EVERY_OPTION = {
     "show_preferences": True, "disabled_rules": ["W204"], "mode": "revise",
     "document_type": "auto", "spelling": "uk", "review": True,
     "narrative": True, "checklist": "auto", "document_scope": "chapter",
+    "main_file": "main.tex",
 }
 
 

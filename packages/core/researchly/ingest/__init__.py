@@ -89,15 +89,18 @@ def source_position(segments: list[Segment], text: str,
     return seg.path, before.count("\n") + 1, len(before) - before.rfind("\n")
 
 
-def load_bytes(filename: str, data: bytes) -> Document:
-    """Read one uploaded file. Dispatches on the extension only."""
+def load_bytes(filename: str, data: bytes,
+               main_file: str | None = None) -> Document:
+    """Read one uploaded file. Dispatches on the extension only.
+    `main_file` chooses an Overleaf project's main .tex file; other formats
+    ignore it."""
     suffix = suffix_of(filename)
     if suffix == ".docx":
         from .docx import load_docx
         return load_docx(filename, data)
     if suffix == ".zip":
         from .latex_project import load_zip
-        return load_zip(filename, data)
+        return load_zip(filename, data, main_file)
     if suffix in TEXT_SUFFIXES:
         return from_text_file(filename, data, TEXT_SUFFIXES[suffix])
     raise IngestError("unsupported_file",

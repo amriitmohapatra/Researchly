@@ -245,6 +245,18 @@ class Document:
     # What was set aside while reading, by kind: {"code": 3, ...}
     # (reading.py; the coverage summary reports it).
     read: dict = field(default_factory=dict)
+    # Parts of the file that were not read at all, by kind (the file
+    # adapters fill it: footnotes, text boxes, headers and footers of a
+    # .docx; included .tex files that could not be read), and parts read
+    # where they stand ({"footnotes": 3} for LaTeX). Counts only (Codex
+    # review #5, the coverage summary).
+    not_checked: dict = field(default_factory=dict)
+    included: dict = field(default_factory=dict)
+    # An Overleaf project: the main .tex file read, and every file that
+    # could have been it when there was more than one (the writer may
+    # choose another; empty when there was no choice to make).
+    main_file: Optional[str] = None
+    main_candidates: list[str] = field(default_factory=list)
     _line_starts: list[int] = field(default_factory=list, repr=False)
 
     # -- construction -------------------------------------------------------
@@ -338,6 +350,8 @@ class Document:
         doc = cls(original=text, masked=masked, kind=kind, headings=headings,
                   structure=structure, warnings=warnings, atoms=atoms)
         doc.read = read
+        if kind == "latex" and res.footnotes:
+            doc.included = {"footnotes": res.footnotes}
         doc._line_starts = [0] + [m.end() for m in re.finditer(r"\n", text)]
         return doc
 

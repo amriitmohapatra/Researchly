@@ -231,6 +231,19 @@
             ],
             "description": "The article type to check as. Omitted: the caller's saved setting, else auto."
           },
+          "main_file": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "/v1/analyze-file with an Overleaf .zip: the project's main .tex file, by its path in the .zip (one of `document.main_candidates`). Omitted: Researchly chooses. Ignored for other files and requests.",
+            "title": "Main File"
+          },
           "mode": {
             "anyOf": [
               {
@@ -687,6 +700,99 @@
           "coverage"
         ],
         "title": "AnalyzeWordResponse",
+        "type": "object"
+      },
+      "Capabilities": {
+        "additionalProperties": false,
+        "description": "What this engine checks and what it contacts over the network (Codex\nreview #11): the local server's \"This computer\" promise, stated from\nthe same health and settings the checks run on.",
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/CapabilityCheck"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "network": {
+            "$ref": "#/components/schemas/NetworkUse"
+          },
+          "route": {
+            "enum": [
+              "local_server",
+              "overlay",
+              "lsp",
+              "cli",
+              "service"
+            ],
+            "title": "Route",
+            "type": "string"
+          },
+          "summary": {
+            "description": "One plain line, for logs and the command line.",
+            "title": "Summary",
+            "type": "string"
+          },
+          "where": {
+            "enum": [
+              "this_computer",
+              "service"
+            ],
+            "title": "Where",
+            "type": "string"
+          }
+        },
+        "required": [
+          "route",
+          "label",
+          "where",
+          "checks",
+          "network",
+          "summary"
+        ],
+        "title": "Capabilities",
+        "type": "object"
+      },
+      "CapabilityCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "enum": [
+              "rules",
+              "spelling",
+              "grammar",
+              "gec",
+              "document",
+              "brief"
+            ],
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "description": "Plain words: \"writing rules\", \"whole-document checks\".",
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "description": "Why it is off, in plain words; empty when on.",
+            "title": "Note",
+            "type": "string"
+          },
+          "on": {
+            "title": "On",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "on"
+        ],
+        "title": "CapabilityCheck",
         "type": "object"
       },
       "Category": {
@@ -1368,6 +1474,17 @@
       "HealthResponse": {
         "additionalProperties": false,
         "properties": {
+          "capabilities": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Capabilities"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What this engine checks and what it contacts. Missing from an older local server."
+          },
           "engine": {
             "$ref": "#/components/schemas/EngineInfo"
           },
@@ -1438,6 +1555,33 @@
           "reading"
         ],
         "title": "HedgingPoint",
+        "type": "object"
+      },
+      "Included": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "minimum": 0.0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "kind": {
+            "const": "footnotes",
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "description": "What it is, in plain words.",
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "count",
+          "label"
+        ],
+        "title": "Included",
         "type": "object"
       },
       "LearnCard": {
@@ -1570,6 +1714,19 @@
               }
             ],
             "description": "The article type to check as. Omitted: the caller's saved setting, else auto."
+          },
+          "main_file": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "/v1/analyze-file with an Overleaf .zip: the project's main .tex file, by its path in the .zip (one of `document.main_candidates`). Omitted: Researchly chooses. Ignored for other files and requests.",
+            "title": "Main File"
           },
           "mode": {
             "anyOf": [
@@ -2167,6 +2324,94 @@
         "title": "NarrativeSection",
         "type": "object"
       },
+      "NetworkContact": {
+        "additionalProperties": false,
+        "properties": {
+          "leaves_computer": {
+            "description": "Over the network (true), or to another program on the same computer (false)?",
+            "title": "Leaves Computer",
+            "type": "boolean"
+          },
+          "sends_text": {
+            "description": "Does the document's text go there?",
+            "title": "Sends Text",
+            "type": "boolean"
+          },
+          "what": {
+            "description": "What is contacted, in plain words.",
+            "title": "What",
+            "type": "string"
+          },
+          "when": {
+            "default": "",
+            "title": "When",
+            "type": "string"
+          }
+        },
+        "required": [
+          "what",
+          "sends_text",
+          "leaves_computer"
+        ],
+        "title": "NetworkContact",
+        "type": "object"
+      },
+      "NetworkUse": {
+        "additionalProperties": false,
+        "properties": {
+          "contacts": {
+            "items": {
+              "$ref": "#/components/schemas/NetworkContact"
+            },
+            "title": "Contacts",
+            "type": "array"
+          },
+          "sends_text": {
+            "description": "True when any check sends the text off this computer (for the hosted engine: beyond the engine).",
+            "title": "Sends Text",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "sends_text"
+        ],
+        "title": "NetworkUse",
+        "type": "object"
+      },
+      "NotChecked": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "minimum": 0.0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "footnotes",
+              "endnotes",
+              "comments",
+              "text_boxes",
+              "headers_footers",
+              "skipped_files"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "description": "What it is, in plain words.",
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "count",
+          "label"
+        ],
+        "title": "NotChecked",
+        "type": "object"
+      },
       "NotCounted": {
         "additionalProperties": false,
         "description": "A sentence the signals matched that was not counted as reporting.",
@@ -2291,6 +2536,22 @@
         "additionalProperties": false,
         "description": "What the checks read and what they set aside (2026-10-14): code,\nmaths, layout, paragraphs in another language. Counts only.",
         "properties": {
+          "included": {
+            "description": "Parts read where they stand that a writer might think were skipped (LaTeX footnotes).",
+            "items": {
+              "$ref": "#/components/schemas/Included"
+            },
+            "title": "Included",
+            "type": "array"
+          },
+          "not_checked": {
+            "description": "Parts of an uploaded file the checks did not read: a .docx's footnotes, endnotes, comments, text boxes and headers or footers with words in them; files an Overleaf project includes that could not be read. Counted, never read as text.",
+            "items": {
+              "$ref": "#/components/schemas/NotChecked"
+            },
+            "title": "Not Checked",
+            "type": "array"
+          },
           "set_aside": {
             "items": {
               "$ref": "#/components/schemas/SetAside"
@@ -2759,6 +3020,26 @@
           },
           "format": {
             "$ref": "#/components/schemas/SourceFormat"
+          },
+          "main_candidates": {
+            "description": "An Overleaf project with more than one file that starts a document (\\documentclass): all of them, so the writer can choose another (options.main_file). Empty otherwise.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Main Candidates",
+            "type": "array"
+          },
+          "main_file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "An Overleaf project: the main .tex file that was read (with every \\input in it).",
+            "title": "Main File"
           },
           "segments": {
             "items": {

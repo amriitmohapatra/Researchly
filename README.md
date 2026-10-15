@@ -45,6 +45,7 @@ for evaluation; see `CLAUDE.md` before ever making it public.
 | `PLAN.md` | The shared checklist: what's done, what's next |
 | `docs/PROJECT_LOG.md` | The full build history |
 | `CLAUDE.md` / `AGENTS.md` | Rules for anyone (human or AI) working here |
+| `docs/local-mode.md` | Checking on this computer: what each local route runs and contacts, and `researchly doctor` |
 
 | Folder | Contents |
 |---|---|

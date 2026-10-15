@@ -88,6 +88,7 @@ export function analysisOptions(p: {
   checklist?: ChecklistChoice | null;
   documentScope?: DocumentScope | null;
   mode?: Mode;
+  mainFile?: string | null;
 }): AnalyzeOptions {
   return {
     show_preferences: p.showPreferences,
@@ -96,6 +97,8 @@ export function analysisOptions(p: {
     narrative: p.narrative ?? false,
     ...(p.checklist ? { checklist: p.checklist } : {}),
     ...(p.mode ? { mode: p.mode } : {}),
+    // An Overleaf project's main file, only when the writer chose one.
+    ...(p.mainFile ? { main_file: p.mainFile } : {}),
     // Only when the writer (or their account, or this browser) has a choice:
     // leaving it out lets the engine apply the account's saved one.
     ...(p.spelling ? { spelling: p.spelling } : {}),
@@ -287,6 +290,8 @@ export interface FileCheckParams {
   checklist?: ChecklistChoice | null;
   documentScope?: DocumentScope | null;
   mode?: Mode;
+  /** An Overleaf .zip: the main .tex file the writer chose (one of `document.main_candidates`). */
+  mainFile?: string | null;
   signal?: AbortSignal;
 }
 
@@ -347,6 +352,7 @@ export async function analyzeFile(
           checklist: p.checklist,
           documentScope: p.documentScope,
           mode: p.mode,
+          mainFile: p.mainFile,
         },
         token,
       ),

@@ -125,3 +125,31 @@ export const SUPABASE = supabaseConfig(
 
 /** Whether this build has accounts (sign-in, uploads, synced settings). */
 export const ACCOUNTS_ENABLED = SUPABASE !== null;
+
+/* ---------- uploads without accounts, for local development only ---------- */
+
+/**
+ * Whether `next dev` offers file upload without accounts
+ * (NEXT_PUBLIC_RESEARCHLY_DEV_UPLOAD=1). Only when all three hold:
+ *
+ * - the flag is exactly "1";
+ * - this is the development server: `next build` inlines NODE_ENV as
+ *   "production", so a production build never honours the flag, whatever
+ *   its environment says;
+ * - accounts are not configured: with Supabase set, uploads need sign-in as
+ *   always.
+ *
+ * Files then go to the engine without a token. The engine accepts that only
+ * when it runs without accounts itself (services/engine: no
+ * RESEARCHLY_SUPABASE_URL), which is the local engine; a hosted engine
+ * answers "sign in to check files".
+ */
+export function devUploadEnabled(flag: string | undefined, nodeEnv: string | undefined, accountsEnabled: boolean): boolean {
+  return !accountsEnabled && nodeEnv === "development" && (flag ?? "").trim() === "1";
+}
+
+export const DEV_UPLOAD = devUploadEnabled(
+  process.env.NEXT_PUBLIC_RESEARCHLY_DEV_UPLOAD,
+  process.env.NODE_ENV,
+  ACCOUNTS_ENABLED,
+);
