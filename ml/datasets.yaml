@@ -1078,14 +1078,15 @@ datasets:
     source: "Europe PMC fullTextXML for PMC records of NIH Preprint Pilot preprints (https://www.ebi.ac.uk/europepmc/webservices/rest/{PMCID}/fullTextXML)"
     location: "ml/realdocs/manifest.yaml"
     in_git: false
-    licence: "per item: CC-BY-4.0 (10), CC0-1.0 (1)"
+    licence: "per item: CC-BY-4.0 (9), CC0-1.0 (2)"
     licence_verified: true
     licence_evidence: >-
-      PubMed get_copyright_status, 2026-10-04: PMC licence 'CC BY 4.0' or
-      https://creativecommons.org/publicdomain/zero/1.0/ per item. Found with
+      PubMed get_copyright_status, 2026-10-04 (3 items kept) and 2026-10-15
+      (8 replacements): PMC licence 'CC BY 4.0' or
+      https://creativecommons.org/publicdomain/zero/1.0/ per item, and the
+      <license> element of each Europe PMC fullTextXML agrees. Found with
       PubMed search preprint[pt] AND (transmission OR epidemiolog*) AND free
-      full text AND (medRxiv OR bioRxiv) from 2022; 40 checked, the 11 CC BY /
-      CC0 ones kept, NC/ND/unlicensed left out.
+      full text AND (medRxiv OR bioRxiv); NC/ND/unlicensed left out.
     commercial_ok: true
     permitted_use: [ci_eval, train_experimental]
     current_use: "real-document test bench (P30)"
@@ -1093,8 +1094,12 @@ datasets:
     sha256: null
     items: "ml/realdocs/manifest.yaml — ids pmcpreprint-*"
     notes: >-
-      Not peer-reviewed. 4 medRxiv (epidemiology), 7 bioRxiv (1 within-host
-      transmission model, 6 biology). medRxiv and bioRxiv refuse automated
+      Not peer-reviewed. 8 medRxiv (6 epidemiology, 2 clinical genetics),
+      3 bioRxiv (a within-host transmission model, chronic chikungunya
+      immunology, a neuroscience paper). 2026-10-15: the 8 items whose Europe
+      PMC record held the abstract only (a 29-word stub body; Europe PMC
+      fills bodies weeks after deposit) were replaced by preprints whose
+      fullTextXML has a body of 3,227-16,069 words, checked before adding. medRxiv and bioRxiv refuse automated
       downloads (11 of the 14 realdocs-medrxiv-biorxiv items, P29), so these
       come through PMC like the other articles.
 
