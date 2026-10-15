@@ -4080,3 +4080,281 @@ main:focus {
   max-width: var(--measure);
   text-wrap: pretty;
 }
+
+/* Editor underlines (R5) ----------------------------------------------------
+ * Underlines while writing (S4d R5; DESIGN.md "Underlines while writing";
+ * components/LiveEditor.tsx). The textarea stays native and on top, with a
+ * transparent background; behind it a mirror with exactly the textarea's
+ * box, type, wrapping and scroll draws the text in transparent ink and the
+ * underlined stretches with their category's line from the design tokens.
+ * Everything below is scoped to .lu-*; nothing else on the page changes.
+ */
+
+.lu-frame {
+  position: relative;
+}
+.lu-frame.lu-on {
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+.lu-frame.lu-on > .editor {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+}
+/* The same gutter on both, so a scrollbar appearing never changes where lines wrap in one and not the other. */
+.lu-frame.lu-on > .editor,
+.lu-mirror {
+  scrollbar-gutter: stable;
+}
+.lu-mirror {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  /* The textarea's box and type (.editor), so every word lands where the textarea draws it. */
+  padding: 14px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: normal;
+  tab-size: 8;
+  color: transparent;
+  user-select: none;
+}
+
+.lu-correction {
+  --c-ink: var(--rl-correction-text);
+  --c-line: var(--rl-correction-strong);
+  --c-tint: var(--rl-highlight-correction);
+  --c-underline: var(--rl-underline-correction-color);
+  --c-pattern: var(--rl-underline-correction-style);
+  --c-thickness: var(--rl-underline-correction-thickness);
+}
+.lu-improvement {
+  --c-ink: var(--rl-improvement-text);
+  --c-line: var(--rl-improvement-strong);
+  --c-tint: var(--rl-highlight-improvement);
+  --c-underline: var(--rl-underline-improvement-color);
+  --c-pattern: var(--rl-underline-improvement-style);
+  --c-thickness: var(--rl-underline-improvement-thickness);
+}
+.lu-convention {
+  --c-ink: var(--rl-convention-text);
+  --c-line: var(--rl-convention-strong);
+  --c-tint: var(--rl-highlight-convention);
+  --c-underline: var(--rl-underline-convention-color);
+  --c-pattern: var(--rl-underline-convention-style);
+  --c-thickness: var(--rl-underline-convention-thickness);
+}
+.lu-preference {
+  --c-ink: var(--rl-preference-text);
+  --c-line: var(--rl-preference-strong);
+  --c-tint: var(--rl-highlight-preference);
+  --c-underline: var(--rl-underline-preference-color);
+  --c-pattern: var(--rl-underline-preference-style);
+  --c-thickness: var(--rl-underline-preference-thickness);
+}
+
+/* The line under the words: colour, pattern (the non-colour cue) and thickness, all from the tokens. */
+.lu-mark {
+  text-decoration-line: underline;
+  text-decoration-color: var(--c-underline);
+  text-decoration-style: var(--c-pattern);
+  text-decoration-thickness: var(--c-thickness);
+  text-underline-offset: 0.22em;
+  text-decoration-skip-ink: none;
+  border-radius: 2px;
+}
+/* The underline whose teaser or card is open: tinted behind the words (the text sits above, unchanged). */
+.lu-mark.is-active {
+  background: var(--c-tint);
+  text-decoration-thickness: calc(var(--c-thickness) + 1px);
+}
+/* A missing word or comma: a small wedge at the insertion point. */
+.lu-pt {
+  position: relative;
+}
+.lu-pt::after {
+  content: "";
+  position: absolute;
+  left: -3px;
+  bottom: -0.15em;
+  border-left: 3px solid transparent;
+  border-right: 3px solid transparent;
+  border-bottom: 5px solid var(--c-underline);
+}
+
+/* The teaser: what was noticed, and the revision, beside the words. */
+.lu-teaser {
+  position: fixed;
+  z-index: 30;
+  width: max-content;
+  max-width: min(22rem, calc(100vw - 16px));
+  padding: 10px 12px 6px;
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--c-line, var(--line-strong));
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--overlay-shadow);
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  cursor: pointer;
+}
+.lu-teaser[data-category="correction"] {
+  --c-line: var(--rl-card-rail-correction);
+}
+.lu-teaser[data-category="improvement"] {
+  --c-line: var(--rl-card-rail-improvement);
+}
+.lu-teaser[data-category="convention"] {
+  --c-line: var(--rl-card-rail-convention);
+}
+.lu-teaser[data-category="preference"] {
+  --c-line: var(--rl-card-rail-preference);
+}
+.lu-teaser.lu-above {
+  transform: translateY(-100%);
+}
+.lu-teaser-msg {
+  margin-top: 6px;
+  font-weight: 650;
+  text-wrap: pretty;
+}
+.lu-teaser-repl {
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+.lu-teaser-repl q {
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  quotes: "\201C" "\201D";
+}
+.lu-teaser-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 14px;
+  margin-top: 2px;
+}
+.lu-kbd {
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+}
+
+/* The full card, anchored under the words inside the editor's frame. */
+.lu-card {
+  position: absolute;
+  z-index: 20;
+  left: clamp(0px, var(--lu-left, 0px), calc(100% - min(34rem, 100%)));
+  width: min(34rem, 100%);
+  padding: 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--overlay-shadow);
+}
+.lu-card:focus {
+  outline: none;
+}
+.lu-card:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+/* The card keeps its category rule; the popover's own border is the frame. */
+.lu-card .card {
+  border-top-color: transparent;
+  border-right-color: transparent;
+  border-bottom-color: transparent;
+}
+.lu-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 8px 4px 2px;
+}
+.lu-note {
+  margin: 6px 4px 2px;
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+}
+
+/* The quiet list of underlines, for the keyboard and for a screen reader. */
+.lu-list {
+  margin-top: 8px;
+  font-size: 0.9375rem;
+}
+.lu-list > summary {
+  width: fit-content;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.lu-list > summary:hover {
+  text-decoration-thickness: 2px;
+}
+.lu-count {
+  font-variant-numeric: tabular-nums;
+}
+.lu-help {
+  max-width: var(--measure);
+  margin: 4px 0 6px;
+}
+.lu-items {
+  margin: 0;
+  padding-left: 1.5rem;
+  display: grid;
+  gap: 2px;
+}
+.lu-item {
+  text-align: left;
+  font-weight: 500;
+  color: var(--ink);
+  text-decoration-color: var(--c-underline);
+  text-decoration-style: var(--c-pattern);
+  text-decoration-thickness: var(--c-thickness);
+  overflow-wrap: anywhere;
+}
+.lu-off-note {
+  margin-top: 8px;
+}
+
+/* The state beside the privacy line. */
+.lu-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+.lu-retry {
+  font-size: 0.875rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lu-teaser,
+  .lu-card {
+    transition: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .lu-status {
+    margin-left: 0;
+  }
+  .lu-card {
+    left: 0;
+    width: 100%;
+  }
+}

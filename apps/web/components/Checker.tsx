@@ -39,16 +39,22 @@ import { ENGINE_URL } from "@/lib/config";
 import {
   loadDocumentTypeChoice,
   loadFormat,
+  loadLiveUnderlines,
   loadSpellingChoice,
   saveDocumentTypeChoice,
   saveFormat,
+  saveLiveUnderlines,
   saveSpellingChoice,
   subscribeDocumentType,
   subscribeFormat,
+  subscribeLiveUnderlines,
   subscribeSpelling,
 } from "@/lib/prefs";
 import { useChecklistChoices, useProfileChoices } from "@/lib/registry";
-import { useRuleScopes } from "@/lib/scope";
+import { isDocumentWide, useRuleScopes } from "@/lib/scope";
+import { checkParagraphs } from "@/lib/live-check";
+import { isLiveFormat } from "@/lib/live-paragraphs";
+import { LiveSession, type LiveOptionsState } from "@/lib/live-session";
 import { codePointLength } from "@/lib/segments";
 import { resolveSpelling } from "@/lib/spelling";
 import { ACCEPT_ATTR, checkFile } from "@/lib/source";
@@ -57,6 +63,7 @@ import { revealNeedsRecheck, shownSuggestions, summarySentence } from "@/lib/vie
 import { CheckProgress } from "./CheckProgress";
 import { ChecklistSelect } from "./ChecklistSelect";
 import { FilePanel, type DropHandlers } from "./FilePanel";
+import { LiveEditor, useLiveSnapshot } from "./LiveEditor";
 import { ProfileSelect } from "./ProfileSelect";
 import { ReadingKey } from "./ReadingKey";
 // The results (cards, the text view, the brief, the map, the checklist, the
@@ -66,6 +73,7 @@ import { ReadingKey } from "./ReadingKey";
 const loadResults = () => import("./Results").then((m) => m.Results);
 const Results = dynamic(loadResults, { ssr: false });
 import { SpellingSelect } from "./SpellingSelect";
+import { StatusMark } from "./StatusMark";
 import type { CardActions } from "./SuggestionCard";
 import type { ResultsView } from "./ViewTabs";
 
@@ -144,6 +152,16 @@ export function Checker() {
   const checklist: ChecklistSetting = chosenChecklist ?? storedChecklist ?? "none";
   const checklists = useChecklistChoices(ENGINE_URL);
   const [muted, setMuted] = useState<Muted | null>(null);
+  // Underlines while writing (S4d R5): on unless switched off in this browser. Server render and first client render agree on null.
+  const storedLive = useSyncExternalStore(subscribeLiveUnderlines, loadLiveUnderlines, () => null);
+  const [chosenLive, setChosenLive] = useState<boolean | null>(null);
+  const liveOn = chosenLive ?? storedLive ?? true;
+  // The article type the last check guessed ("Auto"), so the live check reads paragraphs as the full check did.
+  const [guessedType, setGuessedType] = useState<DocumentType | null>(null);
+  const [live] = useState(
+    () => new LiveSession((request, signal) => checkParagraphs(request, { auth: getEngineAuth(), signal })),
+  );
+  const liveSnap = useLiveSnapshot(live);
   const [demoProblem, setDemoProblem] = useState<string | null>(null);
   const [demoLoading, setDemoLoading] = useState(false);
   // "Keep my progress" (opt-in, counts only): loaded once per sign-in, read when a check succeeds.
@@ -187,10 +205,12 @@ export function Checker() {
     prefs: useId(),
     privacy: useId(),
     upload: useId(),
+    live: useId(),
   };
 
 
   useEffect(() => () => session.dispose(), [session]);
+  useEffect(() => () => live.dispose(), [live]);
 
   // Move focus to a new error (or sign-in prompt) once it is on screen, so
   // keyboard and screen-reader users land on it.
@@ -302,6 +322,11 @@ export function Checker() {
       const list = checklistOption(opts?.checklist ?? checklist);
       const submitted = text;
       const submittedFormat = format;
+      const liveOptions = (data: AnalyzeResponse): LiveOptionsState => ({
+        documentType: type === "auto" && data.profile?.guessed ? data.profile.id : type,
+        spelling: spell,
+        showPreferences: prefs,
+      });
       if (target.kind === "paste") {
         const invalid = validateContent(text);
         setProblem(invalid);
@@ -333,10 +358,14 @@ export function Checker() {
           ? analyze({ ...options, content: submitted, format: submittedFormat }, undefined, auth)
           : analyzeFile({ ...options, file: target.file }, undefined, auth);
       };
+      if (target.kind === "paste") live.fullCheckStarted();
       await session.start(task, {
         onResult: (data) => {
           if (target.kind === "paste") {
             setChecked((prev) => ({ seq: (prev?.seq ?? 0) + 1, data, text: submitted, format: submittedFormat, at: new Date() }));
+            // The underlines take the check's sentence-level suggestions, so the two agree.
+            setGuessedType(type === "auto" && data.profile?.guessed ? data.profile.id : null);
+            live.fullCheckAnswered(submitted, submittedFormat, data.suggestions, liveOptions(data), data.health);
           } else {
             shownFileRef.current = target.file;
             const fileData = data as AnalyzeFileResponse;
@@ -348,14 +377,17 @@ export function Checker() {
         },
         onError: () => setAnnouncement(""),
       });
+      // Failed, cancelled or superseded: the underlines go back to their own loop (a no-op after an answer).
+      if (target.kind === "paste") live.fullCheckEnded();
     },
-    [session, text, format, showPreferences, documentType, spelling, checklist],
+    [session, live, text, format, showPreferences, documentType, spelling, checklist],
   );
 
   /** Cancel the running check: the screen goes back to what it showed before, with a note. */
   const cancelCheck = () => {
     const newFile = mode === "file" && shownFileRef.current === null;
     if (!session.cancel()) return;
+    live.fullCheckEnded();
     if (newFile) {
       // A new file was cancelled before any result: back to the editor, as if it had not been chosen.
       setMode("paste");
@@ -603,6 +635,25 @@ export function Checker() {
 
   // Which rules read the whole document (for the section chooser). Asked once, after the first results; no text is sent.
   const scopes = useRuleScopes(ENGINE_URL, current !== null);
+  // Which rules read the whole document: their findings are never underlines.
+  useEffect(() => {
+    live.setDocumentWide((id) => isDocumentWide(id, scopes));
+  }, [live, scopes]);
+
+  // The live check follows the switch, the editor being on screen, and the options Check uses.
+  useEffect(() => {
+    live.setEnabled(liveOn && mode === "paste");
+  }, [live, liveOn, mode]);
+  const liveType: DocumentType = documentType === "auto" ? (guessedType ?? "auto") : documentType;
+  useEffect(() => {
+    live.setOptions({ documentType: liveType, spelling, showPreferences });
+  }, [live, liveType, spelling, showPreferences]);
+  const onLiveChange = (on: boolean) => {
+    setChosenLive(on);
+    saveLiveUnderlines(on);
+  };
+  const liveLatex = liveOn && mode === "paste" && !isLiveFormat(format);
+  const liveStatus = liveSnap.enabled && liveSnap.status.state !== "hidden" ? liveSnap.status : null;
   // The results on screen, for a mute to filter only those (a new check starts clean).
   const resultsKey = mode === "file" ? (fileChecked ? `f${fileChecked.seq}` : null) : checked ? `p${checked.seq}` : null;
   useEffect(() => {
@@ -650,38 +701,39 @@ export function Checker() {
                 Paste a section, a chapter or a whole draft. Headings such as &ldquo;Methods&rdquo; or
                 &ldquo;Discussion&rdquo; let the advice fit the section.
               </p>
-              <textarea
-                id={ids.text}
-                ref={textareaRef}
-                className="editor"
-                name="content"
+              <LiveEditor
+                session={live}
                 value={text}
-                onChange={(e) => {
-                  setText(e.target.value);
+                format={format}
+                onChange={(v) => {
+                  setText(v);
                   if (problem) setProblem(null);
                 }}
-                aria-describedby={describedBy}
-                aria-invalid={problem ? true : undefined}
-                spellCheck={false}
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="off"
-                rows={12}
+                textareaRef={textareaRef}
+                id={ids.text}
+                describedBy={describedBy}
+                invalid={problem !== null}
                 placeholder="In order to estimate the effective reproduction number, a renewal model was fitted…"
-                data-testid="editor"
+                footer={
+                  <div className="field-foot">
+                    {problem ? (
+                      <p id={ids.problem} className="field-problem" role="alert" data-testid="input-problem">
+                        {problem.message}
+                      </p>
+                    ) : (
+                      <span />
+                    )}
+                    <p className={`counter${overLimit ? " counter-over" : ""}`} aria-live="off">
+                      {fmt.format(chars)} / {fmt.format(MAX_CONTENT_CHARS)} characters
+                    </p>
+                  </div>
+                }
               />
-              <div className="field-foot">
-                {problem ? (
-                  <p id={ids.problem} className="field-problem" role="alert" data-testid="input-problem">
-                    {problem.message}
-                  </p>
-                ) : (
-                  <span />
-                )}
-                <p className={`counter${overLimit ? " counter-over" : ""}`} aria-live="off">
-                  {fmt.format(chars)} / {fmt.format(MAX_CONTENT_CHARS)} characters
+              {liveLatex ? (
+                <p className="help lu-off-note" data-testid="underlines-latex">
+                  Underlines while writing are available for plain text and Markdown; press Check for LaTeX.
                 </p>
-              </div>
+              ) : null}
             </div>
 
             {accounts ? (
@@ -790,6 +842,19 @@ export function Checker() {
                 <span>Show preferences</span>
               </label>
 
+              <label className="control control-toggle" htmlFor={ids.live}>
+                <input
+                  id={ids.live}
+                  type="checkbox"
+                  role="switch"
+                  className="switch"
+                  checked={liveOn}
+                  onChange={(e) => onLiveChange(e.target.checked)}
+                  data-testid="live-underlines"
+                />
+                <span>Underlines while writing</span>
+              </label>
+
               <div className="control control-actions">
                 <button
                   type="submit"
@@ -835,6 +900,16 @@ export function Checker() {
                   and it uses no cookies, analytics or third-party scripts.
                 </p>
               </details>
+              {liveStatus ? (
+                <span className="lu-status" data-testid="live-status">
+                  <StatusMark status={liveStatus} announce={false} />
+                  {liveStatus.state === "offline" ? (
+                    <button type="button" className="btn-link lu-retry" onClick={() => live.retryNow()} data-testid="live-retry">
+                      Try now
+                    </button>
+                  ) : null}
+                </span>
+              ) : null}
             </div>
           </form>
         )}

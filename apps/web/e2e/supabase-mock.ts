@@ -238,14 +238,33 @@ export interface EngineCall {
 export type EngineHandler = (call: EngineCall, route: Route, n: number) => Promise<void> | void;
 
 /** Mock the engine's /v1/analyze, /v1/analyze-file and /v1/rules, recording the Authorization header. */
+/** The live checks the last mockEngineAuth answered (their Authorization header only). */
+export const liveCalls: { authorization?: string }[] = [];
+
 export async function mockEngineAuth(page: Page, handler: EngineHandler, rules: RuleInfo[] = []): Promise<EngineCall[]> {
   const calls: EngineCall[] = [];
+  liveCalls.length = 0;
   await page.route(`${ENGINE}/v1/**`, async (route) => {
     const req = route.request();
     if (req.method() === "OPTIONS") return reply(route, 204);
     const path = new URL(req.url()).pathname;
     if (path === "/v1/rules") return reply(route, 200, { rules, profiles: PROFILES });
     if (path === "/v1/health") return reply(route, 200, { status: "ok", tiers: [], engine: { service_version: "0", core_version: "0", rules_loaded: 0 } });
+    if (path === "/v1/check-paragraphs") {
+      // Underlines while writing (S4d R5): nothing found; recorded apart, so `n` still counts full checks.
+      const live = req.postDataJSON() as { revision: number; paragraphs: { id: string }[] };
+      liveCalls.push({ authorization: req.headers()["authorization"] });
+      return reply(route, 200, {
+        schema_version: "1",
+        revision: live.revision,
+        paragraphs: live.paragraphs.map((p) => ({ id: p.id, section: "unknown", suggestions: [] })),
+        state: "ok",
+        health: [],
+        hidden_preferences: 0,
+        signed_in: Boolean(req.headers()["authorization"]),
+        elapsed_ms: 5,
+      });
+    }
     const buf = req.postDataBuffer();
     const headers = req.headers();
     const call: EngineCall = {

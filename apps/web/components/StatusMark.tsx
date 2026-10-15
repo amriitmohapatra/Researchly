@@ -8,7 +8,20 @@ import { type CheckStatus, stateDescription, stateLabel, stateLook } from "@/lib
  * label is always in the accessibility tree (a polite status region); pass
  * `showLabel={false}` where only the mark fits, as on a widget.
  */
-export function StatusMark({ status, showLabel = true }: { status: CheckStatus; showLabel?: boolean }) {
+export function StatusMark({
+  status,
+  showLabel = true,
+  announce = true,
+}: {
+  status: CheckStatus;
+  showLabel?: boolean;
+  /**
+   * False where the state changes with every typing pause (the website's
+   * editor): the mark stays readable but is not a live region, and the
+   * surface announces only what matters, rarely (DESIGN.md, R5).
+   */
+  announce?: boolean;
+}) {
   const look = stateLook(status.state);
   const label = stateLabel(status);
   const description = stateDescription(status);
@@ -18,9 +31,9 @@ export function StatusMark({ status, showLabel = true }: { status: CheckStatus; 
       className={`status-mark status-${status.state}`}
       data-state={status.state}
       data-testid="status-mark"
-      role="status"
-      aria-live="polite"
-      aria-atomic="true"
+      role={announce ? "status" : undefined}
+      aria-live={announce ? "polite" : undefined}
+      aria-atomic={announce ? true : undefined}
       title={look === "none" ? undefined : description}
     >
       {look !== "none" && <Mark look={look} count={status.count} />}

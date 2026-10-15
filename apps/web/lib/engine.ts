@@ -199,10 +199,10 @@ async function call<T>(
   init: RequestInit,
   signal: AbortSignal | undefined,
   validate: (body: unknown) => body is T,
-  context: { upload?: boolean; engineUrl: string; versioned?: boolean },
+  context: { upload?: boolean; engineUrl: string; versioned?: boolean; timeoutMs?: number },
 ): Promise<CheckResult<T>> {
   const timeout = new AbortController();
-  const timer = setTimeout(() => timeout.abort(), ANALYZE_TIMEOUT_MS);
+  const timer = setTimeout(() => timeout.abort(), context.timeoutMs ?? ANALYZE_TIMEOUT_MS);
   const combined = signal ? AbortSignal.any([signal, timeout.signal]) : timeout.signal;
   let res: Response;
   try {
@@ -241,6 +241,35 @@ async function call<T>(
     };
   }
   return { ok: true, data: body };
+}
+
+/**
+ * POST a JSON body to one of the engine's paths with the caller's bearer
+ * token, the shared error mapping and a shape check. The live check
+ * (lib/live-check.ts, S4d R5) sends through here, so every request that
+ * carries text still leaves from this file (scripts/check-boundary.mjs).
+ */
+export async function postEngineJson<T>(
+  path: string,
+  payload: unknown,
+  validate: (body: unknown) => body is T,
+  opts: { engineUrl?: string; auth?: EngineAuth | null; signal?: AbortSignal; timeoutMs?: number } = {},
+): Promise<CheckResult<T>> {
+  const engineUrl = opts.engineUrl ?? ENGINE_URL;
+  const body = JSON.stringify(payload);
+  return withBearer(opts.auth, (token) =>
+    call(
+      `${engineUrl}${path}`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", accept: "application/json", ...authHeader(token) },
+        body,
+      },
+      opts.signal,
+      validate,
+      { engineUrl, timeoutMs: opts.timeoutMs },
+    ),
+  );
 }
 
 /** Check pasted text: POST /v1/analyze. */

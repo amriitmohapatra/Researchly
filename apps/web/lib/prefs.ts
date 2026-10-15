@@ -3,7 +3,8 @@
  * the article type to check as (S4) and the English spelling to keep to (both
  * shared by the website and the Word add-in, which are one origin) and, in
  * the Word add-in, the engine choice and
- * Draft/Revise and (S4c) the reporting checklist; on the Label page, the
+ * Draft/Revise and (S4c) the reporting checklist; whether the editor
+ * underlines while writing (S4d R5); on the Label page, the
  * verdicts given so far (rule ids and verdicts, never text). The document
  * itself is never persisted (no localStorage, sessionStorage or IndexedDB
  * for text) — scripts/check-boundary.mjs enforces that storage APIs are used
@@ -81,6 +82,29 @@ export function saveSpellingChoice(v: Spelling): void {
 export function subscribeSpelling(onChange: () => void): () => void {
   const handler = (e: StorageEvent) => {
     if (e.key === SPELLING_KEY) onChange();
+  };
+  window.addEventListener("storage", handler);
+  return () => window.removeEventListener("storage", handler);
+}
+
+/* ---------- underlines while writing (S4d R5): a choice, never text ---------- */
+
+const LIVE_UNDERLINES_KEY = "researchly.live-underlines";
+
+/** Whether the editor underlines while the writer writes; null when never chosen (then on). */
+export function loadLiveUnderlines(): boolean | null {
+  const v = read(LIVE_UNDERLINES_KEY);
+  return v === "on" ? true : v === "off" ? false : null;
+}
+
+export function saveLiveUnderlines(on: boolean): void {
+  write(LIVE_UNDERLINES_KEY, on ? "on" : "off");
+}
+
+/** For useSyncExternalStore: another tab switching underlines updates this one. */
+export function subscribeLiveUnderlines(onChange: () => void): () => void {
+  const handler = (e: StorageEvent) => {
+    if (e.key === LIVE_UNDERLINES_KEY) onChange();
   };
   window.addEventListener("storage", handler);
   return () => window.removeEventListener("storage", handler);
