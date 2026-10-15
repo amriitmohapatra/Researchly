@@ -15,8 +15,8 @@ import { useRegistry } from "./registry";
 /** Rule scope by id, from the engine's registry. */
 export type ScopeMap = ReadonlyMap<string, Scope>;
 
-/** packages/core: every rule registered with scope="document" (X-series structure rules, F601/F612/F613, N101, W211, D902, AB802). */
-const DOCUMENT_RULE_IDS: ReadonlySet<string> = new Set(["F601", "F612", "F613", "N101", "W211", "D902", "AB802"]);
+/** packages/core: every rule registered with scope="document" (X-series structure rules, F601/F612/F613, N101, W211, D902, AB802, S003). */
+const DOCUMENT_RULE_IDS: ReadonlySet<string> = new Set(["F601", "F612", "F613", "N101", "W211", "D902", "AB802", "S003"]);
 
 export function scopeMap(rules: readonly RuleInfo[]): ScopeMap {
   return new Map(rules.map((r) => [r.id, r.scope ?? "sentence"]));

@@ -155,6 +155,13 @@ class Analysis:
     profile_guessed: bool = True
     # The headings an Auto guess rested on ("" when chosen or general).
     profile_evidence: str = ""
+    # How much of the document this is (Codex review #4): whole, chapter or
+    # excerpt, chosen or inferred, separate from the article type.
+    scope: profiles_mod.Scope = field(
+        default_factory=lambda: profiles_mod.Scope("whole", True))
+    # Topical headings read as Methods or Results from their own wording:
+    # [{"heading", "section"}] (profiles.infer_topical_sections).
+    topical: list = field(default_factory=list)
     # The critical reader's brief (review.py), when asked for.
     review: Optional[dict] = None
     # The narrative map (discourse/narrative.py), when asked for.
@@ -191,7 +198,11 @@ class Analysis:
                         "guessed": self.profile_guessed,
                         "evidence": self.profile_evidence,
                         "note": self.profile.note,
-                        "rules_off": sorted(self.profile.rules_off)},
+                        "rules_off": sorted(self.profile.rules_off),
+                        "scope": {"id": self.scope.id,
+                                  "guessed": self.scope.guessed,
+                                  "note": self.scope.note},
+                        "topical": [dict(t) for t in self.topical]},
             "review": self.review,
             "narrative": self.narrative,
             "checklist": self.checklist,
@@ -247,12 +258,17 @@ def analyze(source: Union[str, Path, Sequence[dict], Document],
             with_review: bool = False,
             with_narrative: bool = False,
             checklist: Optional[str] = None,
+            document_scope: Optional[str] = None,
             **overrides: Any) -> Analysis:
     """Check one document and return everything the surfaces render.
 
     `cfg` is the resolved settings; when omitted they are loaded from the
     user config plus any `.researchly.toml` governing `near`. Keyword
     overrides (CLI flags, an HTTP payload) win over both.
+
+    `document_scope` is how much of the document this is ("whole",
+    "chapter", "excerpt"; None or "auto" infers it). It is a choice about
+    this check, not a setting, so it is never stored.
     """
     if cfg is None:
         near = near if near is not None else (
@@ -273,6 +289,11 @@ def analyze(source: Union[str, Path, Sequence[dict], Document],
     evidence = (profiles_mod.guess_with_evidence(document)[1]
                 if guessed else "")
     document.default_section = profile.body_section
+    # A topical heading of a research document is read from its own wording
+    # (Methods or Results), before any check reads the sections; then the
+    # scope, which the headings inform (Codex review #4).
+    topical = profiles_mod.infer_topical_sections(document, profile)
+    scope = profiles_mod.resolve_scope(document_scope, document, profile)
     disabled = set(cfg.disabled) | set(profile.rules_off)
 
     # The grammar tier (LT001) reads the masked text, not the parse: start
@@ -312,7 +333,8 @@ def analyze(source: Union[str, Path, Sequence[dict], Document],
         from .review import build_review
         review = build_review(document, nlp, suggestions=everything,
                               spacy_doc=spacy_doc, metrics=mets,
-                              profile=profile, disabled=cfg.disabled)
+                              profile=profile, disabled=cfg.disabled,
+                              scope=scope)
     from . import packs
     suggested = packs.suggest(document.masked)
     checked = None
@@ -325,7 +347,7 @@ def analyze(source: Union[str, Path, Sequence[dict], Document],
     if with_narrative:
         from .discourse.narrative import build_narrative
         narrative = build_narrative(document, spacy_doc=spacy_doc,
-                                    profile=profile)
+                                    profile=profile, scope=scope)
 
     health = engine_status(cfg, nlp=nlp)
     return Analysis(
@@ -338,6 +360,8 @@ def analyze(source: Union[str, Path, Sequence[dict], Document],
         profile=profile,
         profile_guessed=guessed,
         profile_evidence=evidence,
+        scope=scope,
+        topical=topical,
         review=review,
         narrative=narrative,
         checklist=checked,

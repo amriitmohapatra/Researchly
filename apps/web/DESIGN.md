@@ -148,7 +148,7 @@ own "Whole document" group so they are never lost. The chooser starts at
 ## Progress (S4, opt-in)
 
 - Off by default: "Keep my progress" in Settings, with "Delete my
-  progress" behind a confirmation; "Delete my data" removes progress too.
+  progress" behind a confirmation; "Delete my account" removes progress too.
   Only rule ids and counts are kept, never text.
 - `/progress`: one row per rule, a 132×36 sparkline in the accent with a
   hairline zero baseline and a ringed end dot, each line on its own scale
@@ -333,6 +333,52 @@ own "Whole document" group so they are never lost. The chooser starts at
   alone). Nothing is checked until Check. The same row links the Word and
   Overleaf versions for download. The example-draft button in the key stays.
 
+## Evidence in the text and the scope line (Codex review #3, #4; 2026-10-15)
+
+- **Every sentence the brief or the map rests on can be shown.** Under a
+  question of the brief, each placed sentence has its kind in small sans
+  ("A causal claim", "The gap"), the writer's sentence quoted in the serif
+  with a solid left rule, and a quiet **Show in text** link. A claim sits
+  beside its proposed evidence, two columns that stack on a phone: "Its
+  evidence (found nearby)" with that sentence (dashed rule), or "Its
+  evidence (not detected)" with one plain line saying what was not found.
+  Nothing is ever linked by guess: a sentence the engine could not place,
+  or one outside the checked text, is quoted without a link. A multi-file
+  project names the file and line ("sections/discussion.tex, line 3")
+  before the link. The bare quotes of an older engine still show as before.
+  On the map, a present move's sentence (behind "Show the sentence") and a
+  missing link's sentences carry the same link.
+- **On the website** Show in text switches to the Suggestions tab, outlines
+  the sentence in the text (a solid focus-blue outline, never a tint: it
+  is evidence, not a finding) and moves focus to it. One quiet line above
+  the text says where it came from, "Outlined in the text: a sentence from
+  the reviewer’s brief.", with **Back to the reviewer’s brief**; that link,
+  or choosing the outlined sentence, returns to the tab with focus on the
+  link the writer used. With no suggestions the text still appears under
+  the empty state while a sentence is shown. **In Word** the link selects
+  the sentence in the document, as a card does; an approximate or failed
+  selection is said in one line above the brief.
+- **The scope line**: how much of the document the check took the text to
+  be, separate from the article type. Inferred, never asked up front (the
+  composer row already has its controls): one muted line at the top of the
+  brief and of the map says what was assumed and what it changes ("Read as
+  an excerpt (its only section is Methods): sections that are not in it are
+  not asked for."), with a small **Read as** select (Auto (excerpt), Whole
+  document, Chapter, Excerpt) that checks again. The choice lasts the
+  session and is never stored; Auto is not sent. The same line prints, without
+  the select.
+- **Topical headings** read from their wording are named in one more quiet
+  line under the profile line ("Topical heading read from the wording under
+  it: “Experiment 1: the baseline SEIR” as Methods."), so the writer can see
+  why passive voice was not flagged there.
+- **Genre units on the map.** A policy brief organised by Context,
+  Evidence, Options and Recommendations gets one strip per unit with its
+  own moves, and the note names a unit the headings do not show (whole
+  documents only). A response to reviewers opens with "Comments and
+  replies": each comment beside the reply under it, labelled "Reviewer 1,
+  comment 2", with "No reply was recognised under this comment." where none
+  was; no status words, no judgement.
+
 ## The table cell on an X401 card (2026-10-14)
 
 When a sentence names a row and a column of a table and quotes a number
@@ -346,6 +392,36 @@ line (outlined, not tinted: it is evidence, not a second finding) and moves
 focus there; choosing the outlined cell returns to the card; **Show in
 text** drops the outline. The Word card shows the same box without the
 jump.
+
+## A word used again and again (Codex review #10, 2026-10-15)
+
+A word no dictionary knows, used three or more times, that is not a known
+kind of slip (the engine judges that) is **one card, never one per use**:
+a Convention, so it reads as a question and never as an error. The
+message is the engine's: "‘numpyro’ appears 3 times and isn’t in the
+dictionary. If it’s a term, add it to your dictionary; otherwise check its
+spelling." No suggested revision. A repeated typo is still a Correction at
+every use, and the revision queue groups those as one issue with Previous
+and Next as before.
+
+- **Every use is underlined** in the text in the Convention style, each
+  mark standing for the one card: choosing any of them leads to it, and
+  all of them light up while the card is active.
+- **Show where** takes the place of "Show in text": it brings the first use
+  into view and focuses it, then **Previous** and **Next** walk the others,
+  held at either end and said to be unavailable there (as the queue's
+  buttons are), with "Place 2 of 3" in a polite live region. The buttons
+  never vanish from under the keyboard.
+- **Add “numpyro” to dictionary** (signed in) adds the word once; the check
+  runs again and every use clears together. Signed out with accounts on,
+  one quiet help line says where a dictionary is kept ("Sign in to keep a
+  dictionary: a word you add is never questioned again, here or in Word.").
+  A build without accounts says nothing; the local Word add-in offers the
+  same Add to dictionary, kept on the computer.
+- **Word**: the same card; Show where selects each use in the document in
+  turn (Previous / Next, "Place n of N"), in place of "Show in document".
+- Draft holds the question back with the other whole-document checks; the
+  word is not flagged meanwhile.
 
 ## What was read (2026-10-14)
 
@@ -548,9 +624,27 @@ sign-in, no upload, no settings route.
   production build never shows it.
 - **Settings** is one column of panels: Muted rules (name, code, one-line
   why, Unmute), How suggestions are shown (switch, spelling locale),
-  Your dictionary (add with inline limits, tiles with Remove), Delete. Every
-  change saves at once and is announced; a failed save moves the control
-  back and says why. Delete asks first, with focus on "Keep them".
+  Your dictionary (add with inline limits, tiles with Remove, "Clear my
+  dictionary…"), Your progress, Your account. Every change saves at once
+  and is announced; a failed save moves the control back and says why.
+  Every destructive action asks first, with focus on the safe choice
+  ("Keep them", "Keep my account").
+- **Your account** (PLAN #12) holds two actions, each with a sentence saying
+  exactly what it does, never one combined "Delete my data":
+  - **Reset preferences…** unmutes every rule, hides preferences and puts
+    grammar checks, spelling, Draft or Revise and the article type back to
+    their defaults; the dictionary, recorded progress and the "Keep my
+    progress" switch stay (the dialog says so). Words have their own "Clear
+    my dictionary…", progress its own "Delete my progress…": three scoped
+    actions instead of the old "Delete my data", so a writer never loses
+    more than they meant to.
+  - **Delete my account…** deletes the sign-in and everything kept with it,
+    says it can't be undone and signs this browser out. Two steps: the
+    dialog, then typing "delete" (any case). The confirm button is never
+    disabled: pressed early it says what to type and focuses the field. A
+    failure keeps the dialog open and says nothing was deleted. Done, the
+    page shows "Your account was deleted" (heading focused) with "Back to
+    the checker".
 - **Dialogs** are native `<dialog>` (focus contained, Escape closes, focus
   returns to the opener).
 
@@ -599,6 +693,10 @@ column, the site's tokens, cards and notices; nothing new to learn.
   next), with document-wide suggestions under "Whole document" and a note
   saying how many are elsewhere, with "Show the whole document". Then health, errors, results,
   and a closed **Settings** disclosure (engine, show preferences, live underlines, account).
+  The account part links to the website's Settings ("To reset your preferences or delete
+  your account, use Settings on the website", a new window) rather than repeating those
+  actions: they are rare, destructive and need room for their confirmations, and one
+  place to keep correct is safer than two (PLAN #12).
   The footer holds "Report a problem" (mailto, never with document text).
 - **Results**: "N suggestions", then quiet grey notes: what Draft held back
   (with "Switch to Revise"), hidden preferences (with "Show them"), and what
@@ -796,6 +894,11 @@ file refused by the engine (unsupported, unreadable, too large), file
 warnings, card action saved or failed; settings signed out, loading, load
 failed, nothing muted, empty dictionary, saved, save failed, delete
 confirm.
+
+PLAN #12 adds: clear the dictionary (confirm), reset preferences (confirm,
+not yet available), delete the account (dialog, word missing or wrong,
+deleting, failed with the dialog kept open, not yet available, deleted and
+signed out), and the Word pane's link to the website's Settings.
 
 S4c adds: a lesson open on a card or a move, a checklist with found,
 partly-there, needs-your-check, confirmed and not-applicable items (N1:

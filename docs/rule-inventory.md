@@ -255,6 +255,7 @@ Noise floor with the notes: 11.74 → 11.89 flags/1000w (+44 flags, every one a 
 |---|---|---|---|---|
 | S001 | Spelling (unknown words, top-3 suggestions ranked by a noisy-channel model with the neighbouring words) | Correction | symspellpy (MIT) + `spellrank.py`, always on | MVP; ranker 2026-10-14 |
 | S002 | Real-word confusion: a real word the neighbouring words say was meant as its usual confusion ("principle component", "a casual relationship", "were effected by") | Correction | SymSpell bigram counts, one-way pairs in `lexicons.CONFUSIONS`, margin ≈150× | 2026-10-14 (Mays, Damerau & Mercer 1991) |
+| S003 | A word used three or more times that no dictionary knows and that is not a known kind of slip: one grouped question ("‘X’ appears N times and isn’t in the dictionary. If it’s a term, add it to your dictionary; otherwise check its spelling.") carrying every place it appears (`occurrences`), with Add to dictionary and Show where on the cards | Convention | `rules_spelling.repeated_kind` over S001's scan; document scope (full check only; Draft holds it back) | 2026-10-15 (Codex review #10) |
 | LT001 | Grammar: agreement, verb forms, a/an, confusions | Correction | LanguageTool via language_tool_python (local server, Java), optional | MVP |
 | GEC001 | Learned corrections: minimal token-level edits (GECToR-style), opt-in `[tiers] gec = true`, abstains without a local model | Correction | local edit tagger scaffold (`gec.py` + `rules_gec.py`), tier="gec", never auto-applied, confidence-gated, masked-span-safe (test_gec.py) | 2026-08-14 scaffold |
 
@@ -267,8 +268,8 @@ more than half of its false flags on biomedical prose; and skips code names
 shipped scientific lexicon (`researchly/data/scientific_terms.txt`),
 personal dictionary (`researchly dict add`), UK/US variant mapping,
 morphological fallback (closed-class words exempt — "thiss" ≠ "this+s"),
-regex word scan (spaCy tokenizer splits some typos), 3+-use learned terms,
-proper-noun skip (sentence-start capitalized words need a distance-1
+regex word scan (spaCy tokenizer splits some typos), repeated words judged
+rather than skipped (below), proper-noun skip (sentence-start capitalized words need a distance-1
 correction to be flagged), author names followed by initials or "et al"
 (P31). Reference-list sections ("References", "Bibliography") are masked
 for every rule (P31). LT001 keeps grammar/duplication/confusion
@@ -280,6 +281,32 @@ the compound-spelling family (`EN_COMPOUNDS_*`, `MAKER_COMPOUNDS`),
 `NON_STANDARD_WORD` (maths and code), `THE_SUPERLATIVE` ("least squares"),
 `NUMBERS_IN_WORDS`, `POSSESSIVE_APOSTROPHE`, `I_LOWERCASE`, `THE_PUNCT`,
 `EN_SPECIFIC_CASE`, `ADMIT_ENJOY_VB`.
+
+**Repeated words (2026-10-15, Codex review #10).** S001 used to skip any
+word used three or more times as "the author's vocabulary", so a typo typed
+three times was never seen. Now such a word is judged
+(`rules_spelling.repeated_kind`): it is a **typo**, flagged by S001 at every
+use, when it is a misinflection ("occured"), a run-together opening with a
+little word ("inspite", "eachother"), or one edit from a common word
+(SymSpell count ≥ 300,000) by a usual slip (learned error model, log P ≥
+−5.5), or, for a word of 8+ letters, one edit from a very common word (≥ 5
+million) with no other candidate near it. Words under 6 letters, words with
+a coined-name ending (`lexicons.TERM_ENDINGS`: -mab, -vir, -mycin, -osis,
+-virus…) and splits after a content word ("linewidth", "lowand") are
+**terms**: no S001 card, one S003 question for all their uses. A word the
+writer spells as a name (never in lower case, or in capitals or as a proper
+noun at most of its uses) is left alone, as before. Measured with
+`ml/eval/spelling_repetition.py` (each word in three invented sentences):
+built-in labelled set, typo recall 0 → 0.927 (51 of 55 typos flagged at
+every use, the other 4 asked about), term false flags 0 → 0 (34 of 34
+terms one question each); held-out Wikipedia misspellings (test split, 500)
+and SPECIALIST words hidden from the lexicon (395), typo recall 0 → 0.624
+(no typo silent: the rest are asked about), term false flags 0 → 0.013 per
+use (5 of 395 terms). Noise floor 11.89 → 12.07/1000w: S001 +13 (three
+genuine typos repeated in the theses), S003 +38 questions (one per word).
+Thresholds were set on the training split of the Wikipedia list and a
+separate SPECIALIST sample. Known limit, chosen for precision: a short slip
+repeated ("teh" three times) is asked about rather than corrected.
 
 ## v0.1 MVP rule set (implemented in the prototype)
 

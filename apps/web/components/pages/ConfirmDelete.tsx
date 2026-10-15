@@ -12,14 +12,28 @@ interface Props {
   busy: boolean;
   onConfirm: () => Promise<unknown>;
   testId: string;
+  /** Shown on the confirm button while it works (default "Deleting…"). */
+  workingLabel?: string;
 }
 
 /**
  * A destructive action behind a native <dialog> (DESIGN.md: focus contained,
  * Escape closes, focus returns to the opener), the safe choice focused first.
- * The Settings page's "Delete my data" pattern, for the other deletes.
+ * Used wherever a second click should confirm: deleting progress, clearing
+ * the dictionary, resetting preferences. Deleting the account asks for more
+ * (components/DeleteAccount.tsx).
  */
-export function ConfirmDelete({ label, title, body, keepLabel, confirmLabel, busy, onConfirm, testId }: Props) {
+export function ConfirmDelete({
+  label,
+  title,
+  body,
+  keepLabel,
+  confirmLabel,
+  busy,
+  onConfirm,
+  testId,
+  workingLabel = "Deleting…",
+}: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const openerRef = useRef<HTMLButtonElement>(null);
   const keepRef = useRef<HTMLButtonElement>(null);
@@ -75,7 +89,7 @@ export function ConfirmDelete({ label, title, body, keepLabel, confirmLabel, bus
               {working ? (
                 <>
                   <span className="spinner" aria-hidden="true" />
-                  Deleting…
+                  {workingLabel}
                 </>
               ) : (
                 confirmLabel

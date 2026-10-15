@@ -37,6 +37,7 @@ import {
 } from "@/lib/account";
 import { getEngineAuth, openSignIn, useAuth } from "@/lib/auth";
 import { checklistOffer, checklistOption, type ChecklistSetting } from "@/lib/checklists";
+import type { ScopeChoice } from "@/lib/evidence";
 import { createCheckSession, previousMark, type CheckTask } from "@/lib/check-session";
 import { analyze, analyzeFile, fetchDemoManuscript } from "@/lib/engine";
 import { QUEUE_START, type QueueState } from "@/lib/queue";
@@ -83,7 +84,7 @@ const loadResults = () => import("./Results").then((m) => m.Results);
 const Results = dynamic(loadResults, { ssr: false });
 import { SpellingSelect } from "./SpellingSelect";
 import { StatusMark } from "./StatusMark";
-import type { CardActions } from "./SuggestionCard";
+import { SIGNED_OUT_DICTIONARY_NOTE, type CardActions } from "./SuggestionCard";
 import type { ResultsView } from "./ViewTabs";
 
 /** Pasting into the editor (S1), or reading an uploaded file (S2, signed in). */
@@ -114,7 +115,13 @@ type MutedRule = { id: string; name: string; key: string | null };
 type AccountNote = { ok: boolean; text: string; settingsLink?: boolean; undo?: MutedRule };
 
 /** What a re-check may change: the toggle, the article type, the spelling, the checklist. */
-type CheckOptions = { showPreferences?: boolean; documentType?: DocumentType; spelling?: Spelling; checklist?: ChecklistSetting };
+type CheckOptions = {
+  showPreferences?: boolean;
+  documentType?: DocumentType;
+  spelling?: Spelling;
+  checklist?: ChecklistSetting;
+  documentScope?: ScopeChoice;
+};
 
 /** Rules muted since the results on screen were checked, keyed to those results (they lapse with the next check). */
 type Muted = { key: string; rules: ReadonlySet<string> };
@@ -166,6 +173,10 @@ export function Checker() {
   // The reporting checklist (S4): this session's choice, else this browser's, else none.
   const storedChecklist = useSyncExternalStore(subscribeChecklistSetting, loadChecklistSetting, () => null);
   const [chosenChecklist, setChosenChecklist] = useState<ChecklistSetting | null>(null);
+  // How much of the document the text is (Codex review #4): "auto" lets the
+  // engine infer it; a choice from the brief or the map lasts this session
+  // and is never stored, since it describes this text, not the writer.
+  const [documentScope, setDocumentScope] = useState<ScopeChoice>("auto");
   const checklist: ChecklistSetting = chosenChecklist ?? storedChecklist ?? "none";
   const checklists = useChecklistChoices(ENGINE_URL);
   const [muted, setMuted] = useState<Muted | null>(null);
@@ -339,6 +350,7 @@ export function Checker() {
       const type = opts?.documentType ?? documentType;
       const spell = opts?.spelling ?? spelling;
       const list = checklistOption(opts?.checklist ?? checklist);
+      const scopeChoice = opts?.documentScope ?? documentScope;
       const submitted = text;
       const submittedFormat = format;
       const liveOptions = (data: AnalyzeResponse): LiveOptionsState => ({
@@ -372,7 +384,7 @@ export function Checker() {
         // (Codex review R6), so a Draft choice saved from Word never hides
         // the document-wide checks here, and the brief and the narrative map
         // are always asked for.
-        const options = { showPreferences: prefs, documentType: type, spelling: spell, review: true, narrative: true, checklist: list, mode: "revise" as const, signal };
+        const options = { showPreferences: prefs, documentType: type, spelling: spell, review: true, narrative: true, checklist: list, documentScope: scopeChoice, mode: "revise" as const, signal };
         return target.kind === "paste"
           ? analyze({ ...options, content: submitted, format: submittedFormat }, undefined, auth)
           : analyzeFile(
@@ -403,7 +415,7 @@ export function Checker() {
       // Failed, cancelled or superseded: the underlines go back to their own loop (a no-op after an answer).
       if (target.kind === "paste") live.fullCheckEnded();
     },
-    [session, live, text, format, showPreferences, documentType, spelling, checklist],
+    [session, live, text, format, showPreferences, documentType, spelling, checklist, documentScope],
   );
 
   /** Cancel the running check: the screen goes back to what it showed before, with a note. */
@@ -645,6 +657,9 @@ export function Checker() {
     [signedIn, onMute, onAddWord, actionBusy, loading],
   );
 
+  // A grouped spelling question asks to add a word to the dictionary: signed out, say where the dictionary is.
+  const dictionaryNote = accounts && !signedIn ? SIGNED_OUT_DICTIONARY_NOTE : null;
+
   const chars = codePointLength(text);
   const overLimit = chars > MAX_CONTENT_CHARS;
   const describedBy = [ids.hint, problem ? ids.problem : null].filter(Boolean).join(" ");
@@ -654,6 +669,13 @@ export function Checker() {
   const previous = previousMark(current !== null, run);
 
   // A changed type checks again whatever is on screen, exactly as a stage change does in Word.
+  /** "Read as" beside the brief and the map: checks again read as a whole document, a chapter or an excerpt. */
+  const onDocumentScope = (next: ScopeChoice) => {
+    if (next === documentScope) return;
+    setDocumentScope(next);
+    if (current) void recheck({ documentScope: next });
+  };
+
   const onTypeChange = (next: DocumentType) => {
     if (next === documentType) return;
     setChosenType(next);
@@ -1147,6 +1169,7 @@ export function Checker() {
           onRevealPreferences={onRevealPreferences}
           source={fileChecked.data.document}
           actions={cardActions}
+          dictionaryNote={dictionaryNote}
           scopes={scopes}
           view={view}
           onView={setView}
@@ -1158,6 +1181,8 @@ export function Checker() {
           queue={queue}
           onQueue={setQueue}
           previous={previous}
+          documentScope={documentScope}
+          onDocumentScope={onDocumentScope}
         />
       ) : mode === "paste" && checked ? (
         <Results
@@ -1169,6 +1194,7 @@ export function Checker() {
           busy={loading}
           onRevealPreferences={onRevealPreferences}
           actions={cardActions}
+          dictionaryNote={dictionaryNote}
           scopes={scopes}
           view={view}
           onView={setView}
@@ -1180,6 +1206,8 @@ export function Checker() {
           queue={queue}
           onQueue={setQueue}
           previous={previous}
+          documentScope={documentScope}
+          onDocumentScope={onDocumentScope}
         />
       ) : null}
     </>

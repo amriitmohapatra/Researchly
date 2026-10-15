@@ -268,6 +268,32 @@ problem** link arrive by email at the maintainer's address.
 
 ---
 
+## 10. Account controls (about 5 minutes, before the public beta)
+
+Writers can now reset their preferences and delete their own account from
+the website's Settings (PLAN #12), and the engine limits signed-in people
+per account rather than per address.
+
+1. **Database.** Supabase **SQL Editor → New query**, paste
+   `supabase/migrations/20261015120000_account_controls.sql` (from `main`,
+   **Copy raw file**), **Run**. Apply it after
+   `20261014130000_progress_comparable.sql`. Safe to run twice.
+2. **Check it can delete a sign-in.** In the same editor run
+   `select has_table_privilege('postgres', 'auth.users', 'DELETE');`. It
+   must say `true`: "Delete my account" runs as `postgres`. If it says
+   `false`, tell Claude before the beta; until then the website says
+   deletion isn't available and nothing is deleted.
+3. **Engine.** Run **Deploy engine** again (step 5). The per-user limits are
+   in `services/engine/deploy/cloudrun.service.yaml`
+   (`RESEARCHLY_USER_RATE_LIMIT_PER_MIN` 30, `..._USER_LIVE_...` 120,
+   `..._USER_UPLOAD_...` 10 a minute per account); there is nothing to set
+   in GitHub.
+
+Until step 1 is done the website still works; "Reset preferences" and
+"Delete my account" say they are not available yet, and nothing changes.
+
+---
+
 ## Later deploys
 
 - **Website:** automatic. Every push to `main` deploys production, and every

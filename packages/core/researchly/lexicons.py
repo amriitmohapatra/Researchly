@@ -157,6 +157,20 @@ APOSTROPHELESS_CONTRACTIONS = {
     "shouldve": "should have",
 }
 
+# --- S001 / S003: endings of coined biomedical names -------------------------
+# A repeated unknown word with one of these endings is built like a term (a
+# drug, an enzyme, a condition, a virus), so it is asked about once (S003)
+# rather than corrected at every use, even when a common word is one letter
+# away. Only endings that general English words seldom share: "-ase" and
+# "-ome" were left out because "increase" and "outcome" end that way, and a
+# typo of them would have been taken for a term.
+TERM_ENDINGS = (
+    "mab", "mabs", "vir", "virs", "cillin", "mycin", "azole", "azoles",
+    "kinase", "kinases", "osis", "oses", "itis", "aemia", "emia", "omics",
+    "virus", "viruses", "phage", "phages", "cyte", "cytes", "plasma",
+    "plasmas", "bacter", "coccus", "cocci",
+)
+
 # --- W212: uncountable nouns given a plural ---------------------------------
 # Mass nouns that standard English does not pluralise: a common slip for
 # writers whose first language counts them ("softwares", "informations"),

@@ -359,6 +359,64 @@ test.describe("signed in", () => {
   });
 });
 
+/* ---------- a word used again and again (Codex review #10) ---------- */
+
+const REPEAT_TEXT = "Methods\nWe fitted numpyro models. The numpyro sampler ran quickly. Then numpyro stopped.\n";
+const REPEAT_AT = [0, 1, 2].map((n) => {
+  let i = -1;
+  for (let k = 0; k <= n; k++) i = REPEAT_TEXT.indexOf("numpyro", i + 1);
+  return i;
+});
+const repeatQuestion = {
+  ...signedInPaste.suggestions[0]!,
+  id: "e2e-s003-1",
+  rule_id: "S003",
+  rule_name: "repeated-unknown-word",
+  category: "convention" as const,
+  tier: "spelling",
+  span: { start: REPEAT_AT[0]!, end: REPEAT_AT[0]! + 7, line: 2, col: REPEAT_AT[0]! - 7 },
+  text: "numpyro",
+  message:
+    "‘numpyro’ appears 3 times and isn’t in the dictionary. If it’s a term, add it to your dictionary; otherwise check its spelling.",
+  replacement: null,
+  occurrences: REPEAT_AT.map((a) => ({ start: a, end: a + 7, line: 2, col: a - 7 })),
+};
+const repeatAnswer = { ...signedInPaste, suggestions: [repeatQuestion], counts: { convention: 1 } };
+const repeatCleared = { ...signedInPaste, suggestions: [], counts: {} };
+
+test.describe("a word used again and again", () => {
+  test("Add to dictionary on the one question clears every use", async ({ page }) => {
+    await seedSession(page);
+    const sb = await mockSupabase(page);
+    const calls = await mockEngineAuth(page, (_c, route, n) => reply(route, 200, n === 1 ? repeatAnswer : repeatCleared));
+    await page.goto("/");
+    await expect(page.getByTestId("account-button")).toBeVisible();
+    await pasteAndCheck(page, REPEAT_TEXT);
+    const card = page.locator("#card-e2e-s003-1");
+    await expect(page.getByTestId("document").locator("mark")).toHaveCount(3);
+    await expect(card.getByTestId("dictionary-note")).toHaveCount(0);
+    await card.getByTestId("add-word").click();
+    await expect(page.getByTestId("account-note")).toContainText("Added “numpyro” to your dictionary");
+    await expect(page.getByRole("heading", { name: "No suggestions" })).toBeVisible();
+    await expect(page.getByTestId("document").locator("mark")).toHaveCount(0);
+    expect(sb.words).toEqual(["numpyro"]);
+    expect(calls).toHaveLength(2);
+    expect(await axeSerious(page)).toEqual([]);
+  });
+
+  test("signed out, the question says where a dictionary is kept", async ({ page }) => {
+    await mockSupabase(page);
+    await mockEngineAuth(page, (_c, route) => reply(route, 200, { ...repeatAnswer, signed_in: false }));
+    await page.goto("/");
+    await pasteAndCheck(page, REPEAT_TEXT);
+    const card = page.locator("#card-e2e-s003-1");
+    await expect(card.getByTestId("add-word")).toHaveCount(0);
+    await expect(card.getByTestId("dictionary-note")).toHaveText(
+      "Sign in to keep a dictionary: a word you add is never questioned again, here or in Word.",
+    );
+  });
+});
+
 test.describe("uploads", () => {
   test("a .md file: raw bytes, encoded name, bearer token; read-only view with highlights", async ({ page }) => {
     await seedSession(page);
@@ -622,25 +680,25 @@ test.describe("settings page", () => {
     await expect(page.getByTestId("settings-status")).toHaveText("Removed “Rt” from your dictionary.");
     expect(sb.words).toEqual(["nowcasting", "serial-interval"]);
 
-    await page.getByTestId("delete-open").click();
-    const dialog = page.getByTestId("delete-dialog");
+    // "Clear my dictionary" (PLAN #12): the words only, by the caller's own id; the settings stay.
+    await page.getByTestId("clear-dictionary-open").click();
+    const dialog = page.getByTestId("clear-dictionary-dialog");
     await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText("All 2 words will be removed from your dictionary");
     await expect(dialog.getByRole("button", { name: "Keep them" })).toBeFocused();
     expect(await axeSerious(page)).toEqual([]);
-    await dialog.getByTestId("delete-confirm").click();
-    await expect(page.getByTestId("settings-status")).toHaveText("Your settings, dictionary and progress were deleted.");
+    await dialog.getByTestId("clear-dictionary-confirm").click();
+    await expect(page.getByTestId("settings-status")).toHaveText("Your dictionary was cleared.");
     await expect(dialog).toBeHidden();
-    await expect(page.getByTestId("muted-empty")).toBeVisible();
     await expect(page.getByTestId("word-count")).toHaveText("Your dictionary is empty.");
-    expect(sb.settings).toBeNull();
+    await expect(page.getByTestId("clear-dictionary-open")).toHaveCount(0);
+    await expect(muted).toHaveCount(1);
     expect(sb.words).toEqual([]);
+    expect(sb.settings?.disabled_rules).toEqual(["G101"]);
 
     const deletes = sb.sent.filter((r) => r.method === "DELETE");
-    // "Delete my data": progress first (S4c), then the dictionary and the settings, each by the caller's own id.
     const wholesale = deletes.filter((r) => r.search.includes(`user_id=eq.${USER.id}`)).map((r) => r.path);
-    expect(wholesale[0]).toBe("/rest/v1/progress_events");
-    expect(deletes.some((r) => r.path === "/rest/v1/user_settings" && r.search.includes(`user_id=eq.${USER.id}`))).toBe(true);
-    expect(deletes.some((r) => r.path === "/rest/v1/dictionary_words" && r.search.includes(`user_id=eq.${USER.id}`))).toBe(true);
+    expect(wholesale).toEqual(["/rest/v1/dictionary_words"]);
     // Never another user's id; inserts and upserts carry no user id at all (the column defaults to auth.uid()).
     for (const r of sb.sent) {
       expect(r.body + r.search).not.toContain(OTHER_USER_ID);
@@ -727,8 +785,9 @@ for (const width of [375, 1280]) {
       expect(await noOverflow(page)).toBeLessThanOrEqual(0);
       await page.screenshot({ path: `${shots}/accounts-settings-${width}.png`, fullPage: true });
 
-      await page.getByTestId("delete-open").click();
-      await expect(page.getByTestId("delete-dialog")).toBeVisible();
+      await page.getByTestId("delete-account-open").click();
+      await expect(page.getByTestId("delete-account-dialog")).toBeVisible();
+      expect(await noOverflow(page)).toBeLessThanOrEqual(0);
       await page.screenshot({ path: `${shots}/accounts-delete-dialog-${width}.png` });
     });
 

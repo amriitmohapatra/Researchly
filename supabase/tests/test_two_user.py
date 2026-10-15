@@ -231,14 +231,20 @@ def test_function_privileges_and_hardening(pg):
     assert set(by_name) == {
         "my_config", "mute_rule", "unmute_rule", "researchly_dictionary_cap",
         "researchly_rule_ids_valid", "researchly_set_updated_at",
-        "researchly_counts_valid", "researchly_progress_prune"}
+        "researchly_counts_valid", "researchly_progress_prune",
+        "reset_my_preferences", "delete_my_account"}
     for name, (secdef, config, anon_x, auth_x, public_x) in by_name.items():
-        assert secdef is False, name + " must be SECURITY INVOKER"
+        # Exactly one function runs with its owner's privileges: deleting
+        # from auth.users is not something a user can do themselves.
+        assert secdef is (name == "delete_my_account"), \
+            name + " has the wrong SECURITY setting"
         assert config == ['search_path=""'], (name, config)
         assert anon_x is False and public_x is False, name
         assert auth_x is (name in ("my_config", "mute_rule", "unmute_rule",
                                    "researchly_rule_ids_valid",
-                                   "researchly_counts_valid")), name
+                                   "researchly_counts_valid",
+                                   "reset_my_preferences",
+                                   "delete_my_account")), name
 
 
 def test_no_trigger_on_auth_users_and_no_extra_tables(pg):
@@ -1023,3 +1029,153 @@ def test_progress_metadata_holds_no_text(pg, assessed, mode, ruleset):
     with pytest.raises(errors.CheckViolation):
         with as_user(pg, USER_A) as cur:
             _record_full(cur, assessed, mode, ruleset)
+
+
+# ---------------------------------------------------------------------------
+# Account controls (PLAN #12): reset preferences, delete the account
+# ---------------------------------------------------------------------------
+
+def _seed_everything(pg, user, word="Stan"):
+    """Non-default values in every preference, a word, progress (superuser)."""
+    pg.execute(
+        "insert into public.user_settings (user_id, disabled_rules,"
+        " show_preferences, locale, mode, document_type, spelling, prediction,"
+        " keep_progress) values (%s, %s, true, 'en-GB', 'draft', 'grant',"
+        " 'uk-oxford', false, true)", (user, ["S001", "G101"]))
+    pg.execute("insert into public.dictionary_words (user_id, word)"
+               " values (%s, %s)", (user, word))
+    pg.execute("insert into public.progress_events (user_id, words, counts)"
+               " values (%s, 900, '{\"G101\": 2}'::jsonb)", (user,))
+
+
+def _everything(pg, user):
+    """Every row stored for `user`, in every table, read as superuser."""
+    settings = pg.execute(
+        "select disabled_rules, show_preferences, locale, mode, document_type,"
+        " spelling, prediction, keep_progress from public.user_settings"
+        " where user_id = %s", (user,)).fetchall()
+    words = pg.execute("select word from public.dictionary_words"
+                       " where user_id = %s order by word", (user,)).fetchall()
+    progress = pg.execute("select words, counts from public.progress_events"
+                          " where user_id = %s order by id", (user,)).fetchall()
+    login = pg.execute("select count(*) from auth.users where id = %s",
+                       (user,)).fetchone()[0]
+    return settings, words, progress, login
+
+
+DEFAULT_ROW = ([], False, "en-US", "revise", "auto", "auto", True)
+
+
+def test_reset_puts_preferences_back_and_keeps_words_and_progress(pg):
+    _seed_everything(pg, USER_A)
+    _seed_everything(pg, USER_B, word="NumPyro")
+    b_before = _everything(pg, USER_B)
+    with as_user(pg, USER_A) as cur:
+        cur.execute("select public.reset_my_preferences()")
+        config = my_config(cur)
+    settings, words, progress, login = _everything(pg, USER_A)
+    # Every choice back to its column default; the progress opt-in stays on.
+    assert settings == [(*DEFAULT_ROW, True)]
+    assert words == [("Stan",)] and progress == [(900, {"G101": 2})]
+    assert login == 1
+    assert config == dict(DEFAULT_CONFIG, dictionary=["Stan"])
+    assert _everything(pg, USER_B) == b_before          # B untouched
+
+
+def test_reset_without_a_settings_row_is_a_no_op(pg):
+    with as_user(pg, USER_A) as cur:
+        cur.execute("select public.reset_my_preferences()")
+        assert my_config(cur) == DEFAULT_CONFIG
+    assert _everything(pg, USER_A)[0] == []
+
+
+def test_reset_covers_every_preference_column(pg):
+    """reset_my_preferences sets each column to DEFAULT. When a later
+    migration adds a preference column this fails until the function resets
+    it too (or the column is deliberately added to `kept`)."""
+    body = pg.execute("select prosrc from pg_proc"
+                      " where proname = 'reset_my_preferences'").fetchone()[0]
+    flat = "".join(body.split())
+    columns = {r[0] for r in pg.execute(
+        "select column_name from information_schema.columns"
+        " where table_schema = 'public' and table_name = 'user_settings'")}
+    kept = {"user_id", "updated_at", "keep_progress"}
+    missing = [c for c in sorted(columns - kept) if f"{c}=default" not in flat]
+    assert missing == []
+
+
+def test_delete_account_removes_every_row_and_the_sign_in(pg):
+    _seed_everything(pg, USER_A)
+    _seed_everything(pg, USER_B, word="NumPyro")
+    b_before = _everything(pg, USER_B)
+    with as_user(pg, USER_A) as cur:
+        cur.execute("select public.delete_my_account()")
+    assert _everything(pg, USER_A) == ([], [], [], 0)
+    assert _everything(pg, USER_B) == b_before
+    # Nothing of A's is left in any public table, whatever it is called.
+    for (table,) in pg.execute("select tablename from pg_tables"
+                               " where schemaname = 'public'").fetchall():
+        n = pg.execute(sql.SQL("select count(*) from public.{} where user_id = %s")
+                       .format(sql.Identifier(table)), (USER_A,)).fetchone()[0]
+        assert n == 0, table
+
+
+def test_after_deletion_the_old_token_reaches_nothing(pg):
+    _seed_everything(pg, USER_A)
+    with as_user(pg, USER_A) as cur:
+        cur.execute("select public.delete_my_account()")
+    with as_user(pg, USER_A) as cur:          # a token issued before
+        assert my_config(cur) == DEFAULT_CONFIG
+    with pytest.raises(errors.ForeignKeyViolation):
+        with as_user(pg, USER_A) as cur:
+            cur.execute("insert into public.user_settings (locale) values ('en-GB')")
+    with as_user(pg, USER_A) as cur:          # deleting again is harmless
+        cur.execute("select public.delete_my_account()")
+    assert _everything(pg, USER_A) == ([], [], [], 0)
+
+
+def test_delete_account_without_a_user_id_is_refused(pg):
+    _seed_everything(pg, USER_A)
+    before = _everything(pg, USER_A)
+    with pytest.raises(errors.InsufficientPrivilege):
+        with acting_as(pg, "authenticated") as cur:     # no sub claim
+            cur.execute("select public.delete_my_account()")
+    assert _everything(pg, USER_A) == before
+    assert pg.execute("select count(*) from auth.users").fetchone()[0] == 2
+
+
+@pytest.mark.parametrize("fn", ["reset_my_preferences", "delete_my_account"])
+def test_anon_cannot_reset_or_delete(pg, fn):
+    _seed_everything(pg, USER_A)
+    before = _everything(pg, USER_A)
+    with pytest.raises(errors.InsufficientPrivilege):
+        with as_anon(pg) as cur:
+            # Even with A's id in the claims: anon has no EXECUTE.
+            cur.execute("select set_config('request.jwt.claims', %s, true)",
+                        (json.dumps({"role": "anon", "sub": str(USER_A)}),))
+            cur.execute(sql.SQL("select public.{}()").format(sql.Identifier(fn)))
+    assert _everything(pg, USER_A) == before
+
+
+@pytest.mark.parametrize("fn", ["reset_my_preferences", "delete_my_account"])
+def test_the_account_functions_take_no_user_argument(pg, fn):
+    """No signature lets a caller name someone else's account."""
+    args = pg.execute("select pg_get_function_arguments(p.oid) from pg_proc p"
+                      " join pg_namespace n on n.oid = p.pronamespace"
+                      " where n.nspname = 'public' and p.proname = %s",
+                      (fn,)).fetchall()
+    assert args == [("",)]
+
+
+def test_every_table_owning_user_rows_cascades_from_auth_users(pg):
+    """delete_my_account relies on ON DELETE CASCADE. A new per-user table
+    without it would make deletion fail; this names the table first."""
+    rows = pg.execute(
+        "select c.conrelid::regclass::text, c.confdeltype from pg_constraint c"
+        " where c.contype = 'f' and c.confrelid = 'auth.users'::regclass"
+        " order by 1").fetchall()
+    assert rows == [("dictionary_words", "c"), ("progress_events", "c"),
+                    ("user_settings", "c")]
+    tables = {r[0] for r in pg.execute(
+        "select tablename from pg_tables where schemaname = 'public'")}
+    assert tables == {r[0] for r in rows}

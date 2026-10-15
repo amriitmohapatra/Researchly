@@ -292,6 +292,19 @@ of them. On 115 cached open-access articles (735k words) GN201 found 12
 agreement slips, all real. The regional notes stay silent under auto and
 were read under each chosen English on both corpora.
 
+## 15. Genre-native units: the policy brief and the response letter (Codex review #4, 2026-10-15)
+
+`researchly/discourse/units.py` and `discourse/moves.py` (`UNIT_SCHEMAS`). Recognised from headings (and, in plain text, from a line of its own); they change the narrative map only, never a suggestion. Questions, lessons and frames are Researchly's own wording; the works are cited by name on the source line, nothing is quoted.
+
+| Unit | Moves (in order) | Sources |
+|---|---|---|
+| Context | the problem, and why now | Young & Quinn (2002), the parts of a policy paper |
+| Evidence | what the evidence shows | Young & Quinn (2002); guide §9.8 |
+| Options | the options; what each would cost or achieve | Young & Quinn (2002) |
+| Recommendations | a clear recommendation; who acts, and by when | Young & Quinn (2002); guide §9.8 |
+
+A response to reviewers is read as comment-and-reply units ("Reviewer 1, Comment 2", "R1.2", "Comment 3" under a "Reviewer 2" line, a quoted comment followed by its reply) and described, never judged; its Learn card ("A response to reviewers, comment by comment") cites Noble (2017), "Ten simple rules for writing a response to reviewers". The policy-brief card cites Young & Quinn (2002) and guide §9.8.
+
 ## Shipped this phase (v0.4)
 
 **New rules (10):** E701 empty-phrase · E702 adversative-run · E703
