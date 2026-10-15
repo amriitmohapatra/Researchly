@@ -29,10 +29,13 @@ public sealed record PlacedSuggestion(Suggestion Suggestion, TextRange16 Range, 
 /// </summary>
 public sealed class LiveCheckSession : IDisposable
 {
-    /// <summary>At most this many paragraphs per request; the rest follow in the next one.</summary>
-    public const int MaxParagraphsPerRequest = 40;
-    /// <summary>At most this many characters per request.</summary>
-    public const int MaxCharsPerRequest = 40_000;
+    /// <summary>At most this many paragraphs per request; the rest follow in the next one (the engine takes 50).</summary>
+    public const int MaxParagraphsPerRequest = 20;
+    /// <summary>
+    /// About this many characters per request (one longer paragraph is still sent alone): well inside
+    /// the engine's 20,000, and under the hosted engine's word cap for a caller without an account (1,500 words).
+    /// </summary>
+    public const int MaxCharsPerRequest = 6_000;
 
     private sealed class Record
     {
@@ -41,6 +44,10 @@ public sealed class LiveCheckSession : IDisposable
         public bool IsHeading;
         public string? Heading;
         public string? SentHeading;
+        /// <summary>Refused by the engine as sent (422 and the like): not sent again until its text changes.</summary>
+        public bool Rejected;
+        /// <summary>Longer than the engine checks at once (LiveLimits): never sent.</summary>
+        public bool TooLong;
         public List<Suggestion> Results = new();
     }
 
@@ -158,7 +165,11 @@ public sealed class LiveCheckSession : IDisposable
     {
         if (!_running) return;
         foreach (var r in _records.Values)
-            if (!r.IsHeading && !string.IsNullOrWhiteSpace(r.Text)) r.Dirty = true;
+            if (!r.IsHeading && !r.TooLong && !string.IsNullOrWhiteSpace(r.Text))
+            {
+                r.Dirty = true;
+                r.Rejected = false;
+            }
         _generation++;
         State.Edited();
         _debouncer.Cancel();
@@ -248,24 +259,27 @@ public sealed class LiveCheckSession : IDisposable
                 }
                 rec.Results = kept;
                 rec.Dirty = true;
+                rec.Rejected = false;
             }
             else if (tp.Change == ParagraphChange.Added)
             {
                 rec.Results = new List<Suggestion>();
                 rec.Dirty = true;
+                rec.Rejected = false;
             }
 
             rec.Text = tp.Text;
+            rec.TooLong = LiveLimits.Characters(rec.Text) > LiveLimits.MaxCharacters;
             if (rec.IsHeading != isHeading) changed = true;
             rec.IsHeading = isHeading;
             rec.Heading = headings[i];
             // A new heading above a paragraph changes its section: check it again.
-            if (!rec.Dirty && !isHeading && rec.SentHeading != rec.Heading && !string.IsNullOrWhiteSpace(rec.Text))
+            if (!rec.Dirty && !rec.Rejected && !isHeading && rec.SentHeading != rec.Heading && !string.IsNullOrWhiteSpace(rec.Text))
             {
                 rec.Dirty = true;
                 changed = true;
             }
-            if (isHeading || string.IsNullOrWhiteSpace(rec.Text))
+            if (isHeading || string.IsNullOrWhiteSpace(rec.Text) || rec.TooLong)
             {
                 rec.Dirty = false;
                 rec.Results = new List<Suggestion>();
@@ -304,7 +318,7 @@ public sealed class LiveCheckSession : IDisposable
             Options = _options(),
         };
         foreach (var (id, rec) in batch)
-            request.Paragraphs.Add(new ParagraphPayload { Id = id, Text = rec.Text, Heading = rec.Heading });
+            request.Paragraphs.Add(new ParagraphPayload { Id = id, Text = rec.Text, Heading = Clip(rec.Heading) });
 
         _inflight?.Cancel();
         _inflight?.Dispose();
@@ -314,12 +328,21 @@ public sealed class LiveCheckSession : IDisposable
         _ = RunAsync(request, _revision, _generation, _inflight.Token);
     }
 
+    /// <summary>A heading the engine accepts (at most 300 characters); a longer one is cut at a character boundary.</summary>
+    private static string? Clip(string? heading)
+    {
+        if (heading == null || heading.Length <= LiveLimits.MaxHeadingCharacters) return heading;
+        int end = LiveLimits.MaxHeadingCharacters;
+        if (char.IsHighSurrogate(heading[end - 1])) end--;
+        return heading.Substring(0, end);
+    }
+
     private List<(string Id, Record Rec)> PickBatch()
     {
         var dirty = new List<(string Id, Record Rec, int Distance)>();
         foreach (var tp in _tracked)
         {
-            if (!_records.TryGetValue(tp.Id, out var rec) || !rec.Dirty) continue;
+            if (!_records.TryGetValue(tp.Id, out var rec) || !rec.Dirty || rec.TooLong) continue;
             int distance = CaretOffset is int c
                 ? (c < tp.Paragraph.Start ? tp.Paragraph.Start - c : c > tp.Paragraph.End ? c - tp.Paragraph.End : 0)
                 : 0;
@@ -350,12 +373,12 @@ public sealed class LiveCheckSession : IDisposable
         }
         catch (EngineException e)
         {
-            OnFailure(e, revision);
+            OnFailure(e, request, revision);
             return;
         }
         catch (Exception e)
         {
-            OnFailure(new EngineException("unreachable", "The engine could not be reached.", inner: e), revision);
+            OnFailure(new EngineException("unreachable", "The engine could not be reached.", inner: e), request, revision);
             return;
         }
         OnReply(reply, request, revision, generation);
@@ -398,7 +421,7 @@ public sealed class LiveCheckSession : IDisposable
             _followUp = _scheduler.Schedule(TimeSpan.Zero, SendCheck);
             return;
         }
-        State.ReplyReceived(_visible.Count, _lastPartial, _lastPartialDetail);
+        ReportReply();
     }
 
     private void RecoverFromOffline()
@@ -411,9 +434,30 @@ public sealed class LiveCheckSession : IDisposable
             State.FieldEntered(); // leave offline; the reply sets the final state
     }
 
-    private void OnFailure(EngineException e, long revision)
+    private void OnFailure(EngineException e, CheckParagraphsRequest request, long revision)
     {
         if (!_running || revision != _revision) return;
+        if (!e.Retryable)
+        {
+            // Refused as sent (422 and the like): the same request would be refused again.
+            // Say so, keep these paragraphs out until they are edited, and do not retry.
+            foreach (var p in request.Paragraphs)
+            {
+                if (!_records.TryGetValue(p.Id, out var rec) || !string.Equals(rec.Text, p.Text, StringComparison.Ordinal))
+                    continue;
+                rec.Rejected = true;
+                rec.Dirty = false;
+                rec.Results = new List<Suggestion>();
+            }
+            _backoff.Reset();
+            _retryTimer?.Dispose();
+            _retryTimer = null;
+            NextRetryAt = null;
+            RebuildVisible();
+            SuggestionsChanged?.Invoke();
+            State.RequestFailed(OfflineDetail(e));
+            return;
+        }
         var delay = _backoff.Next();
         if (e.RetryAfter is { } ra && ra > delay) delay = ra > TimeSpan.FromSeconds(120) ? TimeSpan.FromSeconds(120) : ra;
         State.RequestFailed(OfflineDetail(e));
@@ -434,6 +478,10 @@ public sealed class LiveCheckSession : IDisposable
         "rate_limited" => "Can’t check right now: the engine is busy. Retrying shortly.",
         "not_found" => "Can’t check right now: this engine does not offer live checks. Update it, or choose another engine.",
         "bad_reply" => "Can’t check right now: the engine's reply could not be read.",
+        "sign_in_required" => "Can’t check this here: without an account the engine checks only a little text at a time. Choose This computer in the Researchly menu, or check a shorter passage.",
+        "payload_too_large" => "Can’t check this as you type: the text is too long. Researchly will try again after your next edit.",
+        "invalid_request" or "malformed_request" or "malformed_json" =>
+            "Can’t check this text as it was sent. Researchly will try again after your next edit; if this keeps happening, update the engine or this app.",
         "no_engine" => "Can’t check right now: no engine is chosen. Choose This computer, or set a hosted address, in the Researchly menu.",
         _ => "Can’t check right now: the engine refused the request.",
     };
@@ -442,7 +490,29 @@ public sealed class LiveCheckSession : IDisposable
     {
         if (State.State is OverlayState.Hidden or OverlayState.Offline) return;
         if (_inflight != null && !_inflight.IsCancellationRequested && AnyDirty()) return;
-        State.ReplyReceived(_visible.Count, _lastPartial, _lastPartialDetail);
+        ReportReply();
+    }
+
+    /// <summary>The state after a reply: partial when a tier was down, or when some paragraphs could not be checked.</summary>
+    private void ReportReply()
+    {
+        string? notChecked = UncheckedDetail();
+        bool partial = _lastPartial || notChecked != null;
+        string? detail = string.Join(" ", new[] { _lastPartial ? _lastPartialDetail : null, notChecked }.Where(d => d != null));
+        State.ReplyReceived(_visible.Count, partial, partial ? detail : null);
+    }
+
+    /// <summary>Why some paragraphs have no underlines although they were not checked clear; null when all were.</summary>
+    public string? UncheckedDetail()
+    {
+        int rejected = _records.Values.Count(r => r.Rejected && !r.IsHeading);
+        int tooLong = _records.Values.Count(r => r.TooLong && !r.IsHeading);
+        var parts = new List<string>();
+        if (rejected == 1) parts.Add("One paragraph couldn’t be checked; it will be after you edit it.");
+        else if (rejected > 1) parts.Add(rejected.ToString(CultureInfo.InvariantCulture) + " paragraphs couldn’t be checked; they will be after you edit them.");
+        if (tooLong == 1) parts.Add("One paragraph is too long to check as you type.");
+        else if (tooLong > 1) parts.Add(tooLong.ToString(CultureInfo.InvariantCulture) + " paragraphs are too long to check as you type.");
+        return parts.Count == 0 ? null : string.Join(" ", parts);
     }
 
     private void RebuildVisible()
@@ -456,8 +526,11 @@ public sealed class LiveCheckSession : IDisposable
                 if (_dismissed.Contains(s.Id)) continue;
                 if (s.Category == Category.Preference && !ShowPreferences) continue;
                 if (!Utf16.IsValidRange(tp.Text, s.Begin, s.End)) continue;
+                string flagged = tp.Text.Substring(s.Begin, s.End - s.Begin);
+                // The engine's flagged words must still be exactly there: a write-back checks the same words.
+                if (s.Text.Length > 0 && !string.Equals(flagged, s.Text, StringComparison.Ordinal)) continue;
                 var range = new TextRange16(tp.Paragraph.Start + s.Begin, tp.Paragraph.Start + s.End);
-                list.Add(new PlacedSuggestion(s, range, tp.Text.Substring(s.Begin, s.End - s.Begin), tp.Id));
+                list.Add(new PlacedSuggestion(s, range, flagged, tp.Id));
             }
         }
         _visible = list;

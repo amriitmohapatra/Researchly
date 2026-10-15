@@ -5,6 +5,7 @@ using System.Windows.Media;
 using Researchly.Overlay.Core.Engine;
 using Researchly.Overlay.Core.Placement;
 using Researchly.Overlay.Core.Tokens;
+using UnderlinePattern = Researchly.Design.UnderlinePattern;
 using Researchly.Overlay.Platform;
 
 namespace Researchly.Overlay.Ui;
@@ -95,7 +96,7 @@ internal sealed class UnderlineLayer : FrameworkElement
             foreach (var item in _items)
             {
                 if ((int)item.Category != pass) continue;
-                var style = DesignTokens.For(item.Category);
+                var underline = Looks.For(item.Category).Underline;
                 var line = _theme.Line(item.Category);
                 foreach (var box in item.Lines)
                 {
@@ -104,7 +105,7 @@ internal sealed class UnderlineLayer : FrameworkElement
                     if (r.Width < 1 || r.Height < 1) continue;
                     if (item.Id == _hovered)
                         dc.DrawRectangle(HoverTint(item.Category), null, r);
-                    DrawUnderline(dc, style.Pattern, line, r);
+                    DrawUnderline(dc, underline.Pattern, underline.Thickness, line, r);
                 }
             }
         }
@@ -112,27 +113,27 @@ internal sealed class UnderlineLayer : FrameworkElement
 
     private Brush HoverTint(Category category)
     {
-        var tint = DesignTokens.For(category).For(_theme.IsDark).Tint;
+        var tint = Looks.For(category).Highlight.Resolve(_theme.IsDark);
         var b = new SolidColorBrush(Theme.ToColor(tint.WithAlpha(_theme.IsDark ? 0.30 : 0.45)));
         b.Freeze();
         return b;
     }
 
-    private static void DrawUnderline(DrawingContext dc, UnderlinePattern pattern, Brush brush, Rect r)
+    private static void DrawUnderline(DrawingContext dc, UnderlinePattern pattern, double thickness, Brush brush, Rect r)
     {
         double y = Math.Round(r.Bottom - 1.5) + 0.5;
         double x0 = r.Left, x1 = r.Right;
         switch (pattern)
         {
             case UnderlinePattern.Solid:
-                dc.DrawLine(Pen(brush, 2, null, PenLineCap.Flat), new Point(x0, y), new Point(x1, y));
+                dc.DrawLine(Pen(brush, thickness, null, PenLineCap.Flat), new Point(x0, y), new Point(x1, y));
                 break;
             case UnderlinePattern.Dashed:
                 // Dash lengths are in units of the pen thickness.
-                dc.DrawLine(Pen(brush, 2, new DashStyle(new[] { 2.0, 1.5 }, 0), PenLineCap.Flat), new Point(x0, y), new Point(x1, y));
+                dc.DrawLine(Pen(brush, thickness, new DashStyle(new[] { 2.0, 1.5 }, 0), PenLineCap.Flat), new Point(x0, y), new Point(x1, y));
                 break;
             case UnderlinePattern.Dotted:
-                dc.DrawLine(Pen(brush, 2, new DashStyle(new[] { 0.0, 2.0 }, 0), PenLineCap.Round), new Point(x0 + 1, y), new Point(x1, y));
+                dc.DrawLine(Pen(brush, thickness, new DashStyle(new[] { 0.0, 2.0 }, 0), PenLineCap.Round), new Point(x0 + 1, y), new Point(x1, y));
                 break;
             case UnderlinePattern.WavyDotted:
                 for (double x = x0 + 1; x <= x1; x += 3)

@@ -22,5 +22,9 @@
   <ItemGroup>
     <!-- Synthetic engine replies written for these tests (no document text from anyone). -->
     <None Include="Fixtures\**\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Real exchanges of the live check, made by the engine service and shared with the macOS
+         client (packages/contract/fixtures/check-paragraphs; services/engine keeps them true). -->
+    <None Include="$(MSBuildThisFileDirectory)..\..\..\..\packages\contract\fixtures\check-paragraphs\*.json"
+          Link="Shared\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

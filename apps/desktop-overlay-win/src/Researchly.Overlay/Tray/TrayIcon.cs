@@ -5,6 +5,7 @@ using System.Windows.Forms;
 using Researchly.Overlay.Core.Settings;
 using Researchly.Overlay.Core.State;
 using Researchly.Overlay.Core.Tokens;
+using Rgba = Researchly.Design.Rgba;
 using Researchly.Overlay.Native;
 
 namespace Researchly.Overlay.Tray;
@@ -136,7 +137,7 @@ internal sealed class TrayIcon : IDisposable
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.Clear(Color.Transparent);
             bool paused = s.PausedEverywhere || s.CurrentAppPaused;
-            var accent = ToColor(DesignTokens.WidgetColour(paused ? OverlayState.Offline : s.State, s.Dark));
+            var accent = ToColor(Looks.WidgetColour(paused ? OverlayState.Offline : s.State, s.Dark));
             using var pen = new Pen(accent, 3.5f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
             using var brush = new SolidBrush(accent);
             var disc = new Rectangle(3, 3, size - 7, size - 7);

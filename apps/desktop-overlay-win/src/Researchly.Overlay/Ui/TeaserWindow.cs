@@ -34,7 +34,7 @@ internal sealed class TeaserWindow : NonActivatingWindow
     {
         SuggestionId = s.Id;
         var stack = new StackPanel { MaxWidth = 340 };
-        stack.Children.Add(Parts.CategoryHeader(_theme, s.Suggestion.Category));
+        stack.Children.Add(Parts.CategoryHeader(_theme, s.Suggestion.Category, s.Suggestion.SectionLabel));
         stack.Children.Add(Parts.Text(_theme, s.Suggestion.Message, 13));
         if (s.Suggestion.Replacements.Count > 0)
         {

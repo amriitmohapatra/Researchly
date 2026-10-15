@@ -6,6 +6,7 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using Researchly.Overlay.Core.Engine;
 using Researchly.Overlay.Core.Tokens;
+using System.Collections.Generic;
 using Researchly.Overlay.Platform;
 
 namespace Researchly.Overlay.Ui;
@@ -39,13 +40,30 @@ internal static class Parts
         SnapsToDevicePixels = true,
     };
 
-    /// <summary>The category's icon and name: colour is never the only cue.</summary>
-    public static StackPanel CategoryHeader(Theme theme, Category category)
+    // The website's icon shapes (apps/web/components/CategoryIcon.tsx) as path data on a
+    // 16 x 16 grid, keyed by the generated tokens' icon names; circles are two arcs.
+    private static readonly Dictionary<string, string> IconPaths = new(StringComparer.Ordinal)
     {
-        var style = DesignTokens.For(category);
+        ["circle-cross"] = "M1.5,8 A6.5,6.5 0 1 1 14.5,8 A6.5,6.5 0 1 1 1.5,8 Z M5.5,5.5 L10.5,10.5 M10.5,5.5 L5.5,10.5",
+        ["arrow-up"] = "M8,13 L8,3.5 M4,7.5 L8,3.5 L12,7.5",
+        ["open-book"] = "M8,4.5 C6.6,3.4 4.6,3 2,3 L2,12.5 C4.6,12.5 6.6,12.9 8,14 C9.4,12.9 11.4,12.5 14,12.5 L14,3 C11.4,3 9.4,3.4 8,4.5 Z M8,4.5 L8,14",
+        ["sliders"] = "M2.5,5 L4.1,5 M7.9,5 L13.5,5 M2.5,11 L8.6,11 M12.4,11 L13.5,11 M4.1,5 A1.9,1.9 0 1 1 7.9,5 A1.9,1.9 0 1 1 4.1,5 Z M8.6,11 A1.9,1.9 0 1 1 12.4,11 A1.9,1.9 0 1 1 8.6,11 Z",
+    };
+
+    /// <summary>The path data for a token icon name (an unknown one is drawn as the Improvement arrow).</summary>
+    public static string IconPath(string icon) => IconPaths.TryGetValue(icon, out var d) ? d : IconPaths["arrow-up"];
+
+    /// <summary>
+    /// The category's icon and name (colour is never the only cue), and the section the advice
+    /// assumed when there is one ("Methods"), as on the website's cards. Rule ids and internal
+    /// rule names are never shown.
+    /// </summary>
+    public static StackPanel CategoryHeader(Theme theme, Category category, string? section = null)
+    {
+        var look = Looks.For(category);
         var icon = new Path
         {
-            Data = Geometry.Parse(style.IconPath),
+            Data = Geometry.Parse(IconPath(look.Icon)),
             Stroke = theme.Ink(category),
             StrokeThickness = 1.5,
             StrokeStartLineCap = PenLineCap.Round,
@@ -59,7 +77,7 @@ internal static class Parts
         };
         var name = new TextBlock
         {
-            Text = style.Name,
+            Text = look.Label,
             FontFamily = Sans,
             FontSize = 12.5,
             FontWeight = FontWeights.SemiBold,
@@ -69,6 +87,20 @@ internal static class Parts
         var panel = new StackPanel { Orientation = Orientation.Horizontal };
         panel.Children.Add(icon);
         panel.Children.Add(name);
+        if (section != null)
+        {
+            var sectionText = new TextBlock
+            {
+                Text = "· " + section,
+                FontFamily = Sans,
+                FontSize = 12.5,
+                Foreground = theme.InkSecondaryBrush,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(6, 0, 0, 0),
+            };
+            System.Windows.Automation.AutomationProperties.SetName(sectionText, "Section: " + section);
+            panel.Children.Add(sectionText);
+        }
         return panel;
     }
 

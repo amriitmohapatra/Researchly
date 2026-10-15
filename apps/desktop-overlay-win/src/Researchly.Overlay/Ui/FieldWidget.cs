@@ -130,7 +130,7 @@ internal sealed class WidgetGlyph : FrameworkElement
         if (size <= 0) size = FieldWidget.SizeDip;
         var c = new Point(size / 2, size / 2);
         double r = size / 2 - 2;
-        var accent = _theme.Brush(DesignTokens.WidgetColour(_state, _theme.IsDark));
+        var accent = _theme.Brush(Looks.WidgetColour(_state, _theme.IsDark));
         var surface = _theme.SurfaceBrush;
         var ring = new Pen(accent, 2);
         ring.Freeze();
