@@ -7,7 +7,7 @@
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { createElement } from "react";
+import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test } from "@playwright/test";
 import { TOKENS } from "@researchly/design-tokens";
@@ -26,11 +26,28 @@ const EXAMPLES: Record<string, Partial<CheckStatus>> = {
   offline: { reason: "No connection", retryInMs: 4000, failures: 2 },
 };
 
+/**
+ * Playwright compiles JSX in test imports to its own component-testing
+ * objects ({__pw_type: "jsx"}), which React cannot render. These components
+ * are pure (no hooks), so call them and rebuild real React elements.
+ */
+type PwNode = { __pw_type?: string; type: unknown; props?: Record<string, unknown>; key?: string | null };
+function toReact(node: unknown): ReactNode {
+  if (Array.isArray(node)) return node.map(toReact);
+  if (node === null || typeof node !== "object" || (node as PwNode).__pw_type !== "jsx") return node as ReactNode;
+  const { type, props = {}, key } = node as PwNode;
+  if (typeof type === "function") return toReact((type as (p: unknown) => unknown)(props));
+  const { children, ...rest } = props;
+  const kids = Array.isArray(children) ? children.map(toReact) : [toReact(children)];
+  return createElement(type as string, { ...rest, key: key ?? undefined }, ...kids);
+}
+const markup = (status: CheckStatus, showLabel = true) => renderToStaticMarkup(toReact(StatusMark({ status, showLabel })) as never);
+
 function page(): string {
   const rows = CHECK_STATES.map((state) => {
     const status = { ...INITIAL_STATUS, state, ...(EXAMPLES[state] ?? {}) };
-    const mark = renderToStaticMarkup(createElement(StatusMark, { status }));
-    const bare = renderToStaticMarkup(createElement(StatusMark, { status, showLabel: false }));
+    const mark = markup(status);
+    const bare = markup(status, false);
     return `<li data-row="${state}"><code>${state}</code><span class="on-page">${mark}</span><span class="on-card">${bare}${mark}</span></li>`;
   }).join("");
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><style>${CSS}
