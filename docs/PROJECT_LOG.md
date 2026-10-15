@@ -3104,7 +3104,14 @@ each resumed from its saved work.
   - Eight abstract-only preprints in the bench are replaced with full-text
     ones.
 
-**Evidence (merged branch).** VERIFY_LINE
+**Evidence (merged branch).**
+- Python: core 1587 passed / 2 skipped; service 349; ML suites 143 (dogfood
+  25, realdocs 26, tools 5, eval 29, corpus 35, critics 23).
+- Supabase two-user tests: 133 (re-run by the lead through the usual
+  route).
+- Web: lint, typecheck, token and contract checks clean; 663 unit tests;
+  e2e chromium + accounts: 235 passed.
+- Third-party scan 0 hits; ruff clean; noise gate OK at 11.54/1000w.
 
 **For the owner.**
 - Run `supabase/migrations/20261015120000_account_controls.sql` after the
