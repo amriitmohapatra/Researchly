@@ -20,6 +20,7 @@ word confusion) and drop LanguageTool's spelling (S001's job) and style
 from __future__ import annotations
 
 import os
+import re
 import threading
 import time
 
@@ -147,6 +148,18 @@ SKIP_MISREAD_PREFIXES = ("EN_COMPOUNDS_", "EN_DIACRITICS_REPLACE_")
 # rule wins because it carries a named source and a bulk-safe fix.
 #   ENGLISH_WORD_REPEAT_RULE  ->  W207 doubled-word
 SKIP_COVERED_RULES = {"ENGLISH_WORD_REPEAT_RULE"}
+# "a"/"an" before an abbreviation Researchly's grammar notes know how to say
+# (GN206): one card, with the pronunciation, and none where LanguageTool
+# guesses from the letter ("an SNP" for the word-like "snip").
+A_VS_AN_RULES = {"EN_A_VS_AN"}
+
+
+def _covered_article(rule_id: str, document: Document, end: int) -> bool:
+    if rule_id not in A_VS_AN_RULES:
+        return False
+    from .lexicons import ABBREVIATION_ARTICLE
+    m = re.match(r"\s+([A-Za-z][A-Za-z0-9]*)", document.masked[end:end + 24])
+    return bool(m) and m.group(1) in ABBREVIATION_ARTICLE
 
 
 def get_tool(locale: str = "en-US"):
@@ -412,6 +425,8 @@ def _suggestions(matches, document: Document):
         end = m.offset + err_len
         # masked regions are spaces; never flag inside them
         if not document.masked[start:end].strip():
+            continue
+        if _covered_article(rule_id, document, end):
             continue
         # ...nor across them: LanguageTool reads "An $\\exp(1)$ prior" as
         # "An prior" and "$a$, $b$," as two commas in a row.

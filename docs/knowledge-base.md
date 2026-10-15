@@ -242,6 +242,55 @@ Each item is paraphrased in Researchly's words, with the section it belongs in a
 
 **Not built, and why.** The key-noun thread (one noun per chapter, drift when it changes): the slides' own key nouns include verbs ("decide"), so picking the noun needs judgement a parse cannot supply; recorded in PLAN as research-grade. Orphan review sections: a section's return address is an idea, not a citation, so citation overlap would call a used section an orphan. The four cracks and the three tests beyond the consequence test (adjudication, inheritance), "the gap picks the method", inherited methods and wrong measures: they judge the science, not the wording. A ruling move on the Discussion map (closed / narrowed / reframed / reopened): the words for a verdict are too varied to detect, so most discussions would show it as missing; D904 catches the anti-pattern instead. "Taken together" as buried tension and "well suited to exploring" in Methods: common and usually innocent, so they would cost precision. "Contributes to a deeper understanding": a vague-contribution phrase better handled as an extension of E701's empty phrases after a corpus check. Thread versus tape (the same sentence pasted into every chapter) is deterministic and could be built later.
 
+## 14. Researchly grammar notes (`docs/grammar-notes.md`; R6, 2026-10-15)
+
+**What it is.** Grammar and regional-usage rules written for Researchly at
+build time from general knowledge of English grammar (owner, 2026-10-15:
+"at build time (not LLM) … we can cite sources at the end"; ADR-11). The
+document is Researchly's own text, with invented examples and a further
+reading list at the end; no book, style guide or product is copied or
+closely paraphrased, so no third-party licence is involved. Source code
+`rgn`, shown to writers as "Researchly grammar notes". The engine never
+calls a model: each note is a deterministic rule in
+`researchly/rules_grammar_notes.py`, its word lists in `lexicons.py`
+(`COLLECTIVE_NOUNS`, `AGREEMENT_HEADS`, `DANGLING_OK`,
+`ABBREVIATION_ARTICLE`, `PERCEIVERS`, `FIT_FOLLOWERS`, `MONTHS`).
+
+| Note | Rule | Source |
+|---|---|---|
+| Group nouns take a singular verb in American English | **GN101** (Convention; `spelling = "us"` only) | `rgn` |
+| Different from / than / to by English | **GN102** (Convention; "than" in UK, UK-Oxford, AU, IN; "to" in US, CA) | `rgn` |
+| "gotten" outside North America | **GN103** (Convention; UK, UK-Oxford, AU, IN) | `rgn` |
+| "whilst" in American English | **GN104** (Convention; US) | `rgn` |
+| "was fit" vs "was fitted" for a model | **GN105** (Convention; UK, UK-Oxford, AU, IN) | `rgn` |
+| Full stops and commas with closing quotation marks | **GN106** (Convention, document; by chosen English, or a mixture under auto) | `rgn` |
+| Dates in prose, and dates written two ways | **GN107** (Convention, document) | `rgn` |
+| Agreement across an "of" phrase | **GN201** (Improvement) | `rgn` |
+| "A number of" takes a plural verb | **GN202** (Improvement) | `rgn` |
+| "Neither … nor" with two singular nouns | **GN203** (Improvement) | `rgn` |
+| "The reason is because" | **GN204** (Improvement) | `rgn` |
+| Dangling "-ing" opener before a passive | **GN205** (Improvement) | `rgn` |
+| "a"/"an" by how an abbreviation is said | **GN206** (Improvement; LanguageTool's a/an card steps aside for the listed abbreviations) | `rgn` |
+| "data" singular and plural in one document | **GN207** (Convention, document) | `rgn` |
+| "which" for a defining clause in American English | **GN208** (Preference; US) | `rgn` |
+| Lesson | Learn card **grammar-notes** ("Grammar of research prose, and your English") | `rgn` |
+
+**Not built, and why** (details in the document's "Considered and
+dropped"): "less cases", "between 5 to 10", "comprised of" and double
+comparatives are already caught by LanguageTool (checked on invented
+sentences); "compared to/with" is house style and too frequent; "in
+hospital" is used by medical journals in every English; "at/on the
+weekend" and "fill in/out" are rare or regional only in speech; all-number
+dates are ambiguous but cannot be resolved without guessing.
+
+**Precision (2026-10-15).** On the eight accepted theses with the setting
+on auto, the notes add 44 flags (GN201 23, GN205 10, GN207 6, GN206 4,
+GN204 1), every one judged a true finding on reading the matches locally
+(none copied anywhere); the noise floor moves from 11.74 to 11.89 because
+of them. On 115 cached open-access articles (735k words) GN201 found 12
+agreement slips, all real. The regional notes stay silent under auto and
+were read under each chosen English on both corpora.
+
 ## Shipped this phase (v0.4)
 
 **New rules (10):** E701 empty-phrase · E702 adversative-run · E703

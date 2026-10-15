@@ -19,7 +19,7 @@ Every actionable heuristic in the writing guide, converted into a typed rule ent
 
 **Plain explanations (P35, 2026-10-08):** every rule carries a `plain=` text beside its `why=`: the same advice in everyday words, for a writer who knows their science but not the grammar vocabulary (owner feedback from the first real use). The cards show the plain text first and the technical why behind it. Neither may mention this repository's internals: `tests/test_explanations.py` fails on a section number, a course code, a lecturer's name, a book citation or a command-line instruction in any user-visible text. Citations live on the Source line only.
 
-**Scope and Draft mode (S3, 2026-10-04):** every rule declares a scope. *Sentence* rules judge the sentence in front of the writer; *document* rules need the whole document. Draft mode (P1) shows sentence-level rules only and says how many document-level suggestions it held back; Revise shows everything. Document-level today: X101–X104, X202, X301, X401, X501, F601, F612, F613, N101, W211, D902, D903, AB802 (`GET /v1/rules` reports each rule's `scope`).
+**Scope and Draft mode (S3, 2026-10-04):** every rule declares a scope. *Sentence* rules judge the sentence in front of the writer; *document* rules need the whole document. Draft mode (P1) shows sentence-level rules only and says how many document-level suggestions it held back; Revise shows everything. Document-level today: X101–X104, X202, X301, X401, X501, F601, F612, F613, N101, W211, D902, D903, AB802, GN106, GN107, GN207 (`GET /v1/rules` reports each rule's `scope`).
 
 **Article-type profiles (S4, 2026-10-08; owner request):** `researchly/profiles.py`. A profile says what kind of document the sections belong to: which checks do not apply (each with a plain reason the cards show), what section unheaded prose is in, and what a reader of that kind expects (the review lens). Types: auto, general, manuscript, thesis-chapter, abstract, commentary, policy-brief, grant, response-to-reviewers. Commentary and policy brief (the owner's field first) switch off the abstract moves (AB801, AB802), the gap statement (D902, and D903 since 2026-10-14) and the hedging prompts (C302, C303), and read their body as argued like a Discussion; "abstract" judges a pasted abstract whole; response-to-reviewers drops the float checks (X101–X104). "auto" guesses only from strong signals (IMRaD headings, a chapter, a recommendations heading) and is otherwise "general", the engine as before. `GET /v1/rules` lists the profiles; `options.document_type` chooses one per request and the account saves it.
 
@@ -215,6 +215,30 @@ Structural checks read `researchly/structure.py`: floats (figures and tables wit
 Definitions ("full name (ACR)") are found with Schwartz & Hearst's (2003) algorithm, so notation such as "A(H1N1)" or panel letters "(D–F)" is not taken for a definition.
 
 Tried and dropped: **X203** abbreviation in a caption not defined there (79 flags on 17 real LaTeX projects, nearly all product names, chemical formulae, coders' initials). Deferred: **X201** missing caption (a captionless float has no prose to anchor a suggestion to), equation symbols defined (F603), tense consistency per section (no named source yet).
+
+## Layer 9 — Researchly grammar notes (S4d R6, 2026-10-15; ADR-11)
+
+Rules written for Researchly at build time from general knowledge of English grammar and its regional usage; the source document is [`grammar-notes.md`](grammar-notes.md) (source code `rgn`, shown as "Researchly grammar notes"), in Researchly's own words with further reading at its end. Module `researchly/rules_grammar_notes.py`; tests `tests/test_grammar_notes.py` (fire, don't-fire and dialect gating for every rule). Regional notes follow the `spelling` setting: "British-pattern" means `uk`, `uk-oxford`, `au` and `in`; under `auto` they speak only about a document's own mixtures. None is a Correction until its precision on the real-document bench is measured at 0.9 or more. LanguageTool's a/an card (`EN_A_VS_AN`) steps aside for the abbreviations GN206 lists, so the writer sees one card with the pronunciation.
+
+| ID | Rule | Type | English | Scope | Theses (auto) |
+|---|---|---|---|---|---|
+| GN101 | Group noun (team, committee, cohort…) with "are/were/have/do"; not before "of" + plural | Convention | US | sentence | 0 (1 under US, a true one) |
+| GN102 | "different than" (British-pattern) / "different to" (US, CA) → "different from"; comparisons and "different to the reader" exempt | Convention | by choice | sentence | 0 |
+| GN103 | "gotten" → "got" | Convention | British-pattern | sentence | 0 |
+| GN104 | "whilst" → "while" | Convention | US | sentence | 0 (5 under US) |
+| GN105 | "was/were fit to/using…" → "fitted"; "fit for purpose", "fit to travel" exempt | Convention | British-pattern | sentence | 0 (5 under UK) |
+| GN106 | Full stop or comma inside/outside closing quotation marks against the chosen English; a mixture under auto | Convention | all | document | 0 |
+| GN107 | Month-first date in British-pattern English; dates written both ways (ranges and reference entries exempt) | Convention | all | document | 0 |
+| GN201 | Plural "are/were/have/do" after a singular head + "of" + plural ("the proportion of cases were"); "a proportion of", "the majority of", coordinated subjects exempt | Improvement | all | sentence | 23, all true |
+| GN202 | "A number of" + plural noun with a singular verb | Improvement | all | sentence | 0 |
+| GN203 | "Neither A nor B" (both singular nouns) + plural verb | Improvement | all | sentence | 0 |
+| GN204 | "reason … is/was because" → "is that" | Improvement | all | sentence | 1, true |
+| GN205 | "-ing" opener + comma + passive main clause with no doer ("Using a Bayesian model, the parameters were estimated"); prepositional openers (assuming, given, including…) exempt | Improvement | all | sentence | 10, all true |
+| GN206 | "a"/"an" against how a listed abbreviation is said ("a MCMC", "an UK", "an SNP"); SIR/SEIR accepted either way | Improvement | all | sentence | 4, all true |
+| GN207 | "data" plural in some places and singular in others; the rarer form flagged once | Convention | all | document | 6, all true |
+| GN208 | "which" starting a defining clause (no comma) → "that" | Preference | US | sentence | 0 (258 under US) |
+
+Noise floor with the notes: 11.74 → 11.89 flags/1000w (+44 flags, every one a true finding when read). Considered and dropped (reasons in the document): "less cases", "between 5 to 10", "comprised of", double comparatives (LanguageTool catches them); "compared to/with"; "in hospital"; "at/on the weekend"; "fill in/out"; all-number dates; "toward(s)".
 
 ## Layer 0 — Commodity spelling & grammar (v0.3; integrated open source)
 
