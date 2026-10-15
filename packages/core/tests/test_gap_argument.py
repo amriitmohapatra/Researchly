@@ -35,7 +35,7 @@ def hits(text, rule_id, kind="plain", **kw):
 
 # --- the rules are registered and explained -------------------------------------------
 
-@pytest.mark.parametrize("rid", ["D903", "D904", "D905"])
+@pytest.mark.parametrize("rid", ["D903", "D904", "D905", "D906"])
 def test_rules_are_registered_explained_and_reviewed(rid):
     load_rules()
     r = REGISTRY[rid]
@@ -365,6 +365,105 @@ def test_the_moves_are_missing_when_unsaid_and_absent_for_an_article():
                           document_type="manuscript").narrative
     assert "design_limit" not in _moves(article, "methods")
     assert "still_open" not in _moves(article, "conclusion")
+
+
+# --- D906: thread versus tape ----------------------------------------------------------
+# The same gap or aim sentence pasted into several chapters. Synthetic
+# chapters about the demo's fictional districts.
+
+_GAP = ("However, little is known about how the length of the wet season "
+        "changes dengue transmission in the lowland districts of Oldmere.")
+_AIM = ("This thesis aims to estimate how the length of the wet season "
+        "changes dengue transmission in the lowland districts of Oldmere.")
+_FILLER = ("Weekly case counts were collected from every district clinic. "
+           "Rainfall was recorded at four stations across the region. ")
+
+
+def _thesis(ch1: str, ch2: str, ch3: str = "", kind: str = "markdown") -> str:
+    if kind == "latex":
+        body = "".join(f"\\chapter{{{t}}}\n{b}\n\n" for t, b in (
+            ("Introduction", ch1), ("Seasonal forcing", ch2),
+            ("Discussion", ch3)) if b)
+        return ("\\documentclass{report}\n\\begin{document}\n"
+                "\\chapter*{Abstract}\n" + _AIM + "\n\n" + body
+                + "\\end{document}\n")
+    parts = [("Chapter 1: Introduction", ch1), ("Chapter 2: Seasonal forcing",
+             ch2), ("Chapter 3: General discussion", ch3)]
+    return "".join(f"# {t}\n\n{b}\n\n" for t, b in parts if b)
+
+
+def _md_hits(text):
+    return hits(text, "D906", kind="markdown")
+
+
+def _md_ids(text):
+    return ids(text, kind="markdown")
+
+
+def test_d906_fires_on_a_gap_sentence_pasted_into_a_later_chapter():
+    text = _thesis(_FILLER + _GAP, _GAP + " " + _FILLER)
+    (h,) = _md_hits(text)
+    assert h.start > text.index("Chapter 2")
+    assert text[h.start:h.end].startswith("However, little is known")
+    assert "Chapter 1" in h.message
+    assert h.category.value == "improvement"
+
+
+def test_d906_fires_on_a_near_copy_and_names_the_first_chapter():
+    # One word changed: still tape. Chapter 3 points back at Chapter 1.
+    copy = _GAP.replace("lowland", "southern")
+    text = _thesis(_FILLER + _GAP, _FILLER, copy + " " + _FILLER)
+    (h,) = _md_hits(text)
+    assert h.start > text.index("Chapter 3")
+    assert "Chapter 1" in h.message
+
+
+def test_d906_fires_in_latex_chapters_and_skips_the_abstract():
+    text = _thesis(_FILLER + _AIM, _AIM + " " + _FILLER, kind="latex")
+    found = hits(text, "D906", kind="latex")
+    assert len(found) == 1
+    assert found[0].start > text.index("\\chapter{Seasonal forcing}")
+    # The starred Abstract is not a chapter: chapter 1 is "Introduction".
+    assert "Chapter 1" in found[0].message
+
+
+def test_d906_quiet_when_the_gap_is_carried_forward():
+    # A thread: the same key words, but the later sentence knows more.
+    thread = ("Chapter 1 showed that a longer wet season raises dengue "
+              "transmission in the lowland districts, but not whether the "
+              "effect holds in the dry uplands.")
+    assert "D906" not in _md_ids(_thesis(_FILLER + _GAP, thread + " " + _FILLER))
+
+
+def test_d906_quiet_on_repeated_sentences_that_are_not_gap_or_aim():
+    # Methods boilerplate repeated across chapters (a thesis by
+    # publication) is not the gap standing still.
+    method = ("Weekly case counts from every district clinic were linked to "
+              "rainfall records from four stations across the region.")
+    assert "D906" not in _md_ids(_thesis(method + " " + _GAP, method))
+
+
+def test_d906_quiet_within_one_chapter_and_without_chapters():
+    # Repeated in the same chapter: not a chapter-to-chapter copy.
+    assert "D906" not in _md_ids(_thesis(_GAP + " " + _FILLER + _GAP, _FILLER))
+    # An article (no chapters): Introduction and Discussion may echo.
+    article = ("# Introduction\n\n" + _GAP + "\n\n# Discussion\n\n" + _GAP
+               + "\n")
+    assert "D906" not in _md_ids(article)
+
+
+def test_d906_quiet_on_short_sentences():
+    short = "Little is known about rainfall effects."
+    assert "D906" not in _md_ids(_thesis(short + " " + _FILLER, short))
+
+
+def test_d906_reads_word_chapters():
+    paras = [{"text": "Chapter 1 Introduction", "style": "Heading 1"},
+             {"text": _FILLER + _GAP, "style": ""},
+             {"text": "Chapter 2 Seasonal forcing", "style": "Heading 1"},
+             {"text": _GAP + " " + _FILLER, "style": ""}]
+    a = api.analyze(paras, nlp=NLP, show_preferences=True)
+    assert [s.rule_id for s in a.suggestions].count("D906") == 1
 
 
 def test_profile_moves_are_explained_and_reach_a_card():

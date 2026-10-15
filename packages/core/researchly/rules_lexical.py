@@ -796,6 +796,81 @@ def d905_generic_future(doc, document: Document):
             break
 
 
+def _chapters(document: Document) -> list:
+    """(start, name) of each chapter of a thesis, in order: a LaTeX
+    \\chapter, or a heading that says "Chapter N". Front and back matter
+    set as chapters (Abstract, Acknowledgements, References, Appendix)
+    are not chapters of the argument. The name is the heading's own
+    "Chapter N" when it has one, else "Chapter k" by order."""
+    out = []
+    for h in document.headings:
+        text = " ".join(h.text.split())
+        own = re.match(lx.CHAPTER_HEADING_RX, text, re.IGNORECASE)
+        if not own and (h.level != 0 or re.search(lx.NON_CHAPTER_RX, text,
+                                                  re.IGNORECASE)):
+            continue
+        name = (own.group(0).strip().title() if own
+                else f"Chapter {len(out) + 1}")
+        out.append((h.start, name))
+    return out
+
+
+def _shingles(words: list) -> frozenset:
+    """Word pairs: one changed word in a 20-word sentence leaves 0.83 of
+    them shared, a rewritten clause far less."""
+    return frozenset(zip(words, words[1:]))
+
+
+def _gap_or_aim(text: str) -> bool:
+    from .discourse.moves import MOVES
+    return (MOVES["gap"].matches(text) or MOVES["aim"].matches(text)
+            or any(re.search(rx, text, re.IGNORECASE)
+                   for rx in lx.ABSENCE_GAP_RX + lx.THESIS_AIM_RX))
+
+
+@rule("D906", "gap-pasted-across-chapters", Category.IMPROVEMENT,
+      "The same gap or aim sentence, nearly word for word, in two chapters.",
+      'A thesis carries one gap from its first chapter to its last, but a '
+      'carried gap is the same claim told again with what each chapter has '
+      'since learned: a thread. The same sentence pasted into chapter after '
+      'chapter is tape: the claim never moves, and the examiner reads it '
+      'as a sign that the later chapter added nothing to it. Keep the key '
+      'words, and let the later sentence say what this chapter now knows '
+      'that the earlier one did not.',
+      plain=("This sentence is almost the same as one in an earlier "
+             "chapter. Repeating it makes the thesis look as if it has not "
+             "moved on. Keep the same idea, but say what this chapter adds "
+             "to it."),
+      source="workshop-S2", scope="document")
+def d906_gap_pasted_across_chapters(doc, document: Document):
+    chapters = _chapters(document)
+    if len(chapters) < 2:
+        return
+    starts = [c[0] for c in chapters]
+    seen: list = []                 # (chapter index, shingles)
+    for sent in doc.sents:
+        k = bisect_right(starts, sent.start_char) - 1
+        if k < 0:
+            continue                # front matter before the first chapter
+        text = sent.text
+        words = re.findall(r"[a-z0-9]+", text.lower())
+        if len(words) < lx.TAPE_MIN_WORDS or not _gap_or_aim(text):
+            continue
+        grams = _shingles(words)
+        earlier = next(
+            (j for j, other in seen if j < k
+             and len(grams & other) >= lx.TAPE_JACCARD * len(grams | other)),
+            None)
+        seen.append((k, grams))
+        if earlier is None:
+            continue
+        yield Suggestion(
+            message=f"This sentence also appears in {chapters[earlier][1]}. "
+                    "A thesis carries its gap forward rather than repeating "
+                    "it word for word: say what this chapter adds.",
+            start=sent.start_char, end=sent.end_char)
+
+
 # ensure the abstract lens registers wherever the rule pack loads
 from .discourse import abstract_lens  # noqa: E402,F401
 

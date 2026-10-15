@@ -444,7 +444,8 @@ _CARDS = (
          "Put your gap sentence, the last sentence of your discussion and "
          "the last of your conclusion on one page. They should be about the "
          "same thing, and the last should know more than the first.",
-         "workshop-S2+Bunton2005+Kwan2006+Lim2006", rules=("D904", "D905")),
+         "workshop-S2+Bunton2005+Kwan2006+Lim2006",
+         rules=("D904", "D905", "D906")),
     # --- Mechanics ------------------------------------------------------------------
     Card("spelling-and-grammar", "Spelling, grammar and slips", "Mechanics",
          "Small slips cost trust out of proportion to their size.",

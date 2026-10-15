@@ -404,7 +404,8 @@
       "source": "Amriit's learnings from scientific-writing training (Researchly notes); D. Bunton (2005), \"The structure of PhD conclusion chapters\", Journal of English for Academic Purposes 4(3); B. S. C. Kwan (2006), \"The schematic structure of literature reviews in doctoral theses of applied linguistics\", English for Specific Purposes 25(1); J. M. H. Lim (2006), \"Method sections of management research articles: a pedagogically motivated qualitative study\", English for Specific Purposes 25(3)",
       "rules": [
         "D904",
-        "D905"
+        "D905",
+        "D906"
       ],
       "moves": []
     },

@@ -160,6 +160,7 @@ F607–F610 are the thesis-aligned, nobody-else-has-this rules. F601 is the one 
 | D903 | Gap stated as a bare absence ("remains underexplored", "has been overlooked", "little is known") with no stake in it, the sentence before or the two after (what fails, who pays, what is decided without the answer, an untested assumption) | Improvement | Introduction (doc-level) | 2026-10-14 |
 | D904 | "Fills / addresses / bridges the gap" (a knowledge gap) with no ruling: say closed, narrowed, reframed or reopened | Improvement | Discussion, Conclusion | 2026-10-14 |
 | D905 | Generic call for future research ("Further research is needed", "Future work should explore this") naming nothing that is still open | Improvement | Discussion, Limitations, Conclusion | 2026-10-14 |
+| D906 | Thread versus tape: a gap or aim sentence (12+ words) repeated nearly word for word (word-pair Jaccard ≥ 0.8) in a later chapter of a thesis; points back at the first chapter that has it | Improvement | thesis chapters (doc-level) | 2026-10-15 |
 
 All aggregate per section where repetition would nag (E701, E704–E707,
 AB801, L901). E703 fires only when the preceding sentence is ≥18 words
@@ -182,7 +183,15 @@ brief and response to reviewers. D904 skips a partial or negated claim
 gap" (a ruling) and literal gaps ("the immunity gap", "the gap between
 modelling and policy", "this gap in coverage"). D905 fires only when every
 word of the sentence other than the call itself is generic
-(`lexicons.GENERIC_FUTURE_WORDS`). Not rules, and not counted in the noise
+(`lexicons.GENERIC_FUTURE_WORDS`). D906 needs two or more chapters (a
+LaTeX `\chapter`, or a heading reading "Chapter N" in Word or Markdown;
+front and back matter set as chapters do not count, and plain text has no
+chapter headings), compares only gap or aim sentences (the narrative map's
+gap and aim signals, D903's absence phrases and a thesis-aim pattern), and
+flags only the later copy; repeated methods sentences (a thesis by
+publication) are left alone. On the eight theses with their chapters kept
+(18 chapters in four theses, 110 candidate sentences) it raised nothing.
+Not rules, and not counted in the noise
 floor: **strangers**, sources cited in two or more sentences of the
 Discussion and nowhere before it, shown as the narrative map's
 `stranger_sources` link and in the brief's question D
