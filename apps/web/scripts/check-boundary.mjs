@@ -14,6 +14,11 @@
  * cookie helpers (@supabase/ssr) are refused; and app code may not log to
  * the console, so neither text nor a token can end up in a log.
  *
+ * S6 (the installable app): the service worker, public/sw.js, is the only
+ * other file that may fetch, the only one that may use Cache Storage (with
+ * one put(), behind isCacheable()), and components/ServiceWorker.tsx the
+ * only place that registers a worker.
+ *
  * Usage: node scripts/check-boundary.mjs [appRoot]   (exit 1 on violations)
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -23,6 +28,14 @@ import { fileURLToPath } from "node:url";
 const SOURCE_EXT = /\.(c|m)?(t|j)sx?$/;
 /** The only files that may touch localStorage: per-viewer choices, never text. */
 const PREF_FILES = new Set(["lib/prefs.ts", "lib/results-prefs.ts"]);
+/**
+ * The service worker (PLAN S6, the installable app). It may fetch, because a
+ * worker answers the page's own requests, but only same-origin app code,
+ * icons and the offline page are ever stored; tests/unit/pwa.test.ts runs it.
+ */
+const SERVICE_WORKER = "public/sw.js";
+/** The only module that may register a service worker. */
+const SW_REGISTRAR = "components/ServiceWorker.tsx";
 const SKIP_DIRS = new Set(["node_modules", ".next", "out", "test-results", "playwright-report", "tests", "e2e", "scripts"]);
 
 function walk(dir, root, out = []) {
@@ -72,7 +85,7 @@ export function checkBoundary(root) {
     if (/(^|[\s;{(])["']use server["']/.test(src)) {
       flag(f, "server actions ('use server') are not allowed: they would send text to the Next.js server");
     }
-    if (/\bfetch\s*\(/.test(src) && f !== "lib/engine.ts") {
+    if (/\bfetch\s*\(/.test(src) && f !== "lib/engine.ts" && f !== SERVICE_WORKER) {
       flag(f, "network calls belong in lib/engine.ts only (the single, audited path to the engine)");
     }
     if (/\b(XMLHttpRequest|sendBeacon|WebSocket|EventSource)\b/.test(src)) {
@@ -86,6 +99,19 @@ export function checkBoundary(root) {
         f,
         "localStorage is only for per-viewer preferences (format; the Word add-in's engine and Draft/Revise; the reporting checklist), in lib/prefs.ts or lib/results-prefs.ts",
       );
+    }
+    if (/\bserviceWorker\s*\.\s*register\s*\(/.test(src) && f !== SW_REGISTRAR) {
+      flag(f, `service workers are registered only by ${SW_REGISTRAR}, and the only worker is ${SERVICE_WORKER}`);
+    }
+    if (/\bcaches\s*\.\s*(open|match|keys|has|delete)\s*\(/.test(src) && f !== SERVICE_WORKER) {
+      flag(f, `the Cache Storage API is for the service worker (${SERVICE_WORKER}) only: pages never store responses`);
+    }
+    if (f === SERVICE_WORKER) {
+      // The worker stores what isCacheable() allows and nothing else: one put(), behind that check.
+      const puts = src.match(/\.put\s*\(/g) ?? [];
+      if (puts.length !== 1 || !/if\s*\(\s*isCacheable\(/.test(src)) {
+        flag(f, "the service worker stores responses in exactly one place, guarded by isCacheable()");
+      }
     }
     if (/dangerouslySetInnerHTML|\binnerHTML\b|insertAdjacentHTML/.test(src)) {
       flag(f, "never render HTML from data; document text is rendered as text");

@@ -43,6 +43,28 @@ Playwright is pinned to 1.56.1 to match the pre-installed Chromium; set
 With either Supabase value unset the site is the S1 site: no sign-in UI, no
 upload, no `/settings` (404), and supabase-js is never loaded.
 
+### Uploading files in local development, without Supabase
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `NEXT_PUBLIC_RESEARCHLY_DEV_UPLOAD` | unset | `1`: `npm run dev` offers "Check a file instead" and drop-to-check without accounts. **Ignored by `npm run build`** (the production build inlines `NODE_ENV=production`) and whenever Supabase is configured (`lib/config.ts`, `devUploadEnabled`; tests/unit/config.test.ts, and the e2e S1 build sets it to prove it has no effect). |
+
+Files then go to `POST {engine}/v1/analyze-file` **with no token**. The
+engine accepts an anonymous upload only when it runs without accounts
+(`services/engine` with `RESEARCHLY_SUPABASE_URL` unset), which is how the
+local engine runs; a hosted engine with accounts answers "Sign in to check
+files". So:
+
+```bash
+# services/engine, no Supabase variables: anonymous uploads allowed
+# apps/web:
+echo 'NEXT_PUBLIC_RESEARCHLY_DEV_UPLOAD=1' >> .env.local
+npm run dev
+```
+
+The help line under the upload button says it is a development upload. No
+card actions appear (they need an account).
+
 Telemetry is disabled in the npm scripts (`NEXT_TELEMETRY_DISABLED=1`).
 
 ## How it talks to the engine
@@ -117,6 +139,59 @@ Word loads `https://<site>/word` in its sidebar (manifests in
   Every other route's headers are unchanged (tests/unit/security.test.ts,
   e2e/word.spec.ts).
 
+## Install Researchly as an app (S6, P5)
+
+The website is an installable web app (PWA). Nothing changes about how it
+checks: text still goes from the page straight to the engine.
+
+- **Chrome or Edge on a computer**: open the site, then the install icon at
+  the right of the address bar, or the browser menu, then **Install
+  Researchly** (Edge: Apps, then Install this site as an app). It opens in
+  its own window and appears with your other apps.
+- **Android (Chrome)**: the menu (⋮), then **Add to Home screen** or
+  **Install app**.
+- **iPhone and iPad (Safari)**: the Share button, then **Add to Home
+  Screen**.
+
+How it is built:
+
+- `app/manifest.ts` → `/manifest.webmanifest` (name, `standalone`, start
+  URL and scope `/`, colours from the design tokens). Icons in
+  `public/icons/` (192 and 512, plain and maskable) and `app/apple-icon.png`
+  (180), drawn from `app/icon.svg` by `node scripts/make-pwa-icons.mjs`
+  (uses sharp, which Next.js installs); the PNGs are committed.
+- **The service worker, `public/sw.js`, never stores document text or any
+  reply from the engine or Supabase** (confidential by design). Its rules:
+  - same-origin GETs of `/_next/static/*`, `/icons/*`, `/icon.svg`,
+    `/offline.html` and `/offline.css`: cache first, stored only when the
+    reply is a plain 200 from this site without `no-store`/`private`;
+  - navigations to this site's pages: network only, never stored; when the
+    network fails, the offline page ("Researchly needs a connection to check
+    your writing", with local mode as the way to check offline);
+  - everything else is not touched (the worker does not answer, so the
+    browser fetches as usual): every POST, the engine, Supabase, any other
+    origin, `/word`, the demo manuscript, Next.js data requests, URLs with
+    a query.
+  - Cache names carry a version (`researchly-shell-v1`,
+    `researchly-static-v1`); activate deletes every other Researchly cache.
+    Bump `VERSION` in `sw.js` when its rules change.
+- **Registered** by `components/ServiceWorker.tsx` only in a production
+  build, in a top-level window, never on `/word` (Office's webviews may not
+  support service workers; `lib/pwa.ts`). `check-boundary.mjs` allows
+  `fetch` only in `lib/engine.ts` and `sw.js`, the Cache Storage API only
+  in `sw.js` (and there one `put`, behind `isCacheable()`), and
+  registration only in that component.
+- **Tests**: `tests/unit/pwa.test.ts` loads `sw.js` as shipped and drives
+  its handlers with fake caches and network (no POST, engine, Supabase or
+  page reply is ever stored; offline fallback; old caches deleted), and
+  checks the manifest, the icon sizes and the offline page's colours.
+  `e2e/pwa.spec.ts` registers it in the production build, runs a check, and
+  reads every cache entry (same-origin static files only, none holding the
+  checked text), shows the offline page with the network off, and proves
+  `/word` registers nothing. The other specs block service workers
+  (`serviceWorkers: "block"`) so page.route mocks stay in charge.
+- The CSP already has `manifest-src 'self'` and `worker-src 'self'`.
+
 ## Accounts (S2, docs/s2-design.md §5)
 
 - **Browser only.** supabase-js is loaded by `lib/supabase.ts` alone (a
@@ -134,6 +209,11 @@ Word loads `https://<site>/word` in its sidebar (manifests in
   (`application/octet-stream`), name in `X-Researchly-Filename`
   (`encodeURIComponent`), options in `X-Researchly-Options`. Type and the
   25 MB cap are checked first, for usability only.
+- **Muting a rule on an uploaded file** never sends the file again: the
+  rule's cards are filtered out in the page at once, the mute is saved
+  (`mute_rule`), and Undo (`unmute_rule`) brings them back at once. The
+  next check of the file applies the account's mutes in the engine. On
+  pasted text the page still checks again after a mute or an undo.
 - **Settings** (`/settings`, `lib/account.ts`) read and write
   `user_settings` and `dictionary_words` straight from the browser. Inserts
   rely on the `user_id` default (`auth.uid()`); the only id the client ever
@@ -208,7 +288,8 @@ lib/            engine (fetch), segments (offsets + highlight segmentation),
                 queue (the revision queue's passes and positions),
                 check-session (one check at a time; late replies dropped), reading
 proxy.ts        CSP nonce
-scripts/        check-boundary.mjs (confidentiality lint)
+public/         sw.js (service worker), offline.html/.css, icons/ (PWA icons)
+scripts/        check-boundary.mjs (confidentiality lint), make-pwa-icons.mjs
 tests/unit/     Vitest
 e2e/            Playwright specs, typed fixtures (`satisfies AnalyzeResponse`),
                 fake-office.ts (Office.js stand-in), word*.spec.ts
