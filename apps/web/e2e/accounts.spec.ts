@@ -698,3 +698,73 @@ test("dark mode: no serious axe violations on signed-in results and settings", a
   await expect(page.getByTestId("muted-rule")).toHaveCount(1);
   expect(await axeSerious(page, [...AXE_TAGS, "best-practice"])).toEqual([]);
 });
+
+test.describe("muting a rule on an uploaded file (Inbox: no second upload)", () => {
+  test("its cards leave at once, the mute is saved, the file is not sent again; Undo brings them back at once", async ({ page }) => {
+    await seedSession(page);
+    const sb = await mockSupabase(page);
+    const calls = await mockEngineAuth(page, (_c, route) => reply(route, 200, zipResponse));
+    await page.goto("/");
+    await expect(page.getByTestId("account-button")).toBeVisible();
+    await page.getByTestId("file-input").setInputFiles({ name: "thesis-chapter.zip", mimeType: "application/zip", buffer: Buffer.from("PK") });
+    await expect(page.getByRole("heading", { name: "2 suggestions" })).toBeVisible();
+    const uploads = () => calls.filter((c) => c.path === "/v1/analyze-file").length;
+    expect(uploads()).toBe(1);
+
+    await page.locator("#card-e2e-zip-1").getByTestId("mute-rule").click();
+    await expect(page.getByTestId("account-note")).toContainText("Muted “Booster overclaims certainty”");
+    await expect(page.getByRole("heading", { name: "1 suggestion" })).toBeVisible();
+    await expect(page.locator("#card-e2e-zip-1")).toHaveCount(0);
+    await expect(page.getByTestId("document").locator('[data-sids~="e2e-zip-1"]')).toHaveCount(0);
+    expect(sb.settings?.disabled_rules).toEqual(["C201"]);
+    // Focus lands on Undo, one key away, as after "Not an issue here".
+    await expect(page.getByTestId("undo-mute")).toBeFocused();
+    await expect(page.getByTestId("file-panel")).toBeVisible();
+
+    await page.getByTestId("undo-mute").click();
+    await expect(page.getByTestId("account-note")).toContainText("Unmuted “Booster overclaims certainty”");
+    await expect(page.getByRole("heading", { name: "2 suggestions" })).toBeVisible();
+    await expect(page.locator("#card-e2e-zip-1")).toBeVisible();
+    await expect.poll(() => sb.settings?.disabled_rules).toEqual([]);
+    expect(sb.sent.filter((r) => r.path === "/rest/v1/rpc/unmute_rule")).toHaveLength(1);
+
+    // Neither the mute nor its undo sent the file again.
+    await page.waitForTimeout(300);
+    expect(uploads()).toBe(1);
+    expect(await axeSerious(page)).toEqual([]);
+  });
+
+  test("a failed save brings the cards back and says why; still no second upload", async ({ page }) => {
+    await seedSession(page);
+    await mockSupabase(page);
+    const calls = await mockEngineAuth(page, (_c, route) => reply(route, 200, zipResponse));
+    await page.route(`${SUPABASE_URL}/rest/v1/rpc/mute_rule`, (route) =>
+      route.request().method() === "OPTIONS" ? route.fallback() : reply(route, 401, { code: "PGRST301", message: "JWT expired" }),
+    );
+    await page.goto("/");
+    await expect(page.getByTestId("account-button")).toBeVisible();
+    await page.getByTestId("file-input").setInputFiles({ name: "thesis-chapter.zip", mimeType: "application/zip", buffer: Buffer.from("PK") });
+    await expect(page.getByRole("heading", { name: "2 suggestions" })).toBeVisible();
+    await page.locator("#card-e2e-zip-1").getByTestId("mute-rule").click();
+    await expect(page.getByTestId("account-note")).toContainText("Your sign-in has expired");
+    await expect(page.getByRole("heading", { name: "2 suggestions" })).toBeVisible();
+    await expect(page.getByTestId("undo-mute")).toHaveCount(0);
+    expect(calls).toHaveLength(1);
+  });
+
+  test("pasted text: Undo unmutes and checks again, so the engine's answer has the cards back", async ({ page }) => {
+    await seedSession(page);
+    const sb = await mockSupabase(page);
+    const calls = await mockEngineAuth(page, (_c, route, n) => reply(route, 200, n === 2 ? afterMute : signedInPaste));
+    await page.goto("/");
+    await expect(page.getByTestId("account-button")).toBeVisible();
+    await pasteAndCheck(page);
+    await page.locator("#card-e2e-wordy-1").getByTestId("mute-rule").click();
+    await expect(page.getByRole("heading", { name: "1 suggestion" })).toBeVisible();
+    await expect.poll(() => calls.length).toBe(2);
+    await page.getByTestId("undo-mute").click();
+    await expect(page.getByRole("heading", { name: "2 suggestions" })).toBeVisible();
+    await expect.poll(() => calls.length).toBe(3);
+    expect(sb.settings?.disabled_rules).toEqual([]);
+  });
+});
