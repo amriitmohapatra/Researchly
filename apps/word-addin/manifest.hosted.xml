@@ -12,6 +12,10 @@
   does not report; the taskpane checks API support at run time instead.
   tests/test_word_addin_manifests.py enforces the documented limits.
 
+  0.4.0.0 (S4d R4) adds the underline popup's strings (RL.Critique*):
+  Word reads them only from an installed manifest, so the owner sideloads
+  this file once more (README.md, "Underlines in the document").
+
   Its Id differs from manifest.xml (the local, maintenance-only add-in), so
   both can be installed side by side. Sideloading on a Mac: README.md,
   "Hosted add-in (S3)".
@@ -24,7 +28,7 @@
   xsi:type="TaskPaneApp">
 
   <Id>af2a002b-faeb-4373-aa52-40a63ffc9a06</Id>
-  <Version>0.3.1.0</Version>
+  <Version>0.4.0.0</Version>
   <ProviderName>Researchly</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
 
@@ -104,6 +108,14 @@
         <bt:String id="RL.GroupLabel" DefaultValue="Researchly" />
         <bt:String id="RL.OpenLabel" DefaultValue="Researchly" />
         <bt:String id="RL.GetStartedTitle" DefaultValue="Researchly is ready" />
+        <!-- S4d R4: the underline popup (WordApi 1.8) takes these by id:
+             lib/word/live.ts POPUP_RESOURCES. Ids stay within 32 characters. -->
+        <bt:String id="RL.CritiqueBrand" DefaultValue="Researchly" />
+        <bt:String id="RL.CritiqueSubtitle" DefaultValue="Why and source: in the Researchly pane" />
+        <bt:String id="RL.CritiqueCorrection" DefaultValue="Correction" />
+        <bt:String id="RL.CritiqueImprovement" DefaultValue="Improvement" />
+        <bt:String id="RL.CritiqueConvention" DefaultValue="Convention" />
+        <bt:String id="RL.CritiquePreference" DefaultValue="Preference" />
       </bt:ShortStrings>
       <bt:LongStrings>
         <bt:String id="RL.OpenTip" DefaultValue="Open Researchly: explained, section-aware suggestions for this document." />

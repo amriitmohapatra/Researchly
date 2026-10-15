@@ -475,8 +475,8 @@ reply for the latest revision goes to `issues`, `clear` or `partial` (a
 reply for an older revision is dropped); a failure goes to `offline` and
 retries after 2, 4, 8, 16 and 30 s, then every 30 s, staying `offline`
 while a retry is in flight; any success leaves `offline`; leaving the
-field or pausing goes to `hidden`. Not yet wired into the editor or the
-Word pane (R4, R5 do that).
+field or pausing goes to `hidden`. The Word pane shows them in its header
+(R4, below); the editor follows in R5.
 
 ## Shape and density
 
@@ -521,7 +521,7 @@ sign-in, no upload, no settings route.
 The same coach inside Word's sidebar, which is 320 to 400px wide. One
 column, the site's tokens, cards and notices; nothing new to learn.
 
-- **Order**: header (brand, Sign in or the email), then one panel with the
+- **Order**: header (brand, the status mark (S4d R4), Sign in or the email), then one panel with the
   Draft / Revise choice (a two-part segmented control, 8px radius, under it
   exactly "Draft: check what you’ve written so far. Revise: check the
   finished manuscript."), **Check document** (the only primary button) beside
@@ -530,7 +530,7 @@ column, the site's tokens, cards and notices; nothing new to learn.
   and then lists only the section the cursor is in (from its heading to the
   next), with document-wide suggestions under "Whole document" and a note
   saying how many are elsewhere, with "Show the whole document". Then health, errors, results,
-  and a closed **Settings** disclosure (engine, show preferences, account).
+  and a closed **Settings** disclosure (engine, show preferences, live underlines, account).
   The footer holds "Report a problem" (mailto, never with document text).
 - **Results**: "N suggestions", then quiet grey notes: what Draft held back
   (with "Switch to Revise"), hidden preferences (with "Show them"), and what
@@ -576,6 +576,69 @@ column, the site's tokens, cards and notices; nothing new to learn.
   section), cursor not readable. S4c adds: checklist needs Revise, nothing
   in the text points to a checklist, the engine has none, card out of
   date, applied without restoring Track Changes, unknown outcome.
+  S4d R4 adds the six states in the header, live underlines (live-only
+  results, a card in the text, dismissed cards, applied from the popup,
+  applied by Word itself), live underlines paused, and underlines
+  unavailable (older Word, no Microsoft 365).
+
+## Underlines in Word (S4d R4)
+
+Word draws the underlines itself (annotations, WordApi 1.7); the pane owns
+when they appear and what they mean (docs/inline-review-design.md).
+
+- **Colour by type, from the tokens**: Correction red, Improvement blue,
+  Convention green, Preference lavender (Word's fixed schemes, mapped in
+  `packages/design-tokens`). Red only for a likely error. Preferences are
+  underlined only with "Show preferences" on. Underlines never overlap:
+  where two findings cover the same words, the more serious type wins and
+  the other stays a card without "In the text".
+- **When**: about 1.5 s after typing stops, only the paragraphs that
+  changed (each sent with the heading above it), at most one request in
+  flight, at most 50 paragraphs and 20,000 characters per request. When
+  the pane opens it underlines the document once. Headings, table cells
+  and blank lines are never checked live. A reply is drawn only if its
+  paragraph still reads exactly as sent; otherwise it is dropped and the
+  new text is checked.
+- **What is underlined**: sentence-level findings only. Check document's
+  whole-document findings stay in the pane, never as underlines. After
+  Check document its sentence-level findings are drawn and the live
+  results give way; a paragraph edited later shows its live cards in
+  place of the full check's.
+- **Escalation**: hover or click an underline and its card is highlighted
+  and scrolled into view in the pane (a click also leaves a section view
+  or a pass so the card is shown); focus stays in the document. With
+  WordApi 1.8, the underline's popup shows the type as its title, "Why and
+  source: in the Researchly pane" and the brand; it offers the revision
+  only when the rule's fix is `safe` (a revision to read first is applied
+  from the card). Popup Accept applies the revision through the same
+  tracked Apply as the card (or recognises that Word made it); Reject is
+  "Not an issue here".
+- **Cards**: an underlined finding's card carries "In the text" in its
+  head, drawn as the type's underline (colour and pattern from the
+  tokens). Every card gains a quiet "Not an issue here" (right-aligned, the
+  last action), which removes the card and its underline while the pane
+  is open; the notes then say "N suggestions dismissed while the pane is
+  open. Show them". Nothing about a dismissal is stored or sent.
+- **Before any Check document**, the live cards are listed under "N
+  suggestions in the text" with one line saying Check document adds the
+  whole-document checks, the brief and the map.
+- **States in the header**: the status mark sits between the brand and
+  the account control: checking while a live or full check runs, the
+  count, nothing to suggest, checked in part (with the tier that was off),
+  can't check right now (retrying after 2, 4, 8, 16, 30 s, back by itself).
+  Nothing is drawn before the first check; "Paused" (to a screen reader)
+  when the writer turned underlines off. The count is always what the pane
+  lists, so dismissing or applying updates it at once.
+- **Settings**: a "Live underlines" switch under "Show preferences", on by
+  default, remembered on this computer like the engine and stage, with one
+  help line (with "This computer": underlines after Check document only).
+  Where Word cannot draw underlines (no WordApi 1.7, or the first
+  insertion refused: no Microsoft 365) the switch is replaced by one quiet
+  line: "Underlines in the document need Word for Microsoft 365, version
+  16.79 or later. Suggestions still appear here in the pane." Everything
+  else works as before.
+- **Privacy**: underlines live only in the open document (Word does not
+  save them); the pane keeps the checked text in memory only.
 
 ## States (all reachable, all covered by e2e)
 

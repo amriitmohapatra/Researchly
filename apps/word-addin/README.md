@@ -107,6 +107,75 @@ replace it with the current `manifest.xml`.
 Microsoft 365 deployment later (AppSource generates the XML for Mac Word
 from it). Its package needs the two icons in `assets-hosted/` next to it.
 
+### Underlines in the document (S4d R4)
+
+With **Word for Microsoft 365** (Mac 16.79 or later, Windows 2311 or later,
+or Word on the web), Researchly underlines its suggestions in the document
+itself, coloured by type: Correction red, Improvement blue, Convention
+green, Preference lavender (only when "Show preferences" is on).
+
+- **As you write.** About 1.5 seconds after you stop typing, the
+  paragraphs you changed are checked (each with the heading above it, so
+  Methods advice stays Methods advice) and their underlines are redrawn.
+  When the sidebar opens it underlines the whole document once.
+- **Check document** still checks everything; afterwards its
+  sentence-level findings are underlined. Whole-document findings (figure
+  order, abbreviations defined once, the brief, the map) stay in the
+  sidebar, never as underlines.
+- **Hover or click an underline**: the sidebar shows its card (marked
+  "In the text"). On Word 16.85 or later the underline's own popup shows the
+  type, "Why and source: in the Researchly pane" and, where the revision is
+  safe to take unread, the revision itself; **Accept** applies it (as a
+  tracked change where Word can, so Undo works), **Reject** dismisses it.
+  Revisions that need reading first are applied from the card.
+- **Not an issue here** on a card removes it and its underline while the
+  sidebar is open (nothing is stored).
+- **The mark in the sidebar's header** says what is happening: checking,
+  the number of suggestions, nothing to suggest, checked in part (a part of
+  the checking was down), or can't check right now (it tries again by
+  itself after 2, 4, 8, 16 and 30 seconds).
+- **Settings → Live underlines** pauses them (and removes them from the
+  document); the choice is remembered on this computer.
+- With **This computer** as the engine, underlines appear after Check
+  document only (the local server has no live check yet).
+
+Underlines are **not saved in the file**: they exist only while the
+document is open with the sidebar, and are drawn again next time. Nothing
+is stored anywhere.
+
+**Older or one-time-purchase Word** (Word 2019/2021, or Mac before 16.79):
+Word cannot draw these underlines. The sidebar says so once, in Settings
+("Underlines in the document need Word for Microsoft 365, version 16.79 or
+later"), and works exactly as before. Mac 16.79 to 16.84 draws the
+underlines without the popup.
+
+#### Owner steps: install the new manifest once (2026-10-15)
+
+The popup's words are string resources inside `manifest.hosted.xml`
+(version 0.4.0.0); Word reads them only from the installed copy, so the
+manifest must be replaced once:
+
+1. Quit Word completely (**Cmd-Q**).
+2. In Terminal, from this folder: `bash install-mac.sh hosted` (or copy
+   `manifest.hosted.xml` into
+   `~/Library/Containers/com.microsoft.Word/Data/Documents/wef/` by hand,
+   replacing the old copy).
+3. Clear Word's add-in cache: delete the *contents* of
+   `~/Library/Containers/com.microsoft.Word/Data/Library/Caches/` and, if it
+   exists,
+   `~/Library/Containers/com.microsoft.Word/Data/Library/Application Support/Microsoft/Office/16.0/Wef/`.
+4. Open Word and a document, then **Home → Researchly**. Check **Word →
+   About Word**: underlines need 16.79 or later, the popup 16.85 or later.
+5. Type a sentence with a repeated word ("the the") in a body paragraph,
+   wait two seconds: it should be underlined in red. Hover it, click it,
+   try Accept in its popup, then Cmd-Z.
+
+Until the manifest is replaced, underlines still appear; if Word refuses
+the popup without its strings, the sidebar draws them without the popup.
+`manifest.json` (the unified manifest) has no table of string resources
+that a popup could name, so the popup's words come from the XML manifest
+only; the JSON manifest is unchanged.
+
 ### "This computer": check without sending anything
 
 For text that must not leave your Mac (ADR-02 local mode):

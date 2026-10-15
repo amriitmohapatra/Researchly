@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { loadDocumentTypeChoice, loadFormat, loadModeChoice, saveDocumentTypeChoice } from "@/lib/prefs";
+import {
+  loadDocumentTypeChoice,
+  loadFormat,
+  loadModeChoice,
+  loadUnderlinesChoice,
+  saveDocumentTypeChoice,
+  saveUnderlinesChoice,
+} from "@/lib/prefs";
 
 /** A window with just enough localStorage for prefs.ts; the unit suite runs without a DOM. */
 function fakeWindow(store: Map<string, string>) {
@@ -50,5 +57,25 @@ describe("the article-type preference (S4)", () => {
     });
     expect(loadDocumentTypeChoice()).toBeNull();
     expect(() => saveDocumentTypeChoice("grant")).not.toThrow();
+  });
+});
+
+describe("live underlines in Word (S4d R4)", () => {
+  const store = new Map<string, string>();
+  beforeEach(() => {
+    store.clear();
+    vi.stubGlobal("window", fakeWindow(store));
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("is unset until the writer chooses, then remembered as on or off under its own key", () => {
+    expect(loadUnderlinesChoice()).toBeNull();
+    saveUnderlinesChoice(false);
+    expect(loadUnderlinesChoice()).toBe(false);
+    expect([...store.entries()]).toEqual([["researchly.word.underlines", "off"]]);
+    saveUnderlinesChoice(true);
+    expect(loadUnderlinesChoice()).toBe(true);
+    store.set("researchly.word.underlines", "maybe");
+    expect(loadUnderlinesChoice()).toBeNull();
   });
 });

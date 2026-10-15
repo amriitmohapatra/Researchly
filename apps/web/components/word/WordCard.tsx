@@ -34,6 +34,10 @@ interface Props {
   onApply: (s: WordSuggestion) => void;
   /** Signed in only. Absent signed out: the card has no account actions. */
   actions: WordCardActions | null;
+  /** S4d R4: the finding is underlined in the document ("In the text"). */
+  underlined?: boolean;
+  /** S4d R4: "Not an issue here": hides it (and its underline) while the pane is open. Never stored or sent. */
+  onDismiss?: (s: WordSuggestion) => void;
 }
 
 /**
@@ -74,7 +78,18 @@ function quote(text: string): string {
  * the words in the document; "Apply" appears only when the engine proposed
  * a concrete revision.
  */
-export const WordCard = memo(function WordCard({ suggestion: s, active, applied, stale = false, note, onSelect, onApply, actions }: Props) {
+export const WordCard = memo(function WordCard({
+  suggestion: s,
+  active,
+  applied,
+  stale = false,
+  note,
+  onSelect,
+  onApply,
+  actions,
+  underlined = false,
+  onDismiss,
+}: Props) {
   const meta = categoryMeta(s.category);
   const section = sectionLabel(s.section);
   const msgId = `wmsg-${s.id}`;
@@ -100,6 +115,8 @@ export const WordCard = memo(function WordCard({ suggestion: s, active, applied,
       data-category={meta.id}
       data-paragraph={s.location.paragraph}
       data-stale={stale || undefined}
+      data-suggestion-id={s.id}
+      data-underlined={underlined || undefined}
     >
       <div className="card-head">
         <CategoryBadge category={meta.id} />
@@ -107,6 +124,11 @@ export const WordCard = memo(function WordCard({ suggestion: s, active, applied,
           <span className="card-section">
             <span className="sr-only">Section: </span>
             {section}
+          </span>
+        ) : null}
+        {underlined ? (
+          <span className={`wcard-in-text wcard-in-text-${meta.id}`} data-testid="in-the-text">
+            In the text
           </span>
         ) : null}
       </div>
@@ -166,6 +188,16 @@ export const WordCard = memo(function WordCard({ suggestion: s, active, applied,
             data-testid="apply-fix"
           >
             {s.replacement === "" ? "Remove in document" : "Apply in document"}
+          </BusyButton>
+        ) : null}
+        {onDismiss && !applied ? (
+          <BusyButton
+            className="btn-link btn-link-quiet wcard-dismiss"
+            aria-describedby={msgId}
+            onPress={() => onDismiss(s)}
+            data-testid="dismiss"
+          >
+            Not an issue here
           </BusyButton>
         ) : null}
       </div>
