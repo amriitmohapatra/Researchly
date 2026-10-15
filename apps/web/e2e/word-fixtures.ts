@@ -7,6 +7,9 @@ import type { Page, Route } from "@playwright/test";
 import type {
   AnalyzeWordRequest,
   AnalyzeWordResponse,
+  CheckParagraphsRequest,
+  CheckParagraphsResponse,
+  LiveSuggestion,
   ChecklistReport,
   DocumentType,
   HealthResponse,
@@ -573,4 +576,127 @@ export async function mockWordEngine(
 
 export function fulfillJson(route: Route, status: number, body: unknown) {
   return route.fulfill({ status, headers: CORS, contentType: "application/json", body: JSON.stringify(body) });
+}
+
+/* ---------- the live check (S4d R4): POST /v1/check-paragraphs ---------- */
+
+/**
+ * The engine's live answer for one paragraph, synthetic: "the the" is a
+ * Correction with a safe revision, "In order to" an Improvement with a safe
+ * one, "clearly proven" a Convention to read first, "nowcasting" a
+ * Correction with no revision. Ids are stable for the same paragraph,
+ * rule, offset and words, as the engine's are.
+ */
+export function liveSuggestionsFor(pid: string, text: string): LiveSuggestion[] {
+  const out: LiveSuggestion[] = [];
+  const add = (
+    needle: string,
+    rule: string,
+    name: string,
+    category: LiveSuggestion["category"],
+    message: string,
+    replacement: string | null,
+    fix_safety: LiveSuggestion["fix_safety"],
+    caseSensitive = true,
+  ) => {
+    const hay = caseSensitive ? text : text.toLowerCase();
+    const n = caseSensitive ? needle : needle.toLowerCase();
+    for (let i = hay.indexOf(n); i >= 0; i = hay.indexOf(n, i + n.length)) {
+      const words = text.slice(i, i + needle.length);
+      const capital = words[0] !== words[0]!.toLowerCase();
+      out.push({
+        id: [rule, pid, i].join(".").replace(/[^A-Za-z0-9._:-]/g, ""),
+        rule_id: rule,
+        rule_name: name,
+        category,
+        critical: category === "correction",
+        tier: category === "correction" ? "spelling" : "craft",
+        begin: i,
+        end: i + needle.length,
+        text: words,
+        section: "methods",
+        message,
+        plain: "In everyday words: the same advice, written for a reader who knows their science but not the grammar terms.",
+        why: "A synthetic explanation for the e2e suite.",
+        source: "The Craft of Scientific Writing, §4",
+        learn_ref: null,
+        replacements: replacement === null ? [] : [capital ? replacement[0]!.toUpperCase() + replacement.slice(1) : replacement],
+        fix_safety,
+      });
+    }
+  };
+  add("the the", "S010", "Repeated word", "correction", "‘the’ is repeated.", "the", "safe", false);
+  add("In order to", "C120", "Wordy phrase", "improvement", "‘In order to’ can usually be ‘To’.", "to", "safe");
+  add("clearly proven", "C201", "Booster overclaims certainty", "convention", "‘clearly proven’ claims more certainty than the evidence can carry.", null, "review");
+  add("nowcasting", "S001", "Possible misspelling", "correction", "‘nowcasting’ is not in the dictionary.", null, "review");
+  return out;
+}
+
+export function liveResponseFor(req: CheckParagraphsRequest, extra: Partial<CheckParagraphsResponse> = {}): CheckParagraphsResponse {
+  return {
+    schema_version: "1",
+    revision: req.revision,
+    paragraphs: req.paragraphs.map((p) => ({ id: p.id, section: "methods", suggestions: liveSuggestionsFor(p.id, p.text) })),
+    state: "ok",
+    health: HEALTHY,
+    hidden_preferences: 0,
+    signed_in: false,
+    elapsed_ms: 12,
+    ...extra,
+  };
+}
+
+export interface LiveCall {
+  body: CheckParagraphsRequest;
+  authorization: string | undefined;
+}
+
+/** Mock one engine's /v1/check-paragraphs (register after mockWordEngine: the later route answers this path). */
+export async function mockLiveEngine(
+  page: Page,
+  base: string,
+  opts: { respond?: (req: CheckParagraphsRequest, route: Route, n: number) => Promise<void> | void } = {},
+): Promise<LiveCall[]> {
+  const calls: LiveCall[] = [];
+  await page.route(`${base}/v1/check-paragraphs`, async (route) => {
+    const req = route.request();
+    if (req.method() === "OPTIONS") return route.fulfill({ status: 204, headers: CORS });
+    const body = req.postDataJSON() as CheckParagraphsRequest;
+    calls.push({ body, authorization: req.headers()["authorization"] });
+    if (opts.respond) return opts.respond(body, route, calls.length);
+    return route.fulfill({ status: 200, headers: CORS, contentType: "application/json", body: JSON.stringify(liveResponseFor(body)) });
+  });
+  return calls;
+}
+
+type FakeWordHooks = {
+  __fakeWordType(i: number, text: string): void;
+  __fakeWordClick(id: string): void;
+  __fakeWordHover(id: string): void;
+  __fakeWordPopup(id: string, action: "Accept" | "Reject", suggestion?: string): void;
+};
+
+/** The writer edits paragraph `i` in the fake Word. */
+export function typeInWord(page: Page, i: number, text: string) {
+  return page.evaluate(([pi, t]) => (window as unknown as FakeWordHooks).__fakeWordType(pi, t), [i, text] as [number, string]);
+}
+
+/** The writer clicks or hovers underline `id`. */
+export function wordPointer(page: Page, act: "click" | "hover", id: string) {
+  return page.evaluate(
+    ([a, x]) => {
+      const w = window as unknown as FakeWordHooks;
+      if (a === "click") w.__fakeWordClick(x);
+      else w.__fakeWordHover(x);
+    },
+    [act, id] as [string, string],
+  );
+}
+
+/** The writer chooses Accept (with a revision) or Reject in underline `id`'s popup. */
+export function wordPopup(page: Page, id: string, action: "Accept" | "Reject", suggestion?: string) {
+  return page.evaluate(
+    ([x, a, sg]) => (window as unknown as FakeWordHooks).__fakeWordPopup(x, a as "Accept" | "Reject", sg ?? undefined),
+    [id, action, suggestion ?? null] as [string, string, string | null],
+  );
 }
