@@ -24,7 +24,8 @@ from typing import List, Optional, Union
 
 from . import _core  # noqa: F401  (import path + isolation first)
 from . import __version__ as SERVICE_VERSION
-from .schemas import (AnalyzeOptions, AnalyzeResponse, Category, ChecklistChoiceInfo, ChecklistReport,
+from .schemas import (AnalyzeOptions, AnalyzeResponse, Capabilities, Category,
+                      ChecklistChoiceInfo, ChecklistReport,
                       CheckParagraphsResponse, Coverage, EngineInfo, FixSafety,
                       LearnCard, LiveParagraphResult, LiveState, Metrics, Mode,
                       NarrativeMap, ProfileChoice, ProfileInfo, ReadingSummary,
@@ -323,10 +324,20 @@ _OPTIONAL_STATES = {"gec": {"missing", "disabled"}}
 def health_tiers(grammar_enabled: bool = True) -> List[TierHealth]:
     """Live tier status. Probes remote LanguageTool (cached a few seconds);
     loads nothing new — warm-up already did."""
+    return health_and_capabilities(grammar_enabled)[0]
+
+
+def health_and_capabilities(grammar_enabled: bool = True
+                            ) -> "tuple[List[TierHealth], Capabilities]":
+    """The tiers, and what they add up to (Codex review #11): the checks
+    this engine runs and what it contacts, from the same statuses."""
+    from researchly import capabilities
     from researchly.health import engine_status
     cfg = build_config(None, grammar_enabled)
     nlp = api._NLP                       # loaded by warm-up, or None
-    return [to_tier(t) for t in engine_status(cfg, nlp=nlp, probe=True)]
+    statuses = engine_status(cfg, nlp=nlp, probe=True)
+    return ([to_tier(t) for t in statuses],
+            Capabilities(**capabilities.describe(cfg, statuses, "service")))
 
 
 def is_degraded(tiers: List[TierHealth]) -> bool:

@@ -425,6 +425,66 @@ test.describe("uploads", () => {
     expect(await axeSerious(page)).toEqual([]);
   });
 
+  test("an Overleaf .zip with two main files: the one read is named, another can be chosen; the reading line says what was left out", async ({
+    page,
+  }) => {
+    // Codex review #5: no silent guess of the main .tex file, and what the check did not read, in counts.
+    const reading = {
+      words_checked: 1204,
+      set_aside: [],
+      not_checked: [{ kind: "skipped_files" as const, count: 1, label: "included files that could not be read" }],
+      included: [{ kind: "footnotes" as const, count: 2, label: "footnotes" }],
+    };
+    const answer = (main: string) => ({
+      ...zipResponse,
+      reading,
+      document: { ...zipResponse.document, main_file: main, main_candidates: ["cover-letter.tex", "main.tex"] },
+    });
+    await seedSession(page);
+    await mockSupabase(page);
+    const calls = await mockEngineAuth(page, (_c, route, n) => reply(route, 200, answer(n === 1 ? "main.tex" : "cover-letter.tex")));
+    await page.goto("/");
+    await expect(page.getByTestId("account-button")).toBeVisible();
+    await page.getByTestId("file-input").setInputFiles({ name: "paper.zip", mimeType: "application/zip", buffer: Buffer.from("PK synthetic") });
+    await expect(page.getByRole("heading", { name: "2 suggestions" })).toBeVisible();
+    await expect(page.getByTestId("reading-summary")).toHaveText(
+      "Checked 1,204 words, including 2 footnotes. Not checked: 1 included file that could not be read.",
+    );
+    const choice = page.getByTestId("main-file");
+    await expect(choice).toContainText("This project has 2 files that each start a document. Researchly checked main.tex");
+    await expect(page.getByLabel("Main file")).toHaveValue("main.tex");
+    expect(JSON.parse(calls[0]!.headers["x-researchly-options"]!)).not.toHaveProperty("main_file");
+
+    await page.getByLabel("Main file").selectOption("cover-letter.tex");
+    await expect(choice).toContainText("Researchly checked cover-letter.tex");
+    expect(calls).toHaveLength(2);
+    expect(JSON.parse(calls[1]!.headers["x-researchly-options"]!).main_file).toBe("cover-letter.tex");
+    expect(await axeSerious(page)).toEqual([]);
+  });
+
+  test("a .docx with footnotes and a text box: the reading line says they were not checked", async ({ page }) => {
+    const docx = {
+      ...mdResponse,
+      reading: {
+        words_checked: 87,
+        set_aside: [],
+        not_checked: [
+          { kind: "footnotes" as const, count: 3, label: "footnotes" },
+          { kind: "text_boxes" as const, count: 1, label: "text boxes" },
+        ],
+      },
+      document: { ...mdResponse.document, filename: "chapter.docx", format: "docx" as const },
+    };
+    await seedSession(page);
+    await mockSupabase(page);
+    await mockEngineAuth(page, (_c, route) => reply(route, 200, docx));
+    await page.goto("/");
+    await expect(page.getByTestId("account-button")).toBeVisible();
+    await page.getByTestId("file-input").setInputFiles({ name: "chapter.docx", mimeType: "application/octet-stream", buffer: Buffer.from("PK synthetic") });
+    await expect(page.getByTestId("reading-summary")).toHaveText("Checked 87 words. Not checked: 3 footnotes · 1 text box.");
+    await expect(page.getByTestId("main-file")).toHaveCount(0);
+  });
+
   test("drag and drop onto the editor checks the file", async ({ page }) => {
     await seedSession(page);
     await mockSupabase(page);
@@ -696,4 +756,74 @@ test("dark mode: no serious axe violations on signed-in results and settings", a
   await page.goto("/settings");
   await expect(page.getByTestId("muted-rule")).toHaveCount(1);
   expect(await axeSerious(page, [...AXE_TAGS, "best-practice"])).toEqual([]);
+});
+
+test.describe("muting a rule on an uploaded file (Inbox: no second upload)", () => {
+  test("its cards leave at once, the mute is saved, the file is not sent again; Undo brings them back at once", async ({ page }) => {
+    await seedSession(page);
+    const sb = await mockSupabase(page);
+    const calls = await mockEngineAuth(page, (_c, route) => reply(route, 200, zipResponse));
+    await page.goto("/");
+    await expect(page.getByTestId("account-button")).toBeVisible();
+    await page.getByTestId("file-input").setInputFiles({ name: "thesis-chapter.zip", mimeType: "application/zip", buffer: Buffer.from("PK") });
+    await expect(page.getByRole("heading", { name: "2 suggestions" })).toBeVisible();
+    const uploads = () => calls.filter((c) => c.path === "/v1/analyze-file").length;
+    expect(uploads()).toBe(1);
+
+    await page.locator("#card-e2e-zip-1").getByTestId("mute-rule").click();
+    await expect(page.getByTestId("account-note")).toContainText("Muted “Booster overclaims certainty”");
+    await expect(page.getByRole("heading", { name: "1 suggestion" })).toBeVisible();
+    await expect(page.locator("#card-e2e-zip-1")).toHaveCount(0);
+    await expect(page.getByTestId("document").locator('[data-sids~="e2e-zip-1"]')).toHaveCount(0);
+    expect(sb.settings?.disabled_rules).toEqual(["C201"]);
+    // Focus lands on Undo, one key away, as after "Not an issue here".
+    await expect(page.getByTestId("undo-mute")).toBeFocused();
+    await expect(page.getByTestId("file-panel")).toBeVisible();
+
+    await page.getByTestId("undo-mute").click();
+    await expect(page.getByTestId("account-note")).toContainText("Unmuted “Booster overclaims certainty”");
+    await expect(page.getByRole("heading", { name: "2 suggestions" })).toBeVisible();
+    await expect(page.locator("#card-e2e-zip-1")).toBeVisible();
+    await expect.poll(() => sb.settings?.disabled_rules).toEqual([]);
+    expect(sb.sent.filter((r) => r.path === "/rest/v1/rpc/unmute_rule")).toHaveLength(1);
+
+    // Neither the mute nor its undo sent the file again.
+    await page.waitForTimeout(300);
+    expect(uploads()).toBe(1);
+    expect(await axeSerious(page)).toEqual([]);
+  });
+
+  test("a failed save brings the cards back and says why; still no second upload", async ({ page }) => {
+    await seedSession(page);
+    await mockSupabase(page);
+    const calls = await mockEngineAuth(page, (_c, route) => reply(route, 200, zipResponse));
+    await page.route(`${SUPABASE_URL}/rest/v1/rpc/mute_rule`, (route) =>
+      route.request().method() === "OPTIONS" ? route.fallback() : reply(route, 401, { code: "PGRST301", message: "JWT expired" }),
+    );
+    await page.goto("/");
+    await expect(page.getByTestId("account-button")).toBeVisible();
+    await page.getByTestId("file-input").setInputFiles({ name: "thesis-chapter.zip", mimeType: "application/zip", buffer: Buffer.from("PK") });
+    await expect(page.getByRole("heading", { name: "2 suggestions" })).toBeVisible();
+    await page.locator("#card-e2e-zip-1").getByTestId("mute-rule").click();
+    await expect(page.getByTestId("account-note")).toContainText("Your sign-in has expired");
+    await expect(page.getByRole("heading", { name: "2 suggestions" })).toBeVisible();
+    await expect(page.getByTestId("undo-mute")).toHaveCount(0);
+    expect(calls).toHaveLength(1);
+  });
+
+  test("pasted text: Undo unmutes and checks again, so the engine's answer has the cards back", async ({ page }) => {
+    await seedSession(page);
+    const sb = await mockSupabase(page);
+    const calls = await mockEngineAuth(page, (_c, route, n) => reply(route, 200, n === 2 ? afterMute : signedInPaste));
+    await page.goto("/");
+    await expect(page.getByTestId("account-button")).toBeVisible();
+    await pasteAndCheck(page);
+    await page.locator("#card-e2e-wordy-1").getByTestId("mute-rule").click();
+    await expect(page.getByRole("heading", { name: "1 suggestion" })).toBeVisible();
+    await expect.poll(() => calls.length).toBe(2);
+    await page.getByTestId("undo-mute").click();
+    await expect(page.getByRole("heading", { name: "2 suggestions" })).toBeVisible();
+    await expect.poll(() => calls.length).toBe(3);
+    expect(sb.settings?.disabled_rules).toEqual([]);
+  });
 });

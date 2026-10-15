@@ -78,6 +78,14 @@ export interface FakeWordConfig {
   trackingMode?: string;
   /** Paragraph indexes whose ranges sit inside a Word field (a citation). */
   fieldParagraphs?: number[];
+  /**
+   * What the body leaves out, as Word counts it (the coverage summary):
+   * footnotes and endnotes (WordApi 1.5, so `api16`), comments (1.4), and
+   * shapes by type (WordApiDesktop 1.2, only with `desktopApi`). No text.
+   */
+  unread?: { footnotes?: number; endnotes?: number; comments?: number; shapes?: string[] };
+  /** WordApiDesktop 1.2 (body.shapes). Default false. */
+  desktopApi?: boolean;
   /** Mimic office.js removing history.pushState/replaceState. */
   nullHistory?: boolean;
   /** Where the cursor is when the pane opens: a paragraph index (default 0). */
@@ -99,6 +107,8 @@ export interface FakeWordConfig {
     select?: boolean;
     restoreTracking?: boolean;
     cells?: boolean;
+    /** Counting footnotes, comments or shapes fails. */
+    unread?: boolean;
     /** `insert`: every insertAnnotations fails (a Word without Microsoft 365); `popup`: only those with popupOptions. */
     annotations?: "insert" | "popup";
   };
@@ -426,6 +436,27 @@ export function installFakeOffice(target: any, config: FakeWordConfig): FakeWord
       document.onAnnotationHovered = source("hovered");
     }
     if (api18) document.onAnnotationPopupAction = source("popup");
+    // The coverage summary: what the body leaves out, counted like a collection load (never text).
+    const counted = (items: { type?: string; id?: string }[]) => {
+      const coll: any = {
+        items: [],
+        load() {
+          ops.push(() => {
+            if (failures.unread) throw new Error("GeneralException: this part could not be counted");
+            coll.items = items;
+          });
+        },
+      };
+      return coll;
+    };
+    const unread = config.unread ?? {};
+    const times = (n: number | undefined, item: (i: number) => { type?: string; id?: string }) => Array.from({ length: n ?? 0 }, (_v, i) => item(i));
+    if (api16) {
+      document.body.footnotes = counted(times(unread.footnotes, () => ({ type: "Footnote" })));
+      document.body.endnotes = counted(times(unread.endnotes, () => ({ type: "Endnote" })));
+    }
+    if (api14) document.body.getComments = () => counted(times(unread.comments, (i) => ({ id: `c${i}` })));
+    if (config.desktopApi) document.body.shapes = counted((unread.shapes ?? []).map((type) => ({ type })));
     Object.defineProperty(document, "changeTrackingMode", {
       get: () => state.trackingMode,
       set: (mode: string) => {
@@ -479,6 +510,7 @@ export function installFakeOffice(target: any, config: FakeWordConfig): FakeWord
       },
       requirements: {
         isSetSupported(name: string, version?: string) {
+          if (name === "WordApiDesktop") return config.desktopApi === true && versionAtMost(version, "1.2");
           if (name !== "WordApi") return false;
           return versionAtMost(version, api18 ? "1.8" : api17 ? "1.7" : api16 ? "1.6" : api14 ? "1.4" : api13 ? "1.3" : "1.2");
         },

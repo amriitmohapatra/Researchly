@@ -18,6 +18,8 @@ interface Props {
   typeControl?: ReactNode;
   /** The "Reporting checklist" control (S4), beside "Check as". */
   checklistControl?: ReactNode;
+  /** An Overleaf project with several possible main files: check again with the one chosen. */
+  onMainFile?: (name: string) => void;
   onChooseFile: () => void;
   onCancel: () => void;
   onBack: () => void;
@@ -33,6 +35,51 @@ export interface DropHandlers {
 }
 
 const nf = new Intl.NumberFormat("en-GB");
+
+/**
+ * An Overleaf project with more than one file that starts a document (a
+ * cover letter beside the paper): which one was checked, and a choice to
+ * check another (Codex review #5). Nothing when there was no choice to make.
+ */
+function MainFileChoice({
+  main,
+  candidates,
+  disabled,
+  onChange,
+}: {
+  main: string | null;
+  candidates: readonly string[];
+  disabled: boolean;
+  onChange: (name: string) => void;
+}) {
+  const ids = { select: useId(), help: useId() };
+  if (candidates.length < 2 || !main) return null;
+  return (
+    <div className="control file-main" data-testid="main-file">
+      <label htmlFor={ids.select} className="control-label">
+        Main file
+      </label>
+      <select
+        id={ids.select}
+        className="select"
+        value={main}
+        disabled={disabled}
+        aria-describedby={ids.help}
+        onChange={(e) => onChange(e.target.value)}
+        data-testid="main-file-select"
+      >
+        {candidates.map((name) => (
+          <option key={name} value={name} translate="no">
+            {name}
+          </option>
+        ))}
+      </select>
+      <p id={ids.help} className="help control-help">
+        {`This project has ${nf.format(candidates.length)} files that each start a document. Researchly checked ${main}; choose another to check it instead.`}
+      </p>
+    </div>
+  );
+}
 
 /**
  * Stands in for the composer while a file is being checked or read: the
@@ -51,6 +98,7 @@ export function FilePanel({
   onShowPreferences,
   typeControl,
   checklistControl,
+  onMainFile,
   onChooseFile,
   onCancel,
   onBack,
@@ -99,6 +147,15 @@ export function FilePanel({
             ))}
           </ul>
         </div>
+      ) : null}
+
+      {source && onMainFile ? (
+        <MainFileChoice
+          main={source.main_file ?? null}
+          candidates={source.main_candidates ?? []}
+          disabled={loading}
+          onChange={onMainFile}
+        />
       ) : null}
 
       {problem ? (

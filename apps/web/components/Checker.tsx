@@ -25,7 +25,16 @@ import {
   type Spelling,
   type Suggestion,
 } from "@researchly/contract";
-import { addWord, loadDocumentType, loadSettings, loadSpelling, muteRule, saveDocumentType, saveSpelling } from "@/lib/account";
+import {
+  addWord,
+  loadDocumentType,
+  loadSettings,
+  loadSpelling,
+  muteRule,
+  saveDocumentType,
+  saveSpelling,
+  unmuteRule,
+} from "@/lib/account";
 import { getEngineAuth, openSignIn, useAuth } from "@/lib/auth";
 import { checklistOffer, checklistOption, type ChecklistSetting } from "@/lib/checklists";
 import { createCheckSession, previousMark, type CheckTask } from "@/lib/check-session";
@@ -35,7 +44,7 @@ import { loadKeepProgress } from "@/lib/progress";
 import { recordCheck, textKey } from "@/lib/record-progress";
 import { loadChecklistSetting, saveChecklistSetting, subscribeChecklistSetting } from "@/lib/results-prefs";
 import { UPLOAD_TYPES_SENTENCE } from "@/lib/errors";
-import { ENGINE_URL } from "@/lib/config";
+import { DEV_UPLOAD, ENGINE_URL } from "@/lib/config";
 import {
   loadDocumentTypeChoice,
   loadFormat,
@@ -99,7 +108,10 @@ interface FileChecked {
   at: Date;
 }
 
-type AccountNote = { ok: boolean; text: string; settingsLink?: boolean };
+/** A rule just muted, for the note's Undo: its id, its name, and the results it was muted on. */
+type MutedRule = { id: string; name: string; key: string | null };
+
+type AccountNote = { ok: boolean; text: string; settingsLink?: boolean; undo?: MutedRule };
 
 /** What a re-check may change: the toggle, the article type, the spelling, the checklist. */
 type CheckOptions = { showPreferences?: boolean; documentType?: DocumentType; spelling?: Spelling; checklist?: ChecklistSetting };
@@ -124,6 +136,11 @@ export function Checker() {
   // "off": a build without accounts. Everything account-related below is then absent (S1).
   const accounts = auth.status !== "off";
   const signedIn = auth.status === "signed_in";
+  // Files: signed in (S2), or, in a build without accounts, the development
+  // server's switch (NEXT_PUBLIC_RESEARCHLY_DEV_UPLOAD=1; lib/config.ts).
+  const devUpload = DEV_UPLOAD && !accounts;
+  const uploads = accounts || devUpload;
+  const canUpload = signedIn || devUpload;
 
   const [text, setText] = useState("");
   // The only remembered setting. Server render and first client render agree on null.
@@ -187,6 +204,8 @@ export function Checker() {
   const prefsTouched = useRef(false);
   /** The file whose results are on screen, read synchronously (state may lag inside a running check). */
   const shownFileRef = useRef<File | null>(null);
+  /** An Overleaf project's main .tex file, when the writer chose one for this file (Codex review #5). */
+  const mainFileRef = useRef<{ file: File; name: string } | null>(null);
   /** Which results are on screen ("p3", "f1"), read by a mute that completes after a re-render. */
   const resultsKeyRef = useRef<string | null>(null);
   const dragDepth = useRef(0);
@@ -356,7 +375,11 @@ export function Checker() {
         const options = { showPreferences: prefs, documentType: type, spelling: spell, review: true, narrative: true, checklist: list, mode: "revise" as const, signal };
         return target.kind === "paste"
           ? analyze({ ...options, content: submitted, format: submittedFormat }, undefined, auth)
-          : analyzeFile({ ...options, file: target.file }, undefined, auth);
+          : analyzeFile(
+              { ...options, file: target.file, mainFile: mainFileRef.current?.file === target.file ? mainFileRef.current.name : null },
+              undefined,
+              auth,
+            );
       };
       if (target.kind === "paste") live.fullCheckStarted();
       await session.start(task, {
@@ -447,7 +470,7 @@ export function Checker() {
   const startFile = (file: File | undefined) => {
     if (!file || session.getState().phase === "running") return;
     setFileProblem(null);
-    if (!signedIn) {
+    if (!canUpload) {
       openSignIn(FILE_NEEDS_ACCOUNT);
       return;
     }
@@ -465,7 +488,7 @@ export function Checker() {
   };
 
   const chooseFile = () => {
-    if (!signedIn) {
+    if (!canUpload) {
       openSignIn(FILE_NEEDS_ACCOUNT);
       return;
     }
@@ -522,20 +545,41 @@ export function Checker() {
 
   const dropOverlay = dragging ? (
     <div className="drop-overlay" aria-hidden="true">
-      <p className="drop-title">{signedIn ? "Drop to check this file" : "Sign in to check files"}</p>
+      <p className="drop-title">{canUpload ? "Drop to check this file" : "Sign in to check files"}</p>
       <p className="drop-sub">Your pasted text stays in the editor.</p>
     </div>
   ) : null;
 
   /* ---------- account actions on cards (S2, signed in) ---------- */
 
+  /** Hide (or bring back) one rule's cards on the results `key` names, in this page's memory only. */
+  const setRuleHidden = useCallback((key: string | null, id: string, hidden: boolean) => {
+    if (!key) return;
+    setMuted((prev) => {
+      const rules = new Set(prev?.key === key ? prev.rules : []);
+      if (hidden) rules.add(id);
+      else rules.delete(id);
+      return { key, rules };
+    });
+  }, []);
+
+  /**
+   * Mute a rule: its cards leave at once (review proposal 2), the mute is
+   * saved to the account, and then pasted text is checked again. A file is
+   * NOT sent again: the results on screen are filtered here, which is
+   * instant, and the next check of the file applies the account's mutes in
+   * the engine as always (Inbox, S2 follow-up).
+   */
   const onMute = useCallback(
     async (s: Suggestion) => {
+      const key = resultsKeyRef.current;
       setActionBusy(true);
       setAccountNote(null);
+      setRuleHidden(key, s.rule_id, true);
       const r = await muteRule(s.rule_id);
       setActionBusy(false);
       if (!r.ok) {
+        setRuleHidden(key, s.rule_id, false);
         setAccountNote({ ok: false, text: r.message });
         return;
       }
@@ -543,14 +587,41 @@ export function Checker() {
         ok: true,
         text: `Muted “${s.rule_name}”. It stays muted wherever you sign in.`,
         settingsLink: true,
+        undo: { id: s.rule_id, name: s.rule_name, key },
       });
-      // Its cards leave at once (review proposal 2); the re-check then confirms it from the engine.
-      const key = resultsKeyRef.current;
-      if (key) setMuted((prev) => ({ key, rules: new Set(prev?.key === key ? prev.rules : []).add(s.rule_id) }));
-      void recheck();
+      if (mode !== "file") void recheck();
     },
-    [recheck],
+    [mode, recheck, setRuleHidden],
   );
+
+  /**
+   * Undo a mute: unmuted in the account, and on a file's results, if they
+   * are still the ones it was muted on, its cards come back at once with no
+   * request to the engine. Pasted text (or a file checked again since) is
+   * checked again, since the engine's answer no longer holds those cards.
+   */
+  const onUndoMute = async (rule: MutedRule) => {
+    const instant = mode === "file" && rule.key !== null && rule.key === resultsKeyRef.current;
+    setActionBusy(true);
+    setRuleHidden(rule.key, rule.id, false);
+    setAccountNote({ ok: true, text: `Unmuted “${rule.name}”.`, settingsLink: true });
+    const r = await unmuteRule(rule.id);
+    setActionBusy(false);
+    if (!r.ok) {
+      setRuleHidden(rule.key, rule.id, true);
+      setAccountNote({ ok: false, text: r.message });
+      return;
+    }
+    if (!instant) void recheck();
+  };
+
+  // After a mute its cards are gone, and the link that was pressed with them: focus goes to Undo, one key away.
+  const undoMuteRef = useRef<HTMLButtonElement>(null);
+  const noteRef = useRef<HTMLDivElement>(null);
+  const noteUndo = accountNote?.undo ?? null;
+  useEffect(() => {
+    if (noteUndo) undoMuteRef.current?.focus();
+  }, [noteUndo]);
 
   const onAddWord = useCallback(
     async (_s: Suggestion, word: string) => {
@@ -681,6 +752,12 @@ export function Checker() {
               </>
             }
             checklistControl={checklistControl}
+            onMainFile={(name) => {
+              const file = fileChecked?.file;
+              if (!file) return;
+              mainFileRef.current = { file, name };
+              void recheck();
+            }}
             onChooseFile={chooseFile}
             onCancel={cancelCheck}
             onBack={backToEditor}
@@ -692,8 +769,8 @@ export function Checker() {
             <h2 id="composer-title" className="sr-only">
               Check your writing
             </h2>
-            <div className={`field${accounts ? " drop-zone" : ""}`} {...(accounts ? dropHandlers : {})}>
-              {accounts ? dropOverlay : null}
+            <div className={`field${uploads ? " drop-zone" : ""}`} {...(uploads ? dropHandlers : {})}>
+              {uploads ? dropOverlay : null}
               <label htmlFor={ids.text} className="field-label">
                 Text to check
               </label>
@@ -736,7 +813,7 @@ export function Checker() {
               ) : null}
             </div>
 
-            {accounts ? (
+            {uploads ? (
               <div className="upload-row" data-testid="upload-row">
                 <button
                   type="button"
@@ -752,9 +829,11 @@ export function Checker() {
                   Check a file instead
                 </button>
                 <p id={ids.upload} className="help upload-help">
-                  {signedIn
-                    ? "A .docx, .tex, Overleaf .zip, .md, .qmd, .Rmd or .txt file up to 25 MB. You can also drop it on the box above."
-                    : "Needs an account: sign in to check a .docx, .tex, Overleaf .zip, .md, .qmd, .Rmd or .txt file."}
+                  {devUpload
+                    ? "Development upload, no account: the file goes to the engine without sign-in, which only a local engine without accounts accepts. A .docx, .tex, Overleaf .zip, .md, .qmd, .Rmd or .txt file up to 25 MB."
+                    : signedIn
+                      ? "A .docx, .tex, Overleaf .zip, .md, .qmd, .Rmd or .txt file up to 25 MB. You can also drop it on the box above."
+                      : "Needs an account: sign in to check a .docx, .tex, Overleaf .zip, .md, .qmd, .Rmd or .txt file."}
                 </p>
                 {fileProblem ? (
                   <p className="field-problem upload-problem" role="alert" data-testid="file-problem">
@@ -919,7 +998,7 @@ export function Checker() {
         />
       </div>
 
-      {accounts ? (
+      {uploads ? (
         <input
           ref={fileInputRef}
           type="file"
@@ -937,12 +1016,35 @@ export function Checker() {
 
       {accountNote ? (
         <div
+          ref={noteRef}
           className={`notice ${accountNote.ok ? "notice-quiet" : "notice-error"} account-note`}
           role={accountNote.ok ? "status" : "alert"}
+          tabIndex={-1}
           data-testid="account-note"
         >
           <p className="notice-text">
             {accountNote.text}
+            {accountNote.undo ? (
+              <>
+                {" "}
+                <button
+                  type="button"
+                  ref={undoMuteRef}
+                  className="btn-link"
+                  aria-disabled={actionBusy || undefined}
+                  onClick={() => {
+                    const rule = accountNote.undo;
+                    if (!rule || actionBusy) return;
+                    void onUndoMute(rule);
+                    // The button leaves with the note's new text; focus stays on the note.
+                    noteRef.current?.focus();
+                  }}
+                  data-testid="undo-mute"
+                >
+                  Undo
+                </button>
+              </>
+            ) : null}
             {accountNote.settingsLink ? (
               <>
                 {" "}

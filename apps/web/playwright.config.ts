@@ -30,6 +30,9 @@ export default defineConfig({
     trace: "retain-on-failure",
     ...devices["Desktop Chrome"],
     viewport: { width: 1280, height: 900 },
+    // The installable app's service worker (public/sw.js) stays out of the
+    // way of page.route mocks; e2e/pwa.spec.ts turns it on to test it.
+    serviceWorkers: "block",
   },
   projects: [
     { name: "chromium", testIgnore: ACCOUNTS_SPECS, use: { baseURL: `http://localhost:${PORT}` } },
@@ -41,7 +44,9 @@ export default defineConfig({
       url: `http://localhost:${PORT}`,
       timeout: 240_000,
       reuseExistingServer: false, // always test a fresh build of the current code
-      env: { ...env, RESEARCHLY_DIST_DIR: ".next" },
+      // The development-only upload switch is set here on purpose: a
+      // production build must ignore it (e2e/no-accounts.spec.ts: no upload).
+      env: { ...env, RESEARCHLY_DIST_DIR: ".next", NEXT_PUBLIC_RESEARCHLY_DEV_UPLOAD: "1" },
     },
     {
       command: `npx next build && npx next start --port ${ACCOUNTS_PORT}`,

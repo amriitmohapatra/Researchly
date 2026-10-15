@@ -286,7 +286,7 @@ export function toWordParagraph(p: {
 
 /**
  * The document body's paragraphs, in order (footnotes, headers and text
- * boxes are not included). A table paragraph also carries its `cell` place
+ * boxes are not included; countUnread says how many were left out). A table paragraph also carries its `cell` place
  * where Word can report it reliably (readCellPlaces).
  */
 export async function readParagraphs(api: OfficeApi): Promise<WordParagraph[]> {
@@ -314,6 +314,78 @@ export function readParagraphsAndIds(
     });
     return { paragraphs: out, ids: paras.items.map((p) => (withIds ? (p.uniqueLocalId ?? null) : null)) };
   });
+}
+
+/* ---------- what the check does not read (the coverage summary, Codex review #5) ---------- */
+
+/** A part of the document the check did not read, counted: the reading line's "Not checked: 2 footnotes". */
+export interface UnreadPart {
+  kind: "footnotes" | "endnotes" | "comments" | "text_boxes";
+  count: number;
+  label: string;
+}
+
+/** A collection Word can count without reading text: only `items` with one non-text property is loaded. */
+interface CountableCollection {
+  items: { type?: string }[];
+  load(props: string): void;
+}
+
+/** The parts of WordApi that count notes, comments and shapes; absent on older Word. */
+interface CountableBody {
+  footnotes?: CountableCollection;
+  endnotes?: CountableCollection;
+  shapes?: CountableCollection;
+  getComments?(): CountableCollection;
+}
+
+const UNREAD_LABELS: Record<UnreadPart["kind"], string> = {
+  footnotes: "footnotes",
+  endnotes: "endnotes",
+  comments: "comments",
+  text_boxes: "text boxes",
+};
+
+function apiAtLeast(api: OfficeApi, set: string, version: string): boolean {
+  try {
+    return api.Office.context.requirements.isSetSupported(set, version);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The check reads the document body's paragraphs only. This counts what it
+ * leaves out, where Word can count it without handing over any text:
+ * footnotes and endnotes (WordApi 1.5), comments (1.4) and text boxes
+ * (WordApiDesktop 1.2). Each count is its own batch, so a Word that refuses
+ * one still gives the others; a Word without the API gives none. Never
+ * throws; never reads a word of text. Headers and footers are not counted:
+ * Word cannot tell an empty one from a full one without reading it.
+ */
+export async function countUnread(api: OfficeApi): Promise<UnreadPart[]> {
+  const count = async (kind: UnreadPart["kind"], pick: (body: CountableBody) => CountableCollection | undefined, keep: (item: { type?: string }) => boolean = () => true) => {
+    try {
+      return await api.Word.run(async (ctx) => {
+        const coll = pick(ctx.document.body as unknown as CountableBody);
+        if (!coll) return null;
+        coll.load(kind === "comments" ? "items/id" : "items/type");
+        await ctx.sync();
+        const n = coll.items.filter(keep).length;
+        return n > 0 ? { kind, count: n, label: UNREAD_LABELS[kind] } : null;
+      });
+    } catch {
+      return null; // a host that cannot count this part loses nothing else
+    }
+  };
+  const tasks: Promise<UnreadPart | null>[] = [];
+  if (apiAtLeast(api, "WordApi", "1.5")) {
+    tasks.push(count("footnotes", (b) => b.footnotes));
+    tasks.push(count("endnotes", (b) => b.endnotes));
+  }
+  if (apiAtLeast(api, "WordApi", "1.4")) tasks.push(count("comments", (b) => b.getComments?.()));
+  if (apiAtLeast(api, "WordApiDesktop", "1.2")) tasks.push(count("text_boxes", (b) => b.shapes, (s) => s.type === "TextBox"));
+  return (await Promise.all(tasks)).filter((p): p is UnreadPart => p !== null);
 }
 
 /* ---------- table cell places (X401, Codex review #7) ---------- */

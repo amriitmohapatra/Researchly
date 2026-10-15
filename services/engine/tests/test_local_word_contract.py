@@ -41,7 +41,7 @@ PARAS = [{"text": "Introduction", "style": "Heading 1"},
 EVERY_OPTION = {
     "show_preferences": True, "disabled_rules": ["W204"], "mode": "revise",
     "document_type": "auto", "spelling": "uk", "review": True,
-    "narrative": True, "checklist": "auto",
+    "narrative": True, "checklist": "auto", "main_file": "main.tex",
 }
 
 

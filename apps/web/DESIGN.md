@@ -248,8 +248,18 @@ own "Whole document" group so they are never lost. The chooser starts at
   keyboard focus to Undo, which brings the card back and focuses it.
 - The results header then says "N dismissed · Show"; Show brings every
   dismissed suggestion back. Counts and chips leave dismissed ones out.
-- Muting a rule (signed in) removes its cards at once, then re-checks as
-  before; dismissal is the light action, muting the deliberate one.
+- Muting a rule (signed in) removes its cards at once, before the account
+  answers (a failed save brings them back and says why); dismissal is the
+  light action, muting the deliberate one. Pasted text is then checked
+  again. An uploaded file is **not** sent again: its results are filtered in
+  the page, and the next check of the file applies the account's mutes in
+  the engine as always.
+- The mute's quiet notice reads "Muted “Rule name”. It stays muted wherever
+  you sign in. Undo · Change this in Settings", and keyboard focus moves to
+  Undo, as after a dismissal. Undo unmutes in the account; on a file's
+  results its cards come back at once with no request to the engine, and
+  pasted text is checked again. The notice then reads "Unmuted “Rule
+  name”." and keeps focus.
 
 ## Revision queue (review proposal 1)
 
@@ -344,6 +354,28 @@ jump.
   English." in the engine's own words (singular for one). Only the word
   count when nothing was set aside; nothing from an engine without it. The
   same line in the Word pane's results. Warnings stay where they were.
+- The coverage summary (2026-10-15) extends the same line, never a second
+  one: "Checked 4,210 words, including 3 footnotes." (LaTeX footnotes, read
+  where they are cited); "Not checked: 3 footnotes · 1 text box · 2 headers
+  or footers." (what a .docx upload leaves out; an Overleaf project's
+  included files that could not be read); "Researchly checks English
+  only." when a paragraph was set aside as another language. In Word the
+  pane adds what Word itself counts without reading it (footnotes and
+  endnotes, comments, text boxes, where the host's API can count them).
+  Counts and fixed labels only.
+- **Main file** (2026-10-15): an Overleaf project with more than one file
+  that starts a document gets a "Main file" select in the file panel,
+  below the warnings, set to the file that was read, with one help line
+  ("This project has 2 files that each start a document. Researchly
+  checked main.tex; choose another to check it instead."). Choosing one
+  re-checks the same upload with that root; later re-checks keep it. No
+  select when there was no choice to make.
+- **"This computer" in Word's Settings** (2026-10-15): under the engine
+  choice, one help line from the local server's own health says what it
+  checks and what it contacts ("This computer checks writing rules,
+  spelling, grammar and whole-document checks, and builds the reviewer’s
+  brief and the map. It sends nothing over the network."), naming a check
+  that is off and why. Only when This computer is chosen and answering.
 
 ## The printable report (S4)
 
@@ -508,7 +540,12 @@ sign-in, no upload, no settings route.
   card adds a mono "file, line N" line under its head.
 - **Card actions (signed in)** sit after the source, as quiet links: "Mute
   this rule", and on spelling cards "Add “word” to dictionary". Each confirms in
-  a quiet notice with a link to Settings, then re-checks.
+  a quiet notice with a link to Settings, then re-checks; muting on an
+  uploaded file filters in the page instead (Dismissal, above).
+- **Upload in local development** (`NEXT_PUBLIC_RESEARCHLY_DEV_UPLOAD=1`,
+  `next dev` without Supabase only): the same row and drop zone, with the
+  help line saying it is a development upload with no account. A
+  production build never shows it.
 - **Settings** is one column of panels: Muted rules (name, code, one-line
   why, Unmute), How suggestions are shown (switch, spelling locale),
   Your dictionary (add with inline limits, tiles with Remove), Delete. Every
@@ -516,6 +553,34 @@ sign-in, no upload, no settings route.
   back and says why. Delete asks first, with focus on "Keep them".
 - **Dialogs** are native `<dialog>` (focus contained, Escape closes, focus
   returns to the opener).
+
+## The installable app (S6, P5)
+
+The website installs as an app window: "Install Researchly" in Chrome or
+Edge's menu on a computer, "Add to Home Screen" on a phone. Nothing about
+the page changes inside the window; there is no install banner or prompt
+of our own (the browser offers it, quietly).
+
+- **Icons** are the brand mark (`app/icon.svg`), drawn by
+  `scripts/make-pwa-icons.mjs`: the rounded navy square at 192 and 512
+  ("any"); a full-bleed navy square with the letter inside the 80% safe
+  circle for maskable icons (192, 512); a full-bleed 180px Apple touch icon
+  that iOS rounds itself. No other artwork.
+- **Colours** from the tokens: the title bar and the splash screen are the
+  paper page colour (`surface.page`); in dark mode the theme-color meta
+  tags give the dark page colour, so the title bar always matches the page.
+- **The offline page** (`public/offline.html`, shown by the service worker
+  when a page cannot be reached): the header's brand line, one heading
+  ("Researchly needs a connection to check your writing"), a sentence on
+  why, "Try again" as the one primary button (a link to the checker, 44px
+  high), then two quiet lines: nothing written is kept on this device, and
+  local mode (the command-line tool, the VS Code extension) checks without a
+  network. The reading measure, the page's neutrals and accent, light and
+  dark; no script, no inline style.
+- **The service worker keeps no text.** It stores only this site's code
+  (`/_next/static`), icons and the offline page. Pages are network only;
+  the engine, Supabase and every POST are never touched. Never registered by
+  `next dev` or on `/word`.
 
 ## Word taskpane (`/word`, S3)
 
