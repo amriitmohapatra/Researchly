@@ -1,0 +1,28 @@
+{
+  "revision": 3,
+  "paragraphs": [
+    {
+      "id": "p1",
+      "suggestions": [
+        { "id": "ok", "begin": 0, "end": 7, "category": "improvement", "message": "Kept: a valid range." },
+        { "id": "past-end", "begin": 5, "end": 500, "category": "correction", "message": "Dropped: past the end." },
+        { "id": "backwards", "begin": 6, "end": 2, "category": "correction", "message": "Dropped: end before begin." },
+        { "id": "empty", "begin": 3, "end": 3, "category": "correction", "message": "Dropped: empty range." },
+        { "id": "negative", "begin": -1, "end": 2, "category": "correction", "message": "Dropped: negative offset." },
+        { "id": "half-emoji", "begin": 8, "end": 9, "category": "correction", "message": "Dropped: splits a surrogate pair." },
+        { "id": "unknown-category", "begin": 0, "end": 7, "category": "tone", "message": "Dropped: not one of the four types." },
+        { "id": "no-message", "begin": 0, "end": 7, "category": "correction" },
+        { "id": "missing-end", "begin": 0, "category": "correction", "message": "Dropped: no end." },
+        { "id": "echo-mismatch", "begin": 0, "end": 7, "text": "Totally", "category": "correction", "message": "Dropped: the echoed text differs." },
+        { "id": "ok", "begin": 0, "end": 7, "category": "improvement", "message": "Dropped: duplicate id." },
+        "not an object"
+      ]
+    },
+    {
+      "id": "not-sent",
+      "suggestions": [
+        { "id": "orphan", "begin": 0, "end": 1, "category": "correction", "message": "Dropped: this paragraph was not in the request." }
+      ]
+    }
+  ]
+}
