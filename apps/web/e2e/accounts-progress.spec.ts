@@ -91,7 +91,10 @@ test.describe("Keep my progress (Settings)", () => {
       route.request().method() === "POST" ? reply(route, 500, { code: "XX000", message: "boom" }) : reply(route, 200, []),
     );
     await page.goto("/settings");
-    await page.getByTestId("keep-progress-switch").check();
+    // click(), not check(): the switch is meant to move back as soon as the save fails, and check()
+    // asserts it stayed on (that race made this test flaky, about 1 run in 15).
+    await expect(page.getByTestId("keep-progress-switch")).toBeEnabled();
+    await page.getByTestId("keep-progress-switch").click();
     await expect(page.getByTestId("settings-error")).toBeVisible();
     await expect(page.getByTestId("keep-progress-switch")).not.toBeChecked();
   });
