@@ -3016,3 +3016,109 @@ light and dark, checked by eye.
 **Lesson.** A pane inside someone else's app shares its corners with the
 host. Word on the Mac covers the top-right of every add-in pane, so a header
 that fills its row will always collide there.
+
+## P48 — 2026-10-15 — Account controls, coverage, the evidence-linked brief, repeated words, Laya groundwork, an installable app, and an honest noise floor
+
+**Why.** Owner, after P47: proceed with the plan. Decisions:
+- the friend's keyboard-engine source is no longer needed ("we have our own
+  keyboard engine now");
+- S5 sticks to Laya ("open source and free");
+- the comparison study and AppSource are dropped ("I have no desire to
+  monetize the app");
+- the web app idea is kept;
+- "Plan tasks, line them up and proceed without stopping."
+
+Two waves of helpers ran. A usage-limit pause stopped all of them mid-way;
+each resumed from its saved work.
+
+**What.**
+- *#12, account controls.*
+  - Settings has "Reset preferences…", which keeps the dictionary and
+    progress.
+  - "Delete my account…" is type-to-confirm. It deletes the sign-in and every
+    row by cascade (`supabase/migrations/20261015120000_account_controls.sql`).
+  - "Clear my dictionary…" is new. The Word pane links to the website for
+    all of these.
+  - The engine limits per signed-in user (30, 120 live and 10 uploads per
+    minute), with the IP limit for anonymous callers.
+  - Sign-in keys are re-fetched at most once a minute; inside that window
+    the answer is 503, not a sign-out.
+  - Supabase two-user tests: 133.
+- *#5 and #11, coverage and local mode.*
+  - Uploaded `.docx` files say what was not checked (footnotes, endnotes,
+    comments, text boxes, headers and footers).
+  - LaTeX says footnotes were read in place.
+  - An Overleaf project with several roots offers a "Main file" choice.
+  - Word counts its unread parts without reading them.
+  - `/v1/health` describes what each local route runs and contacts
+    (`docs/local-mode.md`); `researchly doctor` checks an installation.
+- *#3 and #4, the brief and document scope.*
+  - Every brief point that rests on a sentence quotes it with "Show in
+    text"; a claim sits beside its evidence, or the brief says "not
+    detected".
+  - A "Read as" line (whole document, chapter, excerpt) sets expectations.
+  - Policy briefs are mapped by their parts; a response to reviewers is
+    shown comment beside reply.
+  - Topical headings are read as Methods or Results when their prose
+    reports, so passive voice is no longer flagged there as if in
+    Discussion.
+  - New sources: Young & Quinn (2002) and Noble (2017).
+- *#10, repeated words.*
+  - The "used three times = vocabulary" exemption is gone. A repeated slip
+    is flagged at every use (S001).
+  - A repeated unknown term gets one grouped question (S003, Convention)
+    with "Show where" and Add to dictionary; names stay quiet.
+  - Held out: typo recall per use 0 → 0.624; terms falsely flagged 0.013.
+- *S5, Laya only.*
+  - The Critic interface ships with a null critic, so engine behaviour is
+    unchanged; a health entry appears once a critic is installed.
+  - Laya: Apache-2.0, verified at the source and pinned by revision and
+    SHA.
+  - Corpus manifest: 1,566 articles in 10 disciplines, of which 1,350 are
+    CC BY or CC0 and trainable. The texts stay outside the repo.
+  - Untrained, on 300 held-out sentences, Laya labels sentence roles with
+    0.470 accuracy, against 0.637 for the TF-IDF baseline. That baseline
+    was 82.6% on PubMed-RCT, which remains the bar.
+  - Fine-tuning, ONNX export and the gate are scripted for Kaggle or the
+    owner's Mac (`ml/critics/laya/README.md`).
+- *Installable web app.*
+  - Manifest and icons. The service worker caches only static files from
+    this site; it never caches pages, engine replies, POSTs or Supabase, and
+    is never registered on `/word`.
+  - An offline page.
+  - Muting on an uploaded file now hides that rule's findings in the
+    browser instead of re-sending the file.
+  - Uploads work in local development without Supabase.
+- *Noise floor, large documents, LaTeX, thread vs tape, preprints.*
+  - The thesis corpus is re-extracted with a tested repair pass (line-end
+    hyphens, page breaks and page numbers, reference lists), so the noise
+    floor is now 12.07 → **11.54**. No rule changed: S001 367 → 218, S003
+    38 → 27, F601 208 → 162, W211 102 → 77.
+  - Texts over 200k characters are parsed in pieces, giving identical
+    findings (a 120k-word thesis peaks at 1.02 GB instead of 2.49 GB).
+  - LaTeX:
+    - findings that straddle a footnote's edge are dropped;
+    - the implicit end of line after `\input` is restored;
+    - redefined built-in macros keep the document's argument count.
+  - D906 flags a gap or aim sentence repeated across chapters.
+  - Eight abstract-only preprints in the bench are replaced with full-text
+    ones.
+
+**Evidence (merged branch).** VERIFY_LINE
+
+**For the owner.**
+- Run `supabase/migrations/20261015120000_account_controls.sql` after the
+  progress migration, check that the privilege query in `docs/deploy.md`
+  §10 returns true, then deploy the engine.
+- S5: fine-tune Laya (README), and label 50+ paragraphs at `/label`.
+
+**Lessons.**
+- A helper that hits a refused permission must stop and report, not work
+  around it. One did, to run the Supabase tests; the lead re-ran them the
+  sanctioned way (133 passed).
+- A noise floor measured on PDF-extracted text partly measures the PDF tool.
+  Fixing the extraction moved the number more than any rule change this
+  round did.
+- Latency-budget tests fail when the machine is loaded by parallel jobs;
+  they pass alone. Run them last, or alone, before reading a failure as a
+  regression.
