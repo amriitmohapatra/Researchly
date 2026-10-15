@@ -1,12 +1,12 @@
 {
   "documents": 8,
   "words": 283332,
-  "suggestions": 3369,
-  "per_1000_words": 11.89,
+  "suggestions": 3420,
+  "per_1000_words": 12.07,
   "by_rule": {
     "G106": 528,
     "G101": 481,
-    "S001": 354,
+    "S001": 367,
     "LT001": 277,
     "F601": 208,
     "G103": 165,
@@ -23,6 +23,7 @@
     "F613": 53,
     "F612": 51,
     "W203": 43,
+    "S003": 38,
     "G102": 34,
     "W209": 31,
     "GN201": 23,
@@ -52,5 +53,5 @@
     "E705": 1,
     "GN204": 1
   },
-  "note": "S4d R6 (2026-10-15): Researchly grammar notes add 44 flags (GN201 23, GN205 10, GN207 6, GN206 4, GN204 1), every one read and judged a true finding; accepted per CLAUDE.md (don't hide good advice)"
+  "note": "Codex review #10 (2026-10-15): S001 no longer skips words used 3+ times. S001 +13 (three typos each repeated in a thesis, all genuine), S003 +38 grouped questions about repeated unknown words (one per word, not per use: abbreviations, model and package names, words joined at PDF line ends). Accepted per CLAUDE.md: repeated typos are true findings."
 }
