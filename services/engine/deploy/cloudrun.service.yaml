@@ -78,6 +78,10 @@ spec:
               value: "1"
             - name: RESEARCHLY_RATE_LIMIT_PER_MIN
               value: "30"
+            # The live check (/v1/check-paragraphs, S4d R3) runs after each
+            # typing pause (~1.5 s): its own budget, about two a second.
+            - name: RESEARCHLY_LIVE_RATE_LIMIT_PER_MIN
+              value: "120"
             # Accounts (S2). Both are public by design (the browser has
             # them too); Row-Level Security protects the data. Empty = the
             # engine runs without accounts.

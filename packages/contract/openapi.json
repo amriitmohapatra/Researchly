@@ -689,6 +689,121 @@
         "title": "Category",
         "type": "string"
       },
+      "CheckParagraphsRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "options": {
+            "$ref": "#/components/schemas/LiveOptions",
+            "description": "The usual check options, all optional; unknown keys are ignored. The live check runs sentence-level rules only, so `mode`, `review`, `narrative` and `checklist` have no effect here."
+          },
+          "paragraphs": {
+            "description": "The paragraphs that changed, each checked on its own.",
+            "items": {
+              "$ref": "#/components/schemas/LiveParagraph"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Paragraphs",
+            "type": "array"
+          },
+          "revision": {
+            "description": "The client's revision counter, echoed back so a stale reply can be dropped.",
+            "maximum": 9007199254740991.0,
+            "minimum": 0.0,
+            "title": "Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "revision",
+          "paragraphs"
+        ],
+        "title": "CheckParagraphsRequest",
+        "type": "object"
+      },
+      "CheckParagraphsResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "assessed_rules": {
+            "description": "The rules this check could show: sentence-level, not muted, not off for the article type, not on a tier that is down.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Assessed Rules",
+            "type": "array"
+          },
+          "elapsed_ms": {
+            "minimum": 0.0,
+            "title": "Elapsed Ms",
+            "type": "integer"
+          },
+          "health": {
+            "description": "Every surface must show a degraded tier.",
+            "items": {
+              "$ref": "#/components/schemas/TierHealth"
+            },
+            "title": "Health",
+            "type": "array"
+          },
+          "hidden_preferences": {
+            "default": 0,
+            "description": "Preference-type findings held back (not shown unless `options.show_preferences`).",
+            "minimum": 0.0,
+            "title": "Hidden Preferences",
+            "type": "integer"
+          },
+          "paragraphs": {
+            "description": "One per requested paragraph, in request order.",
+            "items": {
+              "$ref": "#/components/schemas/LiveParagraphResult"
+            },
+            "title": "Paragraphs",
+            "type": "array"
+          },
+          "revision": {
+            "description": "The request's revision, echoed.",
+            "minimum": 0.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "ruleset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Engine version and a fingerprint of its rules.",
+            "title": "Ruleset"
+          },
+          "schema_version": {
+            "const": "1",
+            "default": "1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "signed_in": {
+            "default": false,
+            "description": "True when a valid account token came with the request and its settings were looked up.",
+            "title": "Signed In",
+            "type": "boolean"
+          },
+          "state": {
+            "$ref": "#/components/schemas/LiveState"
+          }
+        },
+        "required": [
+          "revision",
+          "paragraphs",
+          "state",
+          "health",
+          "elapsed_ms"
+        ],
+        "title": "CheckParagraphsResponse",
+        "type": "object"
+      },
       "ChecklistChoice": {
         "description": "Reporting checklists of the discipline packs (S4, P3).",
         "enum": [
@@ -1230,6 +1345,279 @@
           "cards"
         ],
         "title": "LearnResponse",
+        "type": "object"
+      },
+      "LiveOptions": {
+        "description": "The check options of /v1/analyze, read tolerantly: every field is\noptional and an option this engine does not know is ignored, not\nrefused, so a native client built against a newer or older contract\nkeeps working. A known option with a bad value is still refused.",
+        "properties": {
+          "checklist": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChecklistChoice"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Check the text against a reporting checklist (`checklist` in the response): a guideline's id, or `auto` for the one the text's words point to."
+          },
+          "disabled_rules": {
+            "description": "Rule ids to mute for this request, e.g. [\"G101\"]. For a signed-in caller these are added to the rules muted in their account settings.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 200,
+            "title": "Disabled Rules",
+            "type": "array"
+          },
+          "document_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DocumentType"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The article type to check as. Omitted: the caller's saved setting, else auto."
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Mode"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Draft or Revise for this request. Omitted: the caller's saved setting, else revise."
+          },
+          "narrative": {
+            "default": false,
+            "description": "Also build the narrative map (`narrative` in the response) from the same analysis.",
+            "title": "Narrative",
+            "type": "boolean"
+          },
+          "review": {
+            "default": false,
+            "description": "Also build the critical reader's brief (`review` in the response) from the same analysis.",
+            "title": "Review",
+            "type": "boolean"
+          },
+          "show_preferences": {
+            "default": false,
+            "description": "Include Preference-type suggestions (hidden by default).",
+            "title": "Show Preferences",
+            "type": "boolean"
+          },
+          "spelling": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Spelling"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The English spelling to keep to. Omitted: the caller's saved setting, else auto."
+          }
+        },
+        "title": "LiveOptions",
+        "type": "object"
+      },
+      "LiveParagraph": {
+        "additionalProperties": false,
+        "description": "One paragraph to check after a typing pause.",
+        "properties": {
+          "heading": {
+            "default": "",
+            "description": "The text of the nearest heading above the paragraph, so advice stays section-aware (\"Methods\": passive voice is never flagged). Empty: the article type's body section.",
+            "maxLength": 300,
+            "title": "Heading",
+            "type": "string"
+          },
+          "id": {
+            "description": "The client's own id for the paragraph (letters, digits, . _ : -); echoed back, and part of each suggestion's id.",
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9._:-]+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "style": {
+            "default": "",
+            "description": "Word style name, e.g. \"Normal\" or \"Heading 2\"; empty when the surface has none.",
+            "maxLength": 200,
+            "title": "Style",
+            "type": "string"
+          },
+          "text": {
+            "description": "The paragraph's text. Held in memory for this request only; never stored or logged.",
+            "maxLength": 20000,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text"
+        ],
+        "title": "LiveParagraph",
+        "type": "object"
+      },
+      "LiveParagraphResult": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "The request's paragraph id.",
+            "title": "Id",
+            "type": "string"
+          },
+          "section": {
+            "description": "The section the paragraph was checked as.",
+            "title": "Section",
+            "type": "string"
+          },
+          "suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/LiveSuggestion"
+            },
+            "title": "Suggestions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "section",
+          "suggestions"
+        ],
+        "title": "LiveParagraphResult",
+        "type": "object"
+      },
+      "LiveState": {
+        "description": "ok: every tier ran. partial: a tier was down (e.g. grammar) or the\ncaller's settings could not be loaded; `health` says which.",
+        "enum": [
+          "ok",
+          "partial"
+        ],
+        "title": "LiveState",
+        "type": "string"
+      },
+      "LiveSuggestion": {
+        "additionalProperties": false,
+        "description": "A suggestion of the live check: what an underline, its teaser and\nits card need, and no more.",
+        "properties": {
+          "begin": {
+            "description": "Start of the flagged words within the paragraph, in UTF-16 code units.",
+            "minimum": 0.0,
+            "title": "Begin",
+            "type": "integer"
+          },
+          "category": {
+            "$ref": "#/components/schemas/Category"
+          },
+          "critical": {
+            "description": "True for a Correction (a likely error); false for the other three types.",
+            "title": "Critical",
+            "type": "boolean"
+          },
+          "end": {
+            "description": "End (exclusive), in UTF-16 code units.",
+            "minimum": 0.0,
+            "title": "End",
+            "type": "integer"
+          },
+          "fix_safety": {
+            "$ref": "#/components/schemas/FixSafety"
+          },
+          "id": {
+            "description": "Opaque and stable: the same for the same rule, paragraph, range and flagged words on every check. A hash; it never contains the text.",
+            "title": "Id",
+            "type": "string"
+          },
+          "learn_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The Learn card (GET /v1/learn/{id}).",
+            "title": "Learn Ref"
+          },
+          "message": {
+            "description": "One-line rationale, always shown.",
+            "title": "Message",
+            "type": "string"
+          },
+          "plain": {
+            "default": "",
+            "description": "The explanation in everyday words, shown first.",
+            "title": "Plain",
+            "type": "string"
+          },
+          "replacements": {
+            "description": "Concrete revisions, best first; empty when there is none. Only from deterministic rules or a ≤40-char learned edit, never generated prose.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Replacements",
+            "type": "array"
+          },
+          "rule_id": {
+            "description": "For actions (mute, feedback) and tests; never shown to the writer.",
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "rule_name": {
+            "title": "Rule Name",
+            "type": "string"
+          },
+          "section": {
+            "description": "The section the advice assumed, e.g. methods, discussion, unknown.",
+            "title": "Section",
+            "type": "string"
+          },
+          "source": {
+            "description": "Named provenance of the advice.",
+            "title": "Source",
+            "type": "string"
+          },
+          "text": {
+            "description": "The flagged words, so a client can check they are still there before it applies a revision.",
+            "title": "Text",
+            "type": "string"
+          },
+          "tier": {
+            "description": "spelling | grammar | gec | craft | lens",
+            "title": "Tier",
+            "type": "string"
+          },
+          "why": {
+            "description": "The fuller, teachable explanation.",
+            "title": "Why",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "rule_id",
+          "rule_name",
+          "category",
+          "critical",
+          "tier",
+          "begin",
+          "end",
+          "text",
+          "section",
+          "message",
+          "why",
+          "source",
+          "fix_safety"
+        ],
+        "title": "LiveSuggestion",
         "type": "object"
       },
       "Metrics": {
@@ -2180,6 +2568,19 @@
       "Suggestion": {
         "additionalProperties": false,
         "properties": {
+          "begin16": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`span.start` in UTF-16 code units, the unit Word, browsers and the desktop accessibility APIs count in (S4d R2). `start`/`end` are code points; `begin16`/`end16` here, and `begin`/`end` on a live suggestion, are UTF-16. Additive: older engines omit it.",
+            "title": "Begin16"
+          },
           "category": {
             "$ref": "#/components/schemas/Category"
           },
@@ -2188,6 +2589,31 @@
             "minimum": 0.0,
             "title": "Confidence",
             "type": "number"
+          },
+          "critical": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "True for a Correction (a likely error), false otherwise (S4d R2). Additive: older engines omit it.",
+            "title": "Critical"
+          },
+          "end16": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`span.end` in UTF-16 code units (see `begin16`).",
+            "title": "End16"
           },
           "fix_safety": {
             "$ref": "#/components/schemas/FixSafety"
@@ -2464,10 +2890,36 @@
         "additionalProperties": false,
         "description": "How the add-in finds a suggestion in Word, which has no offsets:\nsearch `paragraph` for `snippet` and take match number `occurrence`.",
         "properties": {
+          "begin16": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`start` in UTF-16 code units within the paragraph (S4d R2).",
+            "title": "Begin16"
+          },
           "end": {
             "minimum": 0.0,
             "title": "End",
             "type": "integer"
+          },
+          "end16": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`end` in UTF-16 code units within the paragraph (S4d R2).",
+            "title": "End16"
           },
           "exact": {
             "description": "False when the span is too long or unsafe to search for whole; `snippet` is then a prefix.",
@@ -2562,6 +3014,19 @@
       "WordSuggestion": {
         "additionalProperties": false,
         "properties": {
+          "begin16": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`span.start` in UTF-16 code units, the unit Word, browsers and the desktop accessibility APIs count in (S4d R2). `start`/`end` are code points; `begin16`/`end16` here, and `begin`/`end` on a live suggestion, are UTF-16. Additive: older engines omit it.",
+            "title": "Begin16"
+          },
           "category": {
             "$ref": "#/components/schemas/Category"
           },
@@ -2570,6 +3035,31 @@
             "minimum": 0.0,
             "title": "Confidence",
             "type": "number"
+          },
+          "critical": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "True for a Correction (a likely error), false otherwise (S4d R2). Additive: older engines omit it.",
+            "title": "Critical"
+          },
+          "end16": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`span.end` in UTF-16 code units (see `begin16`).",
+            "title": "End16"
           },
           "fix_safety": {
             "$ref": "#/components/schemas/FixSafety"
@@ -3098,6 +3588,128 @@
           }
         },
         "summary": "Analyze Word",
+        "tags": [
+          "analysis"
+        ]
+      }
+    },
+    "/v1/check-paragraphs": {
+      "post": {
+        "description": "The live check (S4d R3), called after a typing pause: a few\nparagraphs, each with its nearest heading, checked by the\nsentence-level rules only. Offsets are UTF-16 within each paragraph;\n`revision` is echoed so a stale reply can be dropped. Document-wide\nchecks, the brief and the map stay in /v1/analyze. Rate-limited on its\nown, sized for typing. Native clients send no Origin header and are\naccepted; CORS governs browsers only.",
+        "operationId": "checkParagraphs",
+        "parameters": [
+          {
+            "description": "`Bearer <Supabase access token>` when signed in. Omit for anonymous use.",
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "`Bearer <Supabase access token>` when signed in. Omit for anonymous use.",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckParagraphsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckParagraphsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Malformed request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign-in invalid or expired (unauthorized), or this needs an account (sign_in_required)"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Document too large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request failed validation"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limited"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Engine error (no document text in the body)"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign-in could not be checked (auth_unavailable)"
+          }
+        },
+        "summary": "Check Paragraphs",
         "tags": [
           "analysis"
         ]

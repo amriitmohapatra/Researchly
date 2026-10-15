@@ -114,3 +114,46 @@ def extras(a) -> dict:
         "checklist": checklist_report(a.checklist),
         "suggested_checklist": a.suggested_checklist,
     }
+
+
+# --- the live check (S4d R3) ---------------------------------------------------
+
+def live_suggestion(s, paragraph_id: str, index) -> dict:
+    """One live suggestion for the wire. `index` maps the paragraph's
+    code-point offsets to UTF-16 (researchly.utf16.Utf16Index): `begin` and
+    `end` are UTF-16 code units within the paragraph, because every client
+    that draws underlines counts that way. `rule_id` is for actions and
+    tests; surfaces never show it."""
+    from .utf16 import live_id
+    begin, end = index(s.start), index(s.end)
+    return {
+        "id": live_id(s.rule_id, paragraph_id, begin, end, s.text),
+        "rule_id": s.rule_id,
+        "rule_name": s.rule_name,
+        "category": s.category.value,
+        "critical": s.category.value == "correction",
+        "tier": s.tier,
+        "begin": begin,
+        "end": end,
+        "text": s.text,
+        "section": s.section or "unknown",
+        "message": s.message,
+        "plain": s.plain,
+        "why": s.why,
+        "source": s.source,
+        "learn_ref": s.learn_ref,
+        "replacements": [s.replacement] if s.replacement else [],
+        "fix_safety": "safe" if s.fix_safety == "safe" else "review",
+    }
+
+
+def live_paragraphs(result) -> list:
+    """`api.check_paragraphs()`'s paragraphs, shaped for the wire."""
+    from .utf16 import Utf16Index
+    out = []
+    for p in result.paragraphs:
+        index = Utf16Index(p.text)
+        out.append({"id": p.id, "section": p.section,
+                    "suggestions": [live_suggestion(s, p.id, index)
+                                    for s in p.suggestions]})
+    return out

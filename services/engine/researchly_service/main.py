@@ -5,8 +5,10 @@ exported to packages/contract/openapi.json by `export_openapi.py`.
 
 Layers, outermost first:
 
-    CORSMiddleware            browser origins (RESEARCHLY_ALLOWED_ORIGINS)
-    RequestContextMiddleware  request id · rate limit · 413 before parsing ·
+    CORSMiddleware            browser origins (RESEARCHLY_ALLOWED_ORIGINS);
+                              a request without an Origin header (a native
+                              client) passes untouched
+    RequestContextMiddleware  request id · rate limits · 413 before parsing ·
                               500 error net · one JSON access-log line
     FastAPI                   422/400/404/405 → ErrorResponse (errors.py)
     routes                    → engine_adapter → researchly.api.analyze()
@@ -37,6 +39,7 @@ from researchly import ingest, rules_grammar  # noqa: E402  (after _core)
 from .schemas import (AnalyzeFileResponse, AnalyzeOptions, AnalyzeRequest,
                       AnalyzeWordRequest, AnalyzeWordResponse,
                       AnalyzeResponse,
+                      CheckParagraphsRequest, CheckParagraphsResponse,
                       ErrorResponse, HealthResponse,
                       LearnCard, LearnResponse,
                       RulesResponse, Segment, SourceFormat, SourceInfo,
@@ -152,6 +155,45 @@ def analyze_word(req: AnalyzeWordRequest, request: Request,
         paragraphs, "word", req.options, grammar_enabled=s.grammar_enabled,
         response_cls=AnalyzeWordResponse, word_paragraphs=paragraphs, **who)
     _record(request, resp)
+    return resp
+
+
+@router.post("/v1/check-paragraphs", response_model=CheckParagraphsResponse,
+             responses=ERRORS, operation_id="checkParagraphs",
+             tags=["analysis"])
+def check_paragraphs(req: CheckParagraphsRequest, request: Request,
+                     authorization: Optional[str] = Header(None, description=AUTH_HEADER_DOC)
+                     ) -> CheckParagraphsResponse:
+    """The live check (S4d R3), called after a typing pause: a few
+    paragraphs, each with its nearest heading, checked by the
+    sentence-level rules only. Offsets are UTF-16 within each paragraph;
+    `revision` is echoed so a stale reply can be dropped. Document-wide
+    checks, the brief and the map stay in /v1/analyze. Rate-limited on its
+    own, sized for typing. Native clients send no Origin header and are
+    accepted; CORS governs browsers only."""
+    paragraphs = [p.model_dump() for p in req.paragraphs]
+    st = request.state
+    st.content_chars = sum(len(p["text"]) for p in paragraphs)
+    st.format = "paragraphs"
+    s = _settings(request)
+    who = _account(request, authorization)
+    if (s.accounts_enabled and not who["signed_in"] and s.anon_max_words
+            and sum(_count_words(p["text"]) for p in paragraphs)
+            > s.anon_max_words):
+        raise ApiError(401, "sign_in_required",
+                       f"Without an account Researchly checks up to "
+                       f"{s.anon_max_words:,} words at a time. Sign in to check "
+                       "more.")
+    resp = engine_adapter.run_paragraph_check(
+        paragraphs, req.revision, req.options,
+        grammar_enabled=s.grammar_enabled, **who)
+    st.suggestions = sum(len(p.suggestions) for p in resp.paragraphs)
+    counts: dict = {}
+    for p in resp.paragraphs:
+        for sug in p.suggestions:
+            counts[sug.category.value] = counts.get(sug.category.value, 0) + 1
+    st.counts = counts
+    st.hidden_preferences = resp.hidden_preferences
     return resp
 
 
@@ -311,6 +353,7 @@ async def lifespan(app: FastAPI):
         "core_version": engine_adapter.researchly.__version__,
         "allowed_origins": s.allowed_origins,
         "rate_limit_per_min": s.rate_limit_per_min,
+        "live_rate_limit_per_min": s.live_rate_limit_per_min,
         "lt_url_set": bool(rules_grammar.remote_url()),
         "accounts": s.accounts_enabled,
         "anon_max_words": s.anon_max_words,
@@ -337,6 +380,9 @@ def create_app(settings: Optional[settings_mod.Settings] = None) -> FastAPI:
     )
     app.state.settings = s
     app.state.limiter = RateLimiter(s.rate_limit_per_min)
+    # The live check runs after every typing pause: its own, larger budget,
+    # so typing never uses up the budget for a full check (and vice versa).
+    app.state.live_limiter = RateLimiter(s.live_rate_limit_per_min)
     app.state.accounts = (accounts.Accounts(s.supabase_url,
                                             s.supabase_publishable_key)
                           if s.accounts_enabled else None)
@@ -349,7 +395,8 @@ def create_app(settings: Optional[settings_mod.Settings] = None) -> FastAPI:
     # outside the request middleware so 413/429/500 replies still carry CORS
     # headers and the browser can read the error body.
     app.add_middleware(RequestContextMiddleware, settings=s,
-                       limiter=app.state.limiter)
+                       limiter=app.state.limiter,
+                       live_limiter=app.state.live_limiter)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=s.allowed_origins,

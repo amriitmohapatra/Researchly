@@ -13,6 +13,7 @@ it (`python -m researchly_service.export_openapi`, then `--check` in CI).
 | Method | Path | Returns |
 |---|---|---|
 | `POST` | `/v1/analyze` | `AnalyzeResponse`: suggestions (with `why`, `source`, stable `id`), counts, hidden-preference count, metrics, sections, per-tier health, engine info, `elapsed_ms` |
+| `POST` | `/v1/check-paragraphs` | `CheckParagraphsResponse` (S4d R3, the live check after a typing pause): per paragraph, suggestions from the sentence-level rules with UTF-16 `begin`/`end` within the paragraph, an opaque stable `id` and `critical`; `revision` echoed, `state` `ok` or `partial`, `health`. Own rate limit; a request without an `Origin` header (a native client) is accepted |
 | `GET` | `/v1/health` | `HealthResponse`: `ok`, or `degraded` when a tier the service runs is down (the opt-in `gec` tier never degrades it) |
 | `GET` | `/v1/rules` | `RulesResponse`: the rule registry with why/source |
 
@@ -84,6 +85,7 @@ python bench.py --url http://localhost:8080      # or --in-process
 | `RESEARCHLY_GRAMMAR` | `on` | `off` = this deployment runs no grammar (health says `disabled`, not degraded) |
 | `RESEARCHLY_MAX_BODY_BYTES` | `8388608` | request body cap (8 MiB; must admit 1M four-byte characters) |
 | `RESEARCHLY_RATE_LIMIT_PER_MIN` | `30` | per client IP, per instance; `0` disables |
+| `RESEARCHLY_LIVE_RATE_LIMIT_PER_MIN` | `120` | the live check (`/v1/check-paragraphs`), per client IP, per instance, counted apart from the rest; `0` disables |
 | `RESEARCHLY_TRUSTED_PROXY_HOPS` | `0` | X-Forwarded-For entries added by trusted proxies (Cloud Run: `1`) |
 | `RESEARCHLY_WARMUP` | `on` | warm spaCy, rules and LanguageTool before opening the port |
 
@@ -129,7 +131,10 @@ autoscaling can see them, instead of behind the lock. `/v1/health` and
 `/v1/rules` do not take the lock.
 
 The rate limit is in memory, per instance: with `maxScale: 2` a client can
-get up to 2× the configured rate. Accounts (S2) replace it with per-user
+get up to 2× the configured rate. The live check counts against its own
+limit (`RESEARCHLY_LIVE_RATE_LIMIT_PER_MIN`, 120), so typing never uses up
+the budget for a full check. It takes the same lock: a live check waits for
+a long analysis on the same instance (or Cloud Run sends it to another). Accounts (S2) replace it with per-user
 limits.
 
 ## Measured (dev machine, 2026-10-03)

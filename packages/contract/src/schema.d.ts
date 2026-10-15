@@ -67,6 +67,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/check-paragraphs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check Paragraphs
+         * @description The live check (S4d R3), called after a typing pause: a few
+         *     paragraphs, each with its nearest heading, checked by the
+         *     sentence-level rules only. Offsets are UTF-16 within each paragraph;
+         *     `revision` is echoed so a stale reply can be dropped. Document-wide
+         *     checks, the brief and the map stay in /v1/analyze. Rate-limited on its
+         *     own, sized for typing. Native clients send no Origin header and are
+         *     accepted; CORS governs browsers only.
+         */
+        post: operations["checkParagraphs"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/health": {
         parameters: {
             query?: never;
@@ -451,6 +477,70 @@ export interface components {
          * @enum {string}
          */
         Category: "correction" | "improvement" | "convention" | "preference";
+        /** CheckParagraphsRequest */
+        CheckParagraphsRequest: {
+            /** @description The usual check options, all optional; unknown keys are ignored. The live check runs sentence-level rules only, so `mode`, `review`, `narrative` and `checklist` have no effect here. */
+            options?: components["schemas"]["LiveOptions"];
+            /**
+             * Paragraphs
+             * @description The paragraphs that changed, each checked on its own.
+             */
+            paragraphs: components["schemas"]["LiveParagraph"][];
+            /**
+             * Revision
+             * @description The client's revision counter, echoed back so a stale reply can be dropped.
+             */
+            revision: number;
+        };
+        /** CheckParagraphsResponse */
+        CheckParagraphsResponse: {
+            /**
+             * Assessed Rules
+             * @description The rules this check could show: sentence-level, not muted, not off for the article type, not on a tier that is down.
+             */
+            assessed_rules?: string[];
+            /** Elapsed Ms */
+            elapsed_ms: number;
+            /**
+             * Health
+             * @description Every surface must show a degraded tier.
+             */
+            health: components["schemas"]["TierHealth"][];
+            /**
+             * Hidden Preferences
+             * @description Preference-type findings held back (not shown unless `options.show_preferences`).
+             * @default 0
+             */
+            hidden_preferences: number;
+            /**
+             * Paragraphs
+             * @description One per requested paragraph, in request order.
+             */
+            paragraphs: components["schemas"]["LiveParagraphResult"][];
+            /**
+             * Revision
+             * @description The request's revision, echoed.
+             */
+            revision: number;
+            /**
+             * Ruleset
+             * @description Engine version and a fingerprint of its rules.
+             */
+            ruleset?: string | null;
+            /**
+             * Schema Version
+             * @default 1
+             * @constant
+             */
+            schema_version: "1";
+            /**
+             * Signed In
+             * @description True when a valid account token came with the request and its settings were looked up.
+             * @default false
+             */
+            signed_in: boolean;
+            state: components["schemas"]["LiveState"];
+        };
         /**
          * ChecklistChoice
          * @description Reporting checklists of the discipline packs (S4, P3).
@@ -708,6 +798,178 @@ export interface components {
         LearnResponse: {
             /** Cards */
             cards: components["schemas"]["LearnCard"][];
+        };
+        /**
+         * LiveOptions
+         * @description The check options of /v1/analyze, read tolerantly: every field is
+         *     optional and an option this engine does not know is ignored, not
+         *     refused, so a native client built against a newer or older contract
+         *     keeps working. A known option with a bad value is still refused.
+         */
+        LiveOptions: {
+            /** @description Check the text against a reporting checklist (`checklist` in the response): a guideline's id, or `auto` for the one the text's words point to. */
+            checklist?: components["schemas"]["ChecklistChoice"] | null;
+            /**
+             * Disabled Rules
+             * @description Rule ids to mute for this request, e.g. ["G101"]. For a signed-in caller these are added to the rules muted in their account settings.
+             */
+            disabled_rules?: string[];
+            /** @description The article type to check as. Omitted: the caller's saved setting, else auto. */
+            document_type?: components["schemas"]["DocumentType"] | null;
+            /** @description Draft or Revise for this request. Omitted: the caller's saved setting, else revise. */
+            mode?: components["schemas"]["Mode"] | null;
+            /**
+             * Narrative
+             * @description Also build the narrative map (`narrative` in the response) from the same analysis.
+             * @default false
+             */
+            narrative: boolean;
+            /**
+             * Review
+             * @description Also build the critical reader's brief (`review` in the response) from the same analysis.
+             * @default false
+             */
+            review: boolean;
+            /**
+             * Show Preferences
+             * @description Include Preference-type suggestions (hidden by default).
+             * @default false
+             */
+            show_preferences: boolean;
+            /** @description The English spelling to keep to. Omitted: the caller's saved setting, else auto. */
+            spelling?: components["schemas"]["Spelling"] | null;
+        };
+        /**
+         * LiveParagraph
+         * @description One paragraph to check after a typing pause.
+         */
+        LiveParagraph: {
+            /**
+             * Heading
+             * @description The text of the nearest heading above the paragraph, so advice stays section-aware ("Methods": passive voice is never flagged). Empty: the article type's body section.
+             * @default
+             */
+            heading: string;
+            /**
+             * Id
+             * @description The client's own id for the paragraph (letters, digits, . _ : -); echoed back, and part of each suggestion's id.
+             */
+            id: string;
+            /**
+             * Style
+             * @description Word style name, e.g. "Normal" or "Heading 2"; empty when the surface has none.
+             * @default
+             */
+            style: string;
+            /**
+             * Text
+             * @description The paragraph's text. Held in memory for this request only; never stored or logged.
+             */
+            text: string;
+        };
+        /** LiveParagraphResult */
+        LiveParagraphResult: {
+            /**
+             * Id
+             * @description The request's paragraph id.
+             */
+            id: string;
+            /**
+             * Section
+             * @description The section the paragraph was checked as.
+             */
+            section: string;
+            /** Suggestions */
+            suggestions: components["schemas"]["LiveSuggestion"][];
+        };
+        /**
+         * LiveState
+         * @description ok: every tier ran. partial: a tier was down (e.g. grammar) or the
+         *     caller's settings could not be loaded; `health` says which.
+         * @enum {string}
+         */
+        LiveState: "ok" | "partial";
+        /**
+         * LiveSuggestion
+         * @description A suggestion of the live check: what an underline, its teaser and
+         *     its card need, and no more.
+         */
+        LiveSuggestion: {
+            /**
+             * Begin
+             * @description Start of the flagged words within the paragraph, in UTF-16 code units.
+             */
+            begin: number;
+            category: components["schemas"]["Category"];
+            /**
+             * Critical
+             * @description True for a Correction (a likely error); false for the other three types.
+             */
+            critical: boolean;
+            /**
+             * End
+             * @description End (exclusive), in UTF-16 code units.
+             */
+            end: number;
+            fix_safety: components["schemas"]["FixSafety"];
+            /**
+             * Id
+             * @description Opaque and stable: the same for the same rule, paragraph, range and flagged words on every check. A hash; it never contains the text.
+             */
+            id: string;
+            /**
+             * Learn Ref
+             * @description The Learn card (GET /v1/learn/{id}).
+             */
+            learn_ref?: string | null;
+            /**
+             * Message
+             * @description One-line rationale, always shown.
+             */
+            message: string;
+            /**
+             * Plain
+             * @description The explanation in everyday words, shown first.
+             * @default
+             */
+            plain: string;
+            /**
+             * Replacements
+             * @description Concrete revisions, best first; empty when there is none. Only from deterministic rules or a ≤40-char learned edit, never generated prose.
+             */
+            replacements?: string[];
+            /**
+             * Rule Id
+             * @description For actions (mute, feedback) and tests; never shown to the writer.
+             */
+            rule_id: string;
+            /** Rule Name */
+            rule_name: string;
+            /**
+             * Section
+             * @description The section the advice assumed, e.g. methods, discussion, unknown.
+             */
+            section: string;
+            /**
+             * Source
+             * @description Named provenance of the advice.
+             */
+            source: string;
+            /**
+             * Text
+             * @description The flagged words, so a client can check they are still there before it applies a revision.
+             */
+            text: string;
+            /**
+             * Tier
+             * @description spelling | grammar | gec | craft | lens
+             */
+            tier: string;
+            /**
+             * Why
+             * @description The fuller, teachable explanation.
+             */
+            why: string;
         };
         /**
          * Metrics
@@ -1171,9 +1433,24 @@ export interface components {
         };
         /** Suggestion */
         Suggestion: {
+            /**
+             * Begin16
+             * @description `span.start` in UTF-16 code units, the unit Word, browsers and the desktop accessibility APIs count in (S4d R2). `start`/`end` are code points; `begin16`/`end16` here, and `begin`/`end` on a live suggestion, are UTF-16. Additive: older engines omit it.
+             */
+            begin16?: number | null;
             category: components["schemas"]["Category"];
             /** Confidence */
             confidence: number;
+            /**
+             * Critical
+             * @description True for a Correction (a likely error), false otherwise (S4d R2). Additive: older engines omit it.
+             */
+            critical?: boolean | null;
+            /**
+             * End16
+             * @description `span.end` in UTF-16 code units (see `begin16`).
+             */
+            end16?: number | null;
             fix_safety: components["schemas"]["FixSafety"];
             /**
              * Id
@@ -1346,8 +1623,18 @@ export interface components {
          *     search `paragraph` for `snippet` and take match number `occurrence`.
          */
         WordLocation: {
+            /**
+             * Begin16
+             * @description `start` in UTF-16 code units within the paragraph (S4d R2).
+             */
+            begin16?: number | null;
             /** End */
             end: number;
+            /**
+             * End16
+             * @description `end` in UTF-16 code units within the paragraph (S4d R2).
+             */
+            end16?: number | null;
             /**
              * Exact
              * @description False when the span is too long or unsafe to search for whole; `snippet` is then a prefix.
@@ -1405,9 +1692,24 @@ export interface components {
         };
         /** WordSuggestion */
         WordSuggestion: {
+            /**
+             * Begin16
+             * @description `span.start` in UTF-16 code units, the unit Word, browsers and the desktop accessibility APIs count in (S4d R2). `start`/`end` are code points; `begin16`/`end16` here, and `begin`/`end` on a live suggestion, are UTF-16. Additive: older engines omit it.
+             */
+            begin16?: number | null;
             category: components["schemas"]["Category"];
             /** Confidence */
             confidence: number;
+            /**
+             * Critical
+             * @description True for a Correction (a likely error), false otherwise (S4d R2). Additive: older engines omit it.
+             */
+            critical?: boolean | null;
+            /**
+             * End16
+             * @description `span.end` in UTF-16 code units (see `begin16`).
+             */
+            end16?: number | null;
             fix_safety: components["schemas"]["FixSafety"];
             /**
              * Id
@@ -1695,6 +1997,96 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnalyzeWordResponse"];
+                };
+            };
+            /** @description Malformed request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Sign-in invalid or expired (unauthorized), or this needs an account (sign_in_required) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Document too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Engine error (no document text in the body) */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Sign-in could not be checked (auth_unavailable) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    checkParagraphs: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description `Bearer <Supabase access token>` when signed in. Omit for anonymous use. */
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckParagraphsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckParagraphsResponse"];
                 };
             };
             /** @description Malformed request */
