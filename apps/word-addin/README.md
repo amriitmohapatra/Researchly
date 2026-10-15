@@ -137,7 +137,8 @@ green, Preference lavender (only when "Show preferences" is on).
 - **Settings → Live underlines** pauses them (and removes them from the
   document); the choice is remembered on this computer.
 - With **This computer** as the engine, underlines appear after Check
-  document only (the local server has no live check yet).
+  document only (the pane does not use the local server's live check yet,
+  though `server.py` answers `POST /v1/check-paragraphs` since 2026-10-15).
 
 Underlines are **not saved in the file**: they exist only while the
 document is open with the sidebar, and are drawn again next time. Nothing
