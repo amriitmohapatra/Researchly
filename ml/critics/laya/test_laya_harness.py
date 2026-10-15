@@ -128,6 +128,24 @@ def test_roles_zero_shot_end_to_end_with_a_fake_agent():
     assert set(rep["zero_shot"]["by_group"]) == {"epidemiology", "humanities"}
 
 
+def test_a_cached_run_resumes_without_asking_again(tmp_path):
+    calls = []
+
+    class Counting(FakeAgent):
+        def predict(self, state, questions):
+            calls.append(state)
+            return super().predict(state, questions)
+    agent = Counting(lambda s, k: k[0])
+    q = harness.laya_question(critics.SENTENCE_ROLE)
+    cache = tmp_path / "answers.jsonl"
+    first, _, _ = zero_shot.ask(agent, ["a", "b"], q, cache=cache)
+    again, _, _ = zero_shot.ask(agent, ["a", "b", "c"], q, cache=cache)
+    assert calls == ["a", "b", "c"]
+    assert again[:2] == first
+    rows = [json.loads(x) for x in cache.read_text().splitlines()]
+    assert all(set(r) == {"key", "probs", "seconds"} for r in rows)  # no text
+
+
 def test_sample_roles_takes_whole_abstracts_from_one_split():
     rows = role_rows(40) + role_rows(40, "train")
     s = harness.sample_roles(rows, 12)
@@ -187,6 +205,31 @@ def test_flags_run_with_a_fake_agent(monkeypatch):
                               rotate=False)
     assert rep["zero_shot"]["n"] == 3
     assert rep["engine_precision_without_critic"] == pytest.approx(2 / 3)
+
+
+def test_flags_two_stage_export_then_score(tmp_path, monkeypatch):
+    """Stage 1 (engine) writes the matched flags; stage 2 (Laya) scores
+    them without the engine in the same process."""
+    def fake_flags(section, text, nlp=None):
+        return "Results\n\n" + text, [
+            ("W202", "improvement", 9, 20, "Tighter."),
+            ("S001", "correction", 30, 36, "Did you mean?"),
+            ("E707", "improvement", 40, 54, "Open with the result"),
+            ("W207", "correction", 60, 67, "Doubled word")]
+    monkeypatch.setattr(harness, "label_page_flags", fake_flags)
+    items = tmp_path / "items.jsonl"
+    rc = zero_shot.main(["flags", "--synthetic", "--export-items", str(items)])
+    assert rc == 0
+    rows = harness.read_jsonl(items)
+    assert "skipped" in rows[0] and rows[1:]
+    monkeypatch.setattr(harness, "load_agent",
+                        lambda *a, **k: FakeAgent(lambda s, k: "A"))
+    out = tmp_path / "report.json"
+    zero_shot.main(["flags", "--synthetic", "--items", str(items),
+                    "--out", str(out)])
+    rep = json.loads(out.read_text())
+    assert rep["zero_shot"]["n"] == len(rows) - 1
+    assert "state" not in json.dumps(rep["items"])
 
 
 def test_telemetry_priors_are_text_free(tmp_path):

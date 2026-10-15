@@ -34,11 +34,13 @@ No text is written to the report.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import platform
 import sys
 import time
 from pathlib import Path
+from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import harness  # noqa: E402
@@ -48,20 +50,45 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
 
 def ask(agent, states: list, question: dict, *, rotate: bool = False,
-        batch_size: int = 8) -> tuple:
+        batch_size: int = 8, cache: Optional[Path] = None,
+        batched_probe: bool = True) -> tuple:
     """(Laya probability dicts, seconds per state, batched) for the states.
     One state per call measures single-item latency honestly; batching is
-    reported separately."""
+    reported separately. ``cache`` (a JSONL file, outside the repo) makes a
+    long CPU run resumable: each answer is appended as it arrives, keyed by
+    a hash of state and question, and is not asked again."""
     qs = harness.rotations(question) if rotate else {"q": question}
+    qkey = hashlib.sha256(json.dumps(qs, sort_keys=True).encode()).hexdigest()
+    done = {}
+    if cache is not None and Path(cache).exists():
+        for line in Path(cache).read_text(encoding="utf-8").splitlines():
+            row = json.loads(line)
+            done[row["key"]] = row
+    out = open(cache, "a", encoding="utf-8") if cache is not None else None
     dists, secs = [], []
-    for s in states:
-        res, dt = harness.timed(agent.predict, s, qs)
-        secs.append(dt)
-        ans = res["answers"]
-        dists.append(harness.average(ans) if rotate else
+    try:
+        for s in states:
+            key = hashlib.sha256((qkey + s).encode()).hexdigest()
+            if key in done:
+                dists.append(done[key]["probs"])
+                secs.append(done[key]["seconds"])
+                continue
+            res, dt = harness.timed(agent.predict, s, qs)
+            secs.append(dt)
+            ans = res["answers"]
+            probs = (harness.average(ans) if rotate else
                      dict(ans["q"]["probabilities"]))
+            dists.append(probs)
+            if out is not None:
+                out.write(json.dumps({"key": key, "probs": probs,
+                                      "seconds": dt}) + "\n")
+                out.flush()
+    finally:
+        if out is not None:
+            out.close()
     batched = None
-    if hasattr(agent, "predict_batch") and len(states) >= batch_size:
+    if batched_probe and hasattr(agent, "predict_batch") and \
+            len(states) >= batch_size:
         chunk = states[:batch_size * 4]
         _, dt = harness.timed(agent.predict_batch, chunk, qs,
                               batch_size=batch_size)
@@ -71,11 +98,11 @@ def ask(agent, states: list, question: dict, *, rotate: bool = False,
 
 
 def run_roles(agent, rows: list, dev_rows: list, *, context: str,
-              rotate: bool) -> dict:
+              rotate: bool, cache: Optional[Path] = None) -> dict:
     q = critics.SENTENCE_ROLE
     lq = harness.laya_question(q)
     states = [harness.role_state(r, context) for r in rows]
-    raw, secs, batched = ask(agent, states, lq, rotate=rotate)
+    raw, secs, batched = ask(agent, states, lq, rotate=rotate, cache=cache)
     dists = [harness.from_laya(q, d) for d in raw]
     gold = [r["role"] for r in rows]
     report = {"task": "B sentence role", "question": q.id,
@@ -87,7 +114,8 @@ def run_roles(agent, rows: list, dev_rows: list, *, context: str,
               "baseline_to_beat": harness.BASELINE_TASK_B}
     if dev_rows:
         dev_raw, _, _ = ask(agent, [harness.role_state(r, context)
-                                    for r in dev_rows], lq, rotate=rotate)
+                                    for r in dev_rows], lq, rotate=rotate,
+                            cache=cache, batched_probe=False)
         t = harness.fit_temperature([harness.from_laya(q, d) for d in dev_raw],
                                     [r["role"] for r in dev_rows])
         report["temperature_fitted_on_dev"] = {"t": t, "dev_n": len(dev_rows)}
@@ -134,9 +162,11 @@ def flag_items(labels: list, paragraphs: dict, nlp=None) -> tuple:
 
 
 def run_flags(agent, labels: list, paragraphs: dict, *, rotate: bool,
-              nlp=None) -> dict:
+              nlp=None, prepared=None) -> dict:
+    """Task A. ``prepared`` = (items, skipped) from ``--export-items``, so
+    the engine (spaCy, LanguageTool) and Laya need not share one process."""
     q = critics.FLAG_USEFUL
-    items, skipped = flag_items(labels, paragraphs, nlp)
+    items, skipped = prepared or flag_items(labels, paragraphs, nlp)
     if not items:
         return {"task": "A flag useful", "error": "no usable labels",
                 "skipped": skipped}
@@ -177,6 +207,15 @@ def environment() -> dict:
     return env
 
 
+def _flag_inputs(a, ap) -> tuple:
+    if a.synthetic:
+        return (FIXTURES / "synthetic-labels.json",
+                FIXTURES / "synthetic-paragraphs.json")
+    if not (a.labels and a.paragraphs):
+        ap.error("flags needs --labels and --paragraphs (or --synthetic)")
+    return a.labels, a.paragraphs
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("task", choices=["roles", "flags"])
@@ -197,9 +236,32 @@ def main(argv=None) -> int:
     ap.add_argument("--model", default=harness.LAYA_REPO)
     ap.add_argument("--revision", default=harness.LAYA_REVISION)
     ap.add_argument("--threads", type=int, default=None)
-    ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--out", type=Path, help="the report (JSON, no text)")
+    ap.add_argument("--cache", type=Path, default=None,
+                    help="JSONL of answers so far (outside the repo); a "
+                         "re-run resumes instead of asking again")
+    ap.add_argument("--export-items", type=Path, default=None,
+                    help="flags, stage 1 (engine only, no Laya): write the "
+                         "matched flags to this JSONL (it holds paragraph "
+                         "text: keep it local) and stop")
+    ap.add_argument("--items", type=Path, default=None,
+                    help="flags, stage 2 (Laya only): read --export-items")
     a = ap.parse_args(argv)
 
+    if a.task == "flags" and a.export_items:
+        import label_precision
+        labels_path, paras_path = _flag_inputs(a, ap)
+        items, skipped = flag_items(label_precision.load(labels_path),
+                                    harness.label_paragraphs(paras_path))
+        with a.export_items.open("w", encoding="utf-8") as f:
+            f.write(json.dumps({"skipped": skipped}) + "\n")
+            for state, gold, rule, cat in items:
+                f.write(json.dumps({"state": state, "gold": gold, "rule": rule,
+                                    "category": cat}) + "\n")
+        print(json.dumps({"items": len(items), "skipped": skipped}))
+        return 0
+    if not a.out:
+        ap.error("--out is required")
     agent = harness.load_agent(a.model, a.revision, threads=a.threads)
     if a.task == "roles":
         if not a.labels:
@@ -208,18 +270,16 @@ def main(argv=None) -> int:
         test = harness.sample_roles(rows, a.n, split="test", use=a.use)
         dev = harness.sample_roles(rows, a.dev_n, split="dev", use=a.use)
         report = run_roles(agent, test, dev, context=a.context,
-                           rotate=a.rotate)
+                           rotate=a.rotate, cache=a.cache)
+    elif a.items:
+        rows = harness.read_jsonl(a.items)
+        prepared = ([(r["state"], r["gold"], r["rule"], r["category"])
+                     for r in rows[1:]], rows[0]["skipped"])
+        report = run_flags(agent, [], {}, rotate=a.rotate, prepared=prepared)
+        report["synthetic"] = a.synthetic
     else:
-        sys.path.insert(0, str(harness.REPO / "ml" / "eval"))
         import label_precision
-        if a.synthetic:
-            labels_path = FIXTURES / "synthetic-labels.json"
-            paras_path = FIXTURES / "synthetic-paragraphs.json"
-        else:
-            if not (a.labels and a.paragraphs):
-                ap.error("flags needs --labels and --paragraphs "
-                         "(or --synthetic)")
-            labels_path, paras_path = a.labels, a.paragraphs
+        labels_path, paras_path = _flag_inputs(a, ap)
         report = run_flags(agent, label_precision.load(labels_path),
                            harness.label_paragraphs(paras_path),
                            rotate=a.rotate)

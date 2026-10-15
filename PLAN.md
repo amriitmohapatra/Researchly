@@ -277,13 +277,13 @@ patterns of good research writing across disciplines, not just epidemiology.
 
 ### S5b — Bake-off
 
-- [ ] `Critic` interface in `packages/core/critics/`
-- [ ] Laya zero-shot spike with `laya-evals` on ~50 labelled paragraphs (expect near-chance; learn the harness)
-- [ ] Task A — flag re-ranker (accept/dismiss data): Laya (ModernBERT-large set aside 2026-10-15). Owner also named **Jev** (TypeSafe AI; a non-generative choice/score/yes-no model, 2026-10-08): a candidate only if its weights run inside our own engine container — as a hosted API it is a cloud model (CLAUDE.md #1) and would see document text (#2). Check licence and local availability when S5 starts
-- [ ] Task B — sentence rhetorical role (baseline 82.6%): Laya (ModernBERT-large set aside 2026-10-15)
-- [ ] Verify licences of PubMed-RCT / CSAbstruct / CaRS-50 before training anything shippable
-- [ ] ONNX INT8 export, SHA-pinned; model cards; `health.py` entries
-- [ ] Promotion gate: precision ≥ 0.85, noise floor ≤ 11/1000w, fire + don't-fire tests
+- [x] `Critic` interface in `packages/core/critics/` — 2026-10-15, `packages/core/researchly/critics/`: `score(question, span, context) → {p, abstain, model_version}`, typed authored questions (`flag-useful`, `sentence-role`), registry, an abstaining null critic answering everything until a model is promoted, `health.critic_status()` (not installed / error / disabled / ready with version and SHA; listed in engine health only once something is installed, so outputs are unchanged); 23 tests; noise floor unchanged
+- [~] Laya zero-shot spike with `laya-evals` on ~50 labelled paragraphs (expect near-chance; learn the harness) — 2026-10-15, `ml/critics/laya/zero_shot.py` (own metrics; "laya-evals" is both a CLI in `laya` and an unrelated PyPI package, see docs/s5-laya.md). **Task B ran here**: 300 held-out sentences, accuracy 0.470 (majority 0.323; TF-IDF 0.637 on the same sentences), ECE 0.069 after temperature, precision ≥ 0.85 at only 9.7% coverage. Task A: plumbing proven on synthetic paragraphs (engine matched 10/13 labels); waits for the owner's labelled paragraphs **(Amriit)**
+- [ ] Task A — flag re-ranker (accept/dismiss data): Laya (ModernBERT-large set aside 2026-10-15). Harness ready (`finetune.py data flags`; telemetry is text-free, so it enters as a per-rule hint, not labels); needs the owner's labels. Owner also named **Jev** (TypeSafe AI; a non-generative choice/score/yes-no model, 2026-10-08): a candidate only if its weights run inside our own engine container — as a hosted API it is a cloud model (CLAUDE.md #1) and would see document text (#2). Check licence and local availability when S5 starts
+- [~] Task B — sentence rhetorical role (baseline 82.6%): Laya (ModernBERT-large set aside 2026-10-15) — 2026-10-15: weak labels from the S5a corpus (6,539 trainable sentences), `finetune.py data roles` / `train` (Laya's trainer; Kaggle T4 or 16 GB Mac, steps in `ml/critics/laya/README.md`). Zero-shot 0.470 (above). Note: the TF-IDF baseline scores 82.6% on PubMed-RCT but 63.7% on the S5a test split; both numbers are recorded. Next: the owner's fine-tune run **(Amriit)**
+- [ ] Verify licences of PubMed-RCT / CSAbstruct / CaRS-50 before training anything shippable — not needed for the Laya path: Task B trains on the S5a CC BY / CC0 corpus instead
+- [~] ONNX INT8 export, SHA-pinned; model cards; `health.py` entries — 2026-10-15: `export_onnx.py` (Laya's exporter recipe, INT8 per tensor, SHA-256 into `critic.json` and the filled card), `MODEL_CARD.md` template, `health.critic_status()` verifies the pin. Not run here (disk and memory; docs/s5-laya.md)
+- [~] Promotion gate: precision ≥ 0.85, noise floor ≤ 11/1000w, fire + don't-fire tests — 2026-10-15: `ml/critics/laya/gate.py` checks card, registry `ship_model`, held-out precision ≥ 0.85 with ≥ 20 kept, Task B baseline, ECE reported, fire/don't-fire tests naming the model, noise floor ≤ 11, SHA pin, health entry, no pickles; tested both ways. Nothing to gate yet
 - [ ] **Exit check:** a model ships, or this file records "not shipped, because …"
 
 ## S6 — Reach

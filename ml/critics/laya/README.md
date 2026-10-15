@@ -133,6 +133,12 @@ tests name a model yet, and the noise floor (11.89) is above 11.
    precision ≥ 0.85 on held-out flags with at least 20 kept, so plan on
    more labels (the guide suggests 300–500 paragraphs for a learned critic).
 
+If memory is tight (the engine with LanguageTool plus Laya is ~5 GB), run
+the flags in two stages: `zero_shot.py flags … --export-items ~/flag-items.jsonl`
+with the engine's Python, then `zero_shot.py flags --items ~/flag-items.jsonl
+--out …` in the Laya venv. The items file holds your paragraphs: keep it
+local. For long CPU runs, `--cache ~/laya-answers.jsonl` makes a run resumable.
+
 The flags are re-found by re-checking each paragraph exactly as the Label
 page does; if the engine has changed since you labelled, a label whose rule
 no longer sits at its position is skipped and counted.
