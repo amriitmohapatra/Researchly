@@ -5,6 +5,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@researchly/contract": path.resolve(import.meta.dirname, "../../packages/contract/src/index.ts"),
+      "@researchly/design-tokens": path.resolve(import.meta.dirname, "../../packages/design-tokens/dist/tokens.ts"),
       "client-only": path.resolve(import.meta.dirname, "tests/unit/stubs/empty.ts"),
       "@": path.resolve(import.meta.dirname, "."),
     },

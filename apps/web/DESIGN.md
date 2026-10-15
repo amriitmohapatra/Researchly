@@ -374,7 +374,7 @@ jump.
   or approximated while reading. A reader of the PDF can tell what version
   and which parts were assessed without the app.
 - Light ink only: a grey tint on highlights, an underline whose style says
-  the category (solid, double, dotted, dashed), bold numbers, no colour by
+  the category (solid, dashed, dotted, wavy), bold numbers, no colour by
   verdict, no meters. A4 and Letter both fit; the two columns are a grid,
   so they flow across pages together.
 - The report is mounted only while printing (the button, or the browser's
@@ -401,10 +401,82 @@ jump.
   cream.
 - The four categories use the Okabe-Ito colour-blind-safe palette and are
   always encoded four ways: colour, label, icon shape, underline style
-  (Correction solid, Improvement double, Convention dotted, Preference
-  dashed). Conventions are green-teal, never red. Health notices are blue,
-  never red.
+  (Correction solid, Improvement dashed, Convention dotted, Preference
+  wavy; S4d R2 made these the patterns every surface draws). Conventions
+  are green-teal, never red. Health notices are blue, never red.
+- Category colours come **only** from the design tokens
+  (`packages/design-tokens`, next section): `app/layout.tsx` loads the
+  generated `tokens.css` before `globals.css`, and `globals.css` reads
+  `--rl-*` variables. It writes no category colour of its own.
 - AA contrast in light and dark, checked by axe in the e2e suite.
+
+## Design tokens (S4d R2)
+
+One file, `packages/design-tokens/tokens.json`, is the design language of
+every surface: this site, the Word pane (`/word`) and the desktop clients.
+`node packages/design-tokens/scripts/build.mjs` generates
+`dist/tokens.css` (custom properties: light by default, dark under
+`prefers-color-scheme` unless `data-theme="light"`, and always under
+`data-theme="dark"`), `dist/tokens.ts` (typed map with icon names, Word
+annotation colours and the six states), `dist/ResearchlyTokens.swift` and
+`dist/ResearchlyTokens.cs`. Never edit `dist/` by hand: `--check` (in this
+app's lint and in CI) fails when it is stale.
+
+Three tiers:
+
+1. **Primitive hues**: Researchly's own ramps, taken from this site's
+   palette (paper, slate, night, navy, azure, vermillion, blue, green,
+   orchid, amber). No mode; only the tiers below use them.
+2. **Semantic roles**: `surface.page|raised|sunken`, `text.primary|
+   secondary|on-accent`, `line.hairline|strong`, `accent`, and the roles
+   `correction`, `improvement`, `convention`, `preference`, `focus`,
+   `warning`, `offline`, each with `strong` (lines, rails, marks),
+   `subtle` (tints) and `text`. CSS: `--rl-correction-strong`.
+3. **Component tokens**: `underline.<category>` (colour, pattern,
+   thickness), `highlight.<category>`, `card.rail.<category>`,
+   `badge.<category>.text|background`, `widget.surface|border|mark|ring|
+   warning|offline` and `widget.badge.background|text`. CSS:
+   `--rl-underline-preference-style`, `--rl-card-rail-convention`.
+
+Every semantic and component colour has a light **and** a dark value. The
+generator refuses (and the package's tests fail) when one is missing, when
+text falls below 4.5:1 against the page, a card, a sunken panel or its own
+tint, or when an underline, rail or mark falls below 3:1 against the page
+or a card, in either mode. That floor moved one colour: the Preference line
+is `#c06c9b` (3.28:1 on the paper) where it was `#cc79a7` (2.80:1).
+
+Each category names its icon (ours: circle-cross, arrow-up, open-book,
+sliders, as `CategoryIcon` draws them; an SF Symbol and a Segoe glyph for the
+native clients), its underline pattern (solid, dashed, dotted,
+wavy-dotted; CSS draws the last as wavy) and its Word annotation colour
+scheme (Correction Red, Improvement Blue, Convention Green, Preference
+Lavender). The page's neutrals (`--bg`, `--ink`, …) keep their names here
+and match the tokens' surface and text roles (a unit test holds them
+equal).
+
+## The six states (S4d R2)
+
+Every surface that checks while the writer writes shows one of six states,
+with one look each (`lib/check-state.ts`, `components/StatusMark.tsx`;
+labels from the tokens, so the website, Word and the desktop clients say
+the same words):
+
+| State | Meaning | Look | Words |
+|---|---|---|---|
+| `hidden` | Not eligible here, or paused | Nothing drawn (a screen reader hears "Paused") | Paused |
+| `checking` | A check is in flight for the latest revision | A ring in `widget.ring`; turning, static under reduced motion | Checking… |
+| `issues` | Visible suggestions | A count badge (`widget.badge`) | 3 suggestions / 1 suggestion |
+| `clear` | Checked, nothing to show | A plain mark with a tick (`widget.mark`) | Nothing to suggest |
+| `partial` | Checked, but a tier was down | The mark with a small warning sign (`widget.warning`); the reason in the label | Checked in part |
+| `offline` | The engine can’t be reached or refused | The mark crossed out (`widget.offline`); the next step in the label | Can’t check right now |
+
+Transitions (a pure reducer, unit-tested): an edit goes to `checking`; a
+reply for the latest revision goes to `issues`, `clear` or `partial` (a
+reply for an older revision is dropped); a failure goes to `offline` and
+retries after 2, 4, 8, 16 and 30 s, then every 30 s, staying `offline`
+while a retry is in flight; any success leaves `offline`; leaving the
+field or pausing goes to `hidden`. Not yet wired into the editor or the
+Word pane (R4, R5 do that).
 
 ## Shape and density
 

@@ -62,11 +62,32 @@ export type ReadingSummary = S["ReadingSummary"];
 export type TableEvidence = S["TableEvidence"];
 export type SetAside = S["SetAside"];
 
+// The live check (S4d R3): POST /v1/check-paragraphs.
+export type CheckParagraphsRequest = S["CheckParagraphsRequest"];
+export type CheckParagraphsResponse = S["CheckParagraphsResponse"];
+export type LiveParagraph = S["LiveParagraph"];
+export type LiveParagraphResult = S["LiveParagraphResult"];
+export type LiveSuggestion = S["LiveSuggestion"];
+export type LiveState = S["LiveState"];
+export type LiveOptions = S["LiveOptions"];
+
 /** Mirrors schemas.MAX_CONTENT_CHARS; checked client-side for usability only. */
 export const MAX_CONTENT_CHARS = 1_000_000;
 
 /** Mirrors schemas.MAX_WORD_PARAGRAPHS (/v1/analyze-word). */
 export const MAX_WORD_PARAGRAPHS = 50_000;
+
+/** Mirrors schemas.MAX_LIVE_PARAGRAPHS (/v1/check-paragraphs). */
+export const MAX_LIVE_PARAGRAPHS = 50;
+
+/** Mirrors schemas.MAX_LIVE_CHARS: the paragraphs of one live check, together. */
+export const MAX_LIVE_CHARS = 20_000;
+
+/** Mirrors schemas.MAX_LIVE_HEADING_CHARS. */
+export const MAX_LIVE_HEADING_CHARS = 300;
+
+/** Mirrors schemas.PARAGRAPH_ID_PATTERN; ids are 1–64 characters. */
+export const PARAGRAPH_ID_PATTERN = /^[A-Za-z0-9._:-]{1,64}$/;
 
 /** Article types a caller can check as (S4), in the engine's display order; `GET /v1/rules` carries their labels. */
 export const DOCUMENT_TYPES = [
