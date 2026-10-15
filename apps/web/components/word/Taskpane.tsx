@@ -287,7 +287,7 @@ export function Taskpane() {
   const revealRef = useRef<(id: string, how: "click" | "hover") => void>(() => undefined);
   const popupAcceptRef = useRef<(id: string, revision: string) => void>(() => undefined);
   const popupRejectRef = useRef<(id: string) => void>(() => undefined);
-  const settingsRef = useRef({ underlinesOn, live: engine === "cloud" });
+  const settingsRef = useRef({ underlinesOn, live: true });
 
   /* ---------- start-up: where are we running? ---------- */
 
@@ -337,10 +337,15 @@ export function Taskpane() {
     controllerRef.current?.setEnabled(underlinesOn);
   }, [underlinesOn]);
 
-  // "This computer" has no live check: there, underlines come from Check document only.
+  // Live checks run on either engine; an older "This computer" without the route (404) falls back
+  // to underlines after Check document, and says so in Settings.
+  const [localLiveMissing, setLocalLiveMissing] = useState(false);
   useEffect(() => {
-    controllerRef.current?.setLive(engine === "cloud");
+    setLocalLiveMissing(false);
   }, [engine]);
+  useEffect(() => {
+    controllerRef.current?.setLive(!(engine === "local" && localLiveMissing));
+  }, [engine, localLiveMissing]);
 
   // Which tiers the chosen engine is running, before any check (no text is sent).
   useEffect(() => {
@@ -416,11 +421,14 @@ export function Taskpane() {
   useEffect(() => {
     // Word's events call these between renders: keep them current.
     dismissedRef.current = dismissed;
-    settingsRef.current = { underlinesOn, live: engine === "cloud" };
+    settingsRef.current = { underlinesOn, live: !(engine === "local" && localLiveMissing) };
     liveChoicesRef.current = liveChoices;
     scopesRef.current = scopes;
-    liveSendRef.current = (req, signal) =>
-      checkParagraphs(req, { engineUrl: engineUrlFor(engine), auth: engine === "local" ? null : getEngineAuth(), signal });
+    liveSendRef.current = async (req, signal) => {
+      const r = await checkParagraphs(req, { engineUrl: engineUrlFor(engine), auth: engine === "local" ? null : getEngineAuth(), signal });
+      if (!r.ok && engine === "local" && r.error.status === 404) setLocalLiveMissing(true);
+      return r;
+    };
     probeRef.current = () =>
       engineHealth(engineUrlFor(engine))
         .then((r) => r.ok)
@@ -1479,8 +1487,8 @@ export function Taskpane() {
                       <span>Live underlines</span>
                     </label>
                     <p id={ids.underlinesHelp} className="help" data-testid="underlines-help">
-                      {engine === "local"
-                        ? "With this computer’s engine, underlines appear after Check document; they are not updated as you write."
+                      {engine === "local" && localLiveMissing
+                        ? "Researchly on this computer is older than underlines-as-you-write. Update it to see them after you pause; until then they appear after Check document."
                         : "Underlines suggestions in the document after you pause typing. They live only in the open document and are never saved in the file."}
                     </p>
                   </div>

@@ -321,16 +321,31 @@ test.describe("Word: underlines in the document", () => {
     expect((await wordState(page)).annotations).toEqual([]);
   });
 
-  test("“This computer”: no live check there; Check document still draws the underlines", async ({ page }) => {
+  test("“This computer”: live checks go to the local engine, without a sign-in", async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem("researchly.word.engine", "local"));
     await fakeOffice(page, M365);
     await mockWordEngine(page, "http://localhost:3517");
     const live = await mockLiveEngine(page, "http://localhost:3517");
     await page.goto("/word");
+    await expect.poll(() => underlines(page)).toEqual(INITIAL);
+    expect(live.length).toBeGreaterThan(0);
+    expect(live[0]!.authorization).toBeUndefined();
+  });
+
+  test("an older “This computer” without live checks (404): Settings says so, and Check document still draws the underlines", async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem("researchly.word.engine", "local"));
+    await fakeOffice(page, M365);
+    await mockWordEngine(page, "http://localhost:3517");
+    const live = await mockLiveEngine(page, "http://localhost:3517", {
+      respond: (_req, route) => route.fulfill({ status: 404, headers: { "access-control-allow-origin": "*" }, contentType: "application/json", body: JSON.stringify({ detail: "Not Found" }) }),
+    });
+    await page.goto("/word");
+    await expect.poll(() => live.length).toBeGreaterThan(0);
     await page.getByTestId("tp-settings").locator("summary").click();
-    await expect(page.getByTestId("underlines-help")).toContainText("underlines appear after Check document");
-    await page.waitForTimeout(500);
-    expect(live).toHaveLength(0);
+    await expect(page.getByTestId("underlines-help")).toContainText("older than underlines-as-you-write");
+    const before = live.length;
+    await page.waitForTimeout(2500);
+    expect(live.length).toBe(before); // no retry loop against a route that is not there
     await page.getByTestId("check-document").click();
     await expect(page.getByRole("heading", { name: "8 suggestions" })).toBeVisible();
     await expect.poll(async () => (await wordState(page)).annotations.length).toBe(6);

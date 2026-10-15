@@ -30,6 +30,8 @@ export interface CheckError {
   message: string;
   /** The engine's machine-readable error code, when it sent one. */
   code?: string;
+  /** The HTTP status, when there was a response (e.g. 404: an engine too old for a route). */
+  status?: number;
   /** Present when the engine returned one; shown so the user can report it. */
   requestId?: string;
   /** Whether a plain Retry is a sensible next step. */
@@ -64,7 +66,7 @@ export function errorFromResponse(
 ): CheckError {
   const parsed = isErrorResponse(body) ? body.error : undefined;
   const requestId = parsed?.request_id || headers?.get("x-request-id") || undefined;
-  const e = mapError(status, parsed, requestId, headers, context);
+  const e = { ...mapError(status, parsed, requestId, headers, context), status };
   return parsed?.code ? { ...e, code: parsed.code } : e;
 }
 
