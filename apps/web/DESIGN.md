@@ -354,6 +354,28 @@ jump.
   English." in the engine's own words (singular for one). Only the word
   count when nothing was set aside; nothing from an engine without it. The
   same line in the Word pane's results. Warnings stay where they were.
+- The coverage summary (2026-10-15) extends the same line, never a second
+  one: "Checked 4,210 words, including 3 footnotes." (LaTeX footnotes, read
+  where they are cited); "Not checked: 3 footnotes · 1 text box · 2 headers
+  or footers." (what a .docx upload leaves out; an Overleaf project's
+  included files that could not be read); "Researchly checks English
+  only." when a paragraph was set aside as another language. In Word the
+  pane adds what Word itself counts without reading it (footnotes and
+  endnotes, comments, text boxes, where the host's API can count them).
+  Counts and fixed labels only.
+- **Main file** (2026-10-15): an Overleaf project with more than one file
+  that starts a document gets a "Main file" select in the file panel,
+  below the warnings, set to the file that was read, with one help line
+  ("This project has 2 files that each start a document. Researchly
+  checked main.tex; choose another to check it instead."). Choosing one
+  re-checks the same upload with that root; later re-checks keep it. No
+  select when there was no choice to make.
+- **"This computer" in Word's Settings** (2026-10-15): under the engine
+  choice, one help line from the local server's own health says what it
+  checks and what it contacts ("This computer checks writing rules,
+  spelling, grammar and whole-document checks, and builds the reviewer’s
+  brief and the map. It sends nothing over the network."), naming a check
+  that is off and why. Only when This computer is chosen and answering.
 
 ## The printable report (S4)
 

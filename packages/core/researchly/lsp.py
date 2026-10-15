@@ -19,8 +19,12 @@ What it does:
 - Reads `.researchly.toml` next to the file (or in the workspace root):
   disabled rules and show_preferences, exactly like the CLI.
 
-Everything runs locally; nothing leaves the machine. All analysis is
-synchronous CPU work on small documents — the debounce keeps it snappy.
+Everything runs locally; nothing leaves the machine (unless grammar is
+pointed at a LanguageTool server with RESEARCHLY_LT_URL). On start the
+server logs one line saying what it checks and what it contacts, and the
+`researchly.capabilities` command returns it as data (Codex review #11;
+researchly/capabilities.py). All analysis is synchronous CPU work on small
+documents — the debounce keeps it snappy.
 """
 
 from __future__ import annotations
@@ -204,6 +208,33 @@ def code_action(ls: ResearchlyServer, params: lsp.CodeActionParams):
                 arguments=[uri, str(rule_id)]),
         ))
     return actions
+
+
+def capabilities_report() -> dict:
+    """What the editor extension checks on this computer and what it
+    contacts (Codex review #11): the same description `researchly doctor`
+    prints and the local server's /v1/health carries, for route "lsp"
+    (no reviewer's brief or map in the editor)."""
+    from . import capabilities
+    cfg = config_mod.load()
+    return capabilities.describe(cfg, api.status(cfg, probe=False), "lsp")
+
+
+@server.feature(lsp.INITIALIZED)
+def initialized(ls: ResearchlyServer, params: lsp.InitializedParams):
+    # Said once, in the extension's output channel: what runs and where
+    # the text goes. Never fails the session.
+    try:
+        ls.show_message_log("Researchly: " + capabilities_report()["summary"])
+    except Exception as e:
+        ls.show_message_log(f"Researchly: could not describe the checks "
+                            f"({type(e).__name__})", lsp.MessageType.Warning)
+
+
+@server.command("researchly.capabilities")
+def capabilities_command(ls: ResearchlyServer, _args):
+    """workspace/executeCommand: the capability description, as data."""
+    return capabilities_report()
 
 
 @server.command("researchly.muteRule")

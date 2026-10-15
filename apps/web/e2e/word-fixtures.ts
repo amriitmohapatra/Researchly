@@ -6,6 +6,7 @@
 import type { Page, Route } from "@playwright/test";
 import type {
   AnalyzeWordRequest,
+  Capabilities,
   AnalyzeWordResponse,
   CheckParagraphsRequest,
   CheckParagraphsResponse,
@@ -502,11 +503,12 @@ export function wordResponseFor(req: AnalyzeWordRequest): AnalyzeWordResponse {
   };
 }
 
-export const healthResponse = (tiers: TierHealth[] = HEALTHY) =>
+export const healthResponse = (tiers: TierHealth[] = HEALTHY, capabilities?: Capabilities) =>
   ({
     status: tiers.some((t) => !t.ok && t.tier !== "gec") ? "degraded" : "ok",
     tiers,
     engine: reviseResponse.engine,
+    ...(capabilities ? { capabilities } : {}),
   }) satisfies HealthResponse;
 
 /* ---------- page setup ---------- */
@@ -546,6 +548,8 @@ export async function mockWordEngine(
   opts: {
     respond?: (req: AnalyzeWordRequest, route: Route) => Promise<void> | void;
     health?: TierHealth[];
+    /** What the engine says it checks and contacts (GET /v1/health `capabilities`). */
+    capabilities?: Capabilities;
     rules?: RuleInfo[];
   } = {},
 ): Promise<WordCall[]> {
@@ -555,7 +559,7 @@ export async function mockWordEngine(
     if (req.method() === "OPTIONS") return route.fulfill({ status: 204, headers: CORS });
     const path = new URL(req.url()).pathname;
     if (path === "/v1/health") {
-      return route.fulfill({ status: 200, headers: CORS, contentType: "application/json", body: JSON.stringify(healthResponse(opts.health)) });
+      return route.fulfill({ status: 200, headers: CORS, contentType: "application/json", body: JSON.stringify(healthResponse(opts.health, opts.capabilities)) });
     }
     if (path === "/v1/rules") {
       return route.fulfill({

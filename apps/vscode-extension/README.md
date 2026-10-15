@@ -66,7 +66,10 @@ section-aware rules calibrate accordingly.
 
 - **No underlines** → check the "Researchly" output channel (View → Output).
   Most common: `pygls` not installed in the Python that `python3` resolves
-  to, or `prototypePath` pointing at the wrong folder.
+  to, or `prototypePath` pointing at the wrong folder. On start the channel
+  logs one line saying what the extension checks and that it sends nothing
+  over the network (or names what it contacts); `python3.10 -m researchly
+  doctor` checks the whole installation (`docs/local-mode.md`).
 - **Wrong Python** → set `researchly.pythonPath` to the full path (e.g.
   `/usr/local/bin/python3.10`), then run *Researchly: Restart language
   server*.

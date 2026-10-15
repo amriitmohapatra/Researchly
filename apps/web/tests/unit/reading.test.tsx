@@ -13,7 +13,9 @@ describe("the reading summary", () => {
         { kind: "other_language", count: 1, label: "paragraphs not in English" },
       ],
     };
-    expect(readingSentence(reading)).toBe("Checked 4,210 words. Set aside: 2 lines of code · 1 paragraph not in English.");
+    expect(readingSentence(reading)).toBe(
+      "Checked 4,210 words. Set aside: 2 lines of code · 1 paragraph not in English. Researchly checks English only.",
+    );
   });
 
   it("says only the word count when nothing was set aside", () => {
@@ -49,5 +51,49 @@ describe("the reading summary", () => {
     expect(html).toContain('class="reading-line muted"');
     expect(html).toContain('data-testid="reading-summary"');
     expect(html).toContain("&lt;b&gt;lines&lt;/b&gt; of code");
+  });
+});
+
+describe("the coverage summary (Codex review #5)", () => {
+  it("says what a file's reading left out: footnotes, text boxes, headers, in the singular for one", () => {
+    const reading: Reading = {
+      words_checked: 2310,
+      set_aside: [],
+      not_checked: [
+        { kind: "footnotes", count: 3, label: "footnotes" },
+        { kind: "text_boxes", count: 1, label: "text boxes" },
+        { kind: "headers_footers", count: 2, label: "headers or footers" },
+        { kind: "comments", count: 1, label: "comments" },
+      ],
+    };
+    expect(readingSentence(reading)).toBe("Checked 2,310 words. Not checked: 3 footnotes · 1 text box · 2 headers or footers · 1 comment.");
+  });
+
+  it("says LaTeX footnotes were read where they are cited", () => {
+    expect(
+      readingSentence({ words_checked: 900, set_aside: [], included: [{ kind: "footnotes", count: 1, label: "footnotes" }] }),
+    ).toBe("Checked 900 words, including 1 footnote.");
+  });
+
+  it("names an Overleaf project's unreadable inputs", () => {
+    expect(
+      readingSentence({
+        words_checked: 50,
+        not_checked: [{ kind: "skipped_files", count: 2, label: "included files that could not be read" }],
+      }),
+    ).toBe("Checked 50 words. Not checked: 2 included files that could not be read.");
+  });
+
+  it("adds what the Word pane counted itself, after the engine's own", () => {
+    const reading: Reading = { words_checked: 120, set_aside: [{ kind: "code", count: 1, label: "lines of code" }] };
+    expect(
+      readingSentence(reading, [
+        { kind: "footnotes", count: 2, label: "footnotes" },
+        { kind: "endnotes", count: 0, label: "endnotes" },
+        { kind: "text_boxes", count: 1, label: "text boxes" },
+      ]),
+    ).toBe("Checked 120 words. Set aside: 1 line of code. Not checked: 2 footnotes · 1 text box.");
+    const html = renderToStaticMarkup(<ReadingSummary reading={reading} notChecked={[{ kind: "comments", count: 4, label: "comments" }]} />);
+    expect(html).toContain("Not checked: 4 comments.");
   });
 });

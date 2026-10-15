@@ -425,6 +425,66 @@ test.describe("uploads", () => {
     expect(await axeSerious(page)).toEqual([]);
   });
 
+  test("an Overleaf .zip with two main files: the one read is named, another can be chosen; the reading line says what was left out", async ({
+    page,
+  }) => {
+    // Codex review #5: no silent guess of the main .tex file, and what the check did not read, in counts.
+    const reading = {
+      words_checked: 1204,
+      set_aside: [],
+      not_checked: [{ kind: "skipped_files" as const, count: 1, label: "included files that could not be read" }],
+      included: [{ kind: "footnotes" as const, count: 2, label: "footnotes" }],
+    };
+    const answer = (main: string) => ({
+      ...zipResponse,
+      reading,
+      document: { ...zipResponse.document, main_file: main, main_candidates: ["cover-letter.tex", "main.tex"] },
+    });
+    await seedSession(page);
+    await mockSupabase(page);
+    const calls = await mockEngineAuth(page, (_c, route, n) => reply(route, 200, answer(n === 1 ? "main.tex" : "cover-letter.tex")));
+    await page.goto("/");
+    await expect(page.getByTestId("account-button")).toBeVisible();
+    await page.getByTestId("file-input").setInputFiles({ name: "paper.zip", mimeType: "application/zip", buffer: Buffer.from("PK synthetic") });
+    await expect(page.getByRole("heading", { name: "2 suggestions" })).toBeVisible();
+    await expect(page.getByTestId("reading-summary")).toHaveText(
+      "Checked 1,204 words, including 2 footnotes. Not checked: 1 included file that could not be read.",
+    );
+    const choice = page.getByTestId("main-file");
+    await expect(choice).toContainText("This project has 2 files that each start a document. Researchly checked main.tex");
+    await expect(page.getByLabel("Main file")).toHaveValue("main.tex");
+    expect(JSON.parse(calls[0]!.headers["x-researchly-options"]!)).not.toHaveProperty("main_file");
+
+    await page.getByLabel("Main file").selectOption("cover-letter.tex");
+    await expect(choice).toContainText("Researchly checked cover-letter.tex");
+    expect(calls).toHaveLength(2);
+    expect(JSON.parse(calls[1]!.headers["x-researchly-options"]!).main_file).toBe("cover-letter.tex");
+    expect(await axeSerious(page)).toEqual([]);
+  });
+
+  test("a .docx with footnotes and a text box: the reading line says they were not checked", async ({ page }) => {
+    const docx = {
+      ...mdResponse,
+      reading: {
+        words_checked: 87,
+        set_aside: [],
+        not_checked: [
+          { kind: "footnotes" as const, count: 3, label: "footnotes" },
+          { kind: "text_boxes" as const, count: 1, label: "text boxes" },
+        ],
+      },
+      document: { ...mdResponse.document, filename: "chapter.docx", format: "docx" as const },
+    };
+    await seedSession(page);
+    await mockSupabase(page);
+    await mockEngineAuth(page, (_c, route) => reply(route, 200, docx));
+    await page.goto("/");
+    await expect(page.getByTestId("account-button")).toBeVisible();
+    await page.getByTestId("file-input").setInputFiles({ name: "chapter.docx", mimeType: "application/octet-stream", buffer: Buffer.from("PK synthetic") });
+    await expect(page.getByTestId("reading-summary")).toHaveText("Checked 87 words. Not checked: 3 footnotes · 1 text box.");
+    await expect(page.getByTestId("main-file")).toHaveCount(0);
+  });
+
   test("drag and drop onto the editor checks the file", async ({ page }) => {
     await seedSession(page);
     await mockSupabase(page);

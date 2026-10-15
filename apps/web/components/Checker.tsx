@@ -204,6 +204,8 @@ export function Checker() {
   const prefsTouched = useRef(false);
   /** The file whose results are on screen, read synchronously (state may lag inside a running check). */
   const shownFileRef = useRef<File | null>(null);
+  /** An Overleaf project's main .tex file, when the writer chose one for this file (Codex review #5). */
+  const mainFileRef = useRef<{ file: File; name: string } | null>(null);
   /** Which results are on screen ("p3", "f1"), read by a mute that completes after a re-render. */
   const resultsKeyRef = useRef<string | null>(null);
   const dragDepth = useRef(0);
@@ -373,7 +375,11 @@ export function Checker() {
         const options = { showPreferences: prefs, documentType: type, spelling: spell, review: true, narrative: true, checklist: list, mode: "revise" as const, signal };
         return target.kind === "paste"
           ? analyze({ ...options, content: submitted, format: submittedFormat }, undefined, auth)
-          : analyzeFile({ ...options, file: target.file }, undefined, auth);
+          : analyzeFile(
+              { ...options, file: target.file, mainFile: mainFileRef.current?.file === target.file ? mainFileRef.current.name : null },
+              undefined,
+              auth,
+            );
       };
       if (target.kind === "paste") live.fullCheckStarted();
       await session.start(task, {
@@ -746,6 +752,12 @@ export function Checker() {
               </>
             }
             checklistControl={checklistControl}
+            onMainFile={(name) => {
+              const file = fileChecked?.file;
+              if (!file) return;
+              mainFileRef.current = { file, name };
+              void recheck();
+            }}
             onChooseFile={chooseFile}
             onCancel={cancelCheck}
             onBack={backToEditor}
