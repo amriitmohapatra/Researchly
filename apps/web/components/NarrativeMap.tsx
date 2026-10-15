@@ -1,11 +1,24 @@
 "use client";
 
-import { useId } from "react";
-import type { HedgingPoint, NarrativeMove, NarrativeSection } from "@researchly/contract";
+import { useId, type ReactNode } from "react";
+import type { EvidenceSpan, HedgingPoint, MissingLink, NarrativeMove, NarrativeSection, ReviewerUnit } from "@researchly/contract";
+import { showKey } from "@/lib/evidence";
 import type { NarrativeState } from "@/lib/profiles";
+import { Quote, shortQuote, type ShowInText } from "./EvidenceLinks";
 import { LessonDisclosure } from "./LessonDisclosure";
 
+/** Where a move's or a link's sentence can be shown in the text (Codex review #3). */
+interface Showing {
+  onShow: ShowInText | null;
+  canShow?: (span: EvidenceSpan) => boolean;
+}
+
 interface Props {
+  /** "Show in text" for each placed sentence; absent on paper. */
+  onShowInText?: ShowInText | null;
+  canShow?: (span: EvidenceSpan) => boolean;
+  /** What the check assumed about how much of the document this is, with its override (Codex review #4). */
+  scopeLine?: ReactNode;
   state: NarrativeState;
   /** When the surface has a Draft/Revise control: switches to Revise and checks again. */
   onSwitchToRevise?: () => void;
@@ -40,7 +53,7 @@ const per100 = new Intl.NumberFormat("en-GB", { minimumFractionDigits: 1, maximu
  * as a table of labelled values, and the source set like a card's. Never a
  * score: no counts beyond "2 of 5 moves", no meters, no colour by verdict.
  */
-export function NarrativeMap({ state, onSwitchToRevise, variant = "screen" }: Props) {
+export function NarrativeMap({ state, onSwitchToRevise, variant = "screen", onShowInText = null, canShow, scopeLine = null }: Props) {
   // Heading ids from useId: the printable report mounts a second map beside the screen's.
   const idBase = useId();
   const linksTitle = `${idBase}-links`;
@@ -69,16 +82,35 @@ export function NarrativeMap({ state, onSwitchToRevise, variant = "screen" }: Pr
   const hedging = n.hedging ?? [];
   const unmapped = (n.unmapped ?? []).filter((u) => u.trim());
   const print = variant === "print";
+  const showing: Showing = { onShow: print ? null : onShowInText, canShow };
+  const units = n.units ?? [];
+  const unitsTitle = `${idBase}-units`;
   return (
     <div className={`nmap${print ? " nmap-print" : ""}`} data-testid="narrative-map">
       <p className="help nmap-note" data-testid="narrative-note">
         {n.note}
       </p>
+      {scopeLine}
+      {units.length > 0 ? (
+        <section className="nmap-units" aria-labelledby={unitsTitle} data-testid="narrative-units">
+          <h4 id={unitsTitle} className="col-title">
+            Comments and replies
+          </h4>
+          <ol className="nmap-units-list">
+            {units.map((u, i) => (
+              <li key={`${u.label}-${i}`} className="nmap-unit" data-testid="narrative-unit">
+                <Unit unit={u} index={i} showing={showing} />
+              </li>
+            ))}
+          </ol>
+          {print ? null : <LessonDisclosure learnRef={units[0]!.learn_ref} />}
+        </section>
+      ) : null}
       {n.sections.length > 0 ? (
         <ol className="nmap-sections">
-          {n.sections.map((s) => (
-            <li key={s.section} className="nmap-section" data-testid="narrative-section" data-section={s.section}>
-              <Strip section={s} print={print} />
+          {n.sections.map((s, i) => (
+            <li key={`${s.section}-${i}`} className="nmap-section" data-testid="narrative-section" data-section={s.section}>
+              <Strip section={s} print={print} showing={showing} />
             </li>
           ))}
         </ol>
@@ -103,7 +135,7 @@ export function NarrativeMap({ state, onSwitchToRevise, variant = "screen" }: Pr
                   <span className="nmap-link-section">{l.label}</span>
                 </p>
                 <p className="nmap-link-msg">{l.message}</p>
-                <LinkEvidence sentences={l.evidence ?? []} print={print} />
+                <LinkEvidence link={l} print={print} showing={showing} where={`link-${i}`} />
                 {print ? null : <LessonDisclosure learnRef={l.learn_ref} />}
                 <p className="card-source">
                   <span className="card-source-label">Source:</span> <cite>{l.source}</cite>
@@ -138,7 +170,30 @@ function movesPhrase(s: NarrativeSection): string {
   return `${s.present} of ${s.expected} ${s.expected === 1 ? "move" : "moves"} present`;
 }
 
-function Strip({ section: s, print }: { section: NarrativeSection; print: boolean }) {
+/** One reviewer comment beside the reply under it: described, never judged (Codex review N5). */
+function Unit({ unit: u, index, showing }: { unit: ReviewerUnit; index: number; showing: Showing }) {
+  return (
+    <>
+      <p className="nmap-unit-label">{u.label}</p>
+      <div className="evl-item evl-pair">
+        <div className="evl-side">
+          <p className="evl-label">The comment</p>
+          <Quote span={u.comment} where={`unit-${index}-comment`} onShow={showing.onShow} canShow={showing.canShow} />
+        </div>
+        <div className="evl-side evl-evidence">
+          <p className="evl-label">The reply</p>
+          {u.reply ? (
+            <Quote span={u.reply} where={`unit-${index}-reply`} onShow={showing.onShow} canShow={showing.canShow} />
+          ) : (
+            <p className="evl-note">No reply was recognised under this comment.</p>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+function Strip({ section: s, print, showing }: { section: NarrativeSection; print: boolean; showing: Showing }) {
   const open = s.moves.filter((m) => m.status !== "present");
   const present = s.moves.filter((m) => m.status === "present" && (m.evidence ?? "").trim());
   return (
@@ -182,7 +237,7 @@ function Strip({ section: s, print }: { section: NarrativeSection; print: boolea
                   <figcaption className="nmap-frame-caption">A frame to fill in; the words are yours.</figcaption>
                 </figure>
               ) : null}
-              {m.status === "out_of_order" && (m.evidence ?? "").trim() ? <Evidence move={m} print={print} /> : null}
+              {m.status === "out_of_order" && (m.evidence ?? "").trim() ? <Evidence move={m} print={print} showing={showing} /> : null}
               {print ? null : <LessonDisclosure learnRef={m.learn_ref} />}
               <p className="card-source">
                 <span className="card-source-label">Source:</span> <cite>{m.source}</cite>
@@ -191,7 +246,7 @@ function Strip({ section: s, print }: { section: NarrativeSection; print: boolea
           ))}
           {present.map((m) => (
             <li key={m.id} className="nmap-detail nmap-detail-present" data-testid="narrative-present" data-move={m.id}>
-              <Evidence move={m} print={print} label />
+              <Evidence move={m} print={print} showing={showing} label />
               {/* An opening sentence taken as this move says so: an assumption, not proof (Codex review N5). */}
               {m.note.trim() ? (
                 <p className="nmap-detail-note muted" data-testid="narrative-present-note">
@@ -207,11 +262,24 @@ function Strip({ section: s, print }: { section: NarrativeSection; print: boolea
 }
 
 /** The writer's own sentence a move rests on: behind a disclosure on screen, open on paper. */
-function Evidence({ move: m, print, label = false }: { move: NarrativeMove; print: boolean; label?: boolean }) {
+function Evidence({
+  move: m,
+  print,
+  showing,
+  label = false,
+}: {
+  move: NarrativeMove;
+  print: boolean;
+  showing: Showing;
+  label?: boolean;
+}) {
   const quote = (
-    <blockquote className="nmap-evidence">
-      <q>{(m.evidence ?? "").trim()}</q>
-    </blockquote>
+    <>
+      <blockquote className="nmap-evidence">
+        <q>{(m.evidence ?? "").trim()}</q>
+      </blockquote>
+      {m.span ? <ShowButton span={m.span} where={`move-${m.id}`} showing={showing} /> : null}
+    </>
   );
   if (print) {
     return (
@@ -246,14 +314,17 @@ function Evidence({ move: m, print, label = false }: { move: NarrativeMove; prin
  * The sentences a missing link concerns, quoted in the serif: behind "Show
  * the sentences" on screen (closed), open on paper. Nothing when there are none.
  */
-function LinkEvidence({ sentences, print }: { sentences: readonly string[]; print: boolean }) {
-  const list = sentences.map((s) => s.trim()).filter(Boolean);
+function LinkEvidence({ link, print, showing, where }: { link: MissingLink; print: boolean; showing: Showing; where: string }) {
+  // Placed sentences when the engine sends them (Codex review #3), else the bare quotes.
+  const spans = (link.spans ?? []).filter((s) => s.text.trim());
+  const list = spans.length > 0 ? spans.map((s) => s.text.trim()) : (link.evidence ?? []).map((s) => s.trim()).filter(Boolean);
   if (list.length === 0) return null;
   const quotes = (
     <ul className="nmap-link-evidence" aria-label="The sentences concerned, quoted from your text">
       {list.map((s, i) => (
         <li key={i} className="nmap-evidence">
           <q>{s}</q>
+          {spans[i] ? <ShowButton span={spans[i]!} where={`${where}-${i}`} showing={showing} /> : null}
         </li>
       ))}
     </ul>
@@ -266,6 +337,27 @@ function LinkEvidence({ sentences, print }: { sentences: readonly string[]; prin
       </summary>
       {quotes}
     </details>
+  );
+}
+
+/** "Show in text" for a placed sentence, where the surface can show it; nothing on paper. */
+function ShowButton({ span, where, showing }: { span: EvidenceSpan; where: string; showing: Showing }) {
+  const { onShow, canShow } = showing;
+  if (!onShow || (canShow && !canShow(span))) return null;
+  const key = showKey(where, span);
+  return (
+    <p className="evl-meta nmap-show">
+      <button
+        type="button"
+        className="btn-link evl-show"
+        data-show-key={key}
+        data-testid="show-evidence"
+        aria-label={`Show in text: ${shortQuote(span.text)}`}
+        onClick={() => onShow(span, key)}
+      >
+        Show in text
+      </button>
+    </p>
   );
 }
 
