@@ -8,7 +8,7 @@ Synthetic text only.
 
 import pytest
 
-from researchly import api, profiles, shapes
+from researchly import api, shapes
 from researchly.discourse import units
 from researchly.document import Document
 from tests.test_explanations import INTERNAL
