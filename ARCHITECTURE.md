@@ -615,6 +615,7 @@ Each record follows the ch. 23.1 format: context, options, decision, and consequ
 - **Consequences:**
   - ML adds a training workbench and evaluation discipline, but nothing on the hot path until a model earns it.
   - If Laya loses the bake-off we lose about a week. If it wins, we get one model that answers many authored questions.
+- **Amendment, 2026-10-15 (owner): Laya only.** "For S5, let's stick to Laya for now (as its open source and free)." The bake-off in decision 2 becomes a single-candidate evaluation: **ModernBERT-large and Jev are set aside** (Laya's English checkpoint is itself ModernBERT-large plus a decision head, so the base weights are the same family). The bar does not move: Laya must clear the promotion gate (decision 4) on its own, and for **Task B the baseline to beat stays the TF-IDF classifier's 82.6%**. Built the same day: the `Critic` interface, registry and abstaining null critic (`researchly/critics/`, `health.critic_status()`), the S5a corpus harvester and manifest (`ml/corpus/`), and the Laya harness (`ml/critics/laya/`: zero-shot, fine-tune, INT8 ONNX export with SHA-256 pin, `gate.py`). Facts, links and the first measurements: `docs/s5-laya.md`. Pickles stay out; the critic folder is read only through its pinned `critic.json`.
 
 ### ADR-07 — Rule #1 stands: no cloud LLMs, no generative drafting
 

@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "note": "Synthetic paragraphs written for the Laya harness (2026-10-15). Not anyone's real writing; planted problems exercise the flag re-ranker plumbing. The owner's real paragraphs stay on the owner's machine and are never committed.",
+  "paragraphs": [
+    {
+      "paragraph": 1,
+      "section": "introduction",
+      "text": "Dengue is a mosquito-borne infection that affects millions of people every year. It is very important to note that the burden falls hardest on cities in the tropics. Previous models has assumed that transmission is constant across seasons, but this is clearly not the case. Little is known about how school holidays change the force of infection."
+    },
+    {
+      "paragraph": 2,
+      "section": "methods",
+      "text": "Weekly case counts were obtained from the national surveillance system for 2015 to 2023. We fitted a renewal-equation model in Stan and the posterior was summarised by its median and 95% credible interval. The generation interval was assumed to follow a gamma distribution with mean 15 days. Convergence were checked with the R-hat statistic and effective sample sizes."
+    },
+    {
+      "paragraph": 3,
+      "section": "results",
+      "text": "The reproduction number fell from 1.8 to 0.9 after the vector control campaign began. In order to compare districts, we ranked them by their peak incidence. Incidence was higest in the northern districts, where rainfall was also greatest. Figure 2 shows the the seasonal pattern in each district."
+    },
+    {
+      "paragraph": 4,
+      "section": "discussion",
+      "text": "Our results suggest that school holidays may possibly reduce transmission, although it could perhaps be argued that other factors might also play a role. The effect was strongest in large cities. This finding is consistent with earlier work on influenza. However, our data could not separate the effect of holidays from the effect of rainfall."
+    },
+    {
+      "paragraph": 5,
+      "section": "abstract",
+      "text": "Seasonal changes in contact patterns may shape dengue transmission. We fitted a renewal model to nine years of weekly cases from twelve districts. The reproduction number dropped by a third during school holidays. Timing vector control before the holidays could reduce the yearly peak."
+    },
+    {
+      "paragraph": 6,
+      "section": "conclusion",
+      "text": "In conclusion, it is clear that school holidays has a large impact on dengue transmission in every setting. Due to the fact that holidays are predictable, public health teams can plan around them. Future work should test whether these findings holds in rural areas."
+    }
+  ]
+}
