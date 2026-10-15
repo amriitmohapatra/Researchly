@@ -460,6 +460,29 @@ _CARDS = (
          "catches doubled words the eye skips.",
          "§6+LanguageTool+symspellpy",
          rules=("S001", "S002", "LT001", "W207", "GEC001", "W210", "W213", "W208", "W212")),
+    Card("grammar-notes", "Grammar of research prose, and your English",
+         "Mechanics",
+         "Agree with the head noun, give every opener a doer, and keep to "
+         "one English.",
+         "A few grammar slips are typical of research writing. A verb "
+         "agrees with the main word of its subject, not the nearest noun: "
+         "the proportion of cases was higher. An opening '-ing' phrase "
+         "needs a doer in the main clause. 'A' or 'an' follows how an "
+         "abbreviation is said. Some usage depends on which English you "
+         "write: American English says 'the committee was' and 'different "
+         "from' or 'than'; British English also allows 'the committee "
+         "were' and 'different to'. Choose your English in the settings.",
+         "Using a Bayesian model, the proportion of cases were estimated "
+         "with a MCMC sampler.",
+         "Using a Bayesian model, we estimated the proportion of cases with "
+         "an MCMC sampler.",
+         "In each long subject, find the main noun and check that the verb "
+         "agrees with it; then read each opening '-ing' phrase and ask who "
+         "is doing it.",
+         "rgn",
+         rules=("GN101", "GN102", "GN103", "GN104", "GN105", "GN106",
+                "GN107", "GN201", "GN202", "GN203", "GN204", "GN205",
+                "GN206", "GN207", "GN208")),
     Card("headings", "Headings as structure", "Mechanics",
          "Heading styles for headings only; body styles for text.",
          "In Word, the heading styles build the navigation pane, the table of "
