@@ -136,8 +136,10 @@ green, Preference lavender (only when "Show preferences" is on).
   itself after 2, 4, 8, 16 and 30 seconds).
 - **Settings → Live underlines** pauses them (and removes them from the
   document); the choice is remembered on this computer.
-- With **This computer** as the engine, underlines appear after Check
-  document only (the local server has no live check yet).
+- With **This computer** as the engine, live underlines work too, from a
+  `server.py` dated 2026-10-15 or later. An older `server.py` has no live
+  check: Settings says so, and underlines appear after Check document until
+  you update it and restart the server.
 
 Underlines are **not saved in the file**: they exist only while the
 document is open with the sidebar, and are drawn again next time. Nothing
