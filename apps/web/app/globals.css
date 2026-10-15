@@ -8,6 +8,10 @@
  * palette that stays distinct under protanopia, deuteranopia and tritanopia.
  * Colour is never the only cue — every category also has a label, an icon
  * shape and an underline style. Conventions are green-teal (advisory), never red.
+ *
+ * Category colours and underline patterns are NOT written here: they come
+ * from the design tokens (packages/design-tokens/dist/tokens.css, loaded by
+ * app/layout.tsx first) as --rl-* custom properties, light and dark.
  */
 
 :root {
@@ -29,23 +33,6 @@
   --info-line: #b9c6db;
   --error-bg: #fbf0ea;
   --error-line: #e2b49c;
-
-  /* Correction — Okabe-Ito vermillion */
-  --correction-ink: #9e3b00;
-  --correction-line: #d55e00;
-  --correction-tint: #fbe4d6;
-  /* Improvement — Okabe-Ito blue */
-  --improvement-ink: #005a8f;
-  --improvement-line: #0072b2;
-  --improvement-tint: #dcebf6;
-  /* Convention — Okabe-Ito bluish green: advisory, not an error */
-  --convention-ink: #00694d;
-  --convention-line: #009e73;
-  --convention-tint: #d6efe5;
-  /* Preference — Okabe-Ito reddish purple */
-  --preference-ink: #8a3a69;
-  --preference-line: #cc79a7;
-  --preference-tint: #f6e2ed;
 
   --serif: "Iowan Old Style", "Charter", "Bitstream Charter", "Sitka Text", Cambria, "Palatino Linotype", Georgia,
     "DejaVu Serif", serif;
@@ -80,19 +67,6 @@
     --info-line: #3a4a66;
     --error-bg: #2c1f1a;
     --error-line: #6b4433;
-
-    --correction-ink: #ffa070;
-    --correction-line: #f08a4b;
-    --correction-tint: rgb(213 94 0 / 0.26);
-    --improvement-ink: #86c8f2;
-    --improvement-line: #56b4e9;
-    --improvement-tint: rgb(0 114 178 / 0.32);
-    --convention-ink: #66d4b0;
-    --convention-line: #3cc196;
-    --convention-tint: rgb(0 158 115 / 0.26);
-    --preference-ink: #eaa8cd;
-    --preference-line: #d88bb8;
-    --preference-tint: rgb(204 121 167 / 0.26);
 
     --shadow: 0 1px 2px rgb(0 0 0 / 0.3);
     --overlay-shadow: 0 8px 24px rgb(0 0 0 / 0.55);
@@ -458,7 +432,7 @@ main:focus {
   opacity: 0.85;
 }
 .editor[aria-invalid="true"] {
-  border-color: var(--correction-line);
+  border-color: var(--rl-correction-strong);
 }
 
 .field-foot {
@@ -471,7 +445,7 @@ main:focus {
 }
 
 .field-problem {
-  color: var(--correction-ink);
+  color: var(--rl-correction-text);
   font-weight: 600;
 }
 
@@ -481,7 +455,7 @@ main:focus {
   margin-left: auto;
 }
 .counter-over {
-  color: var(--correction-ink);
+  color: var(--rl-correction-text);
   font-weight: 600;
 }
 
@@ -831,7 +805,7 @@ main:focus {
   margin-top: 0;
 }
 .hidden-prefs .cat-icon {
-  color: var(--preference-ink);
+  color: var(--rl-preference-text);
 }
 
 .empty {
@@ -879,27 +853,14 @@ main:focus {
 /* Each chip label carries its category's underline, tying the chip to the highlights. */
 .chip-btn .chip-label {
   text-decoration-line: underline;
-  text-decoration-color: var(--c-line);
-  text-decoration-thickness: 2px;
+  text-decoration-color: var(--c-underline);
+  text-decoration-style: var(--c-pattern);
+  text-decoration-thickness: var(--c-thickness);
   text-underline-offset: 4px;
   text-decoration-skip-ink: none;
 }
 .chip-all .chip-label {
   text-decoration-line: none;
-}
-.chip-correction .chip-label {
-  text-decoration-style: solid;
-}
-.chip-improvement .chip-label {
-  text-decoration-style: double;
-  text-decoration-thickness: 3px;
-}
-.chip-convention .chip-label {
-  text-decoration-style: dotted;
-  text-decoration-thickness: 3px;
-}
-.chip-preference .chip-label {
-  text-decoration-style: dashed;
 }
 .chip-btn[aria-pressed="true"] {
   background: var(--c-tint);
@@ -975,7 +936,66 @@ main:focus {
   margin-bottom: 10px;
 }
 
-/* ---------- category variables ---------- */
+/* ---------- the six states of a live check (S4d R2; components/StatusMark.tsx) ---------- */
+
+.status-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-2);
+  font-size: 0.875rem;
+  line-height: 1.2;
+}
+.status-mark .sm-svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  overflow: visible;
+}
+.sm-track {
+  stroke: var(--rl-line-hairline);
+}
+.sm-ring {
+  stroke: var(--rl-widget-ring);
+}
+.sm-mark {
+  stroke: var(--rl-widget-mark);
+}
+.sm-badge {
+  fill: var(--rl-widget-badge-background);
+}
+.sm-badge-text {
+  fill: var(--rl-widget-badge-text);
+  font-family: var(--sans);
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.sm-warning {
+  fill: var(--rl-widget-warning);
+}
+.sm-warning-glyph {
+  stroke: var(--rl-widget-surface);
+}
+.sm-offline {
+  stroke: var(--rl-widget-offline);
+}
+.status-spin {
+  transform-origin: 10px 10px;
+  animation: status-spin 1.1s linear infinite;
+}
+@keyframes status-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .status-spin {
+    animation: none;
+  }
+}
+
+/* ---------- category variables (from the design tokens) ---------- */
 
 .hl-correction,
 .pt-correction,
@@ -984,9 +1004,12 @@ main:focus {
 .chip-correction,
 .key-correction,
 .spec-correction {
-  --c-ink: var(--correction-ink);
-  --c-line: var(--correction-line);
-  --c-tint: var(--correction-tint);
+  --c-ink: var(--rl-correction-text);
+  --c-line: var(--rl-correction-strong);
+  --c-tint: var(--rl-correction-subtle);
+  --c-underline: var(--rl-underline-correction-color);
+  --c-pattern: var(--rl-underline-correction-style);
+  --c-thickness: var(--rl-underline-correction-thickness);
 }
 .hl-improvement,
 .pt-improvement,
@@ -995,9 +1018,12 @@ main:focus {
 .chip-improvement,
 .key-improvement,
 .spec-improvement {
-  --c-ink: var(--improvement-ink);
-  --c-line: var(--improvement-line);
-  --c-tint: var(--improvement-tint);
+  --c-ink: var(--rl-improvement-text);
+  --c-line: var(--rl-improvement-strong);
+  --c-tint: var(--rl-improvement-subtle);
+  --c-underline: var(--rl-underline-improvement-color);
+  --c-pattern: var(--rl-underline-improvement-style);
+  --c-thickness: var(--rl-underline-improvement-thickness);
 }
 .hl-convention,
 .pt-convention,
@@ -1006,9 +1032,12 @@ main:focus {
 .chip-convention,
 .key-convention,
 .spec-convention {
-  --c-ink: var(--convention-ink);
-  --c-line: var(--convention-line);
-  --c-tint: var(--convention-tint);
+  --c-ink: var(--rl-convention-text);
+  --c-line: var(--rl-convention-strong);
+  --c-tint: var(--rl-convention-subtle);
+  --c-underline: var(--rl-underline-convention-color);
+  --c-pattern: var(--rl-underline-convention-style);
+  --c-thickness: var(--rl-underline-convention-thickness);
 }
 .hl-preference,
 .pt-preference,
@@ -1017,9 +1046,12 @@ main:focus {
 .chip-preference,
 .key-preference,
 .spec-preference {
-  --c-ink: var(--preference-ink);
-  --c-line: var(--preference-line);
-  --c-tint: var(--preference-tint);
+  --c-ink: var(--rl-preference-text);
+  --c-line: var(--rl-preference-strong);
+  --c-tint: var(--rl-preference-subtle);
+  --c-underline: var(--rl-underline-preference-color);
+  --c-pattern: var(--rl-underline-preference-style);
+  --c-thickness: var(--rl-underline-preference-thickness);
 }
 
 /* ---------- document view ---------- */
@@ -1048,8 +1080,9 @@ main:focus {
   background: var(--c-tint);
   border-radius: 2px;
   text-decoration-line: underline;
-  text-decoration-color: var(--c-line);
-  text-decoration-thickness: 2px;
+  text-decoration-color: var(--c-underline);
+  text-decoration-style: var(--c-pattern);
+  text-decoration-thickness: var(--c-thickness);
   text-underline-offset: 4px;
   text-decoration-skip-ink: none;
   -webkit-box-decoration-break: clone;
@@ -1057,24 +1090,6 @@ main:focus {
 }
 .hl {
   cursor: pointer;
-}
-.hl-correction,
-.spec-correction {
-  text-decoration-style: solid;
-}
-.hl-improvement,
-.spec-improvement {
-  text-decoration-style: double;
-  text-decoration-thickness: 3px;
-}
-.hl-convention,
-.spec-convention {
-  text-decoration-style: dotted;
-  text-decoration-thickness: 3px;
-}
-.hl-preference,
-.spec-preference {
-  text-decoration-style: dashed;
 }
 .hl-multi {
   box-shadow: inset 0 0 0 1px var(--c-line);
@@ -1580,7 +1595,7 @@ main:focus {
   color: var(--ink);
 }
 .input[aria-invalid="true"] {
-  border-color: var(--correction-line);
+  border-color: var(--rl-correction-strong);
 }
 .field .input + .field-problem,
 .dialog .field-problem {
@@ -2773,16 +2788,16 @@ main:focus {
     -webkit-print-color-adjust: exact;
   }
   .print-hl-correction {
-    text-decoration-style: solid;
+    text-decoration-style: var(--rl-underline-correction-style);
   }
   .print-hl-improvement {
-    text-decoration-style: double;
+    text-decoration-style: var(--rl-underline-improvement-style);
   }
   .print-hl-convention {
-    text-decoration-style: dotted;
+    text-decoration-style: var(--rl-underline-convention-style);
   }
   .print-hl-preference {
-    text-decoration-style: dashed;
+    text-decoration-style: var(--rl-underline-preference-style);
   }
   .print-ref {
     font-weight: 700;

@@ -20,7 +20,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"],
-      "@researchly/contract": ["../../packages/contract/src/index.ts"]
+      "@researchly/contract": ["../../packages/contract/src/index.ts"],
+      "@researchly/design-tokens": ["../../packages/design-tokens/dist/tokens.ts"]
     }
   },
   "include": [

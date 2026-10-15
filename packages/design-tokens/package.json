@@ -1,0 +1,15 @@
+{
+  "name": "@researchly/design-tokens",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Researchly's design tokens (S4d R2): one tokens.json, generated for CSS, TypeScript, Swift and C#. Never edit dist/ by hand.",
+  "type": "module",
+  "types": "dist/tokens.ts",
+  "main": "dist/tokens.ts",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/build.mjs --check",
+    "report": "node scripts/build.mjs --check --report",
+    "test": "node --test test/tokens.test.mjs"
+  }
+}
