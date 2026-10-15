@@ -1,0 +1,5 @@
+# SwiftPM and build.sh outputs (regenerable).
+.build/
+build/
+.swiftpm/
+Package.resolved
