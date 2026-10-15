@@ -204,7 +204,8 @@ def check(document: Document, nlp, *,
 
     disabled = disabled or set()
     if spacy_doc is None:
-        spacy_doc = nlp(document.masked)
+        from .api import parse
+        spacy_doc = parse(document.masked, nlp)
 
     out: list[Suggestion] = []
     for r in REGISTRY.values():

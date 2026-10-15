@@ -14,6 +14,7 @@ detected sections, engine health, and the resolved config.
 
 from __future__ import annotations
 
+import re
 import threading
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -59,6 +60,67 @@ def get_nlp(model: str = "en_core_web_sm"):
             nlp.max_length = MAX_LENGTH
             _NLP = nlp
     return _NLP
+
+
+# A long document is parsed in pieces of at most this many characters, cut
+# at paragraph breaks, and the pieces joined into one parse. One call over
+# a whole thesis held the network's working arrays for every token at once:
+# 2.5 GB at peak for 120,000 words, whose finished parse needs about 0.1 GB
+# (2026-10-15). A document up to this length is parsed in one call, exactly
+# as before.
+PARSE_PIECE_CHARS = 200_000
+_LOWER_CONTINUES = ",;:)(-–—"
+
+
+def parse_pieces(text: str, limit: Optional[int] = None) -> list:
+    """Where a long text is cut for parsing: just before the first
+    character of a paragraph that `paragraph_breaks` starts a sentence at
+    anyway (after a blank line, not carrying on in lower case), as late as
+    the limit allows. A piece with no such break in reach runs on to the
+    next one. Returns the (start, end) of each piece; one piece when the
+    text is within the limit."""
+    limit = limit or PARSE_PIECE_CHARS
+    if len(text) <= limit:
+        return [(0, len(text))]
+    cuts = [m.end() for m in re.finditer(r"\n[ \t]*\n\s*(?=\S)", text)
+            if not (text[m.end()].islower()
+                    or text[m.end()] in _LOWER_CONTINUES)]
+    pieces, start, last = [], 0, None   # last: latest cut within reach
+    for cut in cuts:
+        if cut - start <= limit:
+            last = cut
+            continue
+        if last is not None:             # cut at the latest break in reach
+            pieces.append((start, last))
+            start, last = last, None
+            if cut - start <= limit:
+                last = cut
+                continue
+        pieces.append((start, cut))      # no break in reach: run on to it
+        start = cut
+    if len(text) - start > limit and last is not None:
+        pieces.append((start, last))
+        start = last
+    pieces.append((start, len(text)))
+    return [p for p in pieces if p[1] > p[0]]
+
+
+def parse(text: str, nlp=None):
+    """THE parse of a masked document. Within PARSE_PIECE_CHARS: one call,
+    as it always was. Longer: the pieces of `parse_pieces`, one at a time,
+    joined with `Doc.from_docs` into one Doc over the same text (every
+    offset, sentence and token as before; each piece starts a sentence, as
+    the whole parse does there). Tags, dependencies and lemmas come from
+    the same model; within a few tokens of a cut they may differ from a
+    whole parse, which reads across the paragraph break
+    (tests/test_large_documents.py)."""
+    nlp = nlp or get_nlp()
+    pieces = parse_pieces(text)
+    if len(pieces) == 1:
+        return nlp(text)
+    from spacy.tokens import Doc
+    return Doc.from_docs([nlp(text[a:b]) for a, b in pieces],
+                         ensure_whitespace=False)
 
 
 def paragraph_breaks(doc):
@@ -224,7 +286,7 @@ def analyze(source: Union[str, Path, Sequence[dict], Document],
     nlp = nlp or get_nlp()
 
     # THE single parse. Shared by the rules, the metrics and the review.
-    spacy_doc = nlp(document.masked)
+    spacy_doc = parse(document.masked, nlp)
 
     # Always check with preferences on so the hidden count is free; filter
     # afterwards. This is what made the second full run unnecessary.

@@ -821,11 +821,20 @@ def _shingles(words: list) -> frozenset:
     return frozenset(zip(words, words[1:]))
 
 
+_GAP_OR_AIM: list = []
+
+
 def _gap_or_aim(text: str) -> bool:
-    from .discourse.moves import MOVES
-    return (MOVES["gap"].matches(text) or MOVES["aim"].matches(text)
-            or any(re.search(rx, text, re.IGNORECASE)
-                   for rx in lx.ABSENCE_GAP_RX + lx.THESIS_AIM_RX))
+    """A gap or aim sentence: the narrative map's gap and aim signals,
+    D903's absence phrases or a thesis aim. One compiled pattern (a whole
+    thesis has thousands of sentences to test)."""
+    if not _GAP_OR_AIM:
+        from .discourse.moves import MOVES
+        signals = (tuple(MOVES["gap"].signals) + tuple(MOVES["aim"].signals)
+                   + lx.ABSENCE_GAP_RX + lx.THESIS_AIM_RX)
+        _GAP_OR_AIM.append(re.compile(
+            "|".join(f"(?:{rx})" for rx in signals), re.IGNORECASE))
+    return bool(_GAP_OR_AIM[0].search(text))
 
 
 @rule("D906", "gap-pasted-across-chapters", Category.IMPROVEMENT,
