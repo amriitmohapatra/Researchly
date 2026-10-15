@@ -148,7 +148,7 @@ own "Whole document" group so they are never lost. The chooser starts at
 ## Progress (S4, opt-in)
 
 - Off by default: "Keep my progress" in Settings, with "Delete my
-  progress" behind a confirmation; "Delete my data" removes progress too.
+  progress" behind a confirmation; "Delete my account" removes progress too.
   Only rule ids and counts are kept, never text.
 - `/progress`: one row per rule, a 132×36 sparkline in the accent with a
   hairline zero baseline and a ringed end dot, each line on its own scale
@@ -624,9 +624,27 @@ sign-in, no upload, no settings route.
   production build never shows it.
 - **Settings** is one column of panels: Muted rules (name, code, one-line
   why, Unmute), How suggestions are shown (switch, spelling locale),
-  Your dictionary (add with inline limits, tiles with Remove), Delete. Every
-  change saves at once and is announced; a failed save moves the control
-  back and says why. Delete asks first, with focus on "Keep them".
+  Your dictionary (add with inline limits, tiles with Remove, "Clear my
+  dictionary…"), Your progress, Your account. Every change saves at once
+  and is announced; a failed save moves the control back and says why.
+  Every destructive action asks first, with focus on the safe choice
+  ("Keep them", "Keep my account").
+- **Your account** (PLAN #12) holds two actions, each with a sentence saying
+  exactly what it does, never one combined "Delete my data":
+  - **Reset preferences…** unmutes every rule, hides preferences and puts
+    grammar checks, spelling, Draft or Revise and the article type back to
+    their defaults; the dictionary, recorded progress and the "Keep my
+    progress" switch stay (the dialog says so). Words have their own "Clear
+    my dictionary…", progress its own "Delete my progress…": three scoped
+    actions instead of the old "Delete my data", so a writer never loses
+    more than they meant to.
+  - **Delete my account…** deletes the sign-in and everything kept with it,
+    says it can't be undone and signs this browser out. Two steps: the
+    dialog, then typing "delete" (any case). The confirm button is never
+    disabled: pressed early it says what to type and focuses the field. A
+    failure keeps the dialog open and says nothing was deleted. Done, the
+    page shows "Your account was deleted" (heading focused) with "Back to
+    the checker".
 - **Dialogs** are native `<dialog>` (focus contained, Escape closes, focus
   returns to the opener).
 
@@ -675,6 +693,10 @@ column, the site's tokens, cards and notices; nothing new to learn.
   next), with document-wide suggestions under "Whole document" and a note
   saying how many are elsewhere, with "Show the whole document". Then health, errors, results,
   and a closed **Settings** disclosure (engine, show preferences, live underlines, account).
+  The account part links to the website's Settings ("To reset your preferences or delete
+  your account, use Settings on the website", a new window) rather than repeating those
+  actions: they are rare, destructive and need room for their confirmations, and one
+  place to keep correct is safer than two (PLAN #12).
   The footer holds "Report a problem" (mailto, never with document text).
 - **Results**: "N suggestions", then quiet grey notes: what Draft held back
   (with "Switch to Revise"), hidden preferences (with "Show them"), and what
@@ -872,6 +894,11 @@ file refused by the engine (unsupported, unreadable, too large), file
 warnings, card action saved or failed; settings signed out, loading, load
 failed, nothing muted, empty dictionary, saved, save failed, delete
 confirm.
+
+PLAN #12 adds: clear the dictionary (confirm), reset preferences (confirm,
+not yet available), delete the account (dialog, word missing or wrong,
+deleting, failed with the dialog kept open, not yet available, deleted and
+signed out), and the Word pane's link to the website's Settings.
 
 S4c adds: a lesson open on a card or a move, a checklist with found,
 partly-there, needs-your-check, confirmed and not-applicable items (N1:

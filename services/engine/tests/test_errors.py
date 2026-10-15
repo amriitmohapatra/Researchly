@@ -7,7 +7,7 @@ import asyncio
 import json
 
 from researchly_service import engine_adapter
-from researchly_service.middleware import RateLimiter, RequestContextMiddleware
+from researchly_service.middleware import Limiters, RequestContextMiddleware
 from researchly_service.schemas import MAX_CONTENT_CHARS, ErrorResponse
 
 from conftest import make_settings
@@ -112,7 +112,7 @@ def test_413_is_decided_before_the_body_is_read():
         sent.append(message)
 
     mw = RequestContextMiddleware(app, make_settings(max_body_bytes=1000),
-                                  RateLimiter(0))
+                                  Limiters(make_settings()))
     scope = {"type": "http", "method": "POST", "path": "/v1/analyze",
              "headers": [(b"content-length", b"999999999"),
                          (b"content-type", b"application/json")],
@@ -138,7 +138,7 @@ def test_bad_content_length_400():
     async def receive():
         return {"type": "http.request", "body": b"", "more_body": False}
 
-    mw = RequestContextMiddleware(app, make_settings(), RateLimiter(0))
+    mw = RequestContextMiddleware(app, make_settings(), Limiters(make_settings()))
     scope = {"type": "http", "method": "POST", "path": "/v1/analyze",
              "headers": [(b"content-length", b"lots")], "client": None}
     asyncio.run(mw(scope, receive, send))

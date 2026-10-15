@@ -11,8 +11,11 @@ read from a file.
 | RESEARCHLY_LT_URL                | (unset)          | LanguageTool server; unset = local JVM |
 | RESEARCHLY_GRAMMAR               | on               | `off`: the deployment does not run grammar |
 | RESEARCHLY_MAX_BODY_BYTES        | 8388608 (8 MiB)  | request bodies above this get 413 unread |
-| RESEARCHLY_RATE_LIMIT_PER_MIN    | 30               | per client IP, per instance; 0 disables |
-| RESEARCHLY_LIVE_RATE_LIMIT_PER_MIN | 120            | /v1/check-paragraphs (the live check), per client IP, per instance; its own budget; 0 disables |
+| RESEARCHLY_RATE_LIMIT_PER_MIN    | 30               | anonymous callers, per client IP, per instance; also the budget of failed sign-ins per IP; 0 disables |
+| RESEARCHLY_LIVE_RATE_LIMIT_PER_MIN | 120            | /v1/check-paragraphs (the live check), anonymous, per client IP, per instance; its own budget; 0 disables |
+| RESEARCHLY_USER_RATE_LIMIT_PER_MIN | 30             | signed-in callers (verified token's `sub`), per user, per instance: /v1/analyze and /v1/analyze-word; 0 disables |
+| RESEARCHLY_USER_LIVE_RATE_LIMIT_PER_MIN | 120       | the live check, per signed-in user, per instance; 0 disables |
+| RESEARCHLY_USER_UPLOAD_RATE_LIMIT_PER_MIN | 10      | /v1/analyze-file, per signed-in user, per instance; 0 disables |
 | RESEARCHLY_TRUSTED_PROXY_HOPS    | 0                | X-Forwarded-For entries appended by trusted proxies (Cloud Run: 1) |
 | RESEARCHLY_WARMUP                | on               | warm spaCy/rules/LanguageTool before serving |
 | RESEARCHLY_SUPABASE_URL          | (unset)          | Supabase project URL; unset = no accounts (S1 behaviour) |
@@ -95,6 +98,9 @@ class Settings:
     max_body_bytes: int = DEFAULT_MAX_BODY_BYTES
     rate_limit_per_min: int = 30
     live_rate_limit_per_min: int = 120
+    user_rate_limit_per_min: int = 30
+    user_live_rate_limit_per_min: int = 120
+    user_upload_rate_limit_per_min: int = 10
     trusted_proxy_hops: int = 0
     warmup: bool = True
     supabase_url: str = ""
@@ -132,6 +138,12 @@ def load() -> Settings:
         rate_limit_per_min=max(0, _int("RESEARCHLY_RATE_LIMIT_PER_MIN", 30)),
         live_rate_limit_per_min=max(0, _int(
             "RESEARCHLY_LIVE_RATE_LIMIT_PER_MIN", 120)),
+        user_rate_limit_per_min=max(0, _int(
+            "RESEARCHLY_USER_RATE_LIMIT_PER_MIN", 30)),
+        user_live_rate_limit_per_min=max(0, _int(
+            "RESEARCHLY_USER_LIVE_RATE_LIMIT_PER_MIN", 120)),
+        user_upload_rate_limit_per_min=max(0, _int(
+            "RESEARCHLY_USER_UPLOAD_RATE_LIMIT_PER_MIN", 10)),
         trusted_proxy_hops=max(0, _int("RESEARCHLY_TRUSTED_PROXY_HOPS", 0)),
         warmup=_flag("RESEARCHLY_WARMUP", True),
         supabase_url=_supabase_url(),

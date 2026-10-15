@@ -6,8 +6,16 @@ raises. In order, for each HTTP request it:
 
 1. assigns a `request_id` (uuid4 hex; never taken from the client) and
    returns it as `X-Request-ID` on every response;
-2. rate-limits by client IP (sliding 60 s window, in memory, per instance;
-   the live check has a limiter of its own, sized for typing);
+2. rate-limits (sliding 60 s windows, in memory, per instance). On the
+   checking routes, with accounts on, a request carrying a token has it
+   verified here first (in a worker thread) and is then limited per USER,
+   keyed on the verified `sub`, so people signed in behind one address (a
+   university's NAT) never use up each other's budget. Anonymous callers,
+   and every other route, are limited per client IP. A token that fails
+   verification is charged to its IP in a budget of its own (beyond it the
+   answer is 429, not 401), so forged tokens are limited like anonymous
+   requests while a valid token is always served on its own budget. Full
+   checks, the live check and uploads each have their own budget;
 3. rejects a body larger than the cap **before reading it** when
    Content-Length says so, and caps chunked bodies while buffering;
 4. runs the app, and turns ANY exception into a 500 `ErrorResponse` without
@@ -23,7 +31,9 @@ import time
 import uuid
 from typing import Deque, Dict, Optional
 
-from . import logging_setup
+from starlette.concurrency import run_in_threadpool
+
+from . import accounts, logging_setup
 from .errors import INTERNAL_MESSAGE, error_bytes
 
 log = logging_setup.get("researchly.service")
@@ -36,6 +46,9 @@ KNOWN_ROUTES = {"/v1/analyze", "/v1/analyze-file", "/v1/check-paragraphs",
 UNLIMITED_PATHS = {"/v1/health"}
 LIVE_PATHS = {"/v1/check-paragraphs"}
 UPLOAD_PATHS = {"/v1/analyze-file"}
+# Routes that read the caller's account: limited per user when signed in.
+ACCOUNT_PATHS = {"/v1/analyze", "/v1/analyze-word", "/v1/check-paragraphs",
+                 "/v1/analyze-file"}
 BODY_METHODS = {"POST", "PUT", "PATCH"}
 
 
@@ -103,13 +116,81 @@ def _header(scope, name: bytes) -> Optional[bytes]:
     return None
 
 
+class Limiters:
+    """Every budget the engine keeps, one RateLimiter each (per instance)."""
+
+    def __init__(self, settings):
+        s = settings
+        self.ip = RateLimiter(s.rate_limit_per_min)
+        # The live check runs after every typing pause: its own, larger
+        # budget, so typing never uses up the budget for a full check.
+        self.ip_live = RateLimiter(s.live_rate_limit_per_min)
+        self.user = RateLimiter(s.user_rate_limit_per_min)
+        self.user_live = RateLimiter(s.user_live_rate_limit_per_min)
+        self.user_upload = RateLimiter(s.user_upload_rate_limit_per_min)
+        # Tokens that failed verification, per IP; sized like the IP budget.
+        self.bad_token = RateLimiter(s.rate_limit_per_min)
+
+    def for_ip(self, path: str) -> RateLimiter:
+        return self.ip_live if path in LIVE_PATHS else self.ip
+
+    def for_user(self, path: str) -> RateLimiter:
+        if path in LIVE_PATHS:
+            return self.user_live
+        return self.user_upload if path in UPLOAD_PATHS else self.user
+
+    def reset(self) -> None:
+        for lim in (self.ip, self.ip_live, self.user, self.user_live,
+                    self.user_upload, self.bad_token):
+            lim.reset()
+
+
+IP_LIMITED = "Too many requests from this address; try again in {} s."
+USER_LIMITED = "Too many checks from your account; try again in {} s."
+WWW_AUTHENTICATE = (b"www-authenticate", b'Bearer realm="researchly"')
+
+
+def _retry(wait: int):
+    return [(b"retry-after", str(wait).encode())]
+
+
 class RequestContextMiddleware:
-    def __init__(self, app, settings, limiter: RateLimiter,
-                 live_limiter: Optional[RateLimiter] = None):
+    def __init__(self, app, settings, limiters: Limiters):
         self.app = app
         self.settings = settings
-        self.limiter = limiter
-        self.live_limiter = live_limiter or limiter
+        self.limiters = limiters
+
+    async def _limit(self, scope, path: str, state: dict):
+        """None to go on, or (status, code, message, headers) to refuse."""
+        ip = client_ip(scope, self.settings.trusted_proxy_hops)
+        accts = _accounts_of(scope)
+        header = _header(scope, b"authorization")
+        if accts is None or path not in ACCOUNT_PATHS or not (
+                header and header.strip()):
+            wait = self.limiters.for_ip(path).check(ip)
+            if wait is None:
+                return None
+            return 429, "rate_limited", IP_LIMITED.format(wait), _retry(wait)
+
+        # Every token is checked (a signature check is cheap, and a forged
+        # key id is bounded by the key re-fetch cooldown), so a valid token
+        # is never refused because of someone else's at the same address.
+        try:
+            caller = await run_in_threadpool(_verify, accts,
+                                             header.decode("latin-1"))
+        except accounts.AuthError as e:
+            wait = self.limiters.bad_token.check(ip) if e.charge else None
+            if wait is not None:
+                return (429, "rate_limited", IP_LIMITED.format(wait),
+                        _retry(wait))
+            return (e.status, e.code, e.message,
+                    [WWW_AUTHENTICATE] if e.status == 401 else [])
+        # The routes take the caller from here; it is never verified twice.
+        state["caller"] = caller
+        wait = self.limiters.for_user(path).check(caller.user_id)
+        if wait is None:
+            return None
+        return 429, "rate_limited", USER_LIMITED.format(wait), _retry(wait)
 
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http":
@@ -146,18 +227,11 @@ class RequestContextMiddleware:
         failure = None
         try:
             try:
-                # 1. rate limit
+                # 1. who is asking, and their rate limit
                 if method != "OPTIONS" and path not in UNLIMITED_PATHS:
-                    limiter = (self.live_limiter if path in LIVE_PATHS
-                               else self.limiter)
-                    wait = limiter.check(
-                        client_ip(scope, self.settings.trusted_proxy_hops))
-                    if wait is not None:
-                        return await reply_error(
-                            429, "rate_limited",
-                            "Too many requests from this address; try again "
-                            f"in {wait} s.",
-                            [(b"retry-after", str(wait).encode())])
+                    refusal = await self._limit(scope, path, state)
+                    if refusal is not None:
+                        return await reply_error(*refusal)
 
                 # 2. body size, decided before the body is read
                 if method in BODY_METHODS:
@@ -217,6 +291,19 @@ class RequestContextMiddleware:
             if "error_code" in state:
                 fields["code"] = state["error_code"]
             access.info("request", extra=fields)
+
+
+def _accounts_of(scope) -> Optional["accounts.Accounts"]:
+    """The app's Accounts, read per request (None: accounts are off)."""
+    app_state = getattr(scope.get("app"), "state", None)
+    return getattr(app_state, "accounts", None)
+
+
+def _verify(accts: "accounts.Accounts", header: str) -> "accounts.Caller":
+    token = accounts.bearer_token(header)
+    if token is None:            # unreachable: the header is not blank
+        raise accounts.AuthError(401, "unauthorized", accounts.UNAUTHORIZED)
+    return accts.verify(token)
 
 
 def too_large_message(cap: int) -> str:

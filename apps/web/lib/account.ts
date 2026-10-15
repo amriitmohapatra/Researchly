@@ -129,19 +129,73 @@ export function removeWord(word: string): Promise<AccountResult<null>> {
   });
 }
 
-/** "Delete my settings and dictionary": every row this user owns, in both tables. */
-export function deleteMyData(): Promise<AccountResult<null>> {
+/* ---------- account controls (PLAN #12): clear, reset, delete ---------- */
+
+/** Why an account deletion failed, as a sentence. Nothing is deleted when it fails. */
+export function deleteErrorMessage(err: DbError | null | undefined): string {
+  switch (err?.code) {
+    case "42501":
+    case "PGRST301":
+    case "PGRST303":
+      return "Your sign-in has expired. Sign in again, then delete your account; nothing was deleted.";
+    default:
+      return err?.message?.toLowerCase().includes("fetch")
+        ? "Could not reach your account. Check your connection and try again; nothing was deleted."
+        : "Your account could not be deleted just now. Try again; nothing was deleted.";
+  }
+}
+
+/** PostgREST's "no such function": the account database has not had the 20261015120000 migration yet. */
+const NO_FUNCTION = "PGRST202";
+
+/** "Clear my dictionary": every word this user added; nothing else. */
+export function clearDictionary(): Promise<AccountResult<null>> {
   return run(async (sb) => {
     const { data } = await sb.auth.getSession();
     const uid = data.session?.user.id;
-    if (!uid) return { ok: false, message: "Sign in again to delete your data; nothing was changed." };
+    if (!uid) return { ok: false, message: "Sign in again to clear your dictionary; nothing was changed." };
     // Filtered by the caller's own id (from its own session): PostgREST refuses
     // an unfiltered delete, and RLS would scope it to this user anyway.
-    const words = await sb.from("dictionary_words").delete().eq("user_id", uid);
-    if (words.error) return { ok: false, message: accountErrorMessage(words.error) };
-    const settings = await sb.from("user_settings").delete().eq("user_id", uid);
-    if (settings.error) return { ok: false, message: accountErrorMessage(settings.error) };
-    return { ok: true, data: null };
+    const { error } = await sb.from("dictionary_words").delete().eq("user_id", uid);
+    return error ? { ok: false, message: accountErrorMessage(error) } : { ok: true, data: null };
+  });
+}
+
+/**
+ * "Reset preferences": the database puts every choice back to its default
+ * (reset_my_preferences, on the caller's own row only) and keeps the
+ * dictionary, the recorded progress and the "Keep my progress" switch.
+ * Then reads the settings back for display.
+ */
+export async function resetPreferences(): Promise<AccountResult<UserSettings>> {
+  const reset = await run<null>(async (sb) => {
+    const { error } = await sb.rpc("reset_my_preferences");
+    if (error?.code === NO_FUNCTION) {
+      return { ok: false, message: "Resetting isn’t available on this site yet. Nothing was changed." };
+    }
+    return error ? { ok: false, message: accountErrorMessage(error) } : { ok: true, data: null };
+  });
+  return reset.ok ? loadSettings() : reset;
+}
+
+/**
+ * "Delete my account": the database deletes the caller's sign-in and, with
+ * it, every row they own (delete_my_account; it acts only on the caller's own
+ * account, named by their token, never by anything sent here). A failure
+ * deletes nothing and says so. The caller then signs this browser out
+ * (lib/auth.ts signOut), after it has said the account is gone.
+ */
+export function deleteMyAccount(): Promise<AccountResult<null>> {
+  return run(async (sb) => {
+    const { error } = await sb.rpc("delete_my_account");
+    if (error?.code === NO_FUNCTION) {
+      return {
+        ok: false,
+        message:
+          "Deleting an account isn’t available on this site yet, so nothing was deleted. Use “Report a problem” to ask for your account to be deleted.",
+      };
+    }
+    return error ? { ok: false, message: deleteErrorMessage(error) } : { ok: true, data: null };
   });
 }
 
