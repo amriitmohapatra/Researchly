@@ -1,4 +1,5 @@
 import XCTest
+import ResearchlyDesignTokens
 @testable import ResearchlyOverlayCore
 
 final class EngineClientTests: XCTestCase {
@@ -36,7 +37,8 @@ final class EngineClientTests: XCTestCase {
         XCTAssertFalse(s[0].critical)
         XCTAssertEqual(s[0].id, "improvement:3-8")                    // a fallback id when none is sent
         XCTAssertEqual(s[1].category, .other("newfangled"))
-        XCTAssertEqual(Tokens.category(s[1].category).name, "Suggestion")
+        XCTAssertEqual(s[1].category.label, "Suggestion")
+        XCTAssertEqual(s[1].category.look.underline.pattern, .dashed)    // drawn as an Improvement
         XCTAssertEqual(s[2].category, .improvement)                   // missing category
         XCTAssertTrue(r.paragraphs[1].suggestions.isEmpty)
         XCTAssertFalse(r.health.degraded)
@@ -75,14 +77,19 @@ final class EngineClientTests: XCTestCase {
         struct Boom: Error {}
         XCTAssertEqual(EngineClient.interpret(.failure(Boom()), sentRevision: 1), .failure(.unreachable("Boom")))
         let body = try Repo.fixture("error-response.json")
-        let refused = EngineClient.interpret(.success((status: 429, body: body)), sentRevision: 1)
-        XCTAssertEqual(refused, .failure(.refused(status: 429, message: "Too many requests. Try again shortly.")))
-        XCTAssertEqual(EngineClient.interpret(.success((status: 200, body: Data("<html>".utf8))), sentRevision: 1),
+        let limited = EngineClient.interpret(.success(HTTPReply(status: 429, body: body)), sentRevision: 1)
+        XCTAssertEqual(limited, .failure(.rateLimited(retryAfter: nil)))
+        let waited = EngineClient.interpret(.success(HTTPReply(status: 429, body: body, headers: ["Retry-After": "12"])),
+                                            sentRevision: 1)
+        XCTAssertEqual(waited, .failure(.rateLimited(retryAfter: 12)))
+        XCTAssertEqual(EngineClient.interpret(.success(HTTPReply(status: 503, body: body)), sentRevision: 1),
+                       .failure(.refused(status: 503, message: "Too many requests. Try again shortly.")))
+        XCTAssertEqual(EngineClient.interpret(.success(HTTPReply(status: 200, body: Data("<html>".utf8))), sentRevision: 1),
                        .failure(.malformed))
-        let ok = EngineClient.interpret(.success((status: 200, body: try Repo.fixture("check-response-full.json"))),
+        let ok = EngineClient.interpret(.success(HTTPReply(status: 200, body: try Repo.fixture("check-response-full.json"))),
                                         sentRevision: 7)
         XCTAssertEqual(try ok.get().paragraphs.count, 2)
-        let noEcho = EngineClient.interpret(.success((status: 200, body: try Repo.fixture("check-response-minimal.json"))),
+        let noEcho = EngineClient.interpret(.success(HTTPReply(status: 200, body: try Repo.fixture("check-response-minimal.json"))),
                                             sentRevision: 7)
         XCTAssertNoThrow(try noEcho.get())          // a missing echo is accepted
     }
@@ -90,7 +97,12 @@ final class EngineClientTests: XCTestCase {
     func testErrorMessagesForTheWriter() {
         XCTAssertTrue(EngineError.unreachable("x").userMessage.contains("Can’t reach the engine"))
         XCTAssertTrue(EngineError.refused(status: 404, message: nil).userMessage.contains("doesn’t offer live checks"))
-        XCTAssertTrue(EngineError.refused(status: 429, message: nil).userMessage.contains("busy"))
+        XCTAssertTrue(EngineError.rateLimited(retryAfter: 5).userMessage.contains("busy"))
+        XCTAssertTrue(EngineError.rejected(status: 422, code: "invalid_request").userMessage.contains("after your next edit"))
+        XCTAssertTrue(EngineError.rejected(status: 401, code: "sign_in_required").userMessage.contains("This computer"))
+        XCTAssertFalse(EngineError.rejected(status: 422, code: nil).isRetryable)
+        XCTAssertTrue(EngineError.rateLimited(retryAfter: nil).isRetryable)
+        XCTAssertTrue(EngineError.refused(status: 404, message: nil).isRetryable)
     }
 
     func testEngineChoiceURLs() {
@@ -109,11 +121,11 @@ final class EngineClientTests: XCTestCase {
             var headers: [String: String] = [:]
             var body = Data()
             func post(_ url: URL, body: Data, headers: [String: String], timeout: TimeInterval,
-                      completion: @escaping (Result<(status: Int, body: Data), Error>) -> Void) {
+                      completion: @escaping (Result<HTTPReply, Error>) -> Void) {
                 self.url = url
                 self.headers = headers
                 self.body = body
-                completion(.success((status: 200, body: Data(#"{"revision": 1, "paragraphs": [{"id": "p1", "suggestions": []}]}"#.utf8))))
+                completion(.success(HTTPReply(status: 200, body: Data(#"{"revision": 1, "paragraphs": [{"id": "p1", "suggestions": []}]}"#.utf8))))
             }
         }
         let rec = Recorder()
@@ -207,23 +219,26 @@ final class GeometryTests: XCTestCase {
 }
 
 final class TokenTests: XCTestCase {
-    func testEveryCategoryHasADistinctPatternAndIcon() {
+    func testCategoriesComeFromTheGeneratedTokens() {
         let cats: [Category] = [.correction, .improvement, .convention, .preference]
-        let styles = cats.map { Tokens.category($0) }
-        XCTAssertEqual(Set(styles.map { $0.pattern }).count, 4)
-        XCTAssertEqual(Set(styles.map { $0.symbol }).count, 4)
-        XCTAssertEqual(styles.map { $0.pattern }, [.solid, .dashed, .dotted, .wavyDotted])
-        XCTAssertEqual(styles.map { $0.name }, ["Correction", "Improvement", "Convention", "Preference"])
+        let looks = cats.map { $0.look }
+        XCTAssertEqual(looks.map { $0.id }, ResearchlyTokens.categoryOrder)
+        XCTAssertEqual(looks.map { $0.underline.pattern }, [.solid, .dashed, .dotted, .wavyDotted])
+        XCTAssertEqual(Set(looks.map { $0.sfSymbol }).count, 4)
+        XCTAssertEqual(cats.map { $0.label }, ["Correction", "Improvement", "Convention", "Preference"])
+        XCTAssertEqual(looks.map { $0.critical }, [true, false, false, false])
+        XCTAssertEqual(Category.correction.look.underline.color, ResearchlyTokens.underlineCorrectionColor)
     }
 
-    func testCategoryTextIsReadableInBothThemes() {
-        for c in [Category.correction, .improvement, .convention, .preference] {
-            let ink = Tokens.category(c).ink
-            XCTAssertGreaterThanOrEqual(ink.light.contrast(with: Tokens.surfaceLight), 4.5, "\(c) light")
-            XCTAssertGreaterThanOrEqual(ink.dark.contrast(with: Tokens.surfaceDark), 4.5, "\(c) dark")
-            let line = Tokens.category(c).line
-            XCTAssertGreaterThanOrEqual(line.light.contrast(with: Tokens.surfaceLight), 2.5, "\(c) underline light")
-            XCTAssertGreaterThanOrEqual(line.dark.contrast(with: Tokens.surfaceDark), 3.0, "\(c) underline dark")
+    func testEveryStateHasAGeneratedLook() {
+        XCTAssertEqual(OverlayState.allCases.map { $0.rawValue }, ResearchlyTokens.stateOrder)
+        for state in OverlayState.allCases {
+            XCTAssertEqual(state.look.id, state.rawValue)
+            XCTAssertFalse(state.title.isEmpty)
         }
+        XCTAssertEqual(OverlayState.issues.label(count: 3), "3 suggestions")
+        XCTAssertEqual(OverlayState.issues.label(count: 1), "1 suggestion")
+        XCTAssertEqual(OverlayState.offline.title, ResearchlyTokens.states["offline"]?.label)
+        XCTAssertEqual(RetryBackoff.schedule, ResearchlyTokens.retrySeconds)
     }
 }

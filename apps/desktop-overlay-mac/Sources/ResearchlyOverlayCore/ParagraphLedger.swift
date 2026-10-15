@@ -60,6 +60,11 @@ public struct TrackedParagraph: Equatable {
         case checked
         /// Never sent: blank, or a heading.
         case skipped
+        /// Refused by the engine as sent (422 and the like): not sent again
+        /// until its text changes (which gives it a new id).
+        case rejected
+        /// Longer than the engine checks at once (LiveLimits): never sent.
+        case tooLong
     }
 
     /// Stable while the paragraph's text is unchanged; a changed paragraph
@@ -76,8 +81,9 @@ public struct TrackedParagraph: Equatable {
 }
 
 /// A suggestion placed in the field: its range counts from the start of the
-/// field's text, and `flaggedText` is what it covered when it arrived (a
-/// write-back first checks that the field still says that).
+/// field's text, and `flaggedText` is what it covered when it arrived: the
+/// engine's `text`, checked against the paragraph (a write-back first checks
+/// that the field still says that).
 public struct PlacedSuggestion: Equatable {
     public let suggestion: LiveSuggestion
     public let paragraphID: String
@@ -129,7 +135,8 @@ public struct ParagraphLedger {
                     moved.range = s.range.shifted(by: delta)
                     return moved
                 }
-                if old.status != .pending, old.status != .skipped, old.checkedHeading != currentHeading {
+                if old.status != .pending, old.status != .skipped, old.status != .tooLong,
+                   old.checkedHeading != currentHeading {
                     // Same words under a different section: the advice may differ.
                     old.status = .pending
                     old.suggestions = []
@@ -144,7 +151,9 @@ public struct ParagraphLedger {
                 nextID += 1
                 result.append(TrackedParagraph(
                     id: id, text: p.text, range: p.range, heading: currentHeading,
-                    isHeading: isHeading, status: (isHeading || p.isBlank) ? .skipped : .pending,
+                    isHeading: isHeading,
+                    status: (isHeading || p.isBlank) ? .skipped
+                        : LiveLimits.characters(p.text) > LiveLimits.maxCharacters ? .tooLong : .pending,
                     checkedHeading: nil, suggestions: []))
             }
             if let h = headingText { currentHeading = h }
@@ -158,6 +167,13 @@ public struct ParagraphLedger {
         paragraphs.contains { $0.status == .pending }
     }
 
+    /// Paragraphs the engine refused, or too long to send: the check of
+    /// this field is incomplete, and the writer is told.
+    public var uncheckable: (rejected: Int, tooLong: Int) {
+        (paragraphs.filter { $0.status == .rejected }.count,
+         paragraphs.filter { $0.status == .tooLong }.count)
+    }
+
     public var hasPendingOrInFlight: Bool {
         paragraphs.contains {
             if case .inFlight = $0.status { return true }
@@ -168,7 +184,12 @@ public struct ParagraphLedger {
     /// The next batch to send: visible paragraphs first, then the nearest to
     /// the caret; at most `maxCount` paragraphs and about `maxCharacters`
     /// UTF-16 units (a single longer paragraph is still sent on its own).
+    /// Never more than the engine accepts (LiveLimits): UTF-16 units are at
+    /// least as many as the characters the engine counts, and a paragraph
+    /// over its limit is never pending (`tooLong`).
     public func nextBatch(caret: Int?, visible: UTF16Range?, maxCount: Int, maxCharacters: Int) -> [TrackedParagraph] {
+        let maxCount = max(1, min(maxCount, LiveLimits.maxParagraphs))
+        let maxCharacters = min(maxCharacters, LiveLimits.maxCharacters)
         let pending = paragraphs.enumerated().filter { $0.element.status == .pending }
         guard !pending.isEmpty else { return [] }
         let caretIndex = caret.flatMap { snapshot.paragraphIndex(containing: $0) } ?? 0
@@ -186,6 +207,7 @@ public struct ParagraphLedger {
             if batch.count >= maxCount { break }
             let size = p.range.length
             if !batch.isEmpty, characters + size > maxCharacters { continue }
+            if batch.isEmpty, LiveLimits.characters(p.text) > LiveLimits.maxCharacters { continue }
             batch.append(p)
             characters += size
         }
@@ -197,6 +219,15 @@ public struct ParagraphLedger {
         for i in paragraphs.indices where set.contains(paragraphs[i].id) && paragraphs[i].status == .pending {
             paragraphs[i].status = .inFlight(revision)
             paragraphs[i].checkedHeading = paragraphs[i].heading
+        }
+    }
+
+    /// The engine refused a request as it was: its paragraphs are not sent
+    /// again until they change.
+    public mutating func markRejected(revision: Int) {
+        for i in paragraphs.indices where paragraphs[i].status == .inFlight(revision) {
+            paragraphs[i].status = .rejected
+            paragraphs[i].suggestions = []
         }
     }
 
@@ -234,6 +265,13 @@ public struct ParagraphLedger {
             return nil
         }
         var local = UTF16Range(begin: s.begin, end: s.end)
+        if !s.text.isEmpty {
+            // The engine says which words it flagged: they must be exactly
+            // there, or the range is not about this text and is dropped.
+            guard UTF16Text.substring(p.text, local) == s.text else { return nil }
+            return PlacedSuggestion(suggestion: s, paragraphID: p.id, localRange: local,
+                                    range: local.shifted(by: p.range.location), flaggedText: s.text)
+        }
         if !local.isEmpty, let snapped = UTF16Text.snappedToGraphemes(p.text, local) { local = snapped }
         guard let flagged = UTF16Text.substring(p.text, local) else { return nil }
         return PlacedSuggestion(suggestion: s, paragraphID: p.id, localRange: local,

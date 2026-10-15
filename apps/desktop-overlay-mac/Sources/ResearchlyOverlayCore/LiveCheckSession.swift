@@ -15,8 +15,12 @@ public final class LiveCheckSession {
         public var maxCharactersPerRequest: Int
         public var options: CheckOptions
 
+        /// At most 20 paragraphs and about 6,000 characters a request: well
+        /// inside the engine's limits (50 and 20,000, LiveLimits), and under
+        /// the hosted engine's word cap for a caller without an account
+        /// (1,500 words).
         public init(debounce: TimeInterval = 1.5, maxParagraphsPerRequest: Int = 20,
-                    maxCharactersPerRequest: Int = 20_000, options: CheckOptions = CheckOptions()) {
+                    maxCharactersPerRequest: Int = 6_000, options: CheckOptions = CheckOptions()) {
             self.debounce = debounce
             self.maxParagraphsPerRequest = maxParagraphsPerRequest
             self.maxCharactersPerRequest = maxCharactersPerRequest
@@ -26,7 +30,7 @@ public final class LiveCheckSession {
         /// A low-priority app (apps-mac.json) waits longer and sends less.
         public static func forApp(_ rule: AppRule, options: CheckOptions) -> Configuration {
             rule.isLowPriority
-                ? Configuration(debounce: 2.5, maxParagraphsPerRequest: 5, maxCharactersPerRequest: 8_000, options: options)
+                ? Configuration(debounce: 2.5, maxParagraphsPerRequest: 5, maxCharactersPerRequest: 4_000, options: options)
                 : Configuration(options: options)
         }
     }
@@ -133,9 +137,27 @@ public final class LiveCheckSession {
     public var statusDetail: String? {
         switch state {
         case .offline: return lastError?.userMessage ?? EngineError.unreachable("").userMessage
-        case .partial, .issues: return health.reason
+        case .partial, .issues:
+            let parts = [health.reason, uncheckedReason].compactMap { $0 }
+            return parts.isEmpty ? nil : parts.joined(separator: " ")
         default: return nil
         }
+    }
+
+    /// Why some paragraphs have no underlines although they were not
+    /// checked clear: the engine refused them, or they are too long.
+    var uncheckedReason: String? {
+        let (rejected, tooLong) = ledger.uncheckable
+        var out: [String] = []
+        if rejected > 0 {
+            out.append(rejected == 1 ? "One paragraph couldn’t be checked; it will be after you edit it."
+                                     : "\(rejected) paragraphs couldn’t be checked; they will be after you edit them.")
+        }
+        if tooLong > 0 {
+            out.append(tooLong == 1 ? "One paragraph is too long to check as you type."
+                                    : "\(tooLong) paragraphs are too long to check as you type.")
+        }
+        return out.isEmpty ? nil : out.joined(separator: " ")
     }
 
     // MARK: The loop
@@ -178,11 +200,24 @@ public final class LiveCheckSession {
             ledger.apply(response.paragraphs, revision: revision)
             // More to send: go on at once, unless the writer is typing.
             if ledger.hasPending, !debouncer.isPending { sendNext(); return }
+        case .failure(let error) where !error.isRetryable:
+            // Refused as sent (422 and the like): the same request would be
+            // refused again. Say so, and wait for an edit; no retry loop.
+            ledger.markRejected(revision: revision)
+            offline = true
+            lastError = error
+            backoff.reset()
+            retry?.cancel()
+            retry = nil
         case .failure(let error):
             ledger.revertInFlight(revision: revision)
             offline = true
             lastError = error
-            let delay = backoff.nextDelay()
+            var delay = backoff.nextDelay()
+            if case .rateLimited(let wait?) = error {
+                // The engine said how long: never sooner, and at most 2 minutes.
+                delay = min(max(delay, wait), 120)
+            }
             retry?.cancel()
             retry = scheduler.schedule(after: delay) { [weak self] in
                 guard let self = self, generation == self.generation else { return }
@@ -199,7 +234,7 @@ public final class LiveCheckSession {
             offline: offline,
             pending: ledger.hasPendingOrInFlight,
             visibleCount: visibleSuggestions.count,
-            degraded: health.degraded)
+            degraded: health.degraded || uncheckedReason != nil)
         state = StateMachine.state(for: inputs)
         onUpdate?()
     }

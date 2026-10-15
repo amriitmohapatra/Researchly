@@ -9,6 +9,10 @@ enum Repo {
     static let root = testsDir.appendingPathComponent("../../../../").standardizedFileURL
     static let fieldsJSON = root.appendingPathComponent("packages/desktop-rules/fields.json")
     static let appsJSON = root.appendingPathComponent("packages/desktop-rules/apps-mac.json")
+    /// Real exchanges of the live check, made by the engine service
+    /// (services/engine/tests/contract_fixtures.py) and shared with the
+    /// Windows client.
+    static let contractFixtures = root.appendingPathComponent("packages/contract/fixtures/check-paragraphs")
 
     static func fixture(_ name: String) throws -> Data {
         try Data(contentsOf: fixtures.appendingPathComponent(name))
@@ -99,10 +103,47 @@ final class FakeEngine: EngineChecking {
     func fail(_ index: Int, _ error: EngineError = .unreachable("offline")) {
         calls[index].completion(.failure(error))
     }
+
+    /// Answers call `index` with a whole result (a decoded shared fixture).
+    func respond(_ index: Int, _ result: Result<CheckResponse, EngineError>) {
+        calls[index].completion(result)
+    }
 }
 
 func suggestion(_ id: String, _ begin: Int, _ end: Int, _ category: Category = .correction,
                 replacements: [String] = []) -> LiveSuggestion {
     LiveSuggestion(id: id, begin: begin, end: end, category: category,
                    message: "msg", replacements: replacements)
+}
+
+/// One exchange of packages/contract/fixtures/check-paragraphs: the request
+/// a client sent, and what the engine answered.
+struct SharedExchange {
+    let request: [String: Any]
+    let status: Int
+    let headers: [String: String]
+    let response: Data
+
+    init(_ name: String) throws {
+        let data = try Data(contentsOf: Repo.contractFixtures.appendingPathComponent(name + ".json"))
+        let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+        request = json["request"] as! [String: Any]
+        status = json["status"] as! Int
+        headers = json["headers"] as? [String: String] ?? [:]
+        response = try JSONSerialization.data(withJSONObject: json["response"]!)
+    }
+
+    var revision: Int { request["revision"] as! Int }
+
+    var paragraphs: [[String: Any]] { request["paragraphs"] as! [[String: Any]] }
+
+    func text(of id: String) -> String {
+        paragraphs.first { ($0["id"] as? String) == id }!["text"] as! String
+    }
+
+    /// What the client makes of the reply, through its own decoder.
+    var interpreted: Result<CheckResponse, EngineError> {
+        EngineClient.interpret(.success(HTTPReply(status: status, body: response, headers: headers)),
+                               sentRevision: revision)
+    }
 }

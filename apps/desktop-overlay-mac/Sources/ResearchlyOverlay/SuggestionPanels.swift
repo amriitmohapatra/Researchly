@@ -1,4 +1,5 @@
 import AppKit
+import ResearchlyDesignTokens
 import ResearchlyOverlayCore
 
 /// Builds the small rounded, vibrant surfaces the teaser and the card share.
@@ -30,14 +31,23 @@ enum PanelChrome {
         return l
     }
 
-    static func categoryHeader(_ category: Category) -> NSStackView {
-        let style = Tokens.category(category)
+    /// The category's icon and name, and the section the advice assumed
+    /// when there is one ("Methods"), as on the website's cards. The rule's
+    /// id and internal name are never shown.
+    static func categoryHeader(_ category: Category, section: String? = nil) -> NSStackView {
+        let look = category.look
         let icon = NSImageView()
-        icon.image = Appearance.symbol(style.symbol, label: style.name)
-        icon.contentTintColor = style.ink.nsColor
+        icon.image = Appearance.symbol(look.sfSymbol, label: category.label)
+        icon.contentTintColor = look.badgeText.nsColor
         icon.setContentHuggingPriority(.required, for: .horizontal)
-        let name = label(style.name, size: 11.5, weight: .semibold, color: style.ink.nsColor, lines: 1)
-        let row = NSStackView(views: [icon, name])
+        let name = label(category.label, size: 11.5, weight: .semibold, color: look.badgeText.nsColor, lines: 1)
+        var views: [NSView] = [icon, name]
+        if let section = section {
+            let s = label("· " + section, size: 11.5, color: .secondaryLabelColor, lines: 1)
+            s.setAccessibilityLabel("Section: " + section)
+            views.append(s)
+        }
+        let row = NSStackView(views: views)
         row.orientation = .horizontal
         row.spacing = 5
         row.alignment = .centerY
@@ -48,7 +58,7 @@ enum PanelChrome {
     static func rail(_ category: Category) -> NSView {
         let rail = NSView()
         rail.wantsLayer = true
-        rail.layer?.backgroundColor = Tokens.category(category).line.cgColor(dark: Appearance.isDark)
+        rail.layer?.backgroundColor = category.look.rail.cgColor(dark: Appearance.isDark)
         rail.translatesAutoresizingMaskIntoConstraints = false
         rail.widthAnchor.constraint(equalToConstant: 3).isActive = true
         return rail
@@ -111,7 +121,7 @@ final class TeaserPanel {
     func show(_ s: PlacedSuggestion, near anchor: CGRect) {
         suggestionID = s.id
         let stack = NSStackView()
-        stack.addArrangedSubview(PanelChrome.categoryHeader(s.category))
+        stack.addArrangedSubview(PanelChrome.categoryHeader(s.category, section: s.suggestion.sectionLabel))
         let text = s.suggestion.message.isEmpty ? s.suggestion.plain : s.suggestion.message
         if !text.isEmpty { stack.addArrangedSubview(PanelChrome.label(text, size: 13, lines: 3)) }
         if let first = s.suggestion.replacements.first {
@@ -173,7 +183,7 @@ final class CardPanel {
         let id = s.id
         let stack = NSStackView()
 
-        let header = PanelChrome.categoryHeader(s.category)
+        let header = PanelChrome.categoryHeader(s.category, section: s.suggestion.sectionLabel)
         let close = button("Close", style: .inline) { [weak self] in self?.onAction?(id, .close) }
         close.setAccessibilityLabel("Close")
         let spacer = NSView()
@@ -199,7 +209,7 @@ final class CardPanel {
         }
         if let note = note {
             stack.addArrangedSubview(PanelChrome.label(note, size: 12, weight: .medium,
-                                                       color: Tokens.warning.nsColor))
+                                                       color: ResearchlyTokens.warningText.nsColor))
         }
 
         var buttons: [NSView] = []

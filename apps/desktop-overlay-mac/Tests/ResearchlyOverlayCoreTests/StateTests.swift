@@ -151,7 +151,7 @@ final class LiveCheckSessionTests: XCTestCase {
     }
 
     func testReplyWithAnotherRevisionIsRefusedByTheClient() {
-        let result = EngineClient.interpret(.success((status: 200, body: Data(#"{"revision": 9, "paragraphs": []}"#.utf8))),
+        let result = EngineClient.interpret(.success(HTTPReply(status: 200, body: Data(#"{"revision": 9, "paragraphs": []}"#.utf8))),
                                             sentRevision: 4)
         XCTAssertEqual(result, .failure(.revisionMismatch(sent: 4, received: 9)))
     }

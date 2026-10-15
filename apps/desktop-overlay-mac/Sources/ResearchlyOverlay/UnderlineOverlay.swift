@@ -1,5 +1,6 @@
 import AppKit
 import QuartzCore
+import ResearchlyDesignTokens
 import ResearchlyOverlayCore
 
 /// One suggestion's marks: its category and the line rectangles it covers,
@@ -68,12 +69,12 @@ final class UnderlineView: NSView {
         // One shape layer per category: they share colour and pattern.
         var byCategory: [String: (Category, CGMutablePath)] = [:]
         for mark in marks {
-            let style = Tokens.category(mark.category)
+            let look = mark.category.look
             let key = mark.category.rawValue
             let path = byCategory[key]?.1 ?? CGMutablePath()
             for r in mark.rects {
                 let baseline = r.minY + 1.5
-                switch style.pattern {
+                switch look.underline.pattern {
                 case .wavyDotted:
                     let points = OverlayGeometry.wavePoints(from: r.minX, to: r.maxX, baseline: baseline + 1)
                     if let first = points.first {
@@ -88,13 +89,13 @@ final class UnderlineView: NSView {
             byCategory[key] = (mark.category, path)
         }
         for (_, entry) in byCategory.sorted(by: { $0.key < $1.key }) {
-            let style = Tokens.category(entry.0)
+            let underline = entry.0.look.underline
             let shape = CAShapeLayer()
             shape.path = entry.1
             shape.fillColor = nil
-            shape.strokeColor = style.line.cgColor(dark: dark)
-            shape.lineWidth = CGFloat(Tokens.underlineWidth)
-            switch style.pattern {
+            shape.strokeColor = underline.color.cgColor(dark: dark)
+            shape.lineWidth = CGFloat(underline.thickness)
+            switch underline.pattern {
             case .solid:
                 shape.lineCap = .butt
             case .dashed:
@@ -104,7 +105,6 @@ final class UnderlineView: NSView {
                 // Zero-length dashes with round caps draw as dots.
                 shape.lineDashPattern = [0.01, 3.5]
                 shape.lineCap = .round
-                shape.lineWidth = CGFloat(Tokens.underlineWidth) + 0.4
             }
             layer?.addSublayer(shape)
         }
@@ -113,7 +113,7 @@ final class UnderlineView: NSView {
 
     /// The category tint at a strength that leaves the text readable.
     static func tintColor(for category: Category, dark: Bool) -> CGColor {
-        let c = Tokens.category(category).tint.resolve(dark: dark)
+        let c = category.look.highlight.resolve(dark: dark)
         let alpha = dark ? c.alpha : 0.55
         return CGColor(srgbRed: CGFloat(c.red), green: CGFloat(c.green), blue: CGFloat(c.blue), alpha: CGFloat(alpha))
     }

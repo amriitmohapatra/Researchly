@@ -1,5 +1,6 @@
 import AppKit
 import ApplicationServices
+import ResearchlyDesignTokens
 import ResearchlyOverlayCore
 
 /// The focused field the overlay is attached to.
@@ -420,16 +421,16 @@ final class OverlayController: FocusTrackerDelegate, FieldWidgetDelegate {
         menu.autoenablesItems = false
         let list = session.visibleSuggestions
         let header = NSMenuItem(title: list.isEmpty ? session.state.title
-                                                    : "\(list.count) suggestion\(list.count == 1 ? "" : "s")",
+                                                    : OverlayState.issues.label(count: list.count),
                                 action: nil, keyEquivalent: "")
         header.isEnabled = false
         menu.addItem(header)
         var targets: [ActionTarget] = []
         for s in list.prefix(12) {
-            let style = Tokens.category(s.category)
+            let name = s.category.label
             let text = s.suggestion.message.isEmpty ? s.flaggedText : s.suggestion.message
-            let item = NSMenuItem(title: "\(style.name): \(text)", action: #selector(ActionTarget.fire(_:)), keyEquivalent: "")
-            item.image = Appearance.symbol(style.symbol, label: style.name)
+            let item = NSMenuItem(title: "\(name): \(text)", action: #selector(ActionTarget.fire(_:)), keyEquivalent: "")
+            item.image = Appearance.symbol(s.category.look.sfSymbol, label: name)
             let id = s.id
             let t = ActionTarget { [weak self] in self?.openCard(id) }
             item.target = t
