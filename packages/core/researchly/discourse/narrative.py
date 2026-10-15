@@ -13,14 +13,16 @@ from __future__ import annotations
 import re
 from typing import Optional
 
+from .. import evidence as evidence_mod
 from .. import learn
 from .. import lexicons as lx
 from .. import sources
 from ..document import Document
 from . import argument as argument_mod
 from . import citations as citations_mod
-from .moves import (MOVES, ORDERED, SCHEMAS, SECTION_LABELS, label_moves,
-                    schema_for)
+from . import units as units_mod
+from .moves import (MOVES, ORDERED, SCHEMAS, SECTION_LABELS, UNIT_SCHEMAS,
+                    label_moves, schema_for)
 
 SOURCE = sources.cite("Swales+WW+§2")
 _SENT_SPLIT = re.compile(r"(?<=[.!?])\s+")
@@ -60,13 +62,17 @@ def _quote(text: str) -> str:
 
 
 def _move_entry(move_id: str, status: str, evidence: Optional[str] = None,
-                note: str = "", section: str = "") -> dict:
+                note: str = "", section: str = "",
+                span: Optional[dict] = None) -> dict:
     m = MOVES[move_id]
     return {
         "id": m.id, "label": m.label, "status": status,
         "question": m.question, "plain": m.plain, "frame": m.frame,
         "source": m.citation, "evidence": evidence, "note": note,
         "learn_ref": learn.card_for_move(section, m.id),
+        # Where the sentence is, so the surfaces can show it in the text
+        # (Codex review #3); None when it cannot be placed.
+        "span": span,
     }
 
 
@@ -99,11 +105,13 @@ def describes_only(profile) -> bool:
 
 
 def _section_map(section: str, sents: list, profile=None,
-                 instance: int = 1) -> dict:
-    schema = expected_moves(section, profile)
+                 instance: int = 1, document=None, schema=None,
+                 label: Optional[str] = None) -> dict:
+    schema = expected_moves(section, profile) if schema is None else schema
     describe = describes_only(profile)
     first: dict = {}          # move -> index of its first sentence
     evidence: dict = {}
+    spans: dict = {}
     assumed: set = set()
     for i, (_, _, text) in enumerate(sents):
         for mid in label_moves(text, section, first=(i == 0),
@@ -111,6 +119,9 @@ def _section_map(section: str, sents: list, profile=None,
             if mid not in first:
                 first[mid] = i
                 evidence[mid] = _quote(text)
+                if document is not None:
+                    spans[mid] = evidence_mod.span(document, sents[i][0],
+                                                   sents[i][1])
                 if MOVES[mid].opening and not MOVES[mid].matches(text):
                     assumed.add(mid)
     out = []
@@ -135,9 +146,10 @@ def _section_map(section: str, sents: list, profile=None,
                 note = "Appears before " + MOVES[before[0]].label.lower() + "."
             else:
                 note = _ORDER_FALLBACK      # every order warning explains itself
-        out.append(_move_entry(mid, status, evidence[mid], note, section))
+        out.append(_move_entry(mid, status, evidence[mid], note, section,
+                               spans.get(mid)))
     present = sum(1 for e in out if e["status"] != "not_detected")
-    label = SECTION_LABELS.get(section, section.capitalize())
+    label = label or SECTION_LABELS.get(section, section.capitalize())
     return {
         "section": section,
         "label": label if instance == 1 else f"{label} ({instance})",
@@ -224,7 +236,7 @@ def _reading(h: float, b: float) -> str:
 
 
 def build_narrative(document: Document, spacy_doc=None,
-                    profile=None) -> dict:
+                    profile=None, scope=None) -> dict:
     """The map every surface renders.
 
     {"sections": [...], "unmapped": [...], "missing_links": [...],
@@ -249,10 +261,28 @@ def build_narrative(document: Document, spacy_doc=None,
             runs.append((section, seen[section], []))
         runs[-1][2].append((start, end, text))
 
-    sections = [_section_map(s, run, profile, instance=k)
+    sections = [_section_map(s, run, profile, instance=k,
+                             document=document)
                 for s, k, run in runs if s in SCHEMAS]
     unmapped = [s for s in order if s not in SCHEMAS
                 and s not in ("front", "references")]
+    # A policy brief organised by its own units (Codex review #4) is mapped
+    # by them: Context, Evidence, Options, Recommendations.
+    pid = getattr(profile, "id", profile)
+    policy = (_policy_sections(document, sents)
+              if pid == "policy-brief" else None)
+    missing_units: list = []
+    if policy:
+        sections, unmapped = policy
+        found_units = {s["section"] for s in sections}
+        if getattr(scope, "id", "whole") == "whole":
+            missing_units = [units_mod.UNIT_LABELS[u]
+                             for u in units_mod.POLICY_UNITS
+                             if u not in found_units]
+    # A response to reviewers is read as comment-and-reply units, listed
+    # as found and never judged (Codex review N5).
+    units = (_reviewer_units(document)
+             if pid == "response-to-reviewers" else [])
 
     links = []
     for obj in argument_mod.build_argument(document, spacy_doc=spacy_doc):
@@ -267,11 +297,30 @@ def build_narrative(document: Document, spacy_doc=None,
                 "learn_ref": learn.card_for_link(code),
                 "evidence": [_quote(document.original[a:b])
                              for a, b in obj.link_spans.get(code, [])[:3]],
+                "spans": [sp for sp in (
+                    evidence_mod.span(document, a, b)
+                    for a, b in obj.link_spans.get(code, [])[:3])
+                    if sp is not None],
                 "source": sources.cite("WW+Toulmin+§4"),
             })
     links += _review_links(document, spacy_doc)
 
-    if not sections:
+    if units:
+        replied = sum(1 for u in units if u["reply"] is not None)
+        n = len(units)
+        found = f"Found {n} reviewer comment{'s' if n != 1 else ''}"
+        found += (f"; {replied} of them {'has' if replied == 1 else 'have'} "
+                  "a reply." if n > 1 else
+                  ", with a reply under it." if replied else
+                  "; no reply was recognised under it.")
+        note = (found + " A response to reviewers is described, not "
+                "judged: each comment is shown beside its reply.")
+    elif describes_only(profile) and not sections:
+        note = ("No reviewer comments were recognised (such as "
+                "\u201cReviewer 1, Comment 2\u201d, \u201cR1.2\u201d or a "
+                "quoted comment followed by its reply), so there is nothing "
+                "to list. This kind of document is described, not judged.")
+    elif not sections:
         if not document.headings:
             note = ("No section headings were found, so there is no map "
                     "to draw. Add headings (Introduction, Methods, "
@@ -293,6 +342,12 @@ def build_narrative(document: Document, spacy_doc=None,
                 " not detected in the wording; each one below has a question "
                 "and a frame to fill in. The map reads wording, so check "
                 "before adding anything.")
+        if policy:
+            note = ("Read as a policy brief, by its parts: context, "
+                    "evidence, options and recommendations. " + note)
+            if missing_units:
+                note += (" Not found among the headings: "
+                         + ", ".join(missing_units) + ".")
     return {
         "sections": sections,
         "unmapped": unmapped,
@@ -301,8 +356,58 @@ def build_narrative(document: Document, spacy_doc=None,
                                          if s not in ("front", "references")]),
         "note": note,
         "profile": getattr(profile, "id", None),
+        "units": units,
         "source": SOURCE,
     }
+
+
+def _policy_sections(document: Document, sents: list):
+    """(sections, unmapped) for a policy brief organised by its units, or
+    None when it names none of them (then its sections are mapped as
+    before). Each unit instance gets its own strip; text under any other
+    heading is left unmapped, by name."""
+    found = units_mod.policy_units(document)
+    # "Introduction" alone names the context; a brief is organised by its
+    # units only when it names one of the others.
+    if not any(u != "context" for u, _, _, _ in found):
+        return None
+    sections, seen = [], {}
+    for unit, start, end, _ in found:
+        run = [t for t in sents if start <= t[0] < end]
+        if not run:
+            continue
+        seen[unit] = seen.get(unit, 0) + 1
+        sections.append(_section_map(
+            unit, run, None, instance=seen[unit], document=document,
+            schema=UNIT_SCHEMAS[unit], label=units_mod.UNIT_LABELS[unit]))
+    unmapped = []
+    for h in document.headings:
+        if units_mod.unit_of(h.text) is None:
+            name = " ".join(h.text.split())[:60]
+            if name and name not in unmapped and h.section not in (
+                    "references",):
+                unmapped.append(name)
+    return sections, unmapped
+
+
+def _reviewer_units(document: Document) -> list:
+    """The comment-and-reply units of a response letter, in order: each
+    comment and its reply as spans, quoted. Described, never judged."""
+    out = []
+    for u in units_mod.reviewer_units(document):
+        c = u["comment_span"]
+        r = u["reply_span"]
+        comment = evidence_mod.span(document, *c)
+        if comment is None:
+            continue
+        out.append({
+            "kind": "reviewer_comment",
+            "label": u["label"],
+            "comment": comment,
+            "reply": evidence_mod.span(document, *r) if r else None,
+            "learn_ref": learn.card_for_unit("reviewer_comment"),
+        })
+    return out
 
 
 def _review_links(document: Document, spacy_doc=None) -> list:

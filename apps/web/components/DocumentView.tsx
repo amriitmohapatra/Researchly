@@ -4,6 +4,7 @@ import { memo, useCallback, type KeyboardEvent, type MouseEvent } from "react";
 import type { Segment } from "@/lib/segments";
 import { baseId } from "@/lib/table-evidence";
 import { categoryMeta } from "@/lib/categories";
+import { isEvidenceId } from "@/lib/evidence";
 
 interface Props {
   segments: readonly Segment[];
@@ -78,12 +79,29 @@ export const DocumentView = memo(function DocumentView({ segments, activeId, onS
         const active = activeId !== null && s.ids.includes(activeId);
         // An X401 card's table cell, shown on request: outlined, not tinted.
         const cell = s.ids.every((id) => id !== baseId(id));
+        // A sentence of the brief or the map, shown on request (Codex review #3): outlined, never tinted.
+        const evidence = s.ids.some(isEvidenceId);
+        if (s.ids.every(isEvidenceId)) {
+          return (
+            <mark
+              key={`m${s.start}`}
+              className="hl hl-evidence"
+              data-sids={s.ids.join(" ")}
+              data-evidence="true"
+              aria-describedby="evidence-back-note"
+              tabIndex={-1}
+            >
+              {s.text}
+            </mark>
+          );
+        }
         return (
           <mark
             key={`m${s.start}`}
-            className={`hl hl-${primary}${cell ? " hl-cell" : ""}${s.ids.length > 1 ? " hl-multi" : ""}${active ? " is-active" : ""}`}
+            className={`hl hl-${primary}${cell ? " hl-cell" : ""}${evidence ? " hl-evidence-edge" : ""}${s.ids.length > 1 ? " hl-multi" : ""}${active ? " is-active" : ""}`}
             data-sids={s.ids.join(" ")}
             data-category={primary}
+            data-evidence={evidence ? "true" : undefined}
             tabIndex={-1}
           >
             {s.text}
