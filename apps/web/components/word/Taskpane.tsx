@@ -339,10 +339,9 @@ export function Taskpane() {
 
   // Live checks run on either engine; an older "This computer" without the route (404) falls back
   // to underlines after Check document, and says so in Settings.
-  const [localLiveMissing, setLocalLiveMissing] = useState(false);
-  useEffect(() => {
-    setLocalLiveMissing(false);
-  }, [engine]);
+  // Remembered for this session: the local server answered 404 to the live route.
+  const [localLiveGone, setLocalLiveGone] = useState(false);
+  const localLiveMissing = engine === "local" && localLiveGone;
   useEffect(() => {
     controllerRef.current?.setLive(!(engine === "local" && localLiveMissing));
   }, [engine, localLiveMissing]);
@@ -426,7 +425,7 @@ export function Taskpane() {
     scopesRef.current = scopes;
     liveSendRef.current = async (req, signal) => {
       const r = await checkParagraphs(req, { engineUrl: engineUrlFor(engine), auth: engine === "local" ? null : getEngineAuth(), signal });
-      if (!r.ok && engine === "local" && r.error.status === 404) setLocalLiveMissing(true);
+      if (!r.ok && engine === "local" && r.error.status === 404) setLocalLiveGone(true);
       return r;
     };
     probeRef.current = () =>
