@@ -1,72 +1,101 @@
 /**
- * The live check (S4d R3/R5; docs/inline-review-design.md §5): a few
- * paragraphs, each with its nearest heading and a revision number, sent
- * after a typing pause to `POST /v1/check-paragraphs`. The engine answers
- * with sentence-level suggestions whose `begin`/`end` are UTF-16 offsets
- * within the paragraph (JavaScript string indices).
+ * The live check (S4d R3, used by R4 in Word and R5 on the website): send
+ * the paragraphs that changed after a typing pause, with a revision, and
+ * keep only the replies that still describe the text on screen.
  *
- * The request leaves from lib/engine.ts (the one audited path that sends
- * text); this file only shapes and checks it. Nothing is stored.
+ * The network call itself lives in lib/engine.ts (the one audited path that
+ * sends text, scripts/check-boundary.mjs). This file holds the parts every
+ * surface shares: the call with its options, the batch limits and the
+ * stale-reply rule. Nothing here is stored.
  */
-import "client-only";
-import type { CheckParagraphsRequest, CheckParagraphsResponse } from "@researchly/contract";
-import { postEngineJson, type CheckResult, type EngineAuth } from "./engine";
+import {
+  MAX_LIVE_CHARS,
+  MAX_LIVE_HEADING_CHARS,
+  MAX_LIVE_PARAGRAPHS,
+  type CheckParagraphsRequest,
+  type CheckParagraphsResponse,
+  type LiveParagraph,
+  type TierHealth,
+} from "@researchly/contract";
+import { ENGINE_URL } from "./config";
+import { postCheckParagraphs, type CheckResult, type EngineAuth } from "./engine";
 
-/**
- * How long one live check may take before the page calls the engine
- * unreachable. Far above the engine's budget (p95 under 800 ms for a
- * 200-word paragraph), far below a full check's.
- */
-export const LIVE_TIMEOUT_MS = 15_000;
-
-export interface LiveCheckOptions {
+export interface CheckParagraphsOptions {
+  /** The engine to ask (default: the hosted one). */
   engineUrl?: string;
-  /** The account's token source (signed in), or null. */
+  /** The signed-in caller's token source; null or omitted for anonymous use and for "This computer". */
   auth?: EngineAuth | null;
   signal?: AbortSignal;
-  timeoutMs?: number;
 }
 
-function isNat(v: unknown): v is number {
-  return typeof v === "number" && Number.isInteger(v) && v >= 0;
-}
-
-/** Enough to draw underlines safely: every suggestion has an id, a category and a usable range. */
-export function looksLikeCheckParagraphsResponse(body: unknown): body is CheckParagraphsResponse {
-  if (typeof body !== "object" || body === null) return false;
-  const b = body as Record<string, unknown>;
-  if (!isNat(b.revision) || !Array.isArray(b.paragraphs) || !Array.isArray(b.health)) return false;
-  return b.paragraphs.every((p: unknown) => {
-    if (typeof p !== "object" || p === null) return false;
-    const para = p as Record<string, unknown>;
-    return (
-      typeof para.id === "string" &&
-      Array.isArray(para.suggestions) &&
-      para.suggestions.every((s: unknown) => {
-        if (typeof s !== "object" || s === null) return false;
-        const x = s as Record<string, unknown>;
-        return (
-          typeof x.id === "string" &&
-          typeof x.category === "string" &&
-          typeof x.message === "string" &&
-          isNat(x.begin) &&
-          isNat(x.end) &&
-          (x.end as number) >= (x.begin as number)
-        );
-      })
-    );
-  });
-}
-
-/** POST /v1/check-paragraphs. Throws only when `signal` aborts (the caller superseded it). */
-export async function checkParagraphs(
+/** POST /v1/check-paragraphs: the contract's request in, its response out (or a CheckError). */
+export function checkParagraphs(
   request: CheckParagraphsRequest,
-  opts: LiveCheckOptions = {},
+  opts: CheckParagraphsOptions = {},
 ): Promise<CheckResult<CheckParagraphsResponse>> {
-  return postEngineJson("/v1/check-paragraphs", request, looksLikeCheckParagraphsResponse, {
-    engineUrl: opts.engineUrl,
-    auth: opts.auth,
-    signal: opts.signal,
-    timeoutMs: opts.timeoutMs ?? LIVE_TIMEOUT_MS,
-  });
+  return postCheckParagraphs(request, opts.engineUrl ?? ENGINE_URL, opts.auth ?? null, opts.signal);
+}
+
+/** How long the writer must pause before a live check is sent. */
+export const LIVE_PAUSE_MS = 1_500;
+
+/** A paragraph waiting to be checked: its request form. */
+export type LiveCandidate = LiveParagraph;
+
+/**
+ * The next batch within the contract's limits: at most 50 paragraphs and
+ * 20,000 characters together, in the order given. A paragraph too long to
+ * send at all is returned in `tooLong` (it is never sent live; the full
+ * check still reads it). The rest wait for the next round.
+ */
+export function takeBatch<T extends { text: string }>(
+  candidates: readonly T[],
+  limits: { paragraphs: number; chars: number } = { paragraphs: MAX_LIVE_PARAGRAPHS, chars: MAX_LIVE_CHARS },
+): { batch: T[]; rest: T[]; tooLong: T[] } {
+  const batch: T[] = [];
+  const rest: T[] = [];
+  const tooLong: T[] = [];
+  let chars = 0;
+  for (const c of candidates) {
+    if (c.text.length > limits.chars) {
+      tooLong.push(c);
+      continue;
+    }
+    if (batch.length < limits.paragraphs && chars + c.text.length <= limits.chars && rest.length === 0) {
+      batch.push(c);
+      chars += c.text.length;
+    } else {
+      rest.push(c);
+    }
+  }
+  return { batch, rest, tooLong };
+}
+
+/** A heading as the contract takes it: trimmed, at most 300 characters. */
+export function liveHeading(text: string | null | undefined): string {
+  return (text ?? "").trim().slice(0, MAX_LIVE_HEADING_CHARS);
+}
+
+/**
+ * Whether a reply may still be painted: it answers the revision that was
+ * sent, and nothing reset the surface since (a full check, a changed
+ * setting, underlines switched off). Each paragraph's text is checked
+ * separately, just before painting.
+ */
+export function isCurrentReply(
+  reply: Pick<CheckParagraphsResponse, "revision">,
+  sent: { revision: number; generation: number },
+  now: { generation: number },
+): boolean {
+  return reply.revision === sent.revision && sent.generation === now.generation;
+}
+
+/** Partial state's reason in plain words: which part of the checking was off ("Grammar was not checked"). */
+export function partialReason(health: readonly TierHealth[]): string {
+  // The learned tier is optional and usually absent: its absence is not "part of the checking was off".
+  const down = health.filter((t) => !t.ok && t.tier !== "gec" && t.state !== "disabled");
+  if (down.length === 0) return "";
+  const names = down.map((t) => t.label || t.tier);
+  const list = names.length === 1 ? names[0]! : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  return `${list} ${names.length === 1 ? "was" : "were"} not checked`;
 }

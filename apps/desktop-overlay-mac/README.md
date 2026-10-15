@@ -29,10 +29,13 @@ takes the keyboard away from the app you are writing in. Design:
   ```
 
 - This repository, downloaded from GitHub (Code → Download ZIP, or
-  `git clone`). The build reads the rules in `packages/desktop-rules/`, so
-  build from the full checkout, not from this folder alone.
-- An engine to check with: the hosted Researchly engine (its address), or
-  the engine running on this computer (see section 4).
+  `git clone`). The build reads the rules in `packages/desktop-rules/` and
+  the generated design tokens in `packages/design-tokens/`, so build from
+  the full checkout, not from this folder alone.
+- An engine that offers the live check (`POST /v1/check-paragraphs`, PLAN
+  S4d R3, 2026-10-15): the hosted Researchly engine once it has been
+  deployed with R3, or the engine on this computer, `apps/word-addin/server.py`
+  from the same checkout (see section 4).
 
 ## 2. Build and run
 
@@ -77,13 +80,29 @@ page.
 
 Click the menu-bar item, then **Check with**:
 
-- **This computer (127.0.0.1:3517)**: text never leaves the Mac. Needs a
-  local Researchly engine that offers `POST /v1/check-paragraphs` on port
-  3517. The live-check endpoint is new (PLAN S4d R3). Until your local
-  engine has it, the overlay shows "Can't check right now: this engine
-  doesn't offer live checks yet".
+- **This computer (127.0.0.1:3517)**: text never leaves the Mac. Start
+  the local engine, the same one the Word add-in's "This computer" mode
+  uses, and leave it running:
+
+  ```sh
+  cd apps/word-addin
+  python3.10 server.py        # http://127.0.0.1:3517 (needs the CLI's Python set-up)
+  ```
+
+  It must be the `server.py` from 2026-10-15 or later, which answers
+  `POST /v1/check-paragraphs`. If it was already running, stop it
+  (Ctrl-C) and start it again after updating the checkout. An older one
+  answers 404 and the overlay says "This engine doesn't offer live checks
+  yet". The server accepts apps without a web origin (this overlay) only
+  from this Mac itself.
 - **Hosted engine…**: enter the engine's address, starting with
-  `https://`. Plain `http://` is accepted only for this computer.
+  `https://`. Plain `http://` is accepted only for this computer. The
+  hosted engine has the live check once it has been deployed after R3
+  (2026-10-15): the owner runs the **Deploy engine** workflow in the
+  repository's Actions tab. Until then it answers 404, as above. Without
+  an account the hosted engine checks up to 1,500 words at a time; the
+  overlay sends far less per check (at most 20 paragraphs, about 6,000
+  characters).
 
 **Show Preference suggestions** adds the Preference type, which is hidden
 by default as on every Researchly surface.
@@ -205,7 +224,11 @@ mistake handy (for example "Their are three results in the the table.").
 | Nothing in one app, other apps fine | Menu bar → **About this field…**. If it says "This kind of field (AXSomething) isn't supported here", add that role to the app's `roles` in `packages/desktop-rules/apps-mac.json` and rebuild. If it says "Checked: yes", see the next rows |
 | Crossed-out widget, "Can't reach the engine" | Check the address in **Check with**, your connection, or that the local engine is running on port 3517 |
 | The ring spins for several seconds on the first check of the day | A hosted engine can take a few seconds to wake up. Later checks are quicker. A check that takes over 15 s counts as "can't check" and is retried |
-| "This engine doesn't offer live checks yet" | The engine is older than the live-check endpoint. Update it, or choose another engine |
+| "This engine doesn't offer live checks yet" | The engine is older than the live-check endpoint (R3). This computer: update the checkout and restart `server.py`. Hosted: the engine needs a deploy (the **Deploy engine** workflow). Or choose the other engine |
+| "The engine couldn't check this text as it was sent" | The engine refused the request (422). Researchly does not keep resending it: those paragraphs are checked again after you edit them. If it keeps happening, update the engine and this app together |
+| "Checked in part", with "paragraphs couldn't be checked" or "too long to check as you type" | Some paragraphs were refused, or are over 20,000 characters. The others are checked as usual |
+| "This engine checks only a little text at a time without an account" | The hosted engine's limit for anonymous use. Choose This computer, or check a shorter passage |
+| "The engine is busy" | Too many checks in a minute. Researchly waits as long as the engine asks (at most 2 minutes) and tries again |
 | Underlines in the wrong place in a browser | Reload the page once. Chrome, Arc and Firefox build their accessibility tree when Researchly first asks for it |
 | Underlines in Slack or another Electron app don't appear | Quit and reopen that app with Researchly already running |
 | Accept does nothing in an app | About this field… shows the write-back order. Reorder `write_back` for that app in `apps-mac.json` (for example `["paste", "typing"]`) and rebuild |
@@ -244,11 +267,11 @@ Sources/ResearchlyOverlayCore/   Foundation only; builds and tests on Linux too
   ParagraphLedger.swift  paragraph ids, status, placed suggestions, heading detection
   Eligibility.swift      fields.json + apps-mac.json, the gate, per-app rules
   States.swift           the six states, backoff 2/4/8/16/30 s, revisions, debounce, pause
-  EngineModels.swift     the live-check request and a tolerant response decoder
-  EngineClient.swift     POST {engine}/v1/check-paragraphs, engine choice, errors
+  EngineModels.swift     the live-check request, the engine's limits, a tolerant response decoder
+  EngineClient.swift     POST {engine}/v1/check-paragraphs, engine choice, errors (422 not retried, 429 waits)
   LiveCheckSession.swift the loop: pause → send → drop stale → retry → state
   Geometry.swift         AX↔AppKit flip, line splitting, clipping, widget placement
-  Tokens.swift           category colours and patterns (temporary, see below)
+  Looks.swift            categories and states mapped onto the generated tokens
 Sources/ResearchlyOverlay/       the AppKit shell (macOS only)
   FocusTracker / FieldReading    AXObserver, polling, reading fields and line rectangles
   UnderlineOverlay               click-through panel drawing underlines (CAShapeLayer)
@@ -262,9 +285,25 @@ Tests/ResearchlyOverlayCoreTests/  XCTest for the core (fixtures in Fixtures/)
 - `swift run ResearchlyOverlay` runs the app without bundling. It finds
   the rules in the checkout, but macOS grants Accessibility to the
   terminal app you started it from.
-- `Tokens.swift` holds the category colours until
-  `packages/design-tokens/` (PLAN S4d R2) generates them. Replace it with
-  the generated file then.
+- Colours, underline patterns, icons, state words and the retry schedule
+  come from `packages/design-tokens/dist/ResearchlyTokens.swift`, generated
+  from `tokens.json` (`npm run build` in that folder). It is compiled as it
+  is, never copied: `packages/design-tokens/Package.swift` makes it a local
+  Swift package (`ResearchlyDesignTokens`, Foundation only, so it builds on
+  Linux too), and this package depends on it by path
+  (`../../packages/design-tokens`). A change to the tokens reaches the app
+  at the next build.
+- What the engine answers is pinned by real replies:
+  `packages/contract/fixtures/check-paragraphs/*.json` are made by the
+  engine service (`services/engine/tests/contract_fixtures.py`, compared
+  with the service on every test run) and decoded here in
+  `SharedFixtureTests` (and by the Windows client). The reply's `state`
+  decides "checked in part"; a tier that is `disabled` (or the learned tier
+  without a model) is not an outage. A suggestion is drawn only if the
+  paragraph says exactly its `text` at `begin..<end`, and Accept checks the
+  field still says it. The rule's id and internal name (`rule_id`,
+  `rule_name`) are decoded but never shown; the card shows the section
+  ("Methods"), as the website does.
 - Per-app behaviour lives in `packages/desktop-rules/apps-mac.json`
   (schema: `packages/desktop-rules/README.md`). Adding or tuning an app is
   a data change.

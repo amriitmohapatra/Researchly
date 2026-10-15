@@ -1,25 +1,17 @@
 import AppKit
+import ResearchlyDesignTokens
 import ResearchlyOverlayCore
 
-extension RGBA {
+// The generated tokens (packages/design-tokens) give every colour as a
+// light/dark pair, and an `nsColor` that follows the appearance by itself.
+// Core Animation layers need a CGColor resolved for the current appearance.
+extension ResearchlyTokens.RGBA {
     var cgColor: CGColor {
         CGColor(srgbRed: CGFloat(red), green: CGFloat(green), blue: CGFloat(blue), alpha: CGFloat(alpha))
     }
-
-    var nsColor: NSColor {
-        NSColor(srgbRed: CGFloat(red), green: CGFloat(green), blue: CGFloat(blue), alpha: CGFloat(alpha))
-    }
 }
 
-extension ThemedColor {
-    /// A colour that follows the system appearance by itself.
-    var nsColor: NSColor {
-        let light = self.light, dark = self.dark
-        return NSColor(name: nil) { appearance in
-            appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? dark.nsColor : light.nsColor
-        }
-    }
-
+extension ResearchlyTokens.ColorPair {
     func cgColor(dark: Bool) -> CGColor { resolve(dark: dark).cgColor }
 }
 

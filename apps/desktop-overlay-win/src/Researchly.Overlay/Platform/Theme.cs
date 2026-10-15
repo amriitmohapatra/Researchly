@@ -4,6 +4,7 @@ using System.Windows.Media;
 using Microsoft.Win32;
 using Researchly.Overlay.Core.Engine;
 using Researchly.Overlay.Core.Tokens;
+using Rgba = Researchly.Design.Rgba;
 
 namespace Researchly.Overlay.Platform;
 
@@ -55,19 +56,24 @@ internal sealed class Theme : IDisposable
     /// <summary>True when animations should be kept still (Windows "Animation effects" off).</summary>
     public static bool ReducedMotion => !SystemParameters.ClientAreaAnimation;
 
-    public SurfaceColours Surface => DesignTokens.Surface(IsDark);
+    public SurfaceColours Surface => Looks.Surface(IsDark);
 
     public Brush Brush(Rgba c) => Frozen(c);
 
     /// <summary>The underline colour for a category; in high contrast, the system's highlight colour.</summary>
     public Brush Line(Category category) =>
-        IsHighContrast ? SystemColors.HighlightBrush : Frozen(DesignTokens.For(category).For(IsDark).Line);
+        IsHighContrast ? SystemColors.HighlightBrush : Frozen(Looks.For(category).Underline.Color.Resolve(IsDark));
 
+    /// <summary>The card's rail for a category.</summary>
+    public Brush Rail(Category category) =>
+        IsHighContrast ? SystemColors.HighlightBrush : Frozen(Looks.For(category).Rail.Resolve(IsDark));
+
+    /// <summary>Text in the category's colour (its name on a card).</summary>
     public Brush Ink(Category category) =>
-        IsHighContrast ? SystemColors.WindowTextBrush : Frozen(DesignTokens.For(category).For(IsDark).Ink);
+        IsHighContrast ? SystemColors.WindowTextBrush : Frozen(Looks.For(category).BadgeText.Resolve(IsDark));
 
     public Brush Tint(Category category) =>
-        IsHighContrast ? SystemColors.WindowBrush : Frozen(DesignTokens.For(category).For(IsDark).Tint);
+        IsHighContrast ? SystemColors.WindowBrush : Frozen(Looks.For(category).Highlight.Resolve(IsDark));
 
     public Brush SurfaceBrush => IsHighContrast ? SystemColors.WindowBrush : Frozen(Surface.Surface);
     public Brush InkBrush => IsHighContrast ? SystemColors.WindowTextBrush : Frozen(Surface.Ink);

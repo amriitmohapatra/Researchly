@@ -1,4 +1,5 @@
 import Foundation
+import ResearchlyDesignTokens
 
 /// The six states every surface shares (design note §3).
 public enum OverlayState: String, CaseIterable, Codable {
@@ -15,16 +16,11 @@ public enum OverlayState: String, CaseIterable, Codable {
     /// The engine cannot be reached, or refused.
     case offline
 
-    /// Words for the menu bar and the widget's hover text.
+    /// Words for the menu bar and the widget's hover text, from the
+    /// generated tokens (the same words on every surface). For `issues`
+    /// with a count, use `label(count:)`.
     public var title: String {
-        switch self {
-        case .hidden: return "Not checking here"
-        case .checking: return "Checking…"
-        case .issues: return "Suggestions"
-        case .clear: return "No suggestions"
-        case .partial: return "Checked in part"
-        case .offline: return "Can’t check right now"
-        }
+        self == .issues ? "Suggestions" : look.label
     }
 }
 
@@ -63,9 +59,10 @@ public enum StateMachine {
     }
 }
 
-/// Retry delays after failures: 2, 4, 8, 16 and 30 s, then every 30 s.
+/// Retry delays after failures: 2, 4, 8, 16 and 30 s, then every 30 s
+/// (the generated tokens' `retrySeconds`, shared by every surface).
 public struct RetryBackoff: Equatable {
-    public static let schedule: [TimeInterval] = [2, 4, 8, 16, 30]
+    public static let schedule: [TimeInterval] = ResearchlyTokens.retrySeconds
     public private(set) var failures = 0
 
     public init() {}

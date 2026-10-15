@@ -21,7 +21,7 @@
 import type { CheckParagraphsRequest, CheckParagraphsResponse, DocumentType, Format, Spelling, Suggestion, TierHealth } from "@researchly/contract";
 import { INITIAL_STATUS, reduceCheckState, type CheckEvent, type CheckStatus } from "./check-state";
 import type { CheckResult } from "./engine";
-import { shouldBanner } from "./health";
+import { LIVE_PAUSE_MS, partialReason } from "./live-check";
 import {
   canSend,
   carryItems,
@@ -40,8 +40,8 @@ import {
   type LiveParagraph,
 } from "./live-paragraphs";
 
-/** Wait this long after the last keystroke before checking (docs/inline-review-design.md §1.8). */
-export const LIVE_PAUSE_MS = 1500;
+/** Wait this long after the last keystroke before checking (docs/inline-review-design.md §1.8); shared with Word (R4). */
+export { LIVE_PAUSE_MS, partialReason };
 
 export type LiveCheckFn = (request: CheckParagraphsRequest, signal: AbortSignal) => Promise<CheckResult<CheckParagraphsResponse>>;
 
@@ -78,6 +78,12 @@ export interface LiveSnapshot {
   doc: LiveDocument;
   /** The underlines a paragraph shows (answer, or carried across an edit), already filtered for the writer. */
   itemsFor: (p: LiveParagraph) => readonly LiveItem[];
+  /**
+   * More paragraphs changed at once (a long paste) than one live request
+   * takes: those nearest the caret were checked, and Check covers the rest.
+   * Live checks never sweep the whole text (the engine's live rate limit).
+   */
+  leftToCheck: boolean;
   /** Changes whenever anything drawn may have changed. */
   version: number;
 }
@@ -85,12 +91,6 @@ export interface LiveSnapshot {
 const EMPTY: readonly LiveItem[] = [];
 const MAX_CACHE = 4000;
 
-/** The plain-words reason for a partial check: which part of the checking was off. */
-export function partialReason(health: readonly TierHealth[] | undefined): string {
-  const down = (health ?? []).filter(shouldBanner).map((t) => t.label || t.tier);
-  if (down.length === 0) return "";
-  return `${down.join(" and ")} checks were unavailable`;
-}
 
 export class LiveSession {
   private readonly check: LiveCheckFn;
@@ -105,6 +105,11 @@ export class LiveSession {
   private text = "";
   private doc: LiveDocument = { paragraphs: [], headings: [] };
   private keys = new Set<string>();
+  /** Keys new in the latest text (what the writer's last change touched). */
+  private changed: string[] = [];
+  /** Paragraphs the writer changed and no answer covers yet: the only ones ever sent. */
+  private dirty = new Set<string>();
+  private leftToCheck = false;
   private cache = new Map<string, Entry>();
   private provisional = new Map<string, LiveItem[]>();
   private dismissed = new Set<string>();
@@ -143,7 +148,14 @@ export class LiveSession {
   getSnapshot = (): LiveSnapshot => {
     if (!this.snapshot) {
       const enabled = this.enabled;
-      this.snapshot = { status: this.status, enabled, doc: this.doc, itemsFor: this.itemsFor, version: this.version };
+      this.snapshot = {
+        status: this.status,
+        enabled,
+        doc: this.doc,
+        itemsFor: this.itemsFor,
+        leftToCheck: this.leftToCheck,
+        version: this.version,
+      };
     }
     return this.snapshot;
   };
@@ -228,7 +240,10 @@ export class LiveSession {
     this.text = text;
     this.format = live;
     this.doc = live ? splitParagraphs(text, live, this.keyOf) : { paragraphs: [], headings: [] };
+    const was = this.keys;
     this.keys = new Set(this.doc.paragraphs.map((p) => p.key));
+    this.changed = this.doc.paragraphs.filter((p) => !was.has(p.key)).map((p) => p.key);
+    if (this.doc.paragraphs.length === 0) this.leftToCheck = false;
     if (formatChanged) {
       this.provisional.clear();
     } else {
@@ -276,7 +291,10 @@ export class LiveSession {
     this.revision++;
     this.lastEditAt = this.clock.now() - (this.pauseMs - delayMs);
     this.active = true;
-    if (this.enabled) this.schedule(delayMs);
+    if (!this.enabled) return;
+    for (const key of this.changed) this.dirty.add(key);
+    this.changed = [];
+    this.schedule(delayMs);
   }
 
   /** The "Underlines while writing" switch. */
@@ -289,19 +307,18 @@ export class LiveSession {
       this.emit();
       return;
     }
+    // No sweep of what is already on screen: the next edit is checked, and Check covers the rest.
     this.emit();
-    if (this.text.trim()) {
-      this.active = true;
-      this.schedule(0);
-    }
   }
 
   setOptions(o: LiveOptionsState) {
     const stale = o.documentType !== this.opts.documentType || o.spelling !== this.opts.spelling;
-    const prefsOn = o.showPreferences && !this.opts.showPreferences;
     const prefsChanged = o.showPreferences !== this.opts.showPreferences;
     this.opts = o;
     if (stale) {
+      // Ask again only for what was answered or asked for (never the whole text): one request, nearest the caret.
+      for (const key of this.cache.keys()) if (this.keys.has(key)) this.dirty.add(key);
+      if (this.inflight) for (const key of this.inflight.sent.values()) this.dirty.add(key);
       this.epoch++;
       this.inflight?.controller.abort();
       this.inflight = null;
@@ -311,7 +328,7 @@ export class LiveSession {
     if (prefsChanged) this.filtered = new WeakMap();
     if (!stale && !prefsChanged) return;
     this.emit();
-    if (this.enabled && this.active && (stale || prefsOn)) this.schedule(0);
+    if (this.enabled && this.active && stale) this.schedule(0);
     else this.settle();
   }
 
@@ -359,8 +376,9 @@ export class LiveSession {
       }
       this.prune();
     }
-    const reason = partialReason(health);
+    const reason = partialReason(health ?? []);
     this.partial = { on: reason !== "", reason };
+    this.leftToCheck = false;
     this.filtered = new WeakMap();
     this.emit();
     if (!this.enabled) return;
@@ -400,7 +418,8 @@ export class LiveSession {
   }
 
   private todo(): LiveParagraph[] {
-    return this.doc.paragraphs.filter((p) => canSend(p) && this.needs(p));
+    if (this.dirty.size === 0) return [];
+    return this.doc.paragraphs.filter((p) => this.dirty.has(p.key) && canSend(p) && this.needs(p));
   }
 
   private clearTimer() {
@@ -456,6 +475,12 @@ export class LiveSession {
     }
     const format = this.format!;
     const batch = nextBatch(todo, this.caret());
+    // One request per pause: what did not fit (a long paste) is left to Check, never swept live.
+    if (todo.some((p) => !batch.includes(p) && !batch.some((b) => b.key === p.key))) {
+      this.leftToCheck = true;
+      this.emit();
+    }
+    this.dirty.clear();
     const revision = this.revision;
     const request: CheckParagraphsRequest = {
       revision,
@@ -487,6 +512,8 @@ export class LiveSession {
     if (this.inflight !== flight || flight.epoch !== this.epoch || this.disposed) return; // superseded
     this.inflight = null;
     if (!result.ok) {
+      // Asked again on the retry, unless their words changed meanwhile.
+      for (const key of flight.sent.values()) if (this.keys.has(key)) this.dirty.add(key);
       this.dispatch({ type: "failure", revision: flight.revision, reason: result.error.title });
       const wait = this.status.state === "offline" ? this.status.retryInMs : null;
       if (wait !== null) {

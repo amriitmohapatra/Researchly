@@ -1,0 +1,122 @@
+{
+  "about": "One paragraph, nothing to suggest, no heading (section unknown); options with a key this engine does not know, which is ignored.",
+  "request": {
+    "revision": 7,
+    "paragraphs": [
+      {
+        "id": "only",
+        "text": "We fitted a renewal model to weekly case counts."
+      }
+    ],
+    "options": {
+      "show_preferences": true,
+      "a_future_option": true
+    }
+  },
+  "status": 200,
+  "headers": {},
+  "response": {
+    "schema_version": "1",
+    "revision": 7,
+    "paragraphs": [
+      {
+        "id": "only",
+        "section": "unknown",
+        "suggestions": []
+      }
+    ],
+    "state": "ok",
+    "health": [
+      {
+        "tier": "parser",
+        "label": "Sentence parser",
+        "ok": true,
+        "state": "ready",
+        "detail": "en_core_web_sm loaded",
+        "remedy": ""
+      },
+      {
+        "tier": "spelling",
+        "label": "Spelling",
+        "ok": true,
+        "state": "ready",
+        "detail": "SymSpell + scientific lexicon",
+        "remedy": ""
+      },
+      {
+        "tier": "grammar",
+        "label": "Grammar",
+        "ok": false,
+        "state": "disabled",
+        "detail": "turned off in settings",
+        "remedy": "re-enable the grammar tier in settings"
+      },
+      {
+        "tier": "gec",
+        "label": "Learned corrections",
+        "ok": false,
+        "state": "missing",
+        "detail": "no local model in this build (the tier abstains entirely)",
+        "remedy": ""
+      }
+    ],
+    "hidden_preferences": 0,
+    "signed_in": false,
+    "assessed_rules": [
+      "AB801",
+      "C301",
+      "C302",
+      "C303",
+      "C304",
+      "C305",
+      "D904",
+      "D905",
+      "E701",
+      "E702",
+      "E703",
+      "E704",
+      "E705",
+      "E706",
+      "E707",
+      "G101",
+      "G102",
+      "G103",
+      "G104",
+      "G105",
+      "G106",
+      "G107",
+      "G108",
+      "GN101",
+      "GN102",
+      "GN103",
+      "GN104",
+      "GN105",
+      "GN201",
+      "GN202",
+      "GN203",
+      "GN204",
+      "GN205",
+      "GN206",
+      "GN208",
+      "L901",
+      "N102",
+      "S001",
+      "S002",
+      "W201",
+      "W202",
+      "W203",
+      "W204",
+      "W205",
+      "W206",
+      "W207",
+      "W208",
+      "W209",
+      "W210",
+      "W212",
+      "W213",
+      "X302"
+    ],
+    "ruleset": "0.1.0+077e92be",
+    "elapsed_ms": 9
+  }
+}

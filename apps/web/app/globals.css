@@ -4358,3 +4358,58 @@ main:focus {
     width: 100%;
   }
 }
+
+/* Word pane: underlines and states (R4) */
+
+/* The status mark sits between the brand and the account control. */
+.tp-status {
+  margin-left: auto;
+  display: inline-flex;
+  min-width: 0;
+}
+.tp-status .status-mark-label {
+  white-space: nowrap;
+}
+
+/* "In the text": the card's finding is underlined in the document, drawn as its underline (colour and pattern from the tokens). */
+.wcard-in-text {
+  margin-left: auto;
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+  text-decoration-line: underline;
+  text-underline-offset: 3px;
+}
+.wcard-in-text-correction {
+  text-decoration-color: var(--rl-underline-correction-color);
+  text-decoration-style: var(--rl-underline-correction-style);
+  text-decoration-thickness: var(--rl-underline-correction-thickness);
+}
+.wcard-in-text-improvement {
+  text-decoration-color: var(--rl-underline-improvement-color);
+  text-decoration-style: var(--rl-underline-improvement-style);
+  text-decoration-thickness: var(--rl-underline-improvement-thickness);
+}
+.wcard-in-text-convention {
+  text-decoration-color: var(--rl-underline-convention-color);
+  text-decoration-style: var(--rl-underline-convention-style);
+  text-decoration-thickness: var(--rl-underline-convention-thickness);
+}
+.wcard-in-text-preference {
+  text-decoration-color: var(--rl-underline-preference-color);
+  text-decoration-style: var(--rl-underline-preference-style);
+  text-decoration-thickness: var(--rl-underline-preference-thickness);
+}
+
+/* "Not an issue here": the quiet last action of a card. */
+.wcard-actions .wcard-dismiss {
+  margin-left: auto;
+  align-self: center;
+}
+
+/* Live underlines in Settings: the switch with its help, or the one quiet line when Word cannot draw them. */
+.tp-underlines .help,
+.tp-underlines-note {
+  margin-top: 4px;
+}
+
+/* end Word pane: underlines and states (R4) */

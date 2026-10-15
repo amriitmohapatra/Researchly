@@ -56,6 +56,17 @@ for f in fields.json apps-mac.json; do
   fi
 done
 
+# The colours, underline patterns and state words are compiled from the
+# generated tokens: packages/design-tokens is a local Swift package that
+# Package.swift depends on by path (no copy is made).
+TOKENS="$REPO/packages/design-tokens"
+for f in Package.swift dist/ResearchlyTokens.swift; do
+  if [[ ! -f "$TOKENS/$f" ]]; then
+    echo "Missing $TOKENS/$f — run this script from a full checkout of the repository." >&2
+    exit 1
+  fi
+done
+
 cd "$HERE"
 echo "==> Swift $(swift --version 2>&1 | head -n 1)"
 

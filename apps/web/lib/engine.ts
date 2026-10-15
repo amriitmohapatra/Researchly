@@ -19,6 +19,8 @@ import type {
   AnalyzeResponse,
   AnalyzeWordRequest,
   AnalyzeWordResponse,
+  CheckParagraphsRequest,
+  CheckParagraphsResponse,
   DocumentType,
   Format,
   HealthResponse,
@@ -241,35 +243,6 @@ async function call<T>(
     };
   }
   return { ok: true, data: body };
-}
-
-/**
- * POST a JSON body to one of the engine's paths with the caller's bearer
- * token, the shared error mapping and a shape check. The live check
- * (lib/live-check.ts, S4d R5) sends through here, so every request that
- * carries text still leaves from this file (scripts/check-boundary.mjs).
- */
-export async function postEngineJson<T>(
-  path: string,
-  payload: unknown,
-  validate: (body: unknown) => body is T,
-  opts: { engineUrl?: string; auth?: EngineAuth | null; signal?: AbortSignal; timeoutMs?: number } = {},
-): Promise<CheckResult<T>> {
-  const engineUrl = opts.engineUrl ?? ENGINE_URL;
-  const body = JSON.stringify(payload);
-  return withBearer(opts.auth, (token) =>
-    call(
-      `${engineUrl}${path}`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json", accept: "application/json", ...authHeader(token) },
-        body,
-      },
-      opts.signal,
-      validate,
-      { engineUrl, timeoutMs: opts.timeoutMs },
-    ),
-  );
 }
 
 /** Check pasted text: POST /v1/analyze. */
@@ -533,6 +506,69 @@ export async function analyzeWord(
       p.signal,
       looksLikeAnalyzeWordResponse,
       { engineUrl },
+    ),
+  );
+}
+
+/* ---------- the live check (S4d R3/R4): POST /v1/check-paragraphs ---------- */
+
+/**
+ * How long a live check may take. A paragraph's check answers in well under
+ * a second (p95 200 ms over HTTP, R3); a reply slower than this is stale by
+ * the time it lands, so the surface gives up and says it cannot check.
+ */
+export const LIVE_TIMEOUT_MS = 15_000;
+
+/** Enough to paint underlines safely: every paragraph carries an id and suggestions with UTF-16 offsets and a category. */
+export function looksLikeCheckParagraphsResponse(body: unknown): body is CheckParagraphsResponse {
+  if (typeof body !== "object" || body === null) return false;
+  const b = body as Record<string, unknown>;
+  if (typeof b.revision !== "number" || !Array.isArray(b.paragraphs) || !Array.isArray(b.health)) return false;
+  return b.paragraphs.every((p: unknown) => {
+    if (typeof p !== "object" || p === null) return false;
+    const para = p as Record<string, unknown>;
+    return (
+      typeof para.id === "string" &&
+      Array.isArray(para.suggestions) &&
+      para.suggestions.every((s: unknown) => {
+        const x = s as Record<string, unknown> | null;
+        return (
+          typeof x === "object" &&
+          x !== null &&
+          typeof x.id === "string" &&
+          isNat(x.begin) &&
+          isNat(x.end) &&
+          typeof x.category === "string" &&
+          typeof x.text === "string"
+        );
+      })
+    );
+  });
+}
+
+/**
+ * Send changed paragraphs to POST /v1/check-paragraphs. The text goes from
+ * the browser straight to the engine, as every other check does; lib/live-check.ts
+ * wraps this for the surfaces. `auth` is null for "This computer".
+ */
+export async function postCheckParagraphs(
+  request: CheckParagraphsRequest,
+  engineUrl: string = ENGINE_URL,
+  auth?: EngineAuth | null,
+  signal?: AbortSignal,
+): Promise<CheckResult<CheckParagraphsResponse>> {
+  const body = JSON.stringify(request);
+  return withBearer(auth, (token) =>
+    call(
+      `${engineUrl}/v1/check-paragraphs`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", accept: "application/json", ...authHeader(token) },
+        body,
+      },
+      signal,
+      looksLikeCheckParagraphsResponse,
+      { engineUrl, timeoutMs: LIVE_TIMEOUT_MS },
     ),
   );
 }

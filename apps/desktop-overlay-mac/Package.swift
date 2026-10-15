@@ -6,6 +6,11 @@
 //   ResearchlyOverlayCore  Foundation only. Text snapshots, UTF-16 ranges,
 //                          the eligibility gate, the six states, the engine
 //                          client. Builds and tests on Linux too.
+//                          Colours, underline patterns and state looks come
+//                          from the generated tokens: packages/design-tokens
+//                          is a local Swift package (its Package.swift builds
+//                          dist/ResearchlyTokens.swift as is), so build from
+//                          a full checkout.
 //   ResearchlyOverlay      The AppKit shell (Accessibility, overlay windows,
 //                          menu bar). macOS only, so it is declared only when
 //                          this manifest is evaluated on a Mac.
@@ -15,14 +20,17 @@ var products: [Product] = [
     .library(name: "ResearchlyOverlayCore", targets: ["ResearchlyOverlayCore"]),
 ]
 
+let tokens: Target.Dependency = .product(name: "ResearchlyDesignTokens", package: "design-tokens")
+
 var targets: [Target] = [
     .target(
         name: "ResearchlyOverlayCore",
+        dependencies: [tokens],
         path: "Sources/ResearchlyOverlayCore"
     ),
     .testTarget(
         name: "ResearchlyOverlayCoreTests",
-        dependencies: ["ResearchlyOverlayCore"],
+        dependencies: ["ResearchlyOverlayCore", tokens],
         path: "Tests/ResearchlyOverlayCoreTests",
         exclude: ["Fixtures"]
     ),
@@ -33,7 +41,7 @@ products.append(.executable(name: "ResearchlyOverlay", targets: ["ResearchlyOver
 targets.append(
     .executableTarget(
         name: "ResearchlyOverlay",
-        dependencies: ["ResearchlyOverlayCore"],
+        dependencies: ["ResearchlyOverlayCore", tokens],
         path: "Sources/ResearchlyOverlay",
         linkerSettings: [
             .linkedFramework("AppKit"),
@@ -48,5 +56,6 @@ let package = Package(
     name: "ResearchlyOverlay",
     platforms: [.macOS(.v14)],
     products: products,
+    dependencies: [.package(path: "../../packages/design-tokens")],
     targets: targets
 )

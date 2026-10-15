@@ -1,5 +1,6 @@
 import AppKit
 import QuartzCore
+import ResearchlyDesignTokens
 import ResearchlyOverlayCore
 
 @MainActor
@@ -134,15 +135,15 @@ final class WidgetView: NSView {
         let changed = state != self.state || count != self.count
         self.state = state
         self.count = count
-        toolTip = detail ?? state.title
-        setAccessibilityLabel("Researchly: \(state == .issues ? "\(count) suggestion\(count == 1 ? "" : "s")" : state.title)")
+        toolTip = detail ?? state.look.description
+        setAccessibilityLabel("Researchly: \(state.label(count: count))")
         updateSpinner()
         if changed { needsDisplay = true }
     }
 
     private func updateSpinner() {
         let dark = Appearance.isDark
-        spinner.strokeColor = Tokens.widgetRing.cgColor(dark: dark)
+        spinner.strokeColor = ResearchlyTokens.widgetRing.cgColor(dark: dark)
         let spinning = state == .checking
         spinner.isHidden = !spinning
         if spinning && !Appearance.reduceMotion {
@@ -167,8 +168,8 @@ final class WidgetView: NSView {
 
     override func draw(_ dirtyRect: NSRect) {
         let dark = Appearance.isDark
-        let ring = Tokens.widgetRing.resolve(dark: dark).nsColor
-        let surface = Tokens.widgetSurface.resolve(dark: dark).nsColor
+        let ring = ResearchlyTokens.widgetMark.resolve(dark: dark).nsColor
+        let surface = ResearchlyTokens.widgetSurface.resolve(dark: dark).nsColor
         let circle = NSBezierPath(ovalIn: bounds.insetBy(dx: 4, dy: 4))
 
         surface.setFill()
@@ -179,16 +180,16 @@ final class WidgetView: NSView {
             return
         case .checking:
             // The spinner layer draws the ring.
-            Tokens.widgetRing.resolve(dark: dark).nsColor.withAlphaComponent(0.25).setStroke()
+            ResearchlyTokens.widgetRing.resolve(dark: dark).nsColor.withAlphaComponent(0.25).setStroke()
             circle.lineWidth = 2
             circle.stroke()
         case .issues:
-            Tokens.widgetBadge.resolve(dark: dark).nsColor.setFill()
+            ResearchlyTokens.widgetBadgeBackground.resolve(dark: dark).nsColor.setFill()
             circle.fill()
             let text = count > 99 ? "99+" : "\(count)"
             let attrs: [NSAttributedString.Key: Any] = [
                 .font: NSFont.monospacedDigitSystemFont(ofSize: count > 9 ? 9.5 : 11, weight: .bold),
-                .foregroundColor: Tokens.widgetBadgeText.resolve(dark: dark).nsColor,
+                .foregroundColor: ResearchlyTokens.widgetBadgeText.resolve(dark: dark).nsColor,
             ]
             let s = NSAttributedString(string: text, attributes: attrs)
             let size = s.size()
@@ -210,7 +211,7 @@ final class WidgetView: NSView {
             circle.lineWidth = 2
             circle.stroke()
             // A small warning triangle with a stroke for the exclamation.
-            let warn = Tokens.warning.resolve(dark: dark).nsColor
+            let warn = ResearchlyTokens.widgetWarning.resolve(dark: dark).nsColor
             let tri = NSBezierPath()
             tri.move(to: NSPoint(x: bounds.midX, y: bounds.midY + 5))
             tri.line(to: NSPoint(x: bounds.midX - 5.5, y: bounds.midY - 4))
@@ -226,7 +227,7 @@ final class WidgetView: NSView {
             surface.setStroke()
             bar.stroke()
         case .offline:
-            let grey = Tokens.offline.resolve(dark: dark).nsColor
+            let grey = ResearchlyTokens.widgetOffline.resolve(dark: dark).nsColor
             grey.setStroke()
             circle.lineWidth = 2
             circle.stroke()

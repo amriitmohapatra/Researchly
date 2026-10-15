@@ -4,7 +4,8 @@ import type { CheckParagraphsRequest } from "@researchly/contract";
 import { UnderlineTeaser } from "@/components/LiveEditor";
 import { StatusMark } from "@/components/StatusMark";
 import { INITIAL_STATUS } from "@/lib/check-state";
-import { checkParagraphs, LIVE_TIMEOUT_MS, looksLikeCheckParagraphsResponse } from "@/lib/live-check";
+import { LIVE_TIMEOUT_MS, looksLikeCheckParagraphsResponse } from "@/lib/engine";
+import { checkParagraphs } from "@/lib/live-check";
 import type { LiveItem } from "@/lib/live-paragraphs";
 
 const ITEM: LiveItem = {
@@ -124,9 +125,9 @@ describe("the live check's request", () => {
 
   it("refuses an answer it cannot draw safely", () => {
     expect(looksLikeCheckParagraphsResponse(reply)).toBe(true);
-    expect(looksLikeCheckParagraphsResponse({ ...reply, revision: -1 })).toBe(false);
-    const bad = { ...reply, paragraphs: [{ id: "kabc", suggestions: [{ ...ITEM, begin: 9, end: 2 }] }] };
-    expect(looksLikeCheckParagraphsResponse(bad)).toBe(false);
+    const noRange = { ...reply, paragraphs: [{ id: "kabc", suggestions: [{ ...ITEM, begin: "9" }] }] };
+    expect(looksLikeCheckParagraphsResponse(noRange)).toBe(false);
+    expect(looksLikeCheckParagraphsResponse({ ...reply, paragraphs: undefined })).toBe(false);
     expect(looksLikeCheckParagraphsResponse(null)).toBe(false);
   });
 

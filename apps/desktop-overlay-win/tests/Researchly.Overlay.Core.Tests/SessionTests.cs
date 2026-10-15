@@ -382,7 +382,7 @@ public class LiveCheckSessionTests
     [Fact]
     public void Long_fields_go_in_batches_and_the_state_settles_after_the_last()
     {
-        string text = string.Join("\n", Enumerable.Range(1, 95).Select(i => $"Sentence number {i} is here."));
+        string text = string.Join("\n", Enumerable.Range(1, 2 * LiveCheckSession.MaxParagraphsPerRequest + 15).Select(i => $"Sentence number {i} is here."));
         _session.Start(text);
         Assert.Equal(LiveCheckSession.MaxParagraphsPerRequest, _engine.Last.Request.Paragraphs.Count);
         _engine.AnswerClear(_engine.Last);

@@ -14,5 +14,7 @@
     <NeutralLanguage>en</NeutralLanguage>
     <!-- The repository's rule files (packages/desktop-rules), relative to this folder. -->
     <ResearchlyRulesDir>$(MSBuildThisFileDirectory)..\..\packages\desktop-rules\</ResearchlyRulesDir>
+    <!-- The generated design tokens (packages/design-tokens/dist, from tokens.json): compiled into the core as they are. -->
+    <ResearchlyTokensDir>$(MSBuildThisFileDirectory)..\..\packages\design-tokens\dist\</ResearchlyTokensDir>
   </PropertyGroup>
 </Project>

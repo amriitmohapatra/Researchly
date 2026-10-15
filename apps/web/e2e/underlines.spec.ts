@@ -293,9 +293,14 @@ test.describe("underlines while writing", () => {
     expect(sent).toHaveLength(0);
     await expect(underlines(page)).toHaveCount(0);
     await expect(page.getByTestId("live-status")).toHaveCount(0);
-    // Back to Markdown: the text is checked.
+    // Back to Markdown: nothing is swept; the next change is checked.
     await page.getByTestId("format").selectOption("markdown");
+    await page.waitForTimeout(1800);
+    expect(sent).toHaveLength(0);
+    await editor(page).press("Control+End");
+    await page.keyboard.type(" More.");
     await expect.poll(() => sent.length, { timeout: 4000 }).toBe(1);
+    expect(sent[0]!.paragraphs).toHaveLength(1);
   });
 
   test("Markdown: headings are the # lines, and formatting is blanked before sending", async ({ page }) => {
@@ -332,10 +337,12 @@ test.describe("underlines while writing", () => {
     await expect(page.getByTestId("live-status")).toHaveCount(0);
     await page.reload();
     await expect(page.getByTestId("live-underlines")).not.toBeChecked();
-    // On again: what is on screen is checked.
+    expect(await page.evaluate(() => window.localStorage.getItem("researchly.web.underlines"))).toBe("off");
+    // On again: switching on sends nothing by itself; writing is checked.
     await page.getByTestId("live-underlines").check();
     await editor(page).fill(DRAFT);
     await expect(underlines(page)).toHaveCount(3);
+    expect(sent).toHaveLength(1);
   });
 
   test("after Check the underlines and the results agree; a whole-document finding is never an underline", async ({ page }) => {

@@ -248,7 +248,7 @@ describe("the live loop", () => {
       state: "partial",
       health: [{ tier: "grammar", label: "Grammar", ok: false, state: "error", detail: "", remedy: "" }],
     });
-    expect(s.getSnapshot().status).toMatchObject({ state: "partial", count: 1, reason: "Grammar checks were unavailable" });
+    expect(s.getSnapshot().status).toMatchObject({ state: "partial", count: 1, reason: "Grammar was not checked" });
   });
 
   it("switched off or LaTeX: hidden, and nothing is sent", async () => {
@@ -266,13 +266,36 @@ describe("the live loop", () => {
     expect(s.getSnapshot()).toMatchObject({ enabled: false, status: { state: "hidden" } });
   });
 
-  it("switching on with text on screen checks it", async () => {
-    const { s, e, advance } = setup();
+  it("switching on never sweeps the text on screen; the next edit is checked", async () => {
+    const { s, e, advance, type } = setup();
     s.setEnabled(false);
     s.setDocument(TEXT, "plain");
     s.setEnabled(true);
-    await advance(0);
+    await advance(LIVE_PAUSE_MS * 2);
+    expect(e.calls).toHaveLength(0);
+    type(TEXT.replace("More work", "Much more work"));
+    await advance(LIVE_PAUSE_MS);
+    expect(e.calls.map((c) => c.req.paragraphs.map((p) => p.text))).toEqual([["Much more work is needed."]]);
+  });
+
+  it("a long paste: one request for the paragraphs nearest the caret; the rest is left to Check", async () => {
+    const { s, e, advance, type } = setup("");
+    const long = Array.from({ length: 120 }, (_, i) => `Paragraph ${i} has the the slip.`).join("\n\n");
+    s.setCaretSource(() => long.length);
+    type(long);
+    await advance(LIVE_PAUSE_MS);
     expect(e.calls).toHaveLength(1);
+    expect(e.calls[0]!.req.paragraphs).toHaveLength(50);
+    expect(e.calls[0]!.req.paragraphs[0]!.text).toBe("Paragraph 119 has the the slip.");
+    expect(s.getSnapshot().leftToCheck).toBe(true);
+    await e.reply(0);
+    await advance(LIVE_PAUSE_MS * 4);
+    expect(e.calls).toHaveLength(1); // never a sweep
+    expect(s.drawn()).toHaveLength(50);
+    // A full check answers for everything and clears the note.
+    s.fullCheckStarted();
+    s.fullCheckAnswered(long, "plain", [], { documentType: "auto", spelling: null, showPreferences: false });
+    expect(s.getSnapshot().leftToCheck).toBe(false);
   });
 
   it("text loaded without typing (the demo) is not sent until the writer edits or checks", async () => {
@@ -361,10 +384,10 @@ describe("the live loop", () => {
     expect(s.getSnapshot().status).toMatchObject({ state: "issues", count: 1 });
     // The check answered for every paragraph: nothing is sent.
     expect(e.calls).toHaveLength(0);
-    // Showing Preferences asks the engine for the paragraphs the check answered without them.
+    // Showing Preferences sends nothing: the full check answered these paragraphs (Check again shows its Preferences).
     s.setOptions({ documentType: "manuscript", spelling: null, showPreferences: true });
-    await advance(0);
-    expect(e.calls).toHaveLength(1);
+    await advance(LIVE_PAUSE_MS);
+    expect(e.calls).toHaveLength(0);
   });
 
   it("a failed full check hands back to the live loop", async () => {
@@ -394,6 +417,6 @@ describe("the live loop", () => {
         { tier: "grammar", label: "Grammar", ok: false, state: "error", detail: "", remedy: "" },
         { tier: "gec", label: "Learned", ok: false, state: "missing", detail: "", remedy: "" },
       ]),
-    ).toBe("Grammar checks were unavailable");
+    ).toBe("Grammar was not checked");
   });
 });

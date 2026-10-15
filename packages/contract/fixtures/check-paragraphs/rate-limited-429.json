@@ -1,0 +1,23 @@
+{
+  "about": "Over the live check's rate limit (here 1 a minute): 429 rate_limited with a Retry-After header in seconds. Wait at least that long before the next check.",
+  "request": {
+    "revision": 2,
+    "paragraphs": [
+      {
+        "id": "p1",
+        "text": "We fitted a renewal model to weekly case counts."
+      }
+    ]
+  },
+  "status": 429,
+  "headers": {
+    "retry-after": "60"
+  },
+  "response": {
+    "error": {
+      "code": "rate_limited",
+      "message": "Too many requests from this address; try again in 60 s.",
+      "request_id": "c808843e08b3434a8c1212e7af505ebc"
+    }
+  }
+}

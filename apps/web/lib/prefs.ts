@@ -3,8 +3,9 @@
  * the article type to check as (S4) and the English spelling to keep to (both
  * shared by the website and the Word add-in, which are one origin) and, in
  * the Word add-in, the engine choice and
- * Draft/Revise and (S4c) the reporting checklist; whether the editor
- * underlines while writing (S4d R5); on the Label page, the
+ * Draft/Revise, (S4c) the reporting checklist and (S4d R4) whether live
+ * underlines are on, and (S4d R5) whether the website's editor underlines while
+ * writing; on the Label page, the
  * verdicts given so far (rule ids and verdicts, never text). The document
  * itself is never persisted (no localStorage, sessionStorage or IndexedDB
  * for text) — scripts/check-boundary.mjs enforces that storage APIs are used
@@ -89,7 +90,8 @@ export function subscribeSpelling(onChange: () => void): () => void {
 
 /* ---------- underlines while writing (S4d R5): a choice, never text ---------- */
 
-const LIVE_UNDERLINES_KEY = "researchly.live-underlines";
+/** A sibling of the Word pane's key below: the two surfaces are switched separately. */
+const LIVE_UNDERLINES_KEY = "researchly.web.underlines";
 
 /** Whether the editor underlines while the writer writes; null when never chosen (then on). */
 export function loadLiveUnderlines(): boolean | null {
@@ -175,7 +177,7 @@ export function saveModeChoice(v: ModeChoice): void {
 /** For useSyncExternalStore: another taskpane or tab changing a Word preference updates this one. */
 export function subscribeWordPrefs(onChange: () => void): () => void {
   const handler = (e: StorageEvent) => {
-    if (e.key === ENGINE_KEY || e.key === MODE_KEY || e.key === CHECKLIST_KEY) onChange();
+    if (e.key === ENGINE_KEY || e.key === MODE_KEY || e.key === CHECKLIST_KEY || e.key === UNDERLINES_KEY) onChange();
   };
   window.addEventListener("storage", handler);
   return () => window.removeEventListener("storage", handler);
@@ -201,6 +203,20 @@ export function loadChecklistChoice(): ChecklistPref | null {
 
 export function saveChecklistChoice(v: ChecklistPref): void {
   write(CHECKLIST_KEY, v);
+}
+
+/* ---------- live underlines in Word (S4d R4): on or off, never text ---------- */
+
+const UNDERLINES_KEY = "researchly.word.underlines";
+
+/** Whether the writer turned live underlines on or off on this computer; null when never chosen (on, where Word can draw them). */
+export function loadUnderlinesChoice(): boolean | null {
+  const v = read(UNDERLINES_KEY);
+  return v === "on" ? true : v === "off" ? false : null;
+}
+
+export function saveUnderlinesChoice(on: boolean): void {
+  write(UNDERLINES_KEY, on ? "on" : "off");
 }
 
 /* ---------- the Label page (S4 exit check): verdicts on flags, never text ---------- */

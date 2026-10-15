@@ -124,13 +124,73 @@ public sealed class FakeEngine : IEngineClient
         AnswerJson(call, $"{{\"revision\":{call.Request.Revision},\"paragraphs\":[{string.Join(",", parts)}]}}");
     }
 
-    public void Fail(Call call, string code = "unreachable", TimeSpan? retryAfter = null) =>
-        call.Reply.SetException(new EngineException(code, "synthetic failure", retryAfter: retryAfter));
+    public void Fail(Call call, string code = "unreachable", TimeSpan? retryAfter = null, int? status = null) =>
+        call.Reply.SetException(new EngineException(code, "synthetic failure", status, retryAfter));
+
+    /// <summary>Completes a call with what the HTTP client produced for a recorded exchange.</summary>
+    public void Complete(Call call, Task<CheckReply> outcome)
+    {
+        if (outcome.IsFaulted) call.Reply.SetException(outcome.Exception!.InnerException!);
+        else call.Reply.SetResult(outcome.Result);
+    }
 }
 
 public static class Fixtures
 {
     public static string Read(string name) => File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", name));
 
+    /// <summary>
+    /// One exchange of packages/contract/fixtures/check-paragraphs (made by the engine service,
+    /// shared with the macOS client): the request a client sent, the status, the headers it acts
+    /// on and the body the engine answered.
+    /// </summary>
+    public static SharedExchange Shared(string name) =>
+        new(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Shared", name + ".json")));
+
     public static string RulesDirectory => Path.Combine(AppContext.BaseDirectory, "rules");
+}
+
+public sealed class SharedExchange
+{
+    public SharedExchange(string json)
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(json);
+        var root = doc.RootElement;
+        RequestJson = root.GetProperty("request").GetRawText();
+        Request = System.Text.Json.JsonSerializer.Deserialize<CheckParagraphsRequest>(RequestJson)!;
+        Status = root.GetProperty("status").GetInt32();
+        foreach (var h in root.GetProperty("headers").EnumerateObject()) Headers[h.Name] = h.Value.GetString() ?? "";
+        ResponseJson = root.GetProperty("response").GetRawText();
+    }
+
+    public string RequestJson { get; }
+    public CheckParagraphsRequest Request { get; }
+    public int Status { get; }
+    public Dictionary<string, string> Headers { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public string ResponseJson { get; }
+
+    public string Text(string id) => Request.Paragraphs.Single(p => p.Id == id).Text;
+
+    /// <summary>What the real HTTP client makes of the recorded answer to this request (or to another one).</summary>
+    public async Task<CheckReply> ThroughClientAsync(CheckParagraphsRequest? request = null)
+    {
+        using var client = new HttpEngineClient("http://127.0.0.1:3517", new ReplayHandler(this));
+        return await client.CheckAsync(request ?? Request, CancellationToken.None);
+    }
+
+    private sealed class ReplayHandler : System.Net.Http.HttpMessageHandler
+    {
+        private readonly SharedExchange _x;
+        public ReplayHandler(SharedExchange x) => _x = x;
+
+        protected override Task<System.Net.Http.HttpResponseMessage> SendAsync(System.Net.Http.HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var r = new System.Net.Http.HttpResponseMessage((System.Net.HttpStatusCode)_x.Status)
+            {
+                Content = new System.Net.Http.StringContent(_x.ResponseJson, System.Text.Encoding.UTF8, "application/json"),
+            };
+            foreach (var (k, v) in _x.Headers) r.Headers.TryAddWithoutValidation(k, v);
+            return Task.FromResult(r);
+        }
+    }
 }

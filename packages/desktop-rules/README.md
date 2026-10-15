@@ -9,6 +9,7 @@ build scripts copy these files into each app.
 |---|---|---|
 | `fields.json` | macOS and Windows clients | Fields to refuse: secure fields always, plus label and identifier keywords in eight languages, and the field length limits |
 | `apps-mac.json` | macOS client (`apps/desktop-overlay-mac`) | Per-app rules by bundle id |
+| `apps-windows.json` | Windows client (`apps/desktop-overlay-win`) | Per-app rules by executable name; its keys are described in the file's `$comment` and in the Windows README |
 
 ## fields.json (shared; schema version 1)
 
@@ -68,6 +69,14 @@ built-in value (in brackets below).
 | `note` | string | For people reading the file |
 
 `apps-mac.json` holds macOS bundle ids only. Per-app rules for the Windows
-client (`apps/desktop-overlay-win`) belong in a file of their own, for
-example `apps-win.json` keyed by executable name, documented in this README
-when it is added.
+client live in `apps-windows.json`, keyed by executable name.
+
+## What the clients send and receive
+
+These files decide *where* the clients read text. *What* they send and
+receive is the engine's live check, `POST /v1/check-paragraphs` (contract:
+`services/engine/researchly_service/schemas.py`). Real exchanges of it,
+made by the engine service, are in
+`packages/contract/fixtures/check-paragraphs/`; both clients decode them in
+their tests, and the service checks on every test run that they are still
+what it answers.

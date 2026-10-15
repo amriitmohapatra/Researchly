@@ -17,9 +17,13 @@ the build is unsigned.
 - The **.NET 8 SDK**: <https://dotnet.microsoft.com/download/dotnet/8.0>
   (choose "SDK", x64). A later SDK (9, 10) also works. The SDK includes the
   .NET 8 Desktop Runtime the app needs to run.
-- The whole repository (the build reads `packages/desktop-rules/`), from
-  GitHub's "Code, Download ZIP" or `git clone`.
-- An engine to check text (see [Choosing the engine](#choosing-the-engine)).
+- The whole repository (the build reads `packages/desktop-rules/` and the
+  generated design tokens in `packages/design-tokens/dist/`), from GitHub's
+  "Code, Download ZIP" or `git clone`.
+- An engine that offers the live check (`POST /v1/check-paragraphs`, PLAN
+  S4d R3, 2026-10-15): the engine on this computer
+  (`apps/word-addin/server.py`), or the hosted engine once it has been
+  deployed with R3 (see [Choosing the engine](#choosing-the-engine)).
 
 ## Build and run
 
@@ -76,26 +80,39 @@ Press Win+R, type `shell:startup`, and put a shortcut to
 Right-click the icon, then **Engine**:
 
 - **This computer** (default): `http://127.0.0.1:3517`. Nothing leaves
-  the machine. Run Researchly's engine locally on that port, from the
-  repository root (needs Python 3.10 and, for the grammar tier, Java 17+):
+  the machine. Start the local engine, the same one the Word add-in's
+  "This computer" mode uses, from the repository root (needs Python 3.10
+  with the CLI's packages and, for the grammar tier, Java 17+), and leave it
+  running:
 
   ```powershell
-  cd services\engine
-  pip install -r requirements-dev.txt
-  $env:RESEARCHLY_ENV = "development"; $env:PORT = "3517"
-  python -m researchly_service
+  cd apps\word-addin
+  python server.py            # http://127.0.0.1:3517
   ```
 
-  The live check uses `POST /v1/check-paragraphs` (design note section 5).
-  An engine without that endpoint answers 404, and the client says "this
-  engine does not offer live checks" rather than pretending.
+  It must be the `server.py` from 2026-10-15 or later, which answers
+  `POST /v1/check-paragraphs`; restart it after updating the checkout. It
+  serves an app without a web origin (this client) only over loopback.
+  (The engine service in `services\engine`, run in development on port
+  3517, answers the same contract.) An engine without the live check
+  answers 404, and the client says "this engine does not offer live
+  checks" rather than pretending.
 - **Hosted**: choose **Set hosted address...** and enter the hosted
   engine's `https://` address. Plain `http://` is refused for anything but
-  this computer.
+  this computer. The hosted engine has the live check once it has been
+  deployed after R3 (2026-10-15): the owner runs the **Deploy engine**
+  workflow in the repository's Actions tab. Without an account it checks up
+  to 1,500 words at a time; this client sends far less per check (at most
+  20 paragraphs, about 6,000 characters).
 
 If no engine answers, the widget shows the crossed-out mark and the menu
 says "Can't check right now", with **Try again now**. Retries happen by
-themselves after 2, 4, 8, 16 and 30 seconds, then every 30 seconds.
+themselves after 2, 4, 8, 16 and 30 seconds, then every 30 seconds; when
+the engine says it is busy (429), the client waits as long as it asks (at
+most 2 minutes). A request the engine refuses as sent (422 and the like) is
+not sent again: the widget says so, and those paragraphs are checked again
+after you edit them. A paragraph over 20,000 characters is not checked as
+you type, and the warning sign says so.
 
 ## How it looks and behaves
 
@@ -248,6 +265,10 @@ app. Note the Windows version, the display scale(s) and the app versions.
   both typing and pasting. Nothing is changed in those cases.
 - **"Can't check right now" with "This computer".** Start the engine (see
   above) and check `http://127.0.0.1:3517/v1/health` in a browser.
+- **"This engine does not offer live checks".** The engine is older than
+  the live check (R3). This computer: update the checkout and restart
+  `server.py`. Hosted: the engine needs a deploy (the **Deploy engine**
+  workflow).
 
 ## How it is built
 
@@ -265,7 +286,8 @@ apps/desktop-overlay-win/
 │   ├── Placement/                    widget corner, inset, drag, work area
 │   ├── WriteBack/                    pre-checks and outcome of Accept
 │   ├── Settings/                     settings file, pauses, engine address rules
-│   └── Tokens/                       category colours, patterns and icons (light, dark)
+│   └── Tokens/                       Looks.cs: categories and states mapped onto the
+│                                     generated tokens (linked from packages/design-tokens/dist)
 ├── src/Researchly.Overlay/           the Windows shell (WPF, .NET 8)
 │   ├── Capture/                      UI Automation on its own thread: focus, text,
 │   │                                 rectangles, write-back, input, clipboard
@@ -292,9 +314,26 @@ as Unicode input, then by pasting, in the order the app's row lists. Each
 attempt is checked by reading the text again; a method that changed
 nothing lets the next one try, anything unexpected stops.
 
-The colours in `Core/Tokens/DesignTokens.cs` are copied from the website's
-category colours until `packages/design-tokens/` (PLAN R2) generates a C#
-file; replace that class with the generated one then.
+Colours, underline patterns and thicknesses, icon names, state words and
+the retry schedule come from `packages/design-tokens/dist/ResearchlyTokens.cs`,
+generated from `tokens.json` (`npm run build` in that folder). The core
+compiles that file as it is: `Researchly.Overlay.Core.csproj` links it
+(`$(ResearchlyTokensDir)`, set in `Directory.Build.props`), so a change to
+the tokens reaches the app at the next build. Only the icons' path data
+(the website's shapes, keyed by the tokens' icon names) lives in the shell,
+in `Ui/Parts.cs`.
+
+What the engine answers is pinned by real replies:
+`packages/contract/fixtures/check-paragraphs/*.json` are made by the engine
+service (`services/engine/tests/contract_fixtures.py`, compared with the
+service on every test run), copied next to the tests, and decoded through
+the real HTTP client in `SharedFixtureTests` (the macOS client decodes the
+same files). The reply's `state` decides "partial"; a tier that is
+`disabled` (or the learned tier without a model) is not an outage. A
+suggestion is drawn only while the paragraph says exactly its `text` at its
+range, and Accept checks the field still says it. The rule's id and
+internal name are decoded but never shown; the card and teaser show the
+section ("Methods"), as the website does.
 
 The core's tests run anywhere with the .NET 8 SDK:
 `dotnet test tests/Researchly.Overlay.Core.Tests`. The WPF project can be

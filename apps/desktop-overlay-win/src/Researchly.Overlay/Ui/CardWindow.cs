@@ -56,7 +56,7 @@ internal sealed class CardWindow : NonActivatingWindow
             DockPanel.SetDock(nav, Dock.Right);
             header.Children.Add(nav);
         }
-        header.Children.Add(Parts.CategoryHeader(_theme, sug.Category));
+        header.Children.Add(Parts.CategoryHeader(_theme, sug.Category, sug.SectionLabel));
         stack.Children.Add(header);
 
         // The flagged words, in the writer's serif.
@@ -102,7 +102,7 @@ internal sealed class CardWindow : NonActivatingWindow
         _status.Visibility = Visibility.Collapsed;
         stack.Children.Add(_status);
 
-        Content = Parts.Panel(_theme, stack, _theme.Line(sug.Category));
+        Content = Parts.Panel(_theme, stack, _theme.Rail(sug.Category));
         ShowQuietly();
         UpdateLayout();
 

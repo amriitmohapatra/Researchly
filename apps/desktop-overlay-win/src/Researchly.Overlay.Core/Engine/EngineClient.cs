@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -26,6 +27,12 @@ public sealed class EngineException : Exception
     public string Code { get; }
     public int? HttpStatus { get; }
     public TimeSpan? RetryAfter { get; }
+
+    /// <summary>Statuses meaning "this request will never succeed as it is": not retried until the text changes.</summary>
+    public static bool IsRejection(int? status) => status is 400 or 401 or 403 or 413 or 422;
+
+    /// <summary>Whether the same request could succeed later (so a retry with backoff makes sense).</summary>
+    public bool Retryable => !IsRejection(HttpStatus);
 }
 
 /// <summary>Sends paragraphs to the engine the writer chose.</summary>
@@ -109,6 +116,8 @@ public sealed class HttpEngineClient : IEngineClient, IDisposable
         string code = status switch
         {
             429 => "rate_limited",
+            422 => "invalid_request",
+            413 => "payload_too_large",
             401 or 403 => "refused",
             404 => "not_found",
             >= 500 => "engine_error",
@@ -117,6 +126,8 @@ public sealed class HttpEngineClient : IEngineClient, IDisposable
         string message = status switch
         {
             429 => "The engine is busy; trying again shortly.",
+            422 or 400 => "The engine could not check this text as it was sent.",
+            413 => "This text is too long to check as you type.",
             401 or 403 => "The engine refused the request.",
             404 => "This engine does not offer live checks yet.",
             >= 500 => "The engine had a problem.",
@@ -185,10 +196,12 @@ public static class ReplyDecoder
         foreach (var p in request.Paragraphs) sent[p.Id] = p.Text;
 
         var byParagraph = new Dictionary<string, IReadOnlyList<Suggestion>>(StringComparer.Ordinal);
+        var sections = new Dictionary<string, string>(StringComparer.Ordinal);
         int dropped = 0;
         foreach (var pr in dto.Paragraphs ?? new List<ParagraphResultDto?>())
         {
             if (pr?.Id == null || !sent.TryGetValue(pr.Id, out var text)) { dropped += pr?.Suggestions?.Count ?? 0; continue; }
+            if (!string.IsNullOrEmpty(pr.Section)) sections[pr.Id] = pr.Section!;
             var list = new List<Suggestion>();
             var seen = new HashSet<string>(StringComparer.Ordinal);
             foreach (var s in pr.Suggestions ?? new List<SuggestionDto?>())
@@ -201,8 +214,17 @@ public static class ReplyDecoder
             byParagraph[pr.Id] = list;
         }
 
-        var (partial, detail) = ReadHealth(dto);
-        return new CheckReply(dto.Revision, byParagraph, partial, detail, dropped);
+        var (partial, detail, tiers) = ReadHealth(dto);
+        return new CheckReply(dto.Revision, byParagraph, partial, detail, dropped)
+        {
+            Sections = sections,
+            Tiers = tiers,
+            State = dto.State,
+            SchemaVersion = dto.SchemaVersion,
+            HiddenPreferences = Math.Max(0, dto.HiddenPreferences ?? 0),
+            SignedIn = dto.SignedIn ?? false,
+            Ruleset = dto.Ruleset,
+        };
     }
 
     private static Suggestion? Validate(SuggestionDto? s, string paragraphId, string text)
@@ -227,7 +249,8 @@ public static class ReplyDecoder
             id, paragraphId, begin, end, category,
             s.Critical ?? category == Category.Correction,
             message, s.Plain?.Trim() ?? "", s.Why?.Trim() ?? "", s.Source?.Trim() ?? "",
-            replacements, s.Section, s.FixSafety, s.RuleId);
+            replacements, s.Section, s.FixSafety, s.RuleId,
+            Text: flagged, RuleName: s.RuleName, Tier: s.Tier, LearnRef: s.LearnRef);
     }
 
     public static bool TryCategory(string? value, out Category category)
@@ -243,51 +266,55 @@ public static class ReplyDecoder
     }
 
     /// <summary>
-    /// Partial when the reply's state says so, or its health says so. Health may be
-    /// the service's { status, tiers: [...] } (status "degraded" means a tier the
-    /// service is configured to run is down) or a bare list of tiers, where a tier
-    /// with ok = false counts unless its state is "disabled" (switched off on purpose).
+    /// Reads health as the engine sends it (a list of tiers) or as the health route does
+    /// ({ status, tiers }). The reply's state decides when present: "partial" is partial and
+    /// "ok" is not, whatever the tiers say (a tier switched off, or the learned tier without a
+    /// model, is listed with ok = false and is not an outage). Without a state, a tier that is
+    /// an outage (<see cref="TierHealth.IsOutage"/>) or a "degraded" status makes it partial.
     /// </summary>
-    private static (bool Partial, string? Detail) ReadHealth(CheckParagraphsResponseDto dto)
+    private static (bool Partial, string? Detail, IReadOnlyList<TierHealth> Tiers) ReadHealth(CheckParagraphsResponseDto dto)
     {
-        bool partial = string.Equals(dto.State, "partial", StringComparison.OrdinalIgnoreCase);
         var h = dto.Health;
-        JsonElement tiers = default;
-        bool hasStatus = false;
+        JsonElement list = default;
+        bool statusDegraded = false;
         if (h.ValueKind == JsonValueKind.Object)
         {
-            if (h.TryGetProperty("status", out var st) && st.ValueKind == JsonValueKind.String)
-            {
-                hasStatus = true;
-                if (string.Equals(st.GetString(), "degraded", StringComparison.OrdinalIgnoreCase)) partial = true;
-            }
-            if (h.TryGetProperty("tiers", out var t)) tiers = t;
+            if (h.TryGetProperty("status", out var st) && st.ValueKind == JsonValueKind.String
+                && string.Equals(st.GetString(), "degraded", StringComparison.OrdinalIgnoreCase))
+                statusDegraded = true;
+            if (h.TryGetProperty("tiers", out var t)) list = t;
         }
         else if (h.ValueKind == JsonValueKind.Array)
         {
-            tiers = h;
+            list = h;
         }
 
-        string? detail = null;
-        if (tiers.ValueKind == JsonValueKind.Array)
+        var tiers = new List<TierHealth>();
+        if (list.ValueKind == JsonValueKind.Array)
         {
-            foreach (var tier in tiers.EnumerateArray())
+            foreach (var tier in list.EnumerateArray())
             {
                 if (tier.ValueKind != JsonValueKind.Object) continue;
-                bool down = tier.TryGetProperty("ok", out var ok) && ok.ValueKind == JsonValueKind.False;
-                bool disabled = tier.TryGetProperty("state", out var s) && s.ValueKind == JsonValueKind.String
-                                && string.Equals(s.GetString(), "disabled", StringComparison.OrdinalIgnoreCase);
-                if (!down || disabled) continue;
-                if (!hasStatus) partial = true;
-                if (detail == null)
-                {
-                    string label = tier.TryGetProperty("label", out var l) && l.ValueKind == JsonValueKind.String ? l.GetString()!
-                        : tier.TryGetProperty("tier", out var n) && n.ValueKind == JsonValueKind.String ? n.GetString()! : "A check";
-                    detail = $"{label} is unavailable right now.";
-                }
+                string Str(string key) => tier.TryGetProperty(key, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() ?? "" : "";
+                bool ok = !(tier.TryGetProperty("ok", out var o) && o.ValueKind == JsonValueKind.False);
+                string name = Str("tier");
+                string label = Str("label");
+                if (label.Length == 0) label = name.Length > 0 ? name : "A check";
+                tiers.Add(new TierHealth(name, label, ok, Str("state").ToLowerInvariant(), Str("detail"), Str("remedy")));
             }
         }
-        if (!partial) return (false, null);
-        return (true, detail ?? "Some checks are unavailable right now.");
+
+        var down = tiers.Where(t => t.IsOutage).ToList();
+        bool partial = dto.State?.Trim().ToLowerInvariant() switch
+        {
+            "partial" => true,
+            "ok" => false,
+            _ => statusDegraded || down.Count > 0,
+        };
+        if (!partial) return (false, null, tiers);
+        if (down.Count == 0) return (true, "Some checks are unavailable right now.", tiers);
+        string names = string.Join(", ", down.Select(t => t.Label));
+        string verb = down.Count == 1 ? "is" : "are";
+        return (true, $"{names} {verb} unavailable right now.", tiers);
     }
 }

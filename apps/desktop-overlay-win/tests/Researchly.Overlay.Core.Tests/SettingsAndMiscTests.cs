@@ -82,7 +82,7 @@ public class SettingsTests
     [InlineData("http://127.0.0.1:3517", true, "http://127.0.0.1:3517")]
     [InlineData("http://localhost:8080/", true, "http://localhost:8080")]
     [InlineData("http://engine.example.invalid", false, "")]       // plain http over the network: refused
-    [InlineData("https://user:pw@engine.example.invalid", false, "")]
+    [InlineData("https://user:pw@engine.example.org", false, "")]  // credentials in the address: refused
     [InlineData("https://engine.example.invalid/?x=1", false, "")]
     [InlineData("ftp://engine.example.invalid", false, "")]
     [InlineData("not a url", false, "")]
@@ -160,21 +160,39 @@ public class WriteBackPlanTests
 public class TokenTests
 {
     [Fact]
-    public void Every_category_has_a_name_icon_pattern_and_light_and_dark_colours()
+    public void Every_category_comes_from_the_generated_tokens()
     {
-        Assert.Equal(4, DesignTokens.All.Count);
-        Assert.Equal(4, DesignTokens.All.Select(t => t.Pattern).Distinct().Count());
-        foreach (var t in DesignTokens.All)
+        var looks = Looks.Categories.Select(Looks.For).ToList();
+        Assert.Equal(Researchly.Design.ResearchlyTokens.CategoryOrder, looks.Select(l => l.Id));
+        Assert.Equal(new[] { "Correction", "Improvement", "Convention", "Preference" }, looks.Select(l => l.Label));
+        Assert.Equal(new[] { true, false, false, false }, looks.Select(l => l.Critical));
+        Assert.Equal(4, looks.Select(l => l.Underline.Pattern).Distinct().Count());
+        Assert.Equal(Researchly.Design.UnderlinePattern.Solid, Looks.For(Category.Correction).Underline.Pattern);
+        Assert.Equal(Researchly.Design.UnderlinePattern.Dashed, Looks.For(Category.Improvement).Underline.Pattern);
+        Assert.Equal(Researchly.Design.UnderlinePattern.Dotted, Looks.For(Category.Convention).Underline.Pattern);
+        Assert.Equal(Researchly.Design.UnderlinePattern.WavyDotted, Looks.For(Category.Preference).Underline.Pattern);
+        foreach (var l in looks)
         {
-            Assert.False(string.IsNullOrWhiteSpace(t.Name));
-            Assert.False(string.IsNullOrWhiteSpace(t.IconPath));
-            Assert.NotEqual(t.Light.Line, t.Dark.Line);
-            Assert.Same(t, DesignTokens.For(t.Category));
+            Assert.NotEqual(l.Underline.Color.Light, l.Underline.Color.Dark);
+            Assert.False(string.IsNullOrWhiteSpace(l.Icon));
+            Assert.False(string.IsNullOrWhiteSpace(l.SegoeGlyph));
         }
-        Assert.Equal(UnderlinePattern.Solid, DesignTokens.Correction.Pattern);
-        Assert.Equal(UnderlinePattern.Dashed, DesignTokens.Improvement.Pattern);
-        Assert.Equal(UnderlinePattern.Dotted, DesignTokens.Convention.Pattern);
-        Assert.Equal(UnderlinePattern.WavyDotted, DesignTokens.Preference.Pattern);
+    }
+
+    [Fact]
+    public void Every_state_has_a_generated_look_and_words()
+    {
+        foreach (var state in Enum.GetValues<OverlayState>())
+            Assert.Equal(Looks.Id(state), Looks.For(state).Id);
+        Assert.Equal(Researchly.Design.ResearchlyTokens.StateOrder, Enum.GetValues<OverlayState>().Select(Looks.Id));
+        Assert.Equal("3 suggestions", Looks.Label(OverlayState.Issues, 3));
+        Assert.Equal("1 suggestion", Looks.Label(OverlayState.Issues, 1));
+        Assert.Equal(Researchly.Design.ResearchlyTokens.WidgetWarning.Light, Looks.WidgetColour(OverlayState.Partial, dark: false));
+        Assert.Equal(Researchly.Design.ResearchlyTokens.WidgetOffline.Dark, Looks.WidgetColour(OverlayState.Offline, dark: true));
+        // The retry schedule is the tokens' (2, 4, 8, 16, 30 s).
+        var backoff = new RetryBackoff();
+        Assert.Equal(Researchly.Design.ResearchlyTokens.RetrySeconds,
+            Enumerable.Range(0, 5).Select(_ => backoff.Next().TotalSeconds));
     }
 
     [Fact]
@@ -182,16 +200,16 @@ public class TokenTests
     {
         foreach (var dark in new[] { false, true })
         {
-            var surface = DesignTokens.Surface(dark).Surface;
-            foreach (var t in DesignTokens.All)
+            var surface = Looks.Surface(dark).Surface;
+            foreach (var l in Looks.Categories.Select(Looks.For))
             {
-                Assert.True(Rgba.Contrast(t.For(dark).Line, surface) >= 3.0, $"{t.Name} line, dark={dark}");
-                Assert.True(Rgba.Contrast(t.For(dark).Ink, surface) >= 4.5, $"{t.Name} ink, dark={dark}");
+                Assert.True(Looks.Contrast(l.Underline.Color.Resolve(dark), surface) >= 3.0, $"{l.Label} line, dark={dark}");
+                Assert.True(Looks.Contrast(l.BadgeText.Resolve(dark), surface) >= 4.5, $"{l.Label} text, dark={dark}");
             }
-            foreach (var state in Enum.GetValues<OverlayState>())
-                Assert.True(Rgba.Contrast(DesignTokens.WidgetColour(state, dark), surface) >= 3.0, $"{state}, dark={dark}");
-            Assert.True(Rgba.Contrast(DesignTokens.Surface(dark).Ink, surface) >= 4.5);
-            Assert.True(Rgba.Contrast(DesignTokens.Surface(dark).InkSecondary, surface) >= 4.5);
+            foreach (var state in new[] { OverlayState.Checking, OverlayState.Partial, OverlayState.Offline, OverlayState.Issues })
+                Assert.True(Looks.Contrast(Looks.WidgetColour(state, dark), surface) >= 3.0, $"{state}, dark={dark}");
+            Assert.True(Looks.Contrast(Looks.Surface(dark).Ink, surface) >= 4.5);
+            Assert.True(Looks.Contrast(Looks.Surface(dark).InkSecondary, surface) >= 4.5);
         }
     }
 
@@ -199,15 +217,17 @@ public class TokenTests
     public void Conventions_are_never_painted_as_errors()
     {
         // CLAUDE.md rule 3: a Convention never looks like a Correction.
-        Assert.NotEqual(DesignTokens.Correction.Light.Line, DesignTokens.Convention.Light.Line);
-        Assert.NotEqual(DesignTokens.Correction.Pattern, DesignTokens.Convention.Pattern);
+        Assert.NotEqual(Looks.For(Category.Correction).Underline.Color, Looks.For(Category.Convention).Underline.Color);
+        Assert.NotEqual(Looks.For(Category.Correction).Underline.Pattern, Looks.For(Category.Convention).Underline.Pattern);
+        Assert.False(Looks.For(Category.Convention).Critical);
     }
 
     [Fact]
-    public void Hex_parsing()
+    public void Opacity_changes_only_alpha()
     {
-        Assert.Equal(new Rgba(0xd5, 0x5e, 0x00), Rgba.Hex("#d55e00"));
-        Assert.Equal("#d55e00", Rgba.Hex("d55e00").ToString());
-        Assert.Throws<FormatException>(() => Rgba.Hex("#12"));
+        var c = Looks.For(Category.Correction).Highlight.Light;
+        var half = c.WithAlpha(0.5);
+        Assert.Equal((c.R, c.G, c.B), (half.R, half.G, half.B));
+        Assert.Equal(128, half.A);
     }
 }

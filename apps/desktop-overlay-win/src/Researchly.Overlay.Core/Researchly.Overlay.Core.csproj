@@ -23,6 +23,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Colours, underline patterns, icons and state words: the file
+         packages/design-tokens generates from tokens.json, compiled as it is
+         (never copied by hand). Namespace Researchly.Design. -->
+    <Compile Include="$(ResearchlyTokensDir)ResearchlyTokens.cs" Link="Tokens\ResearchlyTokens.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="Researchly.Overlay.Core.Tests" />
   </ItemGroup>
 </Project>

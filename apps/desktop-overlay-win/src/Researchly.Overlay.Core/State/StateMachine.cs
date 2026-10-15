@@ -22,16 +22,14 @@ public enum OverlayState
 }
 
 /// <summary>
-/// Retry timing while offline: 2, 4, 8, 16 and 30 seconds, then every 30 seconds.
-/// Any success resets it.
+/// Retry timing while offline: 2, 4, 8, 16 and 30 seconds, then every 30 seconds
+/// (the generated tokens' RetrySeconds, shared by every surface). Any success resets it.
 /// </summary>
 public sealed class RetryBackoff
 {
     private static readonly TimeSpan[] Steps =
-    {
-        TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(4), TimeSpan.FromSeconds(8),
-        TimeSpan.FromSeconds(16), TimeSpan.FromSeconds(30),
-    };
+        System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Select(
+            Researchly.Design.ResearchlyTokens.RetrySeconds, TimeSpan.FromSeconds));
 
     public int Attempt { get; private set; }
 

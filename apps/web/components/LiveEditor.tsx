@@ -744,6 +744,12 @@ export function LiveEditor({ session, value, format, onChange, textareaRef, id, 
 
       {footer}
 
+      {snap.enabled && snap.leftToCheck ? (
+        <p className="help lu-off-note" data-testid="underlines-left">
+          Underlines follow the paragraphs you change; for a long paste, press Check to see the whole text.
+        </p>
+      ) : null}
+
       {hasMarks ? (
         <details className="lu-list" data-testid="underline-list">
           <summary>
