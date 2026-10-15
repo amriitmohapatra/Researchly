@@ -86,10 +86,33 @@ _SET_ASIDE = (
 )
 
 
+# Parts of a file the checks did not read at all (the file adapters count
+# them; ingest/docx.py, ingest/latex_project.py).
+_NOT_CHECKED = (
+    ("footnotes", "footnotes"),
+    ("endnotes", "endnotes"),
+    ("comments", "comments"),
+    ("text_boxes", "text boxes"),
+    ("headers_footers", "headers or footers"),
+    ("skipped_files", "included files that could not be read"),
+)
+# Parts read where they stand, which a writer might think were skipped.
+_INCLUDED = (
+    ("footnotes", "footnotes"),
+)
+
+
+def _counted(found: dict, kinds) -> list:
+    return [{"kind": k, "count": int(found[k]), "label": label}
+            for k, label in kinds if found.get(k)]
+
+
 def reading_summary(document) -> Optional[dict]:
-    """What was read and what was set aside (Codex review #5): the words
-    the checks saw, and each kind of material they skipped, in plain words.
-    Counts only; no text."""
+    """What was read, set aside and left out (Codex review #5): the words
+    the checks saw, each kind of material they set aside, the parts of a
+    file they did not read (footnotes, text boxes, headers of a .docx;
+    included files that could not be read) and the parts read in place
+    (LaTeX footnotes), in plain words. Counts only; no text."""
     if document is None:
         return None
     read = dict(getattr(document, "read", {}) or {})
@@ -97,9 +120,54 @@ def reading_summary(document) -> Optional[dict]:
         read["marked_up"] = len(document.atoms)
     return {
         "words_checked": len(document.masked.split()),
-        "set_aside": [{"kind": k, "count": int(read[k]), "label": label}
-                      for k, label in _SET_ASIDE if read.get(k)],
+        "set_aside": _counted(read, _SET_ASIDE),
+        "not_checked": _counted(
+            getattr(document, "not_checked", {}) or {}, _NOT_CHECKED),
+        "included": _counted(
+            getattr(document, "included", {}) or {}, _INCLUDED),
     }
+
+
+_SINGULAR = {
+    "code": "line of code",
+    "maths_or_code": "bit of maths or code typed into the text",
+    "layout": "line laid out as a table or an equation",
+    "marked_up": "bit of maths, a citation or code in the markup",
+    "other_language": "paragraph not in English",
+    "footnotes": "footnote", "endnotes": "endnote", "comments": "comment",
+    "text_boxes": "text box", "headers_footers": "header or footer",
+    "skipped_files": "included file that could not be read",
+}
+
+
+def _phrase(item: dict) -> str:
+    label = (_SINGULAR.get(item["kind"], item["label"]) if item["count"] == 1
+             else item["label"])
+    return f"{item['count']:,} {label}"
+
+
+def reading_sentence(summary: Optional[dict]) -> str:
+    """The summary as the surfaces word it: "Checked 4,210 words, including
+    3 footnotes. Set aside: 2 lines of code. Not checked: 1 text box."
+    (apps/web/lib/reading.ts words it the same way.)"""
+    if not summary:
+        return ""
+    n = summary["words_checked"]
+    line = f"Checked {n:,} word{'' if n == 1 else 's'}"
+    inc = summary.get("included") or []
+    if inc:
+        line += ", including " + " · ".join(_phrase(i) for i in inc)
+    line += "."
+    aside = summary.get("set_aside") or []
+    if aside:
+        line += " Set aside: " + " · ".join(_phrase(i) for i in aside) + "."
+    skipped = summary.get("not_checked") or []
+    if skipped:
+        line += (" Not checked: " + " · ".join(_phrase(i) for i in skipped)
+                 + ".")
+    if any(i["kind"] == "other_language" for i in aside):
+        line += " Researchly checks English only."
+    return line
 
 
 def extras(a) -> dict:

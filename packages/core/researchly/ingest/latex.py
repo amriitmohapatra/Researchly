@@ -170,6 +170,22 @@ class LatexMask:
     # Spans that stood for a word in the sentence (maths, citations,
     # references, code, URLs): see Document.atoms.
     atoms: list[tuple[int, int]] = field(default_factory=list)
+    # \footnote{...} is read as prose where it is cited; the coverage
+    # summary says so ("including 3 footnotes").
+    footnotes: int = 0
+
+
+_FOOTNOTE = re.compile(r"\\footnote(?:text)?\s*[\[{]")
+_COMMENT_START = re.compile(r"(?<!\\)%")
+
+
+def _count_footnotes(text: str) -> int:
+    """Footnotes in the body, outside comments: the count the simpler
+    readers report (the parser counts the macros it walks)."""
+    body = _BEGIN_DOCUMENT.search(text)
+    rest = text[body.end():] if body else text
+    return sum(len(_FOOTNOTE.findall(_COMMENT_START.split(line, 1)[0]))
+               for line in rest.splitlines())
 
 
 def mask_latex(text: str,
@@ -211,7 +227,7 @@ def mask_latex(text: str,
     except Exception:
         pass
     return LatexMask(masked, headings, [], [reason],
-                     inline_atoms(text, "latex"))
+                     inline_atoms(text, "latex"), _count_footnotes(text))
 
 
 # On the P29 projects the lenient parse kept 99% of the words where it
@@ -443,6 +459,7 @@ class _Masker:
         self.eat_dimen = False
         # Brace groups still to drop after a DEFINITION_MACROS call.
         self.skip_definition = 0
+        self.footnotes = 0
 
     def run(self) -> LatexMask:
         from pylatexenc import latexwalker as lw
@@ -473,7 +490,8 @@ class _Masker:
         self.structure.sort(key=lambda s: s.start)
         return LatexMask("".join(self.out[:self.n]), self.headings,
                          self.structure, [],
-                         [(a, min(b, self.n)) for a, b in self.atoms if a < self.n])
+                         [(a, min(b, self.n)) for a, b in self.atoms if a < self.n],
+                         self.footnotes)
 
     # -- primitives ---------------------------------------------------------
 
@@ -572,6 +590,9 @@ class _Masker:
         name = n.macroname
         args, spec = self.args(n)
         end = n.pos + n.len
+        if name in ("footnote", "footnotetext") and prose and args \
+                and args[-1] is not None:
+            self.footnotes += 1
         if name in HEADING_MACROS:
             if prose and args and args[-1] is not None:
                 self.heading(n, args[-1])

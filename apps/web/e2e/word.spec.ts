@@ -24,6 +24,7 @@ import {
   reviseResponse,
   WORD_CHECKLIST,
   WORD_NARRATIVE,
+  wordResponseFor,
   wordState,
   WORDY,
 } from "./word-fixtures";
@@ -428,6 +429,54 @@ test.describe("Word taskpane", () => {
     await page.reload();
     await page.getByTestId("tp-settings").locator("summary").click();
     await expect(page.getByTestId("engine-local")).toBeChecked();
+  });
+
+  test("“This computer” says what it checks and what it contacts, from the local server’s own health (Codex review #11)", async ({ page }) => {
+    await fakeOffice(page);
+    const check = (id: "rules" | "spelling" | "grammar" | "document" | "brief", label: string, on = true, note = "") => ({ id, label, on, note });
+    const capabilities = (grammarOn: boolean) => ({
+      route: "local_server" as const,
+      label: "This computer (Word and the desktop overlays)",
+      where: "this_computer" as const,
+      checks: [
+        check("rules", "writing rules"),
+        check("spelling", "spelling"),
+        check("grammar", "grammar", grammarOn, grammarOn ? "" : "turned off in settings"),
+        check("document", "whole-document checks"),
+        check("brief", "the reviewer’s brief and the map"),
+      ],
+      network: { sends_text: false, contacts: [] },
+      summary: "",
+    });
+    await mockWordEngine(page, LOCAL_ENGINE, { capabilities: capabilities(true) });
+    await page.goto("/word");
+    await page.getByTestId("tp-settings").locator("summary").click();
+    await expect(page.getByTestId("local-capabilities")).toHaveCount(0); // the cloud is chosen
+    await page.getByTestId("engine-local").check();
+    await expect(page.getByTestId("local-capabilities")).toHaveText(
+      "This computer checks writing rules, spelling, grammar and whole-document checks, and builds the reviewer’s brief and the map. It sends nothing over the network.",
+    );
+
+    // The server is restarted with grammar off: the pane says so, as the server does.
+    await page.unroute(`${LOCAL_ENGINE}/v1/**`);
+    await mockWordEngine(page, LOCAL_ENGINE, { capabilities: capabilities(false) });
+    await page.getByTestId("engine-cloud").check();
+    await page.getByTestId("engine-local").check();
+    await expect(page.getByTestId("local-capabilities")).toContainText("Grammar is off (turned off in settings).");
+    expect(await axeSerious(page)).toEqual([]);
+  });
+
+  test("the reading line names what Word left out of the check: footnotes, comments, text boxes (Codex review #5)", async ({ page }) => {
+    await fakeOffice(page, { api16: true, desktopApi: true, unread: { footnotes: 2, comments: 1, shapes: ["TextBox", "Picture"] } });
+    const calls = await mockWordEngine(page, ENGINE, {
+      respond: (req, route) => fulfillJson(route, 200, { ...wordResponseFor(req), reading: { words_checked: 61, set_aside: [] } }),
+    });
+    await page.goto("/word");
+    await page.getByTestId("check-document").click();
+    await expect(page.getByTestId("tp-results")).toBeVisible();
+    await expect(page.getByTestId("reading-summary")).toHaveText("Checked 61 words. Not checked: 2 footnotes · 1 comment · 1 text box.");
+    // Counted in Word, never sent: the request carries the body's paragraphs only.
+    expect(JSON.stringify(calls[0]!.body)).not.toContain("footnote");
   });
 
   test("outside Word the page says how to open it, and reads nothing", async ({ page }) => {

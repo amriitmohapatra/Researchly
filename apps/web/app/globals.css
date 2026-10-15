@@ -1707,6 +1707,13 @@ main:focus {
 .file-panel .controls {
   margin-top: 8px;
 }
+.file-main {
+  margin-top: 8px;
+  max-width: var(--measure);
+}
+.file-main .select {
+  max-width: 100%;
+}
 .busy-label {
   display: inline-flex;
   align-items: center;
@@ -2240,6 +2247,10 @@ main:focus {
   padding: 0;
   border: 0;
   min-width: 0;
+}
+.tp-capabilities {
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
 }
 .tp-radio {
   align-items: flex-start;

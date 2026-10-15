@@ -267,6 +267,11 @@ export interface components {
             disabled_rules?: string[];
             /** @description The article type to check as. Omitted: the caller's saved setting, else auto. */
             document_type?: components["schemas"]["DocumentType"] | null;
+            /**
+             * Main File
+             * @description /v1/analyze-file with an Overleaf .zip: the project's main .tex file, by its path in the .zip (one of `document.main_candidates`). Omitted: Researchly chooses. Ignored for other files and requests.
+             */
+            main_file?: string | null;
             /** @description Draft or Revise for this request. Omitted: the caller's saved setting, else revise. */
             mode?: components["schemas"]["Mode"] | null;
             /**
@@ -469,6 +474,55 @@ export interface components {
              * @description What was skipped or approximated while reading the text, e.g. LaTeX that could not be parsed and was read with a simpler method. May quote the caller's own text; never logged.
              */
             warnings?: string[];
+        };
+        /**
+         * Capabilities
+         * @description What this engine checks and what it contacts over the network (Codex
+         *     review #11): the local server's "This computer" promise, stated from
+         *     the same health and settings the checks run on.
+         */
+        Capabilities: {
+            /** Checks */
+            checks: components["schemas"]["CapabilityCheck"][];
+            /** Label */
+            label: string;
+            network: components["schemas"]["NetworkUse"];
+            /**
+             * Route
+             * @enum {string}
+             */
+            route: "local_server" | "overlay" | "lsp" | "cli" | "service";
+            /**
+             * Summary
+             * @description One plain line, for logs and the command line.
+             */
+            summary: string;
+            /**
+             * Where
+             * @enum {string}
+             */
+            where: "this_computer" | "service";
+        };
+        /** CapabilityCheck */
+        CapabilityCheck: {
+            /**
+             * Id
+             * @enum {string}
+             */
+            id: "rules" | "spelling" | "grammar" | "gec" | "document" | "brief";
+            /**
+             * Label
+             * @description Plain words: "writing rules", "whole-document checks".
+             */
+            label: string;
+            /**
+             * Note
+             * @description Why it is off, in plain words; empty when on.
+             * @default
+             */
+            note: string;
+            /** On */
+            on: boolean;
         };
         /**
          * Category
@@ -734,6 +788,8 @@ export interface components {
         };
         /** HealthResponse */
         HealthResponse: {
+            /** @description What this engine checks and what it contacts. Missing from an older local server. */
+            capabilities?: components["schemas"]["Capabilities"] | null;
             engine: components["schemas"]["EngineInfo"];
             /**
              * Status
@@ -764,6 +820,21 @@ export interface components {
             section: string;
             /** Words */
             words: number;
+        };
+        /** Included */
+        Included: {
+            /** Count */
+            count: number;
+            /**
+             * Kind
+             * @constant
+             */
+            kind: "footnotes";
+            /**
+             * Label
+             * @description What it is, in plain words.
+             */
+            label: string;
         };
         /**
          * LearnCard
@@ -816,6 +887,11 @@ export interface components {
             disabled_rules?: string[];
             /** @description The article type to check as. Omitted: the caller's saved setting, else auto. */
             document_type?: components["schemas"]["DocumentType"] | null;
+            /**
+             * Main File
+             * @description /v1/analyze-file with an Overleaf .zip: the project's main .tex file, by its path in the .zip (one of `document.main_candidates`). Omitted: Researchly chooses. Ignored for other files and requests.
+             */
+            main_file?: string | null;
             /** @description Draft or Revise for this request. Omitted: the caller's saved setting, else revise. */
             mode?: components["schemas"]["Mode"] | null;
             /**
@@ -1126,6 +1202,54 @@ export interface components {
             /** Words */
             words: number;
         };
+        /** NetworkContact */
+        NetworkContact: {
+            /**
+             * Leaves Computer
+             * @description Over the network (true), or to another program on the same computer (false)?
+             */
+            leaves_computer: boolean;
+            /**
+             * Sends Text
+             * @description Does the document's text go there?
+             */
+            sends_text: boolean;
+            /**
+             * What
+             * @description What is contacted, in plain words.
+             */
+            what: string;
+            /**
+             * When
+             * @default
+             */
+            when: string;
+        };
+        /** NetworkUse */
+        NetworkUse: {
+            /** Contacts */
+            contacts?: components["schemas"]["NetworkContact"][];
+            /**
+             * Sends Text
+             * @description True when any check sends the text off this computer (for the hosted engine: beyond the engine).
+             */
+            sends_text: boolean;
+        };
+        /** NotChecked */
+        NotChecked: {
+            /** Count */
+            count: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "footnotes" | "endnotes" | "comments" | "text_boxes" | "headers_footers" | "skipped_files";
+            /**
+             * Label
+             * @description What it is, in plain words.
+             */
+            label: string;
+        };
         /**
          * NotCounted
          * @description A sentence the signals matched that was not counted as reporting.
@@ -1193,6 +1317,16 @@ export interface components {
          *     maths, layout, paragraphs in another language. Counts only.
          */
         ReadingSummary: {
+            /**
+             * Included
+             * @description Parts read where they stand that a writer might think were skipped (LaTeX footnotes).
+             */
+            included?: components["schemas"]["Included"][];
+            /**
+             * Not Checked
+             * @description Parts of an uploaded file the checks did not read: a .docx's footnotes, endnotes, comments, text boxes and headers or footers with words in them; files an Overleaf project includes that could not be read. Counted, never read as text.
+             */
+            not_checked?: components["schemas"]["NotChecked"][];
             /** Set Aside */
             set_aside?: components["schemas"]["SetAside"][];
             /** Words Checked */
@@ -1364,6 +1498,16 @@ export interface components {
              */
             filename: string;
             format: components["schemas"]["SourceFormat"];
+            /**
+             * Main Candidates
+             * @description An Overleaf project with more than one file that starts a document (\documentclass): all of them, so the writer can choose another (options.main_file). Empty otherwise.
+             */
+            main_candidates?: string[];
+            /**
+             * Main File
+             * @description An Overleaf project: the main .tex file that was read (with every \input in it).
+             */
+            main_file?: string | null;
             /** Segments */
             segments: components["schemas"]["Segment"][];
             /** Structure */

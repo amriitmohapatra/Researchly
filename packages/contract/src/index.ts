@@ -61,6 +61,12 @@ export type LearnResponse = S["LearnResponse"];
 export type ReadingSummary = S["ReadingSummary"];
 export type TableEvidence = S["TableEvidence"];
 export type SetAside = S["SetAside"];
+export type NotChecked = S["NotChecked"];
+export type Included = S["Included"];
+export type Capabilities = S["Capabilities"];
+export type CapabilityCheck = S["CapabilityCheck"];
+export type NetworkUse = S["NetworkUse"];
+export type NetworkContact = S["NetworkContact"];
 
 // The live check (S4d R3): POST /v1/check-paragraphs.
 export type CheckParagraphsRequest = S["CheckParagraphsRequest"];

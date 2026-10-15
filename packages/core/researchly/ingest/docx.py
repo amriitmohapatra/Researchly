@@ -25,8 +25,10 @@ Each cell paragraph also carries its place, `"cell": [table, row, col,
 colspan]`, which the add-in does not send: X401 uses it to find the row and
 column a sentence quotes (Codex review #7).
 
-Ignored in S2, silently: comments, footnotes and endnotes, headers and
-footers, and text inside text boxes (it sits inside drawings).
+Not read: comments, footnotes and endnotes, headers and footers, and text
+inside text boxes (it sits inside drawings). Since 2026-10-15 they are
+counted, never read as text (`unread_parts`), and the coverage summary says
+what was left out ("Not checked: 3 footnotes · 1 text box").
 
 XML is parsed with defusedxml with DTDs forbidden, so an entity bomb or an
 external entity (XXE) is rejected rather than expanded or fetched.
@@ -114,10 +116,68 @@ def load_docx(filename: str, data: bytes) -> Document:
     try:
         if body is not None:
             reader.block(body, "body")
-        return reader.document(filename)
+        doc = reader.document(filename)
+        doc.not_checked = unread_parts(zf, members, root)
+        return doc
     except RecursionError:
         # Belt and braces behind MAX_DEPTH: no input may crash the service.
         raise IngestError("unreadable_file", TOO_DEEP) from None
+
+
+_HEADER_FOOTER = re.compile(r"word/(?:header|footer)\d*\.xml")
+_LETTER = re.compile(r"[^\W\d_]")
+
+
+def _has_words(el) -> bool:
+    """Any letter in the element's text runs (a page number alone is not
+    something to check)."""
+    return any(_local(t.tag) == "t" and t.text and _LETTER.search(t.text)
+               for t in el.iter())
+
+
+def _text_boxes(root) -> int:
+    """Text boxes with words in them. Word writes each one twice, as a
+    drawing and as a fallback picture for older readers: the fallback is
+    not counted."""
+    count, stack = 0, [root]
+    while stack:
+        el = stack.pop()
+        for c in el:
+            ln = _local(c.tag)
+            if ln == "Fallback":
+                continue
+            if ln == "txbxContent":
+                count += _has_words(c)
+                continue
+            stack.append(c)
+    return count
+
+
+def unread_parts(zf, members: dict, root) -> dict[str, int]:
+    """What a reader of the document sees that the checks do not read,
+    counted (never read as text): footnotes and endnotes cited in the body,
+    comments, text boxes, and headers and footers with words in them (the
+    coverage summary, Codex review #5)."""
+    marks = {"footnoteReference": set(), "endnoteReference": set(),
+             "commentReference": set()}
+    for i, el in enumerate(root.iter()):
+        ln = _local(el.tag)
+        if ln in marks:
+            marks[ln].add(_attr(el, "id") or f"#{i}")
+    out = {"footnotes": len(marks["footnoteReference"]),
+           "endnotes": len(marks["endnoteReference"]),
+           "comments": len(marks["commentReference"]),
+           "text_boxes": _text_boxes(root)}
+    parts = 0
+    for name in sorted(members):
+        if _HEADER_FOOTER.fullmatch(name):
+            try:
+                part = _parse(read_member(zf, members[name], ".docx"))
+            except IngestError:
+                continue        # only counted: a damaged header sinks nothing
+            parts += _has_words(part)
+    out["headers_footers"] = parts
+    return {k: v for k, v in out.items() if v}
 
 
 def _styles(root) -> dict[str, tuple[str, int | None]]:
