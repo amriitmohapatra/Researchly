@@ -939,31 +939,38 @@ export function Taskpane() {
 
   const header = (
     <header className="tp-header">
-      <p className="brand tp-brand" translate="no">
-        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false" className="brand-mark">
-          <path d="M5 4.5h9.5a4.5 4.5 0 010 9H9.5L15 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M5 4.5V20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        </svg>
-        Researchly
-      </p>
-      {showMark && view === "main" ? (
-        <span className="tp-status" data-testid="tp-status">
-          <StatusMark status={markStatus} />
-        </span>
-      ) : null}
-      {accounts && view === "main" ? (
-        auth.status === "loading" ? (
-          <span className="tp-account-placeholder" aria-hidden="true" />
-        ) : signedIn ? (
-          <span className="tp-account" data-testid="tp-account">
-            <span className="sr-only">Signed in as </span>
-            <span className="tp-account-email break-anywhere">{auth.email}</span>
+      {/* Row 1: the name and the check's state. Its right edge stays clear for the host's own
+          button (Word on the Mac draws an "i" over the pane's top-right corner). */}
+      <div className="tp-header-row">
+        <p className="brand tp-brand" translate="no">
+          <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false" className="brand-mark">
+            <path d="M5 4.5h9.5a4.5 4.5 0 010 9H9.5L15 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M5 4.5V20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          Researchly
+        </p>
+        {showMark && view === "main" ? (
+          <span className="tp-status" data-testid="tp-status">
+            <StatusMark status={markStatus} />
           </span>
-        ) : (
-          <button type="button" className="btn btn-quiet btn-compact" onClick={() => setView("sign-in")} data-testid="tp-sign-in">
-            Sign in
-          </button>
-        )
+        ) : null}
+      </div>
+      {/* Row 2: the account, on its own line so it never sits on top of the state. */}
+      {accounts && view === "main" ? (
+        <div className="tp-header-account">
+          {auth.status === "loading" ? (
+            <span className="tp-account-placeholder" aria-hidden="true" />
+          ) : signedIn ? (
+            <span className="tp-account" data-testid="tp-account">
+              <span className="tp-account-label">Signed in as </span>
+              <span className="tp-account-email">{auth.email}</span>
+            </span>
+          ) : (
+            <button type="button" className="btn btn-quiet btn-compact" onClick={() => setView("sign-in")} data-testid="tp-sign-in">
+              Sign in
+            </button>
+          )}
+        </div>
       ) : null}
     </header>
   );

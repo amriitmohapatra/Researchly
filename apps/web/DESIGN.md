@@ -522,7 +522,9 @@ sign-in, no upload, no settings route.
 The same coach inside Word's sidebar, which is 320 to 400px wide. One
 column, the site's tokens, cards and notices; nothing new to learn.
 
-- **Order**: header (brand, the status mark (S4d R4), Sign in or the email), then one panel with the
+- **Order**: header in two rows (row 1: brand, then the status mark (S4d R4) at the right, with the
+  right 40px kept clear because Word on the Mac draws its own "i" button over the pane's top-right
+  corner; row 2: "Signed in as …" shortened with an ellipsis, or Sign in), then one panel with the
   Draft / Revise choice (a two-part segmented control, 8px radius, under it
   exactly "Draft: check what you’ve written so far. Revise: check the
   finished manuscript."), **Check document** (the only primary button) beside
@@ -623,8 +625,9 @@ when they appear and what they mean (docs/inline-review-design.md).
 - **Before any Check document**, the live cards are listed under "N
   suggestions in the text" with one line saying Check document adds the
   whole-document checks, the brief and the map.
-- **States in the header**: the status mark sits between the brand and
-  the account control: checking while a live or full check runs, the
+- **States in the header**: the status mark sits at the right of the
+  brand's row, the account on the row below (never side by side: at 320px
+  they overlapped): checking while a live or full check runs, the
   count, nothing to suggest, checked in part (with the tier that was off),
   can't check right now (retrying after 2, 4, 8, 16, 30 s, back by itself).
   Nothing is drawn before the first check; "Paused" (to a screen reader)

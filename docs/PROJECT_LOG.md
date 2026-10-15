@@ -2984,3 +2984,35 @@ strings), ADR-09 to ADR-11, D5 reopened.
   sizes above the engine's limit.
 - A noise floor is a false-flag alarm, not a quota: when new flags are read
   and found true, the baseline moves, with the evidence in its note.
+
+## P47 — 2026-10-15 — The Word pane's header no longer overlaps
+
+**Why.** The owner tried the add-in after P46: "It works! the word
+suggestions work really well now." The screenshot showed one thing to fix:
+in Word on the Mac, the header put four things in one row. The brand, the
+status mark ("10 suggestions"), the signed-in email and Word's own "i"
+button (drawn over the pane's top-right corner) collided. The email was
+printed over the state and ran under the button.
+
+**What.**
+- `components/word/Taskpane.tsx`: the header now has two rows.
+  - Row 1 holds the brand and the status mark, with the right 40px kept
+    clear for the host's button.
+  - Row 2 holds "Signed in as …", shortened with an ellipsis, or Sign in.
+- `globals.css`: a long state label wraps instead of running under
+  anything.
+- `DESIGN.md`: both header lines updated.
+- New e2e test in `accounts-word.spec.ts`. At 320px, signed in with
+  suggestions:
+  - the account sits below the state;
+  - the state ends 40px short of the edge;
+  - the email fits its row;
+  - nothing scrolls sideways.
+
+**Evidence.** Web lint and typecheck clean; 577 unit tests. The Word, Word
+underlines and signed-in Word e2e specs: 61 passed. Screenshots at 340px,
+light and dark, checked by eye.
+
+**Lesson.** A pane inside someone else's app shares its corners with the
+host. Word on the Mac covers the top-right of every add-in pane, so a header
+that fills its row will always collide there.

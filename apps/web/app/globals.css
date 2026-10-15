@@ -1988,26 +1988,44 @@ main:focus {
   flex-direction: column;
 }
 .tp-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
   padding: 8px 12px;
   border-bottom: 1px solid var(--line);
   background: var(--surface);
 }
+/* Row 1: name and state. The right 40px stay clear for the host's own button over the pane's
+   top-right corner (Word on the Mac); a long state label wraps instead of running under it. */
+.tp-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 36px;
+  padding-right: 40px;
+}
 .tp-brand {
+  flex: none;
   font-size: 1.05rem;
 }
-.tp-account {
+/* Row 2: the account, on its own line, never on top of the state. */
+.tp-header-account {
+  display: flex;
+  align-items: center;
   min-width: 0;
-  max-width: 60%;
-  font-size: 0.85rem;
+  margin-top: 2px;
+}
+.tp-account {
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+  font-size: 0.8125rem;
   color: var(--ink-2);
-  text-align: right;
+}
+.tp-account-label {
+  flex: none;
+  white-space: pre;
 }
 .tp-account-email {
-  display: block;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2015,7 +2033,7 @@ main:focus {
 .tp-account-placeholder {
   display: inline-block;
   width: 4.5rem;
-  height: 36px;
+  height: 20px;
 }
 .tp-main {
   flex: 1;
@@ -4365,12 +4383,12 @@ main:focus {
 
 /* The status mark sits between the brand and the account control. */
 .tp-status {
-  margin-left: auto;
   display: inline-flex;
   min-width: 0;
 }
+/* A long label ("Checked in part: grammar") wraps rather than overlapping anything. */
 .tp-status .status-mark-label {
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 /* "In the text": the card's finding is underlined in the document, drawn as its underline (colour and pattern from the tokens). */
