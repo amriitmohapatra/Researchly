@@ -8,6 +8,7 @@ import {
   type DocumentType,
   type Spelling,
   type TierHealth,
+  type WordLocation,
   type WordParagraph,
   type WordSuggestion,
 } from "@researchly/contract";
@@ -678,12 +679,12 @@ export function Taskpane() {
       return next;
     });
 
-  const onSelect = useCallback(async (s: WordSuggestion) => {
+  const onSelect = useCallback(async (s: WordSuggestion, at?: WordLocation) => {
     const api = officeApi();
     if (!api) return;
     setActiveId(s.id);
     setWordBusy(true);
-    const r = await selectSpan(api, s.location);
+    const r = await selectSpan(api, at ?? s.location);
     setWordBusy(false);
     if (!r.ok) note(s.id, { tone: "problem", text: r.message });
     else if (r.approximate) {
@@ -930,6 +931,7 @@ export function Taskpane() {
       stale={stale.has(s.id)}
       note={notes[s.id] ?? null}
       onSelect={onSelect}
+      onSelectAt={onSelect}
       onApply={onApply}
       actions={cardActions}
       underlined={underlined.has(s.id)}

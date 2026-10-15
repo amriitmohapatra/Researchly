@@ -83,7 +83,7 @@ const loadResults = () => import("./Results").then((m) => m.Results);
 const Results = dynamic(loadResults, { ssr: false });
 import { SpellingSelect } from "./SpellingSelect";
 import { StatusMark } from "./StatusMark";
-import type { CardActions } from "./SuggestionCard";
+import { SIGNED_OUT_DICTIONARY_NOTE, type CardActions } from "./SuggestionCard";
 import type { ResultsView } from "./ViewTabs";
 
 /** Pasting into the editor (S1), or reading an uploaded file (S2, signed in). */
@@ -639,6 +639,9 @@ export function Checker() {
     [signedIn, onMute, onAddWord, actionBusy, loading],
   );
 
+  // A grouped spelling question asks to add a word to the dictionary: signed out, say where the dictionary is.
+  const dictionaryNote = accounts && !signedIn ? SIGNED_OUT_DICTIONARY_NOTE : null;
+
   const chars = codePointLength(text);
   const overLimit = chars > MAX_CONTENT_CHARS;
   const describedBy = [ids.hint, problem ? ids.problem : null].filter(Boolean).join(" ");
@@ -1135,6 +1138,7 @@ export function Checker() {
           onRevealPreferences={onRevealPreferences}
           source={fileChecked.data.document}
           actions={cardActions}
+          dictionaryNote={dictionaryNote}
           scopes={scopes}
           view={view}
           onView={setView}
@@ -1157,6 +1161,7 @@ export function Checker() {
           busy={loading}
           onRevealPreferences={onRevealPreferences}
           actions={cardActions}
+          dictionaryNote={dictionaryNote}
           scopes={scopes}
           view={view}
           onView={setView}

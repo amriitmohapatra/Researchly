@@ -64,6 +64,11 @@ class Suggestion:
     # table, headers, cell place and offsets, the cell's value and any
     # rounding. None for every other suggestion.
     table_evidence: Optional[dict] = None
+    # Every place a grouped suggestion is about (S003, Codex review #10):
+    # [{"start", "end"}] from the rule, in reading order, the first being
+    # the suggestion's own span; the engine adds "line" and "col". None for
+    # a suggestion about one place.
+    occurrences: Optional[list] = None
     # filled in by the engine from the rule registry:
     rule_id: str = ""
     rule_name: str = ""
@@ -101,6 +106,7 @@ class Suggestion:
             "start": self.start,
             "end": self.end,
             "table_evidence": self.table_evidence,
+            "occurrences": self.occurrences,
         }
 
 
@@ -228,6 +234,9 @@ def check(document: Document, nlp, *,
             s.section = section
             s.text = document.original[s.start:s.end]
             s.line, s.col = document.line_col(s.start)
+            if s.occurrences:
+                for o in s.occurrences:
+                    o["line"], o["col"] = document.line_col(o["start"])
             kept.append(s)
         if r.aggregate:
             kept = _aggregate_by_section(kept)
@@ -280,8 +289,11 @@ def _resolve_overlaps(suggestions: list[Suggestion]) -> list[Suggestion]:
     a 60-word sentence and a spelling fix inside it are different observations
     that happen to share coordinates, and suppressing either loses real signal.
     """
+    # S003's question about a repeated word is a Convention from the
+    # spelling tier: it proposes no edit, so it never competes for a span.
     corrections = [s for s in suggestions
-                   if s.tier in CORRECTION_TIER_PRIORITY]
+                   if s.tier in CORRECTION_TIER_PRIORITY
+                   and s.category is Category.CORRECTION]
     if len(corrections) < 2:
         return suggestions
 

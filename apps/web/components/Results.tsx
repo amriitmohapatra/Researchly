@@ -9,6 +9,7 @@ import { briefState, narrativeState, profileLine } from "@/lib/profiles";
 import type { ScopeMap } from "@/lib/scope";
 import { resolveSpans, segment, type ResolvedSpan } from "@/lib/segments";
 import { baseId, cellHighlight, cellId } from "@/lib/table-evidence";
+import { placeBase, placeHighlights } from "@/lib/occurrences";
 import { PREVIOUS_NOTE, type PreviousMark } from "@/lib/check-session";
 import { buildLocator, isMultiFile } from "@/lib/source";
 import { buildQueue, passCounts, posAt, QUEUE_START, resolveSpot, spotOf, type QueuePos, type QueueState } from "@/lib/queue";
@@ -49,6 +50,8 @@ interface Props {
   source?: SourceInfo | null;
   /** Signed-in card actions (mute, add to dictionary). */
   actions?: CardActions | null;
+  /** Signed out with accounts on: where the dictionary a grouped spelling question offers lives. */
+  dictionaryNote?: string | null;
   /** Rule scopes from the engine's registry, when loaded; null means the built-in list applies. */
   scopes?: ScopeMap | null;
   /** Suggestions, the reviewer's brief (S4), the narrative map (S4b) or the checklist. Held by the parent so a re-check keeps the view. */
@@ -101,6 +104,7 @@ export function Results({
   onRevealPreferences,
   source,
   actions,
+  dictionaryNote = null,
   scopes = null,
   view,
   onView,
@@ -200,9 +204,14 @@ export function Results({
     return out;
   }, [submittedText, visible]);
   const shownCell = cellFor ? cells.get(cellFor) : undefined;
+  // A grouped spelling question (Codex review #10): every other place the word appears is underlined like its card.
+  const places = useMemo(
+    () => resolveSpans(submittedText, visible.flatMap(placeHighlights)).filter((r) => r.inRange),
+    [submittedText, visible],
+  );
   const segments = useMemo(
-    () => segment(submittedText, shownCell ? [...resolved, shownCell] : resolved),
-    [submittedText, resolved, shownCell],
+    () => segment(submittedText, [...resolved, ...places, ...(shownCell ? [shownCell] : [])]),
+    [submittedText, resolved, places, shownCell],
   );
   const placeable = useMemo(() => new Set(resolved.map((r) => r.id)), [resolved]);
   const hidden = hiddenPreferenceCount(data, showPreferences);
@@ -284,8 +293,8 @@ export function Results({
 
   const onSelectFromText = useCallback(
     (marked: readonly string[]) => {
-      // A table cell's highlight stands for its card.
-      const ids = [...new Set(marked.map(baseId))];
+      // A table cell's highlight, or another place of a grouped question, stands for its card.
+      const ids = [...new Set(marked.map((m) => placeBase(baseId(m))))];
       if (ids.length === 0) return;
       if (queue) {
         // In a pass, a highlight moves the queue to that finding (repeated clicks cycle overlapping ones).
@@ -310,6 +319,13 @@ export function Results({
     setCellFor(null);
     setActiveId(id);
     setFocusReq((r) => ({ id, target: "mark", seq: (r?.seq ?? 0) + 1 }));
+  }, []);
+
+  /** "Show where" on a grouped question: bring one place of the word into view and focus it. */
+  const onShowPlace = useCallback((id: string, mark: string) => {
+    setCellFor(null);
+    setActiveId(id);
+    setFocusReq((r) => ({ id: mark, target: "mark", seq: (r?.seq ?? 0) + 1 }));
   }, []);
 
   /** X401: outline the table cell the card compared, and bring it into view. */
@@ -371,8 +387,10 @@ export function Results({
       placeable={placeable.has(s.id)}
       onShowInText={onShowInText}
       onShowCell={cells.has(s.id) ? onShowCell : null}
+      onShowPlace={onShowPlace}
       location={locations?.get(s.id) ?? null}
       actions={actions}
+      dictionaryNote={dictionaryNote}
       onDismiss={onDismiss}
     />
   );

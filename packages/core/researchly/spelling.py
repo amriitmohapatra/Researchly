@@ -13,7 +13,9 @@ fatigue that kills checkers. Layers of defence:
    [dictionary] words=[...] in .researchly.toml) — `researchly dict add X`
 4. morphological fallback (covariates → covariate, behaviours → behaviour)
 5. UK/US variant mapping (modelling/modeling, behaviour/behavior, -ise/-ize)
-6. document-learned terms: a word used 3+ times is the author's vocabulary
+6. repeated words (rules_spelling.repeated_kind): a word used 3+ times is
+   corrected at every use only when it is a known kind of slip next to a
+   common word; any other is asked about once (S003), never flagged
 """
 
 from __future__ import annotations

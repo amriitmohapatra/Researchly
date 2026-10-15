@@ -221,6 +221,18 @@ class TableEvidence(_Strict):
                                           'to 1 decimal place"; "" for none.')
 
 
+class Occurrence(_Strict):
+    """One place a grouped suggestion is about (S003, Codex review #10)."""
+    start: int = Field(..., ge=0, description="Offset into `content` in code "
+                                              "points, like Span.start.")
+    end: int = Field(..., ge=0, description="End offset, like Span.end.")
+    line: int = Field(..., ge=0, description="1-based line of `start`; 0 if unknown.")
+    col: int = Field(..., ge=0, description="1-based column of `start`; 0 if unknown.")
+    begin16: Optional[int] = Field(None, ge=0, description="`start` in UTF-16 "
+                                   "code units (see Suggestion.begin16).")
+    end16: Optional[int] = Field(None, ge=0, description="`end` in UTF-16 code units.")
+
+
 class Suggestion(_Strict):
     id: str = Field(..., description="Stable fingerprint of (rule_id, start, end, text); "
                                      "used by /v1/feedback in S2.")
@@ -258,6 +270,11 @@ class Suggestion(_Strict):
         "older engines omit it.")
     end16: Optional[int] = Field(
         None, ge=0, description="`span.end` in UTF-16 code units (see `begin16`).")
+    occurrences: Optional[List[Occurrence]] = Field(
+        None, description="A grouped suggestion only (S003: a word used "
+        "three or more times that no dictionary knows): every place it "
+        "appears, in reading order; `span` is one of them. Absent for a "
+        "suggestion about one place. Additive: older engines omit it.")
 
 
 class Metrics(_Strict):
@@ -589,6 +606,9 @@ class WordLocation(_Strict):
 
 class WordSuggestion(Suggestion):
     location: WordLocation
+    occurrence_locations: Optional[List[WordLocation]] = Field(
+        None, description="With `occurrences`: where each one is in Word, "
+        "in the same order, for \"Show where\".")
 
 
 class Coverage(_Strict):

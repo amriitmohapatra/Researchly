@@ -1983,6 +1983,70 @@
         "title": "NotCounted",
         "type": "object"
       },
+      "Occurrence": {
+        "additionalProperties": false,
+        "description": "One place a grouped suggestion is about (S003, Codex review #10).",
+        "properties": {
+          "begin16": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`start` in UTF-16 code units (see Suggestion.begin16).",
+            "title": "Begin16"
+          },
+          "col": {
+            "description": "1-based column of `start`; 0 if unknown.",
+            "minimum": 0.0,
+            "title": "Col",
+            "type": "integer"
+          },
+          "end": {
+            "description": "End offset, like Span.end.",
+            "minimum": 0.0,
+            "title": "End",
+            "type": "integer"
+          },
+          "end16": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`end` in UTF-16 code units.",
+            "title": "End16"
+          },
+          "line": {
+            "description": "1-based line of `start`; 0 if unknown.",
+            "minimum": 0.0,
+            "title": "Line",
+            "type": "integer"
+          },
+          "start": {
+            "description": "Offset into `content` in code points, like Span.start.",
+            "minimum": 0.0,
+            "title": "Start",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "line",
+          "col"
+        ],
+        "title": "Occurrence",
+        "type": "object"
+      },
       "ProfileChoice": {
         "additionalProperties": false,
         "properties": {
@@ -2640,6 +2704,21 @@
             "title": "Message",
             "type": "string"
           },
+          "occurrences": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Occurrence"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A grouped suggestion only (S003: a word used three or more times that no dictionary knows): every place it appears, in reading order; `span` is one of them. Absent for a suggestion about one place. Additive: older engines omit it.",
+            "title": "Occurrences"
+          },
           "plain": {
             "default": "",
             "description": "The explanation in everyday words, shown first; `why` is the fuller account.",
@@ -3088,6 +3167,36 @@
             "description": "One-line rationale, always shown.",
             "title": "Message",
             "type": "string"
+          },
+          "occurrence_locations": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/WordLocation"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "With `occurrences`: where each one is in Word, in the same order, for \"Show where\".",
+            "title": "Occurrence Locations"
+          },
+          "occurrences": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Occurrence"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A grouped suggestion only (S003: a word used three or more times that no dictionary knows): every place it appears, in reading order; `span` is one of them. Absent for a suggestion about one place. Additive: older engines omit it.",
+            "title": "Occurrences"
           },
           "plain": {
             "default": "",

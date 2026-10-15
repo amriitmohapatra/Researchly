@@ -69,6 +69,16 @@ def test_longer_span_wins_over_shorter():
     assert [s.tier for s in kept] == ["grammar"]
 
 
+def test_a_spelling_tier_convention_is_never_deduped():
+    """S003 asks about a repeated word (a Convention, no edit): a longer
+    grammar flag over its first use must not make the question vanish."""
+    kept = _resolve_overlaps([
+        _sugg(10, 15, "spelling", "S003", category=Category.CONVENTION),
+        _sugg(8, 20, "grammar", "LT001"),
+    ])
+    assert sorted(s.rule_id for s in kept) == ["LT001", "S003"]
+
+
 def test_non_overlapping_corrections_all_survive():
     kept = _resolve_overlaps([
         _sugg(0, 5, "spelling"),
@@ -145,9 +155,14 @@ def test_correction_tiers_are_declared_on_the_commodity_rules():
     # S002 (2026-10-14): real-word confusions judged on SymSpell's bigram
     # counts, so it lives and dies with the spelling tier
     assert REGISTRY["S002"].tier == engine_mod.TIER_SPELLING
+    # S003 (2026-10-15): the question about a repeated unknown word comes
+    # from the spelling tier's scan, but it is a Convention and proposes no
+    # edit, so overlap resolution leaves it alone (test below)
+    assert REGISTRY["S003"].tier == engine_mod.TIER_SPELLING
+    assert REGISTRY["S003"].category is Category.CONVENTION
     # everything else is craft or lens, never a correction tier
     for rid, r in REGISTRY.items():
-        if rid not in ("S001", "S002", "LT001", "GEC001"):
+        if rid not in ("S001", "S002", "S003", "LT001", "GEC001"):
             assert r.tier not in engine_mod.CORRECTION_TIER_PRIORITY, \
                 f"{rid} claims a correction tier it does not implement"
 

@@ -1,11 +1,13 @@
 "use client";
 
-import { memo, type MouseEvent } from "react";
+import { memo, useState, type MouseEvent } from "react";
 import type { Suggestion } from "@researchly/contract";
 import { categoryMeta, sectionLabel } from "@/lib/categories";
 import { dictionaryCandidate, isRuleId } from "@/lib/settings";
+import { placeCount, placeMark } from "@/lib/occurrences";
 import { CategoryBadge } from "./CategoryIcon";
 import { LessonDisclosure } from "./LessonDisclosure";
+import { PlacesNav } from "./PlacesNav";
 import { TableEvidence } from "./TableEvidence";
 
 interface Props {
@@ -16,6 +18,10 @@ interface Props {
   onShowInText: (id: string) => void;
   /** X401 with a table cell that can be placed in the text: outline that cell. */
   onShowCell?: ((id: string) => void) | null;
+  /** A grouped question ("‘X’ appears 3 times…"): bring highlight `mark` of card `id` into view. */
+  onShowPlace?: ((id: string, mark: string) => void) | null;
+  /** Signed out with accounts on: one line on a grouped spelling question saying where a dictionary is kept. */
+  dictionaryNote?: string | null;
   /** For a multi-file upload: the file and line the suggestion is in. */
   location?: string | null;
   /** Signed in only: account actions. Absent signed out, so the card is exactly as in S1. */
@@ -33,6 +39,9 @@ export interface CardActions {
 }
 
 const MAX_QUOTE = 160;
+
+/** Shown signed out on a question that offers to add a word to the dictionary. */
+export const SIGNED_OUT_DICTIONARY_NOTE = "Sign in to keep a dictionary: a word you add is never questioned again, here or in Word.";
 
 function quote(text: string): string {
   const t = text.replace(/\s+/g, " ").trim();
@@ -57,14 +66,24 @@ export const SuggestionCard = memo(function SuggestionCard({
   placeable,
   onShowInText,
   onShowCell,
+  onShowPlace,
   location,
   actions,
   onDismiss,
+  dictionaryNote = null,
 }: Props) {
   const meta = categoryMeta(s.category);
   const section = sectionLabel(s.section);
   const msgId = `msg-${s.id}`;
   const word = actions && s.tier === "spelling" ? dictionaryCandidate(s.text) : null;
+  // A grouped question about a word used again and again (Codex review #10): one card, every place.
+  const places = placeCount(s);
+  const [place, setPlace] = useState<number | null>(null);
+  const showPlace = (index: number) => {
+    setPlace(index);
+    onShowPlace?.(s.id, placeMark(s, index));
+  };
+  const note = !actions && places > 0 && s.tier === "spelling" ? dictionaryNote : null;
   // Only ids the settings table accepts can be muted (e.g. "G101").
   const mutable = isRuleId(s.rule_id);
   const hasActions = Boolean(actions && (mutable || word));
@@ -100,7 +119,7 @@ export const SuggestionCard = memo(function SuggestionCard({
             {section}
           </span>
         ) : null}
-        {placeable ? (
+        {placeable && places === 0 ? (
           <button type="button" className="btn-link card-jump" onClick={() => onShowInText(s.id)}>
             Show in text
           </button>
@@ -120,6 +139,9 @@ export const SuggestionCard = memo(function SuggestionCard({
           <span className="sr-only">Flagged text: </span>
           <q>{quote(s.text)}</q>
         </p>
+      ) : null}
+      {places > 0 && placeable && onShowPlace ? (
+        <PlacesNav count={places} at={place} onGo={showPlace} word={s.text.trim()} describedBy={msgId} />
       ) : null}
       {s.table_evidence ? (
         <TableEvidence evidence={s.table_evidence} onShowCell={onShowCell ? () => onShowCell(s.id) : null} />
@@ -142,6 +164,11 @@ export const SuggestionCard = memo(function SuggestionCard({
             <p>{reasoning}</p>
           </div>
         </details>
+      ) : null}
+      {note ? (
+        <p className="card-dict-note help" data-testid="dictionary-note">
+          {note}
+        </p>
       ) : null}
       <LessonDisclosure learnRef={s.learn_ref} />
       <p className="card-source">

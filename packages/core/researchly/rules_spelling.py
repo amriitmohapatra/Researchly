@@ -95,30 +95,109 @@ _AUTHOR_NAME = re.compile(
     r",?\s+(?:et\s+al\b|[A-Z]{1,3}(?:[,.;]|\s+[A-Z][a-z])|[A-Z]\.)")
 
 
-@rule("S001", "spelling", Category.CORRECTION,
-      "Possible misspelling (SymSpell dictionary + scientific lexicon).",
-      'Spelling against a frequency dictionary plus a scientific lexicon '
-      '(seroprevalence, covariates, nowcasting are not errors here). '
-      'Proper nouns, acronyms, UK/US variants, and terms you use '
-      'repeatedly are skipped. A false alarm on your own terminology: '
-      "'Add to dictionary' on the card teaches it the word.",
-      plain=('This word is not in the dictionary, so it may be a typo. '
-             'Scientific terms, names and abbreviations are usually recognised. '
-             'If it is a real word you use, add it to your dictionary from this '
-             'card and it will not be flagged again.'),
-      source="symspellpy",
-      tier="spelling", fix_safety="review")
-def s001_spelling(doc, document: Document):
+# --- S001 / S003: unknown words, and words used again and again --------------
+#
+# Until Codex review #10 (2026-10-15) any word used three or more times was
+# taken to be the author's vocabulary and never flagged, so a typo the writer
+# repeated ("recieve" three times) went unseen. Now a repeated unknown word is
+# judged: a known kind of slip near a common word stays an S001 card at every
+# occurrence; anything else is asked about once (S003), never flagged.
+
+# How often an unknown word must appear before it is judged as a group.
+REPEAT_MIN = 3
+# Set 2026-10-15 with ml/eval/spelling_repetition.py on the training split of
+# Wikipedia's common misspellings and a sample of SPECIALIST Lexicon words
+# hidden from the lexicon (standing in for field terms no dictionary knows),
+# choosing the fewest terms read as typos (precision first, CLAUDE.md #5).
+# The intended word must be common in SymSpell's English counts ("seasonality"
+# is about 300,000; "until" 113 million) ...
+TYPO_MIN_FREQ = 300_000
+# ... and the slip a usual one: log P(typed | intended) from the learned
+# error table (spellrank.log_error). A transposition, a doubled or dropped
+# letter or a swapped vowel scores above -5.5; an edit the table never saw
+# scores -8.
+TYPO_MIN_ERROR = -5.5
+# A long word one edit from a very frequent word, with no other candidate
+# near it, is a slip even when the edit is one the table has not seen
+# ("bewteen", "ppublisher").
+LONE_MIN_LEN = 8
+LONE_MIN_FREQ = 5_000_000
+# A word this short is one edit from too many words to call ("clin", "sera",
+# "buri" in the eight theses: abbreviations and place names), so a short
+# repeated word is a typo only by its ending or a split around a little word.
+TYPO_MIN_LEN = 6
+
+
+class _Unknown:
+    """One occurrence S001 would flag: where, and what to suggest."""
+    __slots__ = ("start", "end", "word", "lower", "message", "replacement")
+
+    def __init__(self, start, end, word, lower, message, replacement):
+        self.start, self.end = start, end
+        self.word, self.lower = word, lower
+        self.message, self.replacement = message, replacement
+
+
+def _term_shaped(lower: str) -> bool:
+    """Endings of coined biomedical and chemical names ("-ase", "-mab",
+    "-omics"): a word built like a term is asked about, never corrected."""
+    return lower.endswith(lx.TERM_ENDINGS)
+
+
+def _compound(cand: str) -> bool:
+    """Is a two-word split a compound rather than a habit? The run-togethers
+    writers repeat open with a little word ("in spite", "each other", "a
+    lot", "as well"); a split after a content word is a field's compound
+    ("line width", "herpes virus", "burn in") or a lost hyphen or space at a
+    line end ("low- and middle-income" read as "lowand"), which a question
+    covers better than a correction at every use."""
+    left = cand.split(" ", 1)[0]
+    return left not in spelling.FUNCTION_WORDS | {"a", "i", "each"}
+
+
+def repeated_kind(lower: str) -> str:
+    """"typo" or "term" for an unknown word the writer uses REPEAT_MIN or
+    more times. Precision first: only a word the error model and the
+    dictionary both call a slip is a typo; everything else is a term to ask
+    about, as the old blanket exemption assumed."""
+    if spelling.reinflect(lower) is not None:
+        return "typo"                     # "occured", "happend"
+    ranked = spellrank.rank(lower, None, None, top_n=3)
+    if not ranked:
+        return "term"                     # nothing near it: a coined word
+    cand = ranked[0][0]
+    if " " in cand:
+        return "term" if _compound(cand) else "typo"
+    if len(lower) < TYPO_MIN_LEN or _term_shaped(lower) \
+            or _distance(lower, cand) != 1:
+        return "term"
+    freq = spelling.get_sym().words.get(cand, 0)
+    if freq >= TYPO_MIN_FREQ \
+            and spellrank.log_error(lower, cand) >= TYPO_MIN_ERROR:
+        return "typo"
+    lone = len(ranked) == 1 or all(" " in c for c, _ in ranked[1:])
+    if lone and len(lower) >= LONE_MIN_LEN and freq >= LONE_MIN_FREQ:
+        return "typo"
+    return "term"
+
+
+def _scan(document: Document) -> list[_Unknown]:
+    """Every occurrence S001 would flag, with no regard to repetition.
+    Shared by S001 and S003 and kept on the document, so the words are
+    looked up once per check."""
     text = document.masked
     domain = spelling.domain_terms()
     cfg_words: list[str] = getattr(document, "extra_dictionary", []) or []
     user = spelling.user_dictionary(cfg_words)
+    # Keyed on the dictionary too: a word added between two checks of one
+    # document must not be served from the first.
+    key = (text, frozenset(user))
+    cached = getattr(document, "_unknown_words", None)
+    if cached is not None and cached[0] == key:
+        return cached[1]
+    found: list[_Unknown] = []
 
-    words = list(WORD_RX.finditer(text))
-    # words the author uses 3+ times are their vocabulary, not typos
-    counts = Counter(m.group(0).lower() for m in words)
-
-    for m in words:
+    for m in WORD_RX.finditer(text):
         w = m.group(0)
         if "'" in w:
             continue
@@ -130,10 +209,10 @@ def s001_spelling(doc, document: Document):
         if broken:
             joined = w + broken.group(1)
             if spelling.known_with_fallbacks(joined.lower()):
-                yield Suggestion(
-                    message=f"One word broken across a line — join it: "
-                            f"'{joined}'.",
-                    start=m.start(), end=broken.end(1), replacement=joined)
+                found.append(_Unknown(
+                    m.start(), broken.end(1), w, "",
+                    f"One word broken across a line — join it: "
+                    f"'{joined}'.", joined))
                 continue
         if len(w) < MIN_LEN:
             continue
@@ -149,8 +228,6 @@ def s001_spelling(doc, document: Document):
         if lower in domain or lower in user:
             continue
         if w.upper() in lx.ACRONYM_ALLOWLIST:
-            continue
-        if counts[lower] >= 3:
             continue
         if _in_url_like(text, m.start(), m.end()):
             continue
@@ -190,10 +267,120 @@ def s001_spelling(doc, document: Document):
             msg = ("Not in any dictionary. If this is your term, add it "
                    "to your dictionary.")
             repl = None
+        found.append(_Unknown(m.start(), m.end(), w, lower, msg, repl))
+
+    document._unknown_words = (key, found)
+    return found
+
+
+def _usage(document: Document) -> Counter:
+    """How often each word appears in the checked text, in any case."""
+    return _counts(document)[0]
+
+
+def _lower_usage(document: Document) -> Counter:
+    """How often each word appears written all in lower case."""
+    return _counts(document)[1]
+
+
+def _counts(document: Document) -> tuple[Counter, Counter]:
+    cached = getattr(document, "_word_usage", None)
+    if cached is None or cached[0] != document.masked:
+        anycase: Counter = Counter()
+        lower: Counter = Counter()
+        for m in WORD_RX.finditer(document.masked):
+            w = m.group(0)
+            anycase[w.lower()] += 1
+            if w.islower():
+                lower[w] += 1
+        cached = (document.masked, anycase, lower)
+        document._word_usage = cached
+    return cached[1], cached[2]
+
+
+def _repeated(document: Document) -> tuple[dict, set]:
+    """Unknown words used REPEAT_MIN+ times that S001 leaves alone: the
+    terms S003 asks about (each with the uses S001 would have flagged), and
+    the names the writer spells as names. A word never written in lower
+    case (a place name opening a table row, "Udon"), or written in capitals
+    or as a proper noun at most of its uses ("MWS", "Chiang Mai") and in
+    lower case at a few (a table cell, a label), is the writer's name for
+    something; neither a correction nor a question helps."""
+    scanned = _scan(document)
+    cached = getattr(document, "_repeated_words", None)
+    if cached is not None and cached[0] is scanned:
+        return cached[1], cached[2]
+    usage = _usage(document)
+    groups: dict[str, list[_Unknown]] = {}
+    for u in scanned:
+        if u.lower and usage[u.lower] >= REPEAT_MIN:
+            groups.setdefault(u.lower, []).append(u)
+    lower = _lower_usage(document)
+    names = {w for w, occ in groups.items()
+             if 2 * len(occ) <= usage[w] or not lower[w]}
+    terms = {w: occ for w, occ in groups.items()
+             if w not in names and repeated_kind(w) == "term"}
+    document._repeated_words = (scanned, terms, names)
+    return terms, names
+
+
+@rule("S001", "spelling", Category.CORRECTION,
+      "Possible misspelling (SymSpell dictionary + scientific lexicon).",
+      'Spelling against a frequency dictionary plus a scientific lexicon '
+      '(seroprevalence, covariates, nowcasting are not errors here). '
+      'Proper nouns, acronyms and UK/US variants are skipped. A word used '
+      'three or more times is flagged at every use only when it is a known '
+      'kind of slip next to a common word (a learned error model of real '
+      'misspellings); any other repeated word is asked about once instead. '
+      "A false alarm on your own terminology: 'Add to dictionary' on the "
+      'card teaches it the word.',
+      plain=('This word is not in the dictionary, so it may be a typo. '
+             'Scientific terms, names and abbreviations are usually recognised. '
+             'If it is a real word you use, add it to your dictionary from this '
+             'card and it will not be flagged again.'),
+      source="symspellpy",
+      tier="spelling", fix_safety="review")
+def s001_spelling(doc, document: Document):
+    terms, names = _repeated(document)
+    for u in _scan(document):
+        if u.lower in terms or u.lower in names:
+            continue                      # S003 asks about a term, once
+        yield Suggestion(message=u.message, start=u.start, end=u.end,
+                         replacement=u.replacement)
+
+
+@rule("S003", "repeated-unknown-word", Category.CONVENTION,
+      "A word used three or more times that no dictionary knows: one "
+      "question for all its uses (add it, or check its spelling).",
+      'A word the dictionaries do not know, used three or more times, and '
+      'not a known kind of slip next to a common word (the learned error '
+      'model S001 uses), is most likely a term of the field: a coined name, '
+      'a gene, a software package. It is not marked at each use; one card '
+      'asks whether it is a term, shows every place it appears, and adds it '
+      'to your dictionary in one step. A repeated typo still gets a '
+      'spelling card at every use.',
+      plain=('You use this word several times and it is not in the '
+             'dictionary. If it is a term from your field, add it to your '
+             'dictionary and it will not be questioned again. If not, check '
+             'its spelling in each place.'),
+      source="symspellpy", tier="spelling", fix_safety="review",
+      scope="document")
+def s003_repeated_unknown(doc, document: Document):
+    terms, _names = _repeated(document)
+    for lower, occ in terms.items():
+        first = occ[0]
+        # Every use, in reading order (a capitalised one included), so
+        # "Show where" visits each place the count speaks of.
+        where = [{"start": m.start(), "end": m.end()}
+                 for m in WORD_RX.finditer(document.masked)
+                 if m.group(0).lower() == lower]
         yield Suggestion(
-            message=msg,
-            start=m.start(), end=m.end(),
-            replacement=repl)
+            message=(f"‘{first.word}’ appears {len(where)} times "
+                     f"and isn’t in the dictionary. If it’s a term, "
+                     f"add it to your dictionary; otherwise check its "
+                     f"spelling."),
+            start=first.start, end=first.end, replacement=None,
+            occurrences=where)
 
 
 # --- S002: real-word confusions --------------------------------------------

@@ -1148,6 +1148,42 @@ export interface components {
              */
             reason: "absent" | "future" | "prior";
         };
+        /**
+         * Occurrence
+         * @description One place a grouped suggestion is about (S003, Codex review #10).
+         */
+        Occurrence: {
+            /**
+             * Begin16
+             * @description `start` in UTF-16 code units (see Suggestion.begin16).
+             */
+            begin16?: number | null;
+            /**
+             * Col
+             * @description 1-based column of `start`; 0 if unknown.
+             */
+            col: number;
+            /**
+             * End
+             * @description End offset, like Span.end.
+             */
+            end: number;
+            /**
+             * End16
+             * @description `end` in UTF-16 code units.
+             */
+            end16?: number | null;
+            /**
+             * Line
+             * @description 1-based line of `start`; 0 if unknown.
+             */
+            line: number;
+            /**
+             * Start
+             * @description Offset into `content` in code points, like Span.start.
+             */
+            start: number;
+        };
         /** ProfileChoice */
         ProfileChoice: {
             id: components["schemas"]["DocumentType"];
@@ -1468,6 +1504,11 @@ export interface components {
              */
             message: string;
             /**
+             * Occurrences
+             * @description A grouped suggestion only (S003: a word used three or more times that no dictionary knows): every place it appears, in reading order; `span` is one of them. Absent for a suggestion about one place. Additive: older engines omit it.
+             */
+            occurrences?: components["schemas"]["Occurrence"][] | null;
+            /**
              * Plain
              * @description The explanation in everyday words, shown first; `why` is the fuller account.
              * @default
@@ -1727,6 +1768,16 @@ export interface components {
              * @description One-line rationale, always shown.
              */
             message: string;
+            /**
+             * Occurrence Locations
+             * @description With `occurrences`: where each one is in Word, in the same order, for "Show where".
+             */
+            occurrence_locations?: components["schemas"]["WordLocation"][] | null;
+            /**
+             * Occurrences
+             * @description A grouped suggestion only (S003: a word used three or more times that no dictionary knows): every place it appears, in reading order; `span` is one of them. Absent for a suggestion about one place. Additive: older engines omit it.
+             */
+            occurrences?: components["schemas"]["Occurrence"][] | null;
             /**
              * Plain
              * @description The explanation in everyday words, shown first; `why` is the fuller account.

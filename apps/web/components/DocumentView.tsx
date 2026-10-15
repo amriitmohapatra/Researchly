@@ -4,6 +4,7 @@ import { memo, useCallback, type KeyboardEvent, type MouseEvent } from "react";
 import type { Segment } from "@/lib/segments";
 import { baseId } from "@/lib/table-evidence";
 import { categoryMeta } from "@/lib/categories";
+import { placeBase } from "@/lib/occurrences";
 
 interface Props {
   segments: readonly Segment[];
@@ -75,7 +76,8 @@ export const DocumentView = memo(function DocumentView({ segments, activeId, onS
         }
         if (s.ids.length === 0) return <span key={`t${s.start}`}>{s.text}</span>;
         const primary = categoryMeta(s.category ?? "improvement").id;
-        const active = activeId !== null && s.ids.includes(activeId);
+        // Every place of a grouped question lights up with its card.
+        const active = activeId !== null && s.ids.some((id) => placeBase(id) === activeId);
         // An X401 card's table cell, shown on request: outlined, not tinted.
         const cell = s.ids.every((id) => id !== baseId(id));
         return (

@@ -347,6 +347,36 @@ focus there; choosing the outlined cell returns to the card; **Show in
 text** drops the outline. The Word card shows the same box without the
 jump.
 
+## A word used again and again (Codex review #10, 2026-10-15)
+
+A word no dictionary knows, used three or more times, that is not a known
+kind of slip (the engine judges that) is **one card, never one per use**:
+a Convention, so it reads as a question and never as an error. The
+message is the engine's: "‘numpyro’ appears 3 times and isn’t in the
+dictionary. If it’s a term, add it to your dictionary; otherwise check its
+spelling." No suggested revision. A repeated typo is still a Correction at
+every use, and the revision queue groups those as one issue with Previous
+and Next as before.
+
+- **Every use is underlined** in the text in the Convention style, each
+  mark standing for the one card: choosing any of them leads to it, and
+  all of them light up while the card is active.
+- **Show where** takes the place of "Show in text": it brings the first use
+  into view and focuses it, then **Previous** and **Next** walk the others,
+  held at either end and said to be unavailable there (as the queue's
+  buttons are), with "Place 2 of 3" in a polite live region. The buttons
+  never vanish from under the keyboard.
+- **Add “numpyro” to dictionary** (signed in) adds the word once; the check
+  runs again and every use clears together. Signed out with accounts on,
+  one quiet help line says where a dictionary is kept ("Sign in to keep a
+  dictionary: a word you add is never questioned again, here or in Word.").
+  A build without accounts says nothing; the local Word add-in offers the
+  same Add to dictionary, kept on the computer.
+- **Word**: the same card; Show where selects each use in the document in
+  turn (Previous / Next, "Place n of N"), in place of "Show in document".
+- Draft holds the question back with the other whole-document checks; the
+  word is not flagged meanwhile.
+
 ## What was read (2026-10-14)
 
 - One quiet line under the results heading, after the profile line:

@@ -288,7 +288,7 @@ def _word_suggestion(s, doc, paragraphs: list) -> dict:
     """One suggestion in the contract's WordSuggestion shape (as
     services/engine/researchly_service/engine_adapter.to_suggestion)."""
     conf = float(s.confidence if s.confidence is not None else 1.0)
-    return {
+    out = {
         "id": _fingerprint(s.rule_id, s.start, s.end, s.text),
         "rule_id": s.rule_id,
         "rule_name": s.rule_name,
@@ -309,6 +309,16 @@ def _word_suggestion(s, doc, paragraphs: list) -> dict:
         "table_evidence": s.table_evidence,
         "location": wordloc.locate(doc, paragraphs, s.start, s.end),
     }
+    # A grouped suggestion (S003): every place, and where each is in Word.
+    if s.occurrences:
+        out["occurrences"] = [
+            {"start": max(0, o["start"]), "end": max(0, o["end"]),
+             "line": max(0, o.get("line", 0)), "col": max(0, o.get("col", 0))}
+            for o in s.occurrences]
+        out["occurrence_locations"] = [
+            wordloc.locate(doc, paragraphs, o["start"], o["end"])
+            for o in s.occurrences]
+    return out
 
 
 def _config(prefs: bool, disabled: list, mode, extra: dict):

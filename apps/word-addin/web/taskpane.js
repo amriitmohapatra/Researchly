@@ -674,7 +674,7 @@ function cardHtml(s) {
       }</button>`
     : "";
   const dictBtn =
-    s.rule_id === "S001"
+    s.rule_id === "S001" || s.rule_id === "S003"
       ? `<button class="adddict">Add to dictionary</button>`
       : "";
   return `

@@ -60,6 +60,7 @@ export type LearnCard = S["LearnCard"];
 export type LearnResponse = S["LearnResponse"];
 export type ReadingSummary = S["ReadingSummary"];
 export type TableEvidence = S["TableEvidence"];
+export type Occurrence = S["Occurrence"];
 export type SetAside = S["SetAside"];
 
 // The live check (S4d R3): POST /v1/check-paragraphs.

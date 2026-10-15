@@ -4433,3 +4433,31 @@ main:focus {
 }
 
 /* end Word pane: underlines and states (R4) */
+
+/* ---------- repeated words: one question, every place (Codex review #10; components/PlacesNav.tsx) ---------- */
+
+.places {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 4px;
+}
+.places-step {
+  display: inline-flex;
+  gap: 8px;
+}
+.places .btn[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: default;
+}
+.places-pos {
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+}
+.card-dict-note {
+  margin-top: 4px;
+}
+
+/* end repeated words */

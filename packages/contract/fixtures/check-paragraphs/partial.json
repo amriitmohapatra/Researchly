@@ -33,7 +33,7 @@
             "section": "results",
             "message": "Did you mean 'received'? (also: relieved)",
             "plain": "This word is not in the dictionary, so it may be a typo. Scientific terms, names and abbreviations are usually recognised. If it is a real word you use, add it to your dictionary from this card and it will not be flagged again.",
-            "why": "Spelling against a frequency dictionary plus a scientific lexicon (seroprevalence, covariates, nowcasting are not errors here). Proper nouns, acronyms, UK/US variants, and terms you use repeatedly are skipped. A false alarm on your own terminology: 'Add to dictionary' on the card teaches it the word.",
+            "why": "Spelling against a frequency dictionary plus a scientific lexicon (seroprevalence, covariates, nowcasting are not errors here). Proper nouns, acronyms and UK/US variants are skipped. A word used three or more times is flagged at every use only when it is a known kind of slip next to a common word (a learned error model of real misspellings); any other repeated word is asked about once instead. A false alarm on your own terminology: 'Add to dictionary' on the card teaches it the word.",
             "source": "SymSpell spelling engine with Researchly's scientific lexicon",
             "learn_ref": "spelling-and-grammar",
             "replacements": [
@@ -174,7 +174,7 @@
       "W213",
       "X302"
     ],
-    "ruleset": "0.1.0+077e92be",
-    "elapsed_ms": 15
+    "ruleset": "0.1.0+0beb9824",
+    "elapsed_ms": 64
   }
 }

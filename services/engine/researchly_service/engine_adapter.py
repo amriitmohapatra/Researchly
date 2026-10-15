@@ -27,7 +27,7 @@ from . import __version__ as SERVICE_VERSION
 from .schemas import (AnalyzeOptions, AnalyzeResponse, Category, ChecklistChoiceInfo, ChecklistReport,
                       CheckParagraphsResponse, Coverage, EngineInfo, FixSafety,
                       LearnCard, LiveParagraphResult, LiveState, Metrics, Mode,
-                      NarrativeMap, ProfileChoice, ProfileInfo, ReadingSummary,
+                      NarrativeMap, Occurrence, ProfileChoice, ProfileInfo, ReadingSummary,
                       ReviewReport, RuleInfo, Scope, Span,
                       Suggestion, TableEvidence, TierHealth, WordLocation,
                       WordSuggestion)
@@ -178,11 +178,38 @@ def to_suggestion(s, index=None) -> Suggestion:
         critical=s.category.value == "correction",
         begin16=index(start) if index is not None else None,
         end16=index(end) if index is not None else None,
+        occurrences=_occurrences(s, index),
     )
 
 
+def _occurrences(s, index) -> Optional[List[Occurrence]]:
+    occ = getattr(s, "occurrences", None)
+    if not occ:
+        return None
+    return [Occurrence(
+        start=max(0, o["start"]), end=max(0, o["end"]),
+        line=max(0, o.get("line", 0)), col=max(0, o.get("col", 0)),
+        begin16=index(max(0, o["start"])) if index is not None else None,
+        end16=index(max(0, o["end"])) if index is not None else None)
+        for o in occ]
+
+
+def _occurrence_locations(doc, paragraphs, s, indexes: dict
+                          ) -> Optional[List[WordLocation]]:
+    occ = getattr(s, "occurrences", None)
+    if not occ:
+        return None
+    return [_word_location_at(doc, paragraphs, o["start"], o["end"], indexes)
+            for o in occ]
+
+
 def _word_location(doc, paragraphs, s, indexes: dict) -> WordLocation:
-    loc = wordloc.locate(doc, paragraphs, s.start, s.end)
+    return _word_location_at(doc, paragraphs, s.start, s.end, indexes)
+
+
+def _word_location_at(doc, paragraphs, start: int, end: int,
+                      indexes: dict) -> WordLocation:
+    loc = wordloc.locate(doc, paragraphs, start, end)
     i = loc["paragraph"]
     if i not in indexes:
         text = (paragraphs[i].get("text") or "") if i < len(paragraphs) else ""
@@ -245,7 +272,9 @@ def run_analysis(source: Union[str, Document], fmt: str,
         indexes: dict = {}
         suggestions = [WordSuggestion(
             **to_suggestion(s, index).model_dump(),
-            location=_word_location(doc, paragraphs, s, indexes))
+            location=_word_location(doc, paragraphs, s, indexes),
+            occurrence_locations=_occurrence_locations(doc, paragraphs, s,
+                                                       indexes))
             for s in a.suggestions]
         extra["coverage"] = Coverage(**wordloc.coverage(paragraphs, doc))
     else:

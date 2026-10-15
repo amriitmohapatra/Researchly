@@ -459,7 +459,7 @@ _CARDS = (
          "Before you send a draft, read it aloud once, slowly: the ear "
          "catches doubled words the eye skips.",
          "§6+LanguageTool+symspellpy",
-         rules=("S001", "S002", "LT001", "W207", "GEC001", "W210", "W213", "W208", "W212")),
+         rules=("S001", "S002", "S003", "LT001", "W207", "GEC001", "W210", "W213", "W208", "W212")),
     Card("grammar-notes", "Grammar of research prose, and your English",
          "Mechanics",
          "Agree with the head noun, give every opener a doer, and keep to "
