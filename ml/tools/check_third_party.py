@@ -52,11 +52,7 @@ SKIP_SUFFIXES = {".joblib", ".pkl", ".pickle", ".pyc", ".pyo", ".so",
                  ".woff", ".woff2", ".ttf", ".otf", ".vsix", ".docx"}
 # The SymSpell frequency dictionary is a third-party *word list*, not prose;
 # it is licensed separately (ml/datasets.yaml) and would only add noise.
-# predict_sources.tsv is the word-prediction model's attribution list (CC BY
-# requires it): authors and titles of open-access articles, which theses
-# naturally cite too. Bibliographic records, not anyone's prose (2026-10-14).
-SKIP_NAME_RX = re.compile(
-    r"^(frequency_(dictionary|bigramdictionary)|predict_sources\.tsv$)", re.I)
+SKIP_NAME_RX = re.compile(r"^frequency_(dictionary|bigramdictionary)", re.I)
 # Machine-generated files: dependency lockfiles and compiler/bundler state.
 # They hold version lists and number runs, never prose anyone wrote.
 SKIP_GENERATED_RX = re.compile(

@@ -24,8 +24,7 @@ from typing import List, Optional, Union
 
 from . import _core  # noqa: F401  (import path + isolation first)
 from . import __version__ as SERVICE_VERSION
-from .schemas import (AnalyzeOptions, AnalyzeResponse, Category, CompleteOptions, CompleteResponse,
-                      CompletionCandidate, ChecklistChoiceInfo, ChecklistReport,
+from .schemas import (AnalyzeOptions, AnalyzeResponse, Category, ChecklistChoiceInfo, ChecklistReport,
                       Coverage, EngineInfo, FixSafety,
                       LearnCard, Metrics, Mode,
                       NarrativeMap, ProfileChoice, ProfileInfo, ReadingSummary,
@@ -95,27 +94,6 @@ def build_config(options: Optional[AnalyzeOptions],
         if options.spelling is not None:
             cfg.spelling = options.spelling.value
     return cfg
-
-
-def run_completion(text: str, cursor: Optional[int], fmt: str,
-                   options: Optional[CompleteOptions],
-                   account: Optional[dict] = None, **_who) -> CompleteResponse:
-    """Word prediction: one `api.complete()` call. No spaCy parse, so no
-    engine lock; the model is read-only SQLite opened per thread."""
-    cfg = Config()
-    if account is not None:
-        apply_remote(cfg, account)
-    limit = 3
-    if options is not None:
-        if options.spelling is not None:
-            cfg.spelling = options.spelling.value
-        limit = options.limit
-    got = api.complete(text, cursor, kind=fmt, cfg=cfg, limit=limit)
-    return CompleteResponse(
-        status=got.status,
-        candidates=[CompletionCandidate(text=c.text, start=c.start, end=c.end,
-                                        kind=c.kind)
-                    for c in got.candidates])
 
 
 # Everything beyond the suggestions is shaped once, in the core
@@ -285,11 +263,8 @@ def _reading(document) -> Optional[ReadingSummary]:
 
 
 # Tiers that never make the service "degraded" by being off: gec is opt-in
-# (no model ships), so missing/disabled is its normal state. Word prediction
-# helps the writer type; without its model every check still runs, so its
-# absence is reported on its own tier, not as a degraded service.
-_OPTIONAL_STATES = {"gec": {"missing", "disabled"},
-                    "prediction": {"missing", "disabled"}}
+# (no model ships), so missing/disabled is its normal state.
+_OPTIONAL_STATES = {"gec": {"missing", "disabled"}}
 
 
 def health_tiers(grammar_enabled: bool = True) -> List[TierHealth]:

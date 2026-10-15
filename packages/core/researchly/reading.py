@@ -113,8 +113,7 @@ def paragraph_language(text: str) -> str | None:
     """None for English (or too short to tell); otherwise the language the
     paragraph is in: "Spanish", ..., or "another script".
 
-    Runs on every paragraph of every check and of every prediction
-    request's window, so the two exits below skip work that cannot change
+    Runs on every paragraph of every check, so the two exits below skip work that cannot change
     the answer (2026-10-14 performance pass): an ASCII paragraph has only
     Latin letters, and once English function words are more than a third
     of the words no other language can reach three times their share."""

@@ -3,8 +3,7 @@
  * the article type to check as (S4) and the English spelling to keep to (both
  * shared by the website and the Word add-in, which are one origin) and, in
  * the Word add-in, the engine choice and
- * Draft/Revise and (S4c) the reporting checklist; whether word prediction is
- * on (2026-10-14, only once the writer switches it); on the Label page, the
+ * Draft/Revise and (S4c) the reporting checklist; on the Label page, the
  * verdicts given so far (rule ids and verdicts, never text). The document
  * itself is never persisted (no localStorage, sessionStorage or IndexedDB
  * for text) — scripts/check-boundary.mjs enforces that storage APIs are used
@@ -178,29 +177,6 @@ export function loadChecklistChoice(): ChecklistPref | null {
 
 export function saveChecklistChoice(v: ChecklistPref): void {
   write(CHECKLIST_KEY, v);
-}
-
-/* ---------- word prediction (2026-10-14): on or off, never text ---------- */
-
-const PREDICTION_KEY = "researchly.prediction";
-
-/** The switch as set in this browser ("on"/"off"), or null when never touched (prediction is on by default). */
-export function loadPredictionChoice(): boolean | null {
-  const v = read(PREDICTION_KEY);
-  return v === "on" ? true : v === "off" ? false : null;
-}
-
-export function savePredictionChoice(on: boolean): void {
-  write(PREDICTION_KEY, on ? "on" : "off");
-}
-
-/** For useSyncExternalStore: the website and the Word pane share the switch (one origin). */
-export function subscribePrediction(onChange: () => void): () => void {
-  const handler = (e: StorageEvent) => {
-    if (e.key === PREDICTION_KEY) onChange();
-  };
-  window.addEventListener("storage", handler);
-  return () => window.removeEventListener("storage", handler);
 }
 
 /* ---------- the Label page (S4 exit check): verdicts on flags, never text ---------- */

@@ -84,7 +84,6 @@ python bench.py --url http://localhost:8080      # or --in-process
 | `RESEARCHLY_GRAMMAR` | `on` | `off` = this deployment runs no grammar (health says `disabled`, not degraded) |
 | `RESEARCHLY_MAX_BODY_BYTES` | `8388608` | request body cap (8 MiB; must admit 1M four-byte characters) |
 | `RESEARCHLY_RATE_LIMIT_PER_MIN` | `30` | per client IP, per instance; `0` disables |
-| `RESEARCHLY_COMPLETE_RATE_LIMIT_PER_MIN` | `240` | the same, for `/v1/complete` (word prediction, asked for at each pause in typing) |
 | `RESEARCHLY_TRUSTED_PROXY_HOPS` | `0` | X-Forwarded-For entries added by trusted proxies (Cloud Run: `1`) |
 | `RESEARCHLY_WARMUP` | `on` | warm spaCy, rules and LanguageTool before opening the port |
 

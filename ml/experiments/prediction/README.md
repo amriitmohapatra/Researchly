@@ -1,5 +1,9 @@
 # Text prediction: the experiment it grew from
 
+> **Removed, 2026-10-15:** the owner withdrew word prediction (PLAN S4d R1,
+> ADR-07); the engine, service, website and Word surfaces no longer offer
+> words. This folder stays as the record of the experiment.
+
 > **Update, 2026-10-14:** the owner made word prediction a core feature
 > (CLAUDE.md #1, as amended). The product's version is
 > `packages/core/researchly/predict.py`, trained by

@@ -30,11 +30,8 @@ access = logging_setup.get("researchly.access")
 
 # Paths that may appear in logs verbatim. Anything else is logged as
 # "other": a raw path is client-chosen and could carry text.
-KNOWN_ROUTES = {"/v1/analyze", "/v1/analyze-file", "/v1/complete",
+KNOWN_ROUTES = {"/v1/analyze", "/v1/analyze-file",
                 "/v1/health", "/v1/rules", "/docs", "/openapi.json", "/redoc"}
-# Word prediction is asked for at every pause in typing, so it has its own,
-# larger budget rather than spending the checks' one.
-PREDICTION_PATHS = {"/v1/complete"}
 UNLIMITED_PATHS = {"/v1/health"}
 UPLOAD_PATHS = {"/v1/analyze-file"}
 BODY_METHODS = {"POST", "PUT", "PATCH"}
@@ -105,13 +102,10 @@ def _header(scope, name: bytes) -> Optional[bytes]:
 
 
 class RequestContextMiddleware:
-    def __init__(self, app, settings, limiter: RateLimiter,
-                 prediction_limiter: Optional[RateLimiter] = None):
+    def __init__(self, app, settings, limiter: RateLimiter):
         self.app = app
         self.settings = settings
         self.limiter = limiter
-        self.prediction_limiter = prediction_limiter or RateLimiter(
-            settings.complete_rate_limit_per_min)
 
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http":
@@ -150,9 +144,7 @@ class RequestContextMiddleware:
             try:
                 # 1. rate limit
                 if method != "OPTIONS" and path not in UNLIMITED_PATHS:
-                    limiter = (self.prediction_limiter
-                               if path in PREDICTION_PATHS else self.limiter)
-                    wait = limiter.check(
+                    wait = self.limiter.check(
                         client_ip(scope, self.settings.trusted_proxy_hops))
                     if wait is not None:
                         return await reply_error(

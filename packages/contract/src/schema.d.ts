@@ -67,29 +67,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/complete": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Complete
-         * @description Word prediction at a cursor: the end of the word being typed, or the
-         *     next word or short fixed term. Candidates only; nothing is inserted
-         *     unless the writer accepts one. Nothing is offered in maths, code,
-         *     citations, URLs or headings, or when the writer has turned it off.
-         */
-        post: operations["complete"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/v1/health": {
         parameters: {
             query?: never;
@@ -590,77 +567,6 @@ export interface components {
             suggested: boolean;
             /** Total */
             total: number;
-        };
-        /** CompleteOptions */
-        CompleteOptions: {
-            /**
-             * Limit
-             * @description How many candidates to return at most.
-             * @default 3
-             */
-            limit: number;
-            /** @description The English spelling to offer words in. Omitted: the caller's saved setting, else the spelling the text already uses. */
-            spelling?: components["schemas"]["Spelling"] | null;
-        };
-        /**
-         * CompleteRequest
-         * @description Word prediction at a cursor (2026-10-14). Send the text around the
-         *     cursor, not necessarily the whole document: a few thousand characters
-         *     before it are plenty, plus the rest of its paragraph.
-         */
-        CompleteRequest: {
-            /**
-             * Cursor
-             * @description Offset of the cursor in `text`, counted in Unicode code points (not UTF-16 units), like `start` and `end` in the reply. Omitted: the end of `text`.
-             */
-            cursor?: number | null;
-            /**
-             * @description How to read `text`.
-             * @default plain
-             */
-            format: components["schemas"]["Format"];
-            options?: components["schemas"]["CompleteOptions"];
-            /**
-             * Text
-             * @description Text around the cursor. Held in memory for this request only; never stored or logged.
-             */
-            text: string;
-        };
-        /** CompleteResponse */
-        CompleteResponse: {
-            /** Candidates */
-            candidates?: components["schemas"]["CompletionCandidate"][];
-            /**
-             * Status
-             * @description Why there are no candidates, when there are none: off (the writer turned prediction off), masked (the cursor is in maths, code, a citation, a URL or a heading), unavailable (no model).
-             * @default ok
-             * @enum {string}
-             */
-            status: "ok" | "off" | "masked" | "unavailable";
-        };
-        /** CompletionCandidate */
-        CompletionCandidate: {
-            /**
-             * End
-             * @description The cursor.
-             */
-            end: number;
-            /**
-             * Kind
-             * @description word: one word; term: a fixed term of two or three words ("confidence interval").
-             * @enum {string}
-             */
-            kind: "word" | "term";
-            /**
-             * Start
-             * @description Where the typed part of the word begins.
-             */
-            start: number;
-            /**
-             * Text
-             * @description What to put in place of `text[start:end]` if the writer accepts.
-             */
-            text: string;
         };
         /**
          * Coverage
@@ -1789,96 +1695,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnalyzeWordResponse"];
-                };
-            };
-            /** @description Malformed request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Sign-in invalid or expired (unauthorized), or this needs an account (sign_in_required) */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Document too large */
-            413: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Request failed validation */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Rate limited */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Engine error (no document text in the body) */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Sign-in could not be checked (auth_unavailable) */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    complete: {
-        parameters: {
-            query?: never;
-            header?: {
-                /** @description `Bearer <Supabase access token>` when signed in. Omit for anonymous use. */
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CompleteRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CompleteResponse"];
                 };
             };
             /** @description Malformed request */

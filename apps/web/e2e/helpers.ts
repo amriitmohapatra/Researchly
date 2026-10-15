@@ -1,5 +1,5 @@
 import type { Page, Request, Route } from "@playwright/test";
-import type { AnalyzeRequest, CompleteRequest, CompleteResponse } from "@researchly/contract";
+import type { AnalyzeRequest } from "@researchly/contract";
 import type { RuleInfo } from "@researchly/contract";
 import { CHECKLISTS, ENGINE, PROFILES, responseFor, RULES_REGISTRY } from "./fixtures";
 
@@ -38,29 +38,6 @@ export async function mockEngine(page: Page, handler?: Handler, rules: RuleInfo[
     seen.push(body);
     if (handler) await handler(body, route);
     else await json(route, 200, responseFor(body));
-  });
-  // Word prediction (2026-10-14) asks while the writer types: nothing to offer unless a test says otherwise.
-  await page.route(`${ENGINE}/v1/complete`, async (route) => {
-    if (route.request().method() === "OPTIONS") return route.fulfill({ status: 204, headers: CORS });
-    return json(route, 200, { status: "ok", candidates: [] });
-  });
-  return seen;
-}
-
-/**
- * Mock /v1/complete (registered after mockEngine, so it wins): `answer`
- * gets each request body and returns the reply. Returns the bodies sent.
- */
-export async function mockComplete(
-  page: Page,
-  answer: (req: CompleteRequest) => CompleteResponse,
-): Promise<CompleteRequest[]> {
-  const seen: CompleteRequest[] = [];
-  await page.route(`${ENGINE}/v1/complete`, async (route) => {
-    if (route.request().method() === "OPTIONS") return route.fulfill({ status: 204, headers: CORS });
-    const body = route.request().postDataJSON() as CompleteRequest;
-    seen.push(body);
-    return json(route, 200, answer(body));
   });
   return seen;
 }

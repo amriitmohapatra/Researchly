@@ -41,7 +41,7 @@ export interface FakeWordConfig {
   host?: string | null;
   /** WordApi 1.4 (tracked changes, fields). Default true. */
   api14?: boolean;
-  /** WordApi 1.3 (table cells, word prediction). Default true; false also means no 1.4. */
+  /** WordApi 1.3 (table cells). Default true; false also means no 1.4. */
   api13?: boolean;
   /** The writer's Track Changes setting before any apply. Default "Off". */
   trackingMode?: string;
@@ -51,8 +51,6 @@ export interface FakeWordConfig {
   nullHistory?: boolean;
   /** Where the cursor is when the pane opens: a paragraph index (default 0). */
   cursor?: number;
-  /** ... and the offset in that paragraph (default 0): word prediction reads up to it. */
-  cursorAt?: number;
   /**
    * Host failures to reproduce (Codex review R3), each at `context.sync()`
    * like a real Word error:
@@ -84,8 +82,6 @@ export interface FakeWordState {
   failedBatches: number;
   /** Every changeTrackingMode assignment, in order. */
   trackingWrites: string[];
-  /** How many selection-changed handlers are registered (word prediction's panel). */
-  selectionHandlers: number;
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -100,12 +96,8 @@ export function installFakeOffice(target: any, config: FakeWordConfig): FakeWord
     edits: [],
     failedBatches: 0,
     trackingWrites: [],
-    selectionHandlers: 0,
   };
   target.__fakeWord = state;
-  const handlers: (() => void)[] = [];
-  // Tests move the cursor, then call this as Word would after a selection change.
-  target.__fakeWordSelectionChanged = () => handlers.forEach((h) => h());
   if (config.nullHistory && target.history) {
     target.history.pushState = null;
     target.history.replaceState = null;
@@ -150,27 +142,13 @@ export function installFakeOffice(target: any, config: FakeWordConfig): FakeWord
           for (let i = r.pi; i <= r.endPi; i++) items.push(makeParagraph(i));
           return { items, load() {} };
         },
-        select(mode?: string) {
+        select() {
           ops.push(() => {
             if (failures.select) throw new Error("GeneralException: the selection could not be made");
-            const s = mode === "End" ? r.end : r.start;
-            const e = mode === "End" || mode === "Start" ? s : r.end;
-            state.selection = { paragraph: r.pi, start: s, end: e, text: state.paragraphs[r.pi]!.text.slice(s, e) };
+            state.selection = { paragraph: r.pi, start: r.start, end: r.end, text: state.paragraphs[r.pi]!.text.slice(r.start, r.end) };
           });
         },
         insertText(text: string, where: string) {
-          if (where === "End") {
-            // Word prediction: text added at the end of a (collapsed) range; returns the new text's range.
-            const added = makeRange(r.endPi, r.end, r.end);
-            ops.push(() => {
-              const p = state.paragraphs[r.endPi]!;
-              p.text = p.text.slice(0, r.end) + text + p.text.slice(r.end);
-              state.edits.push({ paragraph: r.endPi, start: r.end, end: r.end, before: "", text, tracked: state.trackingMode === "TrackAll" });
-              added.end = r.end + text.length;
-              added.text = text;
-            });
-            return added;
-          }
           if (where !== "Replace") throw new Error(`fake office: unsupported insert location ${where}`);
           ops.push(() => {
             if (failures.insert === "before") throw new Error("GeneralException: the text could not be inserted");
@@ -235,11 +213,6 @@ export function installFakeOffice(target: any, config: FakeWordConfig): FakeWord
         style: p.style ?? "Normal",
         styleBuiltIn: p.styleBuiltIn ?? "Other",
         tableNestingLevel: p.tableNestingLevel ?? 0,
-        getRange(where?: string) {
-          if (where === "Start") return makeRange(pi, 0, 0);
-          if (where === "End") return makeRange(pi, p.text.length, p.text.length);
-          return makeRange(pi, 0, p.text.length);
-        },
         search(needle: string, options: { matchCase?: boolean }) {
           const hay = options?.matchCase ? p.text : p.text.toLowerCase();
           const n = options?.matchCase ? needle : needle.toLowerCase();
@@ -277,8 +250,7 @@ export function installFakeOffice(target: any, config: FakeWordConfig): FakeWord
         const sel = state.selection;
         if (sel) return makeRange(sel.paragraph, sel.start, sel.end);
         const pi = Math.min(Math.max(config.cursor ?? 0, 0), state.paragraphs.length - 1);
-        const at = Math.min(Math.max(config.cursorAt ?? 0, 0), state.paragraphs[pi]!.text.length);
-        return makeRange(pi, at, at);
+        return makeRange(pi, 0, 0);
       },
     };
     Object.defineProperty(document, "changeTrackingMode", {
@@ -325,27 +297,11 @@ export function installFakeOffice(target: any, config: FakeWordConfig): FakeWord
         return info;
       });
     },
-    EventType: { DocumentSelectionChanged: "documentSelectionChanged" },
     context: {
       requirements: {
         isSetSupported(name: string, version?: string) {
           if (name !== "WordApi") return false;
           return versionAtMost(version, api14 ? "1.4" : api13 ? "1.3" : "1.2");
-        },
-      },
-      document: {
-        addHandlerAsync(type: string, handler: () => void, cb?: (r: { status: string }) => void) {
-          if (type === "documentSelectionChanged") {
-            handlers.push(handler);
-            state.selectionHandlers = handlers.length;
-          }
-          if (cb) cb({ status: "succeeded" });
-        },
-        removeHandlerAsync(type: string, options?: { handler?: () => void }, cb?: (r: { status: string }) => void) {
-          const i = options?.handler ? handlers.indexOf(options.handler) : -1;
-          if (type === "documentSelectionChanged" && i >= 0) handlers.splice(i, 1);
-          state.selectionHandlers = handlers.length;
-          if (cb) cb({ status: "succeeded" });
         },
       },
     },

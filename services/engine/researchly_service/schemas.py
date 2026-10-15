@@ -144,54 +144,6 @@ class AnalyzeRequest(_Strict):
     options: AnalyzeOptions = Field(default_factory=AnalyzeOptions)
 
 
-MAX_COMPLETE_CHARS = 100_000
-
-
-class CompleteOptions(_Strict):
-    spelling: Optional[Spelling] = Field(
-        None, description="The English spelling to offer words in. Omitted: "
-                          "the caller's saved setting, else the spelling the "
-                          "text already uses.")
-    limit: int = Field(3, ge=1, le=5,
-                       description="How many candidates to return at most.")
-
-
-class CompleteRequest(_Strict):
-    """Word prediction at a cursor (2026-10-14). Send the text around the
-    cursor, not necessarily the whole document: a few thousand characters
-    before it are plenty, plus the rest of its paragraph."""
-    format: Format = Field(Format.plain, description="How to read `text`.")
-    text: str = Field(..., max_length=MAX_COMPLETE_CHARS,
-                      description="Text around the cursor. Held in memory for "
-                                  "this request only; never stored or logged.")
-    cursor: Optional[int] = Field(
-        None, ge=0, description="Offset of the cursor in `text`, counted in "
-                                "Unicode code points (not UTF-16 units), like "
-                                "`start` and `end` in the reply. Omitted: the "
-                                "end of `text`.")
-    options: CompleteOptions = Field(default_factory=CompleteOptions)
-
-
-class CompletionCandidate(_Strict):
-    text: str = Field(..., description="What to put in place of "
-                                       "`text[start:end]` if the writer accepts.")
-    start: int = Field(..., ge=0, description="Where the typed part of the "
-                                              "word begins.")
-    end: int = Field(..., ge=0, description="The cursor.")
-    kind: Literal["word", "term"] = Field(
-        ..., description="word: one word; term: a fixed term of two or "
-                         "three words (\"confidence interval\").")
-
-
-class CompleteResponse(_Strict):
-    candidates: List[CompletionCandidate] = Field(default_factory=list)
-    status: Literal["ok", "off", "masked", "unavailable"] = Field(
-        "ok", description="Why there are no candidates, when there are none: "
-                          "off (the writer turned prediction off), masked "
-                          "(the cursor is in maths, code, a citation, a URL "
-                          "or a heading), unavailable (no model).")
-
-
 MAX_WORD_PARAGRAPHS = 50_000
 
 

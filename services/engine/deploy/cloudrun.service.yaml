@@ -78,8 +78,6 @@ spec:
               value: "1"
             - name: RESEARCHLY_RATE_LIMIT_PER_MIN
               value: "30"
-            - name: RESEARCHLY_COMPLETE_RATE_LIMIT_PER_MIN
-              value: "240"
             # Accounts (S2). Both are public by design (the browser has
             # them too); Row-Level Security protects the data. Empty = the
             # engine runs without accounts.

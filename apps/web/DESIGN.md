@@ -323,28 +323,6 @@ own "Whole document" group so they are never lost. The chooser starts at
   alone). Nothing is checked until Check. The same row links the Word and
   Overleaf versions for download. The example-draft button in the key stays.
 
-## Word prediction (2026-10-14, CLAUDE.md #1)
-
-- **A quiet strip under the editor**, its height held so the text never
-  jumps: after a pause in typing (250 ms), up to three candidates as small
-  bordered buttons in the serif (they are the writer's words to be), the
-  first with a slightly stronger border, then "Tab to accept · Esc to
-  dismiss" in the muted ink. A word, the end of the word being typed, or a
-  fixed term of at most three words; never more.
-- **Never inserted by itself.** Tab takes the first candidate, a click takes
-  any; only into the very text and caret they were offered for. Esc, a
-  moved caret, leaving the editor or more typing drop the offer. With
-  nothing shown, Tab moves focus as it always did. The buttons are out of
-  the tab order; a polite live region (always mounted) says each offer.
-- **"Word prediction"** is a switch in the composer's row after "Show
-  preferences" (on by default) and a panel in Settings when signed in.
-  Remembered in this browser (`researchly.prediction`, on/off only) and in
-  the account when signed in. Off means nothing is asked for.
-- Only a window around the cursor is sent (up to 4,000 characters before it
-  and the rest of its paragraph); it is never stored. A reply that answers
-  older text is dropped. Nothing shows unless the engine says "ok"; after
-  "too many requests" the strip stays quiet for a minute. Not on paper.
-
 ## The table cell on an X401 card (2026-10-14)
 
 When a sentence names a row and a column of a table and quotes a number
@@ -515,18 +493,6 @@ column, the site's tokens, cards and notices; nothing new to learn.
   under the quiet notes as a two-by-two grid; a pass replaces the cards
   with the same queue as on the site (one column), and each step selects
   the finding's words in Word, as clicking its card does.
-- **Next words (2026-10-14)**: Office JS cannot show words inline, so a
-  small panel under the check panel, titled "Next words" with a quiet
-  "Hide" link, offers up to three words as buttons when the cursor moves
-  (typing moves it). A click inserts the rest of the word at the cursor
-  (the typed letters stay as typed), only if the paragraph up to the cursor
-  still reads as it did; otherwise it says nothing was inserted. Track
-  Changes is never touched, so with it on the insertion is tracked like
-  typing. Nothing for selected words or in headings, said in one line;
-  Word older than WordApi 1.3 is told the panel is not available there.
-  "Word prediction" in Settings brings a hidden panel back. States: idle,
-  words offered, selection, heading, unsupported, text at the cursor
-  changed.
 - **Sign-in** replaces the main column: email, then the emailed code. No
   dialog (Office's dialog API is not used).
 - **States**: connecting to Word, outside Word, office.js missing, idle,
@@ -579,7 +545,7 @@ note with and without earlier results.
   phone the composer's selects stack at one full width, as in the Word pane.
 - In the composer the selects come first, their labels lined up along the
   top; a help line under a select (Check as, Spelling) hangs below it. The
-  switches (Show preferences, Word prediction) and Check take their own row
+  switch (Show preferences) and Check take their own row
   under them, so a switch never floats beside a help line.
 - Every disclosure shows its marker: where a summary is a flex row (the
   Word pane's Settings, the queue's "Every issue in this pass" list) it draws the cards'

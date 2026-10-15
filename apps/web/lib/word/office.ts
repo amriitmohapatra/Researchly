@@ -69,8 +69,6 @@ export interface OfficeParagraph {
   /** WordApi 1.3+ only: the table cell this paragraph is in (a null object outside tables). */
   parentTableCellOrNullObject?: OfficeTableCell;
   search(searchText: string, options: { matchCase: boolean }): OfficeRangeCollection;
-  /** WordApi 1.3+ only (word prediction reads the paragraph up to the cursor with it). */
-  getRange?(rangeLocation?: string): OfficeRange;
 }
 
 export interface OfficeParagraphCollection {
@@ -95,15 +93,7 @@ export interface OfficeApi {
       host: string | null;
       platform: string | null;
     }>;
-    context: {
-      requirements: { isSetSupported(name: string, minVersion?: string): boolean };
-      /** The Common API's document events (word prediction listens for selection changes). */
-      document?: {
-        addHandlerAsync?(eventType: string, handler: () => void, callback?: (result: { status: string }) => void): void;
-        removeHandlerAsync?(eventType: string, options?: { handler?: () => void }, callback?: (result: { status: string }) => void): void;
-      };
-    };
-    EventType?: { DocumentSelectionChanged?: string };
+    context: { requirements: { isSetSupported(name: string, minVersion?: string): boolean } };
   };
   Word: {
     run<T>(batch: (context: WordRequestContext) => Promise<T>): Promise<T>;
@@ -600,109 +590,4 @@ async function restoreTracking(ctx: WordRequestContext, track: boolean, prior: s
   } catch {
     return false;
   }
-}
-
-/* ---------- word prediction (2026-10-14): the "Next words" panel ---------- */
-
-/**
- * Reading the paragraph up to the cursor needs `Paragraph.getRange` and
- * `Range.expandTo`, which arrived with WordApi 1.3. Older Word gets no
- * panel rather than a guess.
- */
-export function canPredict(api: OfficeApi): boolean {
-  return wordApiAtLeast(api, "1.3");
-}
-
-/** The text of the cursor's paragraph up to the cursor, or why there is none to read. */
-export type CursorContext =
-  | { ok: true; before: string }
-  | { ok: false; reason: "unsupported" | "selection" | "heading" | "failed" };
-
-const HEADING_STYLE = /^(Heading\d|Title|Subtitle)$/;
-
-/**
- * Read the paragraph the cursor is in, from its start to the cursor. Only
- * an insertion point counts: with words selected there is no cursor to
- * predict at. A heading gets nothing (prediction stays out of headings).
- * Reads only; nothing in the document changes.
- */
-export async function readCursorContext(api: OfficeApi): Promise<CursorContext> {
-  if (!canPredict(api)) return { ok: false, reason: "unsupported" };
-  try {
-    return await api.Word.run(async (ctx): Promise<CursorContext> => {
-      const sel = ctx.document.getSelection();
-      sel.load("text");
-      const paras = sel.paragraphs;
-      paras.load("items/style,items/styleBuiltIn");
-      await ctx.sync();
-      if (sel.text !== "") return { ok: false, reason: "selection" };
-      const para = paras.items[0];
-      if (!para || !para.getRange) return { ok: false, reason: "failed" };
-      if (HEADING_STYLE.test(para.styleBuiltIn ?? "")) return { ok: false, reason: "heading" };
-      const upTo = para.getRange("Start").expandTo(sel.getRange("Start"));
-      upTo.load("text");
-      await ctx.sync();
-      return { ok: true, before: upTo.text ?? "" };
-    });
-  } catch {
-    return { ok: false, reason: "failed" };
-  }
-}
-
-export const CURSOR_MOVED_MESSAGE = "The text at the cursor has changed, so nothing was inserted. Choose again from the new words.";
-
-/**
- * Insert `insertion` at the cursor, and leave the cursor after it. Only if
- * the paragraph up to the cursor still reads `expectedBefore` (what the
- * words were offered for); otherwise nothing changes. Track Changes is left
- * exactly as the writer set it (never touched here), so with it on the
- * insertion is tracked like any typing.
- */
-export async function insertAtCursor(api: OfficeApi, insertion: string, expectedBefore: string): Promise<ActionResult<object>> {
-  if (!insertion) return { ok: false, message: CURSOR_MOVED_MESSAGE };
-  const now = await readCursorContext(api);
-  if (!now.ok || now.before !== expectedBefore) return { ok: false, message: CURSOR_MOVED_MESSAGE };
-  try {
-    return await api.Word.run(async (ctx) => {
-      const sel = ctx.document.getSelection();
-      const added = sel.insertText(insertion, "End") as OfficeRange | undefined;
-      await ctx.sync();
-      try {
-        added?.select("End");
-        await ctx.sync();
-      } catch {
-        /* inserted; only the cursor did not follow */
-      }
-      return { ok: true as const };
-    });
-  } catch {
-    return { ok: false, message: WORD_FAILED_MESSAGE };
-  }
-}
-
-/**
- * Call `fn` whenever the selection moves (typing moves it too). Returns the
- * way to stop listening, or null where Word offers no such event (the panel
- * then has a button to ask instead).
- */
-export function canListen(api: OfficeApi): boolean {
-  return Boolean(api.Office.context.document?.addHandlerAsync && api.Office.EventType?.DocumentSelectionChanged);
-}
-
-export function onSelectionChange(api: OfficeApi, fn: () => void): (() => void) | null {
-  const doc = api.Office.context.document;
-  const type = api.Office.EventType?.DocumentSelectionChanged;
-  if (!doc?.addHandlerAsync || !type) return null;
-  try {
-    doc.addHandlerAsync(type, fn);
-  } catch {
-    return null;
-  }
-  return () => {
-    try {
-      doc.removeHandlerAsync?.(type, { handler: fn });
-    } catch {
-      /* the pane is closing */
-    }
-  };
 }

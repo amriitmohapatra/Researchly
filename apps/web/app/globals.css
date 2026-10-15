@@ -506,7 +506,6 @@ main:focus {
   height: 0;
 }
 .controls > .control-toggle,
-.controls > .prediction-control,
 .controls > .control-actions {
   order: 2;
   align-self: center;
@@ -4059,86 +4058,10 @@ main:focus {
   margin-top: 16px;
 }
 
-/* ---------- word prediction (2026-10-14) ---------- */
-
-/* A quiet strip under the editor: the candidates, then how to take one. Space is held so the text never jumps. */
-.prediction-strip {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 12px;
-  min-height: 36px;
-  margin-top: 6px;
-  font-size: 0.9375rem;
-}
-.prediction-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.prediction-option {
-  min-height: 32px;
-  padding: 2px 10px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
-  color: var(--ink);
-  font-family: var(--serif); /* the writer's words */
-  font-size: 1rem;
-  cursor: pointer;
-}
-.prediction-option.is-first {
-  border-color: var(--line-strong);
-}
-.prediction-option:hover,
-.prediction-option:active {
-  border-color: var(--accent);
-}
-.prediction-option:active {
-  background: var(--surface-2);
-}
-.prediction-hint {
-  color: var(--ink-2);
-  font-size: 0.85rem;
-}
-.prediction-control {
-  display: flex;
-  flex-direction: column;
-}
-
-/* The Word pane's "Next words" panel. */
-.tp-next {
-  padding: 10px 12px;
-}
-.tp-next-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 8px;
-}
-.tp-next-title {
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-.tp-next .prediction-options {
-  margin-top: 6px;
-}
-.tp-next-note {
-  margin-top: 4px;
-  font-size: 0.875rem;
-  color: var(--ink-2);
-}
-
 /* What was read and what was set aside: one quiet line under the heading. */
 .reading-line {
   margin-top: 4px;
   font-size: 0.9rem;
   max-width: var(--measure);
   text-wrap: pretty;
-}
-
-@media print {
-  .prediction-strip {
-    display: none;
-  }
 }

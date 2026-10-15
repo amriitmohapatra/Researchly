@@ -16,12 +16,6 @@ _to_delete/
 **/*.tar.gz
 **/*.dmg
 shipping/
-# The word-prediction model (37 MB of n-gram counts from CC BY/CC0 articles):
-# over the gate's size limit and a binary the text scans cannot read. Its
-# builder (ml/tools/build_prediction_model.py) is not exported either; the
-# public engine reports prediction as "missing", with the reason.
-packages/core/researchly/data/predict.sqlite
-packages/core/researchly/data/predict_sources.tsv
 
 # Private planning, reviews and agent instructions.
 CLAUDE.md

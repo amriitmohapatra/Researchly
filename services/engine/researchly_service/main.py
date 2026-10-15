@@ -36,7 +36,7 @@ from .middleware import RateLimiter, RequestContextMiddleware
 from researchly import ingest, rules_grammar  # noqa: E402  (after _core)
 from .schemas import (AnalyzeFileResponse, AnalyzeOptions, AnalyzeRequest,
                       AnalyzeWordRequest, AnalyzeWordResponse,
-                      AnalyzeResponse, CompleteRequest, CompleteResponse,
+                      AnalyzeResponse,
                       ErrorResponse, HealthResponse,
                       LearnCard, LearnResponse,
                       RulesResponse, Segment, SourceFormat, SourceInfo,
@@ -124,28 +124,6 @@ def analyze(req: AnalyzeRequest, request: Request,
         req.content, req.format.value, req.options,
         grammar_enabled=s.grammar_enabled, **who)
     _record(request, resp)
-    return resp
-
-
-@router.post("/v1/complete", response_model=CompleteResponse,
-             responses=ERRORS, operation_id="complete", tags=["prediction"])
-def complete(req: CompleteRequest, request: Request,
-             authorization: Optional[str] = Header(None, description=AUTH_HEADER_DOC)
-             ) -> CompleteResponse:
-    """Word prediction at a cursor: the end of the word being typed, or the
-    next word or short fixed term. Candidates only; nothing is inserted
-    unless the writer accepts one. Nothing is offered in maths, code,
-    citations, URLs or headings, or when the writer has turned it off."""
-    st = request.state
-    st.content_chars = len(req.text)
-    st.format = req.format.value
-    if req.cursor is not None and req.cursor > len(req.text):
-        raise ApiError(422, "invalid_request",
-                       "cursor is beyond the end of the text")
-    who = _account(request, authorization)
-    resp = engine_adapter.run_completion(req.text, req.cursor,
-                                         req.format.value, req.options, **who)
-    st.suggestions = len(resp.candidates)
     return resp
 
 

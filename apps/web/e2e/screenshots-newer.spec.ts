@@ -1,16 +1,16 @@
 /**
- * Design review screenshots of the newer surfaces (not assertions): word
- * prediction under the editor, the revision queue, a card's table
- * evidence, the reporting checklist with its parts, and in the Word pane
- * at 320px Next words and the checklist; light and dark, 375 and 1366px.
+ * Design review screenshots of the newer surfaces (not assertions): the
+ * revision queue, a card's table evidence, the reporting checklist with
+ * its parts, and in the Word pane at 320px the checklist; light and dark,
+ * 375 and 1366px.
  * Each logs every axe violation and any horizontal overflow. Synthetic
  * text only. Runs only with SCREENSHOTS=1; see screenshots-pages.spec.ts.
  */
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import type { AnalyzeResponse, CompleteRequest, CompleteResponse, Suggestion } from "@researchly/contract";
+import type { AnalyzeResponse, Suggestion } from "@researchly/contract";
 import { ENGINE, happyResponse, SAMPLE_TEXT } from "./fixtures";
-import { check, json, mockComplete, mockEngine, paste } from "./helpers";
+import { check, json, mockEngine, paste } from "./helpers";
 import { fakeOffice, mockWordEngine } from "./word-fixtures";
 
 const DIR = process.env.SHOTS_DIR ?? "test-results/shots";
@@ -29,19 +29,6 @@ async function axeAll(page: Page, name: string) {
 async function overflow(page: Page, name: string) {
   const o = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   console.log(`OVERFLOW ${name}: ${o}`);
-}
-
-function intervals(req: CompleteRequest): CompleteResponse {
-  const cursor = req.cursor ?? Array.from(req.text).length;
-  const before = Array.from(req.text).slice(0, cursor).join("");
-  if (!before.endsWith("int")) return { status: "ok", candidates: [] };
-  return {
-    status: "ok",
-    candidates: [
-      { text: "interval", start: cursor - 3, end: cursor, kind: "word" },
-      { text: "intervals", start: cursor - 3, end: cursor, kind: "word" },
-    ],
-  };
 }
 
 /** ASCII only, so the engine's code-point offsets equal JavaScript's. */
@@ -131,15 +118,7 @@ for (const scheme of ["light", "dark"] as const) {
           return json(route, 200, { ...happyResponse, suggestions: [X401], counts: { correction: 1, improvement: 0, convention: 0, preference: 0 } });
         return route.fallback();
       });
-      await mockComplete(page, intervals);
       await page.goto("/");
-
-      // Word prediction: the strip under the editor.
-      await page.getByLabel("Text to check").click();
-      await page.keyboard.type("We report the confidence int");
-      await expect(page.getByTestId("prediction-option").first()).toBeVisible();
-      await page.locator(".composer").screenshot({ path: `${DIR}/${P}-prediction-${w}-${scheme}.png` });
-      await axeAll(page, `prediction ${w} ${scheme}`);
 
       // The revision queue, one pass.
       await paste(page, QUEUE_TEXT);
@@ -172,20 +151,16 @@ for (const scheme of ["light", "dark"] as const) {
     });
   }
 
-  test(`word next words and checklist 320 ${scheme}`, async ({ page }) => {
+  test(`word checklist 320 ${scheme}`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
     await page.setViewportSize({ width: 320, height: 900 });
     const PARAS = [
       { text: "Methods", styleBuiltIn: "Heading1" },
       { text: "We report the confidence int", styleBuiltIn: "Normal" },
     ];
-    await fakeOffice(page, { paragraphs: PARAS, cursor: 1, cursorAt: PARAS[1]!.text.length });
+    await fakeOffice(page, { paragraphs: PARAS, cursor: 1 });
     await mockWordEngine(page, ENGINE);
-    await mockComplete(page, intervals);
     await page.goto("/word");
-    await expect(page.getByTestId("next-words").getByTestId("next-word").first()).toBeVisible();
-    await page.screenshot({ path: `${DIR}/${P}-word-next-words-320-${scheme}.png`, fullPage: true });
-    await axeAll(page, `word next words ${scheme}`);
     await page.getByTestId("checklist-select").selectOption("strobe");
     await page.getByTestId("check-document").click();
     await expect(page.getByTestId("view-checklist")).toBeVisible();
