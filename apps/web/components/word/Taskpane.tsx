@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useId, useMemo, useReducer, useRef, useState, useSyncExternalStore } from "react";
 import {
   MAX_WORD_PARAGRAPHS,
   type AnalyzeWordResponse,
@@ -27,6 +27,8 @@ import { claimText, textKey } from "@/lib/record-progress";
 import { getEngineAuth, signOut, useAuth } from "@/lib/auth";
 import { ENGINE_URL, LOCAL_ENGINE_URL, reportProblemHref } from "@/lib/config";
 import { analyzeWord, engineHealth } from "@/lib/engine";
+import { checkParagraphs, partialReason } from "@/lib/live-check";
+import { INITIAL_STATUS, reduceCheckState, type CheckEvent, type CheckStatus } from "@/lib/check-state";
 import { createCheckSession, PREVIOUS_NOTE, previousMark, type CheckTask } from "@/lib/check-session";
 import { type CheckError } from "@/lib/errors";
 import { buildQueue, passCounts, QUEUE_START, type QueueState } from "@/lib/queue";
@@ -42,11 +44,13 @@ import {
   loadEngineChoice,
   loadModeChoice,
   loadSpellingChoice,
+  loadUnderlinesChoice,
   saveChecklistChoice,
   saveDocumentTypeChoice,
   saveEngineChoice,
   saveModeChoice,
   saveSpellingChoice,
+  saveUnderlinesChoice,
   subscribeDocumentType,
   subscribeSpelling,
   subscribeWordPrefs,
@@ -57,7 +61,7 @@ import {
 import {
   applyReplacement,
   officeApi,
-  readParagraphs,
+  readParagraphsAndIds,
   readSelectionParagraph,
   restoreHistory,
   selectSpan,
@@ -74,6 +78,18 @@ import {
 } from "@/lib/word/checklist";
 import { NO_MARKS, toggleMark, type ChecklistMarks } from "@/lib/checklists";
 import {
+  appliedInPlace,
+  dismissalKey,
+  fullRange,
+  mergeCards,
+  paragraphKey,
+  snapshotOf,
+  type LiveEntry,
+  type SnapshotParagraph,
+} from "@/lib/word/live";
+import { UnderlineController, type LiveChoices, type Unavailable } from "@/lib/word/underlines";
+import type { ScopeMap } from "@/lib/scope";
+import {
   coverageSentences,
   heldBackSentence,
   sectionAround,
@@ -87,18 +103,16 @@ import {
   wordSummary,
   type SectionFocus,
 } from "@/lib/word/view";
-import { usePredictionSetting } from "@/lib/use-prediction";
 import { CheckProgress } from "../CheckProgress";
 import { HealthBanner } from "../HealthBanner";
 import { PassChooser, RevisionQueue } from "../RevisionQueue";
 import { NarrativeMap } from "../NarrativeMap";
-import { PredictionToggle, WORD_PREDICTION_HELP } from "../PredictionStrip";
 import { ProfileSelect } from "../ProfileSelect";
 import { ReadingSummary } from "../ReadingSummary";
 import { ReviewBrief } from "../ReviewBrief";
 import { SpellingSelect } from "../SpellingSelect";
+import { StatusMark } from "../StatusMark";
 import { CodeSignIn } from "./CodeSignIn";
-import { NextWords } from "./NextWords";
 import { WordBusyContext, WordCard, type CardNote, type WordCardActions } from "./WordCard";
 import { WordChecklist } from "./WordChecklist";
 import { WordTabs, wordViewIds, type WordView } from "./WordTabs";
@@ -115,6 +129,8 @@ interface Checked {
   checklist: ChecklistPref;
   /** An in-memory key of the checked text, so a recheck of the same words is not recorded twice (never stored or sent). */
   progressKey?: string;
+  /** S4d R4: the paragraphs as checked, with their keys and headings (memory only): underlines and live checks refer to them. */
+  snapshot: SnapshotParagraph[];
 }
 
 type Problem = { title: string; message: string };
@@ -135,6 +151,18 @@ function localDownError(e: CheckError): CheckError {
     message:
       "Start the local server (python3 server.py in Researchly’s word-addin folder), then check again. Or switch to Researchly cloud under Settings below.",
   };
+}
+
+/** S4d R4: why there are no underlines in this Word (Settings says it once, quietly). */
+const UNDERLINES_UNAVAILABLE = "Underlines in the document need Word for Microsoft 365, version 16.79 or later. Suggestions still appear here in the pane.";
+
+/** The status mark's count is what the pane lists, so dismissing or applying a card updates it at once. */
+function shownStatus(status: CheckStatus, shownCount: number): CheckStatus {
+  if (status.state === "issues" || status.state === "clear") {
+    return { ...status, state: shownCount > 0 ? "issues" : "clear", count: shownCount };
+  }
+  if (status.state === "partial") return { ...status, count: shownCount };
+  return status;
 }
 
 /** Document-wide checks only make sense on a complete draft, so the stage says what each one checks. */
@@ -183,8 +211,6 @@ export function Taskpane() {
   /** Suggestions, the reviewer's brief, the narrative map or the checklist: survives a re-check, never stored. */
   const [resultsView, setResultsView] = useState<WordView>("suggestions");
   const [showPreferences, setShowPreferences] = useState(false);
-  // Word prediction (2026-10-14): the "Next words" panel, on unless the writer switched it off.
-  const prediction = usePredictionSetting(signedIn);
 
   // One check at a time (review proposal 8): a cancelled or superseded check's late reply is dropped.
   const [session] = useState(() => createCheckSession<Checked>());
@@ -226,7 +252,42 @@ export function Taskpane() {
     privacy: useId(),
     engine: useId(),
     prefs: useId(),
+    underlines: useId(),
+    underlinesHelp: useId(),
   };
+
+  /* ---------- S4d R4: underlines in the document, and the six states ---------- */
+
+  // Live underlines: this session's switch, else this computer's, else on (where Word can draw them).
+  const storedUnderlines = useSyncExternalStore(subscribeWordPrefs, loadUnderlinesChoice, () => null);
+  const [chosenUnderlines, setChosenUnderlines] = useState<boolean | null>(null);
+  const underlinesOn = chosenUnderlines ?? storedUnderlines ?? true;
+  /** Why this Word cannot draw underlines (then the pane works as before). */
+  const [underlineProblem, setUnderlineProblem] = useState<Unavailable | null>(null);
+  /** The live check's cards per paragraph (memory only). */
+  const [liveEntries, setLiveEntries] = useState<ReadonlyMap<string, LiveEntry>>(() => new Map());
+  /** Suggestion ids underlined in the document now. */
+  const [underlined, setUnderlined] = useState<ReadonlySet<string>>(() => new Set());
+  /** "Not an issue here": paragraph, rule and words (memory only, gone when the pane closes). */
+  const [dismissed, setDismissed] = useState<ReadonlySet<string>>(() => new Set());
+  const [status, dispatchStatus] = useReducer(reduceCheckState, INITIAL_STATUS);
+  const controllerRef = useRef<UnderlineController | null>(null);
+  const liveChoicesRef = useRef<LiveChoices | null>(null);
+  const scopesRef = useRef<ScopeMap | null>(null);
+  const dismissedRef = useRef(dismissed);
+  /** The full check in flight: its revision, for its reply or failure. */
+  const fullRevision = useRef(0);
+  const revisionCounter = useRef(0);
+  const nextRevision = () => controllerRef.current?.nextRevision() ?? ++revisionCounter.current;
+  // Handlers that Word's events call: always the latest render's.
+  const liveSendRef = useRef<(req: Parameters<typeof checkParagraphs>[0], signal: AbortSignal) => ReturnType<typeof checkParagraphs>>(() =>
+    Promise.reject(new Error("not ready")),
+  );
+  const probeRef = useRef<() => Promise<boolean>>(() => Promise.resolve(false));
+  const revealRef = useRef<(id: string, how: "click" | "hover") => void>(() => undefined);
+  const popupAcceptRef = useRef<(id: string, revision: string) => void>(() => undefined);
+  const popupRejectRef = useRef<(id: string) => void>(() => undefined);
+  const settingsRef = useRef({ underlinesOn, live: true });
 
   /* ---------- start-up: where are we running? ---------- */
 
@@ -241,6 +302,49 @@ export function Taskpane() {
       session.dispose();
     };
   }, [session]);
+
+  // The underline controller: one per pane, started once Word is known (S4d R4).
+  useEffect(() => {
+    if (host?.status !== "word") return;
+    const api = officeApi();
+    if (!api) return;
+    const c = new UnderlineController({
+      api,
+      send: (req, signal) => liveSendRef.current(req, signal),
+      probe: () => probeRef.current(),
+      dismissed: (key, s) => dismissedRef.current.has(dismissalKey(key, s)),
+      events: {
+        onEntries: (entries) => setLiveEntries(new Map(entries)),
+        onUnderlined: (ids) => setUnderlined(new Set(ids)),
+        onState: (ev: CheckEvent) => dispatchStatus(ev),
+        onUnavailable: (reason) => setUnderlineProblem(reason),
+        onReveal: (id, how) => revealRef.current(id, how),
+        onPopupAccept: (id, revision) => popupAcceptRef.current(id, revision),
+        onPopupReject: (id) => popupRejectRef.current(id),
+      },
+    });
+    controllerRef.current = c;
+    if (liveChoicesRef.current) c.setChoices(liveChoicesRef.current);
+    c.setScopes(scopesRef.current);
+    void c.start({ enabled: settingsRef.current.underlinesOn, live: settingsRef.current.live });
+    return () => {
+      c.dispose();
+      if (controllerRef.current === c) controllerRef.current = null;
+    };
+  }, [host]);
+
+  useEffect(() => {
+    controllerRef.current?.setEnabled(underlinesOn);
+  }, [underlinesOn]);
+
+  // Live checks run on either engine; an older "This computer" without the route (404) falls back
+  // to underlines after Check document, and says so in Settings.
+  // Remembered for this session: the local server answered 404 to the live route.
+  const [localLiveGone, setLocalLiveGone] = useState(false);
+  const localLiveMissing = engine === "local" && localLiveGone;
+  useEffect(() => {
+    controllerRef.current?.setLive(!(engine === "local" && localLiveMissing));
+  }, [engine, localLiveMissing]);
 
   // Which tiers the chosen engine is running, before any check (no text is sent).
   useEffect(() => {
@@ -308,6 +412,34 @@ export function Taskpane() {
   // The reporting checklists' labels, from the same registry when it lists them; the built-in list otherwise.
   const checklists = useChecklistChoices(engine === "cloud" ? ENGINE_URL : null);
 
+  // What the live check must respect: the same choices as Check document (S4d R4).
+  const liveChoices = useMemo(
+    () => ({ showPreferences, documentType, spelling: spelling ?? null, disabledRules: [] as string[] }),
+    [showPreferences, documentType, spelling],
+  );
+  useEffect(() => {
+    // Word's events call these between renders: keep them current.
+    dismissedRef.current = dismissed;
+    settingsRef.current = { underlinesOn, live: !(engine === "local" && localLiveMissing) };
+    liveChoicesRef.current = liveChoices;
+    scopesRef.current = scopes;
+    liveSendRef.current = async (req, signal) => {
+      const r = await checkParagraphs(req, { engineUrl: engineUrlFor(engine), auth: engine === "local" ? null : getEngineAuth(), signal });
+      if (!r.ok && engine === "local" && r.error.status === 404) setLocalLiveGone(true);
+      return r;
+    };
+    probeRef.current = () =>
+      engineHealth(engineUrlFor(engine))
+        .then((r) => r.ok)
+        .catch(() => false);
+  });
+  useEffect(() => {
+    controllerRef.current?.setChoices(liveChoices);
+  }, [liveChoices]);
+  useEffect(() => {
+    controllerRef.current?.setScopes(scopes);
+  }, [scopes]);
+
   /* ---------- checking ---------- */
 
   /**
@@ -344,6 +476,7 @@ export function Taskpane() {
       setReading(true);
       setAnnouncement("Reading the document…");
       let paragraphs: WordParagraph[];
+      let snapshot: SnapshotParagraph[];
       let cursor: number | null = null;
       let disabledRules: string[] = [];
       try {
@@ -358,7 +491,14 @@ export function Taskpane() {
           }
         }
         try {
-          paragraphs = await readParagraphs(api);
+          // Word's paragraph ids (WordApi 1.6) let the underlines follow a paragraph that moves; never sent.
+          const keyed = controllerRef.current?.usesParagraphIds ?? false;
+          const read = await readParagraphsAndIds(api, keyed);
+          paragraphs = read.paragraphs;
+          snapshot = snapshotOf(
+            paragraphs,
+            read.ids.map((id, i) => paragraphKey(id, i)),
+          );
         } catch {
           setProblem({ title: "Word did not hand over the document", message: "Nothing was sent. Click in the document, then check again." });
           return;
@@ -389,6 +529,9 @@ export function Taskpane() {
         setReading(false);
       }
 
+      const revision = nextRevision();
+      fullRevision.current = revision;
+      dispatchStatus({ type: "edit", revision });
       const task: CheckTask<Checked> = async (signal) => {
         setAnnouncement("Checking your document…");
         // The brief, the narrative map and the checklist are whole-document reads, so they are asked for in Revise only.
@@ -412,7 +555,7 @@ export function Taskpane() {
         const focus = cursor !== null ? sectionAround(paragraphs, cursor) : null;
         // A recheck of the same document text is not recorded twice (Codex review N2): an in-memory key only.
         const progressKey = textKey(paragraphs.map((p) => p.text).join("\n"));
-        return { ok: true, data: { seq: 0, data: r.data, engine: useEngine, focus, checklist: useChecklist, progressKey } };
+        return { ok: true, data: { seq: 0, data: r.data, engine: useEngine, focus, checklist: useChecklist, progressKey, snapshot } };
       };
       await session.start(task, {
         onResult: (c) => {
@@ -423,6 +566,14 @@ export function Taskpane() {
           setStale(new Set());
           setChecklistMarks(NO_MARKS);
           setActiveId(null);
+          // A new check: its own dismissals, its own underlines (sentence-level findings only; document-wide ones stay in the pane).
+          const none = new Set<string>();
+          dismissedRef.current = none;
+          setDismissed(none);
+          setLiveEntries(new Map());
+          const reason = partialReason(c.data.health);
+          dispatchStatus({ type: "reply", revision, count: c.data.suggestions.length, partial: reason !== "", reason });
+          void controllerRef.current?.paintFullCheck(c.snapshot, shownWordSuggestions(c.data, prefs));
           const listed = shownWordSuggestions(c.data, prefs);
           setAnnouncement(c.focus ? sectionSummary(sectionView(listed, c.focus, scopes), c.focus) : wordSummary(listed.length));
           // Opt-in progress (S4c): rule counts and words only, never text, and only
@@ -434,14 +585,25 @@ export function Taskpane() {
               .catch(() => undefined);
           }
         },
-        onError: () => setAnnouncement(""),
+        onError: (e) => {
+          setAnnouncement("");
+          if (fullRevision.current === revision) {
+            dispatchStatus({ type: "failure", revision, reason: e.title });
+            controllerRef.current?.noteFailure(revision);
+          }
+        },
       });
+
     },
     [session, host, mode, documentType, spelling, checklist, showPreferences, engine, signedIn, checked, showWhole, scopes],
   );
 
   const cancelCheck = () => {
-    if (session.cancel()) setAnnouncement("Check cancelled.");
+    if (session.cancel()) {
+      setAnnouncement("Check cancelled.");
+      // The mark leaves "checking"; its count is what the pane lists.
+      dispatchStatus({ type: "reply", revision: fullRevision.current, count: 0 });
+    }
   };
 
   const onTypeChange = (next: DocumentType) => {
@@ -532,21 +694,73 @@ export function Taskpane() {
     } else note(s.id, null);
   }, []);
 
-  const onApply = useCallback(
-    async (s: WordSuggestion) => {
+  /* ---------- the cards on show: the full check, with live paragraphs swapped in (S4d R4) ---------- */
+
+  const fullKeys = useMemo(() => checked?.snapshot.map((p) => p.key) ?? [], [checked]);
+  const merged = useMemo(
+    () => mergeCards(checked?.data.suggestions ?? null, fullKeys, liveEntries, scopes),
+    [checked, fullKeys, liveEntries, scopes],
+  );
+  /** Which paragraph (key) and text a card belongs to: its live entry's, else the full check's. */
+  const cardHome = useMemo(() => {
+    const home = new Map<string, { key: string; text: string }>();
+    for (const e of liveEntries.values()) for (const s of e.cards) home.set(s.id, { key: e.key, text: e.text });
+    return home;
+  }, [liveEntries]);
+  const homeOf = useCallback(
+    (s: WordSuggestion): { key: string; text: string } | null => {
+      const live = cardHome.get(s.id);
+      if (live) return live;
+      const p = checked?.snapshot[s.location.paragraph];
+      return p ? { key: p.key, text: p.text } : null;
+    },
+    [cardHome, checked],
+  );
+  const isDismissed = useCallback(
+    (s: WordSuggestion) => {
+      const home = homeOf(s);
+      return home ? dismissed.has(dismissalKey(home.key, s)) : false;
+    },
+    [homeOf, dismissed],
+  );
+
+  /**
+   * Apply a revision: from the card's Apply, or from the underline's popup.
+   * Where the finding is underlined, the underline is marked accepted
+   * first; the words are then replaced as a tracked change where Word can
+   * (lib/word/office.ts), so undo works as for any edit. If Word made the
+   * change itself (a popup can), that is recognised, never done twice.
+   */
+  const applyRevision = useCallback(
+    async (s: WordSuggestion, replacement: string, via: "pane" | "popup") => {
       const api = officeApi();
-      if (!api || s.replacement === null || s.replacement === undefined) return;
+      if (!api) return;
+      const c = controllerRef.current;
+      const home = homeOf(s);
+      const underlinedHere = via === "popup" || Boolean(c?.annotationFor(s.id));
       setActiveId(s.id);
       setWordBusy(true);
-      const r = await applyReplacement(api, s.location, s.replacement);
+      if (via === "pane" && underlinedHere) await c?.accept(s.id);
+      let r = await applyReplacement(api, s.location, replacement);
+      let byWord = false;
+      if (r.outcome === "not_applied" && underlinedHere && c && home) {
+        const now = await c.currentText(home.key, s.location.paragraph);
+        const range = fullRange(s, home.text);
+        if (now !== null && range && appliedInPlace(home.text, now, range.begin, range.end, replacement)) {
+          r = { ok: true, outcome: "applied", tracked: false };
+          byWord = true;
+        }
+      }
       setWordBusy(false);
       if (r.outcome === "not_applied") {
         note(s.id, { tone: "problem", text: r.message });
+        // The underline was taken away for nothing: draw it again.
+        if (underlinedHere && home) c?.recheck([home.key]);
         return;
       }
       // Applied, or perhaps applied: the paragraph's other suggestions may have
       // moved. They lose Apply until a re-check (Codex review R3), and say why.
-      const others = staleAfterEdit(checked?.data.suggestions ?? [], s.location.paragraph, s.id);
+      const others = staleAfterEdit(merged, s.location.paragraph, s.id);
       setStale((prev) => {
         const next = new Set(prev);
         for (const id of others) next.add(id);
@@ -569,13 +783,76 @@ export function Taskpane() {
       }
       note(s.id, {
         tone: "ok",
-        text: r.tracked
-          ? "Applied as a tracked change. Accept or reject it in Word’s Review tab."
-          : "Applied as a direct edit: this version of Word can’t track it. Undo with Ctrl+Z (Cmd+Z on a Mac).",
+        text: byWord
+          ? "Applied in the document. Undo with Ctrl+Z (Cmd+Z on a Mac)."
+          : r.tracked
+            ? "Applied as a tracked change. Accept or reject it in Word’s Review tab."
+            : "Applied as a direct edit: this version of Word can’t track it. Undo with Ctrl+Z (Cmd+Z on a Mac).",
       });
     },
-    [checked],
+    [homeOf, merged],
   );
+
+  const onApply = useCallback(
+    (s: WordSuggestion) => {
+      if (s.replacement === null || s.replacement === undefined) return;
+      void applyRevision(s, s.replacement, "pane");
+    },
+    [applyRevision],
+  );
+
+  /** "Not an issue here": this card and its underline go, while the pane is open. Never stored or sent. */
+  const onDismiss = useCallback(
+    (s: WordSuggestion) => {
+      const home = homeOf(s);
+      if (!home) return;
+      const next = new Set(dismissedRef.current).add(dismissalKey(home.key, s));
+      dismissedRef.current = next;
+      setDismissed(next);
+      setAnnouncement("Dismissed while the pane is open.");
+      void controllerRef.current?.dismiss(s.id);
+    },
+    [homeOf],
+  );
+
+  const onShowDismissed = () => {
+    const keys = new Set([...dismissedRef.current].map((d) => d.split("\u0001")[0]!));
+    const none = new Set<string>();
+    dismissedRef.current = none;
+    setDismissed(none);
+    // Their paragraphs are checked again, so their underlines come back.
+    controllerRef.current?.recheck(keys);
+  };
+
+  // Word's events: an underline clicked or hovered shows its card; the popup's Accept and Reject act on it.
+  useEffect(() => {
+    revealRef.current = (id, how) => {
+      if (!merged.some((s) => s.id === id)) return;
+      setActiveId(id);
+      if (how === "click") {
+        setResultsView("suggestions");
+        setShowWhole(true);
+        if (queue.pass !== "all") setQueue({ pass: "all", at: null });
+      }
+      // After the render that shows it: scroll the card into view without taking focus from the document.
+      requestAnimationFrame(() => {
+        const card = document.querySelector<HTMLElement>(`[data-suggestion-id="${CSS.escape(id)}"]`);
+        const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+        card?.scrollIntoView({ block: "nearest", behavior: reduce ? "auto" : "smooth" });
+      });
+    };
+    popupAcceptRef.current = (id, revision) => {
+      const s = merged.find((x) => x.id === id);
+      // Only the revision the engine proposed is ever written.
+      if (!s || s.replacement !== revision || applied.has(s.id)) return;
+      revealRef.current(id, "hover");
+      void applyRevision(s, revision, "popup");
+    };
+    popupRejectRef.current = (id) => {
+      const s = merged.find((x) => x.id === id);
+      if (s) onDismiss(s);
+    };
+  });
 
   /* ---------- account actions (signed in) ---------- */
 
@@ -613,13 +890,19 @@ export function Taskpane() {
 
   const busy = phase === "reading" || phase === "checking";
   const inWord = host?.status === "word";
-  const shown = checked ? shownWordSuggestions(checked.data, showPreferences) : [];
+  // Preferences hidden unless asked for; dismissed ones gone while the pane is open (S4d R4).
+  const shown = merged.filter((s) => (showPreferences || s.category !== "preference") && !isDismissed(s));
+  const dismissedCount = merged.filter(isDismissed).length;
+  // Underlines live: the cards of paragraphs checked as the writer writes, before any full check.
+  const liveOnly = !checked && liveEntries.size > 0;
   const focus = checked && !showWhole ? checked.focus : null;
   const split = focus ? sectionView(shown, focus, scopes) : { inSection: shown, wholeDocument: [], elsewhere: 0 };
   const listed = split.inSection.length + split.wholeDocument.length;
-  const hiddenPrefs = checked
-    ? checked.data.hidden_preferences + (showPreferences ? 0 : checked.data.suggestions.filter((s) => s.category === "preference").length)
-    : 0;
+  const hiddenPrefs =
+    (checked ? checked.data.hidden_preferences : 0) + (showPreferences ? 0 : merged.filter((s) => s.category === "preference").length);
+  const markStatus = shownStatus(status, shown.length);
+  // Nothing is drawn before the first check; "Paused" is said only when the writer paused the underlines.
+  const showMark = inWord && (markStatus.state !== "hidden" || (!underlinesOn && underlineProblem === null));
   const heldBack = checked && checked.data.mode === "draft" ? heldBackSentence(checked.data.hidden_by_mode) : null;
   const coverage = checked ? coverageSentences(checked.data.coverage) : null;
   // After a check, its own report of the tiers; before, the engine's health.
@@ -649,6 +932,8 @@ export function Taskpane() {
       onSelect={onSelect}
       onApply={onApply}
       actions={cardActions}
+      underlined={underlined.has(s.id)}
+      onDismiss={onDismiss}
     />
   );
 
@@ -661,6 +946,11 @@ export function Taskpane() {
         </svg>
         Researchly
       </p>
+      {showMark && view === "main" ? (
+        <span className="tp-status" data-testid="tp-status">
+          <StatusMark status={markStatus} />
+        </span>
+      ) : null}
       {accounts && view === "main" ? (
         auth.status === "loading" ? (
           <span className="tp-account-placeholder" aria-hidden="true" />
@@ -847,8 +1137,6 @@ export function Taskpane() {
               </p>
             </section>
 
-            <NextWords engineUrl={engineUrlFor(engine)} local={engine === "local"} setting={prediction} />
-
             {localDown && !error ? (
               <div className="notice notice-health" role="status" data-testid="local-down">
                 <div>
@@ -920,6 +1208,48 @@ export function Taskpane() {
                 <div className="skeleton" />
                 <div className="skeleton short" />
               </div>
+            ) : null}
+
+            {liveOnly ? (
+              <WordBusyContext.Provider value={wordBusy || busy}>
+                <section className="tp-results" aria-labelledby="tp-live-title" data-testid="tp-live-results">
+                  <h2 id="tp-live-title" className="results-title">
+                    {shown.length === 1 ? "1 suggestion" : `${shown.length.toLocaleString("en-GB")} suggestions`} in the text
+                  </h2>
+                  <p className="muted tp-results-meta">
+                    Checked as you write and underlined in the document. Check document adds the whole-document checks, the
+                    reviewer&rsquo;s brief and the map.
+                  </p>
+                  {hiddenPrefs > 0 || dismissedCount > 0 ? (
+                    <div className="tp-notes">
+                      {hiddenPrefs > 0 ? (
+                        <p className="tp-note" data-testid="hidden-prefs">
+                          {hiddenPrefs === 1 ? "1 preference is hidden" : `${hiddenPrefs} preferences are hidden`}: matters of taste.{" "}
+                          <button type="button" className="btn-link" onClick={onRevealPreferences}>
+                            Show {hiddenPrefs === 1 ? "it" : "them"}
+                          </button>
+                        </p>
+                      ) : null}
+                      {dismissedCount > 0 ? (
+                        <p className="tp-note" data-testid="dismissed-note">
+                          {dismissedCount === 1 ? "1 suggestion dismissed" : `${dismissedCount} suggestions dismissed`} while the pane is open.{" "}
+                          <button type="button" className="btn-link" onClick={onShowDismissed} data-testid="show-dismissed">
+                            Show {dismissedCount === 1 ? "it" : "them"}
+                          </button>
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {shown.length === 0 ? (
+                    <div className="empty" data-testid="tp-empty">
+                      <p className="empty-title">Nothing to flag</p>
+                      <p className="muted">No suggestions in what you have written so far. This is not a score.</p>
+                    </div>
+                  ) : (
+                    <div className="cards tp-cards">{shown.map(wordCard)}</div>
+                  )}
+                </section>
+              </WordBusyContext.Provider>
             ) : null}
 
             {checked ? (
@@ -1012,6 +1342,14 @@ export function Taskpane() {
                           {hiddenPrefs === 1 ? "1 preference is hidden" : `${hiddenPrefs} preferences are hidden`}: matters of taste.{" "}
                           <button type="button" className="btn-link" onClick={onRevealPreferences}>
                             Show {hiddenPrefs === 1 ? "it" : "them"}
+                          </button>
+                        </p>
+                      ) : null}
+                      {dismissedCount > 0 ? (
+                        <p className="tp-note" data-testid="dismissed-note">
+                          {dismissedCount === 1 ? "1 suggestion dismissed" : `${dismissedCount} suggestions dismissed`} while the pane is open.{" "}
+                          <button type="button" className="btn-link" onClick={onShowDismissed} data-testid="show-dismissed">
+                            Show {dismissedCount === 1 ? "it" : "them"}
                           </button>
                         </p>
                       ) : null}
@@ -1124,9 +1462,38 @@ export function Taskpane() {
                   <span>Show preferences</span>
                 </label>
 
-                <SpellingSelect id={ids.spelling} value={spelling ?? "auto"} onChange={onSpellingChange} note={spellingNote} />
+                {underlineProblem ? (
+                  <p className="help tp-underlines-note" data-testid="underlines-unavailable">
+                    {UNDERLINES_UNAVAILABLE}
+                  </p>
+                ) : (
+                  <div className="tp-underlines">
+                    <label className="control control-toggle" htmlFor={ids.underlines}>
+                      <input
+                        id={ids.underlines}
+                        type="checkbox"
+                        role="switch"
+                        className="switch"
+                        checked={underlinesOn}
+                        aria-describedby={ids.underlinesHelp}
+                        onChange={(e) => {
+                          setChosenUnderlines(e.target.checked);
+                          saveUnderlinesChoice(e.target.checked);
+                          setAnnouncement(e.target.checked ? "Live underlines on." : "Live underlines paused. Underlines removed from the document.");
+                        }}
+                        data-testid="tp-live-underlines"
+                      />
+                      <span>Live underlines</span>
+                    </label>
+                    <p id={ids.underlinesHelp} className="help" data-testid="underlines-help">
+                      {engine === "local" && localLiveMissing
+                        ? "Researchly on this computer is older than underlines-as-you-write. Update it to see them after you pause; until then they appear after Check document."
+                        : "Underlines suggestions in the document after you pause typing. They live only in the open document and are never saved in the file."}
+                    </p>
+                  </div>
+                )}
 
-                <PredictionToggle setting={prediction} testId="tp-prediction-switch" help={WORD_PREDICTION_HELP} showHelp />
+                <SpellingSelect id={ids.spelling} value={spelling ?? "auto"} onChange={onSpellingChange} note={spellingNote} />
 
                 {accounts ? (
                   <div className="tp-account-settings">

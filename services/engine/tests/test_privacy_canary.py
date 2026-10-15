@@ -399,33 +399,101 @@ def test_upload_warnings_never_logged(client, capture):
     assert_no_canary_anywhere(capture)
 
 
-# --- word prediction (2026-10-14) ---------------------------------------------
+# --- the live check (S4d R3) -----------------------------------------------------
 
-def test_completion_keeps_text_out_of_logs(client, capture):
-    text = f"We estimated the {CANARY} basic rep"
-    r = client.post("/v1/complete", json={"text": text})
-    assert r.status_code == 200
+LIVE = "/v1/check-paragraphs"
+LIVE_TEXT = (f"The {CANARY} model was calibrated by the authors. "
+             f"This are very clear {CANARY} results.")
+
+
+def test_live_check_success(client, capture):
+    r = client.post(LIVE, json={"revision": 3, "paragraphs": [
+        {"id": CANARY, "text": LIVE_TEXT, "heading": f"Discussion {CANARY}",
+         "style": f"Body {CANARY}"}]})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    for t in body["health"]:
+        assert CANARY not in t["detail"] and CANARY not in t["remedy"]
+    # Ids are opaque: the paragraph id and the text go in, never out.
+    for p in body["paragraphs"]:
+        for sug in p["suggestions"]:
+            assert CANARY not in sug["id"]
     rec = assert_logged_request(capture, 200)
-    assert rec.content_chars == len(text)
+    assert rec.route == LIVE and rec.format == "paragraphs"
+    assert rec.content_chars == len(LIVE_TEXT)
     assert_no_canary_anywhere(capture, r)
 
 
 @pytest.mark.parametrize("payload", [
-    {"text": DOC, "cursor": len(DOC) + 5},                    # past the end
-    {"text": DOC, "options": {"spelling": CANARY}},           # bad enum
-    {"text": DOC, CANARY: 1},                                 # unknown key
-    {"text": DOC, "options": {"limit": 99}},
+    {"revision": 1, "paragraphs": [{"id": f"bad {CANARY}", "text": LIVE_TEXT}]},
+    {"revision": CANARY, "paragraphs": [{"id": "a", "text": LIVE_TEXT}]},
+    {"revision": 1, "paragraphs": [{"id": "a", "text": LIVE_TEXT, CANARY: 1}]},
+    {"revision": 1, "paragraphs": [{"id": "a", "text": LIVE_TEXT},
+                                   {"id": "a", "text": LIVE_TEXT}]},
+    {"revision": 1, "paragraphs": [{"id": "a", "text": LIVE_TEXT * 400}]},
+    {"revision": 1, "paragraphs": [{"id": "a", "text": [LIVE_TEXT]}]},
+    {"revision": 1, "paragraphs": [{"id": "a", "text": LIVE_TEXT}],
+     "options": {"disabled_rules": [CANARY] * 201}},
 ])
-def test_completion_validation_errors(client, capture, payload):
-    r = client.post("/v1/complete", json=payload)
+def test_live_check_validation_errors(client, capture, payload):
+    r = client.post(LIVE, json=payload)
     assert r.status_code == 422
+    assert_logged_request(capture, 422)
     assert_no_canary_anywhere(capture, r)
 
 
-def test_forced_internal_error_from_complete(client, capture, monkeypatch):
-    def boom(text, *a, **kw):
-        raise RuntimeError(f"prediction failed on: {text}")
-    monkeypatch.setattr(engine_adapter.api, "complete", boom)
-    r = client.post("/v1/complete", json={"text": DOC})
+def test_live_check_internal_error(client, capture, monkeypatch):
+    def boom(paragraphs, *a, **kw):
+        raise RuntimeError(f"engine failed on: {paragraphs}")    # = the text
+    monkeypatch.setattr(engine_adapter.api, "check_paragraphs", boom)
+    r = client.post(LIVE, json={"revision": 1, "paragraphs": [
+        {"id": "a", "text": LIVE_TEXT}]})
     assert r.status_code == 500
+    assert r.json()["error"]["code"] == "internal"
+    assert_no_canary_anywhere(capture, r)
+
+
+def test_live_check_rule_failure_inside_the_engine(client, capture,
+                                                   monkeypatch):
+    rule = REGISTRY["G104"]
+
+    def exploding_rule(doc, document):
+        text = document.original
+        raise ValueError(f"cannot parse {text}")
+        yield                                          # pragma: no cover
+    monkeypatch.setattr(rule, "func", exploding_rule)
+    r = client.post(LIVE, json={"revision": 1, "paragraphs": [
+        {"id": "a", "text": LIVE_TEXT, "heading": "Discussion"}]})
+    assert r.status_code == 500
+    assert_no_canary_anywhere(capture, r)
+
+
+def test_live_check_grammar_failure_that_echoes_text(client, capture,
+                                                    monkeypatch):
+    class EchoingTool:
+        def check(self, text):
+            raise RuntimeError(f"LanguageTool choked on: {text}")
+
+        def close(self):
+            pass
+
+    monkeypatch.delenv(rules_grammar.REMOTE_ENV, raising=False)
+    for k, v in (("_TOOL", EchoingTool()), ("_LOCALE", "en-US"),
+                 ("_URL", None), ("_FAILED", False), ("_STATE", "ready"),
+                 ("_DETAIL", "")):
+        monkeypatch.setattr(rules_grammar, k, v)
+    r = client.post(LIVE, json={"revision": 1, "paragraphs": [
+        {"id": "a", "text": LIVE_TEXT}]})
+    assert r.status_code == 200 and r.json()["state"] == "partial"
+    assert CANARY not in str(r.json()["health"])
+    assert_no_canary_anywhere(capture, r, client.get("/v1/health"))
+
+
+# --- word prediction was removed (2026-10-15) ----------------------------------
+
+def test_removed_completion_route_keeps_text_out_of_logs(client, capture):
+    # /v1/complete no longer exists. A client that still calls it gets a
+    # plain 404, and the text it sent is not logged or echoed.
+    r = client.post("/v1/complete", json={"text": DOC})
+    assert r.status_code == 404
     assert_no_canary_anywhere(capture, r)

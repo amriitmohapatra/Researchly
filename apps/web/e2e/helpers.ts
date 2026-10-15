@@ -1,5 +1,5 @@
 import type { Page, Request, Route } from "@playwright/test";
-import type { AnalyzeRequest, CompleteRequest, CompleteResponse } from "@researchly/contract";
+import type { AnalyzeRequest, CheckParagraphsRequest, CheckParagraphsResponse, LiveSuggestion } from "@researchly/contract";
 import type { RuleInfo } from "@researchly/contract";
 import { CHECKLISTS, ENGINE, PROFILES, responseFor, RULES_REGISTRY } from "./fixtures";
 
@@ -39,30 +39,47 @@ export async function mockEngine(page: Page, handler?: Handler, rules: RuleInfo[
     if (handler) await handler(body, route);
     else await json(route, 200, responseFor(body));
   });
-  // Word prediction (2026-10-14) asks while the writer types: nothing to offer unless a test says otherwise.
-  await page.route(`${ENGINE}/v1/complete`, async (route) => {
+  // Underlines while writing (S4d R5): an engine that finds nothing, unless a spec mocks the live check itself.
+  await mockLiveCheck(page);
+  return seen;
+}
+
+export type LiveHandler = (req: CheckParagraphsRequest, route: Route, n: number) => Promise<void> | void;
+
+/**
+ * Mock POST /v1/check-paragraphs. Without a handler every paragraph comes
+ * back with no suggestions. Returns the request bodies the page sent. A
+ * later call replaces an earlier one (Playwright tries the newest route first).
+ */
+export async function mockLiveCheck(page: Page, handler?: LiveHandler): Promise<CheckParagraphsRequest[]> {
+  const seen: CheckParagraphsRequest[] = [];
+  await page.route(`${ENGINE}/v1/check-paragraphs`, async (route) => {
     if (route.request().method() === "OPTIONS") return route.fulfill({ status: 204, headers: CORS });
-    return json(route, 200, { status: "ok", candidates: [] });
+    const body = route.request().postDataJSON() as CheckParagraphsRequest;
+    seen.push(body);
+    if (handler) return handler(body, route, seen.length);
+    return json(route, 200, liveReply(body, () => []));
   });
   return seen;
 }
 
-/**
- * Mock /v1/complete (registered after mockEngine, so it wins): `answer`
- * gets each request body and returns the reply. Returns the bodies sent.
- */
-export async function mockComplete(
-  page: Page,
-  answer: (req: CompleteRequest) => CompleteResponse,
-): Promise<CompleteRequest[]> {
-  const seen: CompleteRequest[] = [];
-  await page.route(`${ENGINE}/v1/complete`, async (route) => {
-    if (route.request().method() === "OPTIONS") return route.fulfill({ status: 204, headers: CORS });
-    const body = route.request().postDataJSON() as CompleteRequest;
-    seen.push(body);
-    return json(route, 200, answer(body));
-  });
-  return seen;
+/** A /v1/check-paragraphs answer: each paragraph's suggestions from `find(text, heading)`. */
+export function liveReply(
+  req: CheckParagraphsRequest,
+  find: (text: string, heading: string) => LiveSuggestion[],
+  extra: Partial<CheckParagraphsResponse> = {},
+): CheckParagraphsResponse {
+  return {
+    schema_version: "1",
+    revision: req.revision,
+    paragraphs: req.paragraphs.map((p) => ({ id: p.id, section: "unknown", suggestions: find(p.text, p.heading ?? "") })),
+    state: "ok",
+    health: [],
+    hidden_preferences: 0,
+    signed_in: false,
+    elapsed_ms: 12,
+    ...extra,
+  };
 }
 
 /** Every request the page makes to its own (Next.js) origin. */

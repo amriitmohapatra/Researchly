@@ -1237,19 +1237,21 @@ datasets:
     licence: "per article: CC BY (any version) or CC0, read from each article's own <license>"
     licence_verified: true
     licence_evidence: >-
-      ml/tools/build_prediction_model.py reads every article's <permissions>
-      block and uses the article only if it names creativecommons.org/
+      ml/tools/build_prediction_model.py (removed 2026-10-15; in git history)
+      read every article's <permissions>
+      block and used the article only if it named creativecommons.org/
       licenses/by/<version> or publicdomain/zero (or PLOS's unversioned
       "Creative Commons Attribution License" statement), with no
       NonCommercial, NoDerivatives or ShareAlike term. The search's licence
-      filter is not trusted on its own. The licence seen is recorded per
-      article in packages/core/researchly/data/predict_sources.tsv.
+      filter was not trusted on its own. The licence seen was recorded per
+      article in packages/core/researchly/data/predict_sources.tsv (removed
+      with the feature on 2026-10-15; in git history).
     commercial_ok: true
-    permitted_use: [train_experimental, ship_model]
-    current_use: "Word prediction (researchly/predict.py): data/predict.sqlite"
-    shipped_today: true
+    permitted_use: [train_experimental]
+    current_use: "none: word prediction was removed on 2026-10-15"
+    shipped_today: false
     sha256: null
-    items: "packages/core/researchly/data/predict_sources.tsv (the articles used, with authors, title, DOI and licence)"
+    items: "packages/core/researchly/data/predict_sources.tsv in git history (commit 6bb456a): the articles used, with authors, title, DOI and licence"
     notes: >-
       Owner decision 2026-10-14: text prediction is a core feature (CLAUDE.md
       #1 as amended). Articles are fetched at build time into a cache outside
@@ -1257,6 +1259,11 @@ datasets:
       counts of word sequences of up to four words, each kept only if it
       occurs in at least three different articles, plus the attribution file
       CC BY requires. Never trained on theses or owner documents (D6).
+      Owner decision 2026-10-15 (PLAN S4d R1, ADR-07): word prediction is
+      removed ("any person can simply use copilot or other word based
+      tools"). The model, its attribution list and its builder were
+      deleted from the engine, so ship_model is withdrawn and nothing from
+      this corpus ships. The entry stays as the record of what was used.
 
   - id: symspell-bigram-dictionary
     name: "SymSpell English bigram dictionary (frequency_bigramdictionary_en_243_342.txt)"

@@ -577,7 +577,8 @@ test.describe("idle state", () => {
     const key = page.getByTestId("reading-key");
     await expect(key.getByRole("heading", { name: "How to read the feedback" })).toBeVisible();
     for (const label of ["Correction", "Improvement", "Convention", "Preference"]) await expect(key).toContainText(label);
-    const styles: Record<string, string> = { correction: "solid", improvement: "double", convention: "dotted", preference: "dashed" };
+    // The patterns come from the design tokens (S4d R2); CSS draws wavy-dotted as wavy.
+    const styles: Record<string, string> = { correction: "solid", improvement: "dashed", convention: "dotted", preference: "wavy" };
     for (const [cat, style] of Object.entries(styles)) {
       expect(await key.locator(`.spec-${cat}`).evaluate((el) => getComputedStyle(el).textDecorationStyle), cat).toBe(style);
     }
@@ -782,7 +783,7 @@ test.describe("accessibility", () => {
     await page.keyboard.press("Tab");
     await expect(page.getByLabel("Show preferences")).toBeFocused();
     await page.keyboard.press("Tab");
-    await expect(page.getByLabel("Word prediction")).toBeFocused();
+    await expect(page.getByLabel("Underlines while writing")).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(page.getByTestId("check")).toBeFocused();
     await page.keyboard.press("Enter");

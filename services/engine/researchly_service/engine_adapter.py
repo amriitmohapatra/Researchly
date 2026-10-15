@@ -24,10 +24,9 @@ from typing import List, Optional, Union
 
 from . import _core  # noqa: F401  (import path + isolation first)
 from . import __version__ as SERVICE_VERSION
-from .schemas import (AnalyzeOptions, AnalyzeResponse, Category, CompleteOptions, CompleteResponse,
-                      CompletionCandidate, ChecklistChoiceInfo, ChecklistReport,
-                      Coverage, EngineInfo, FixSafety,
-                      LearnCard, Metrics, Mode,
+from .schemas import (AnalyzeOptions, AnalyzeResponse, Category, ChecklistChoiceInfo, ChecklistReport,
+                      CheckParagraphsResponse, Coverage, EngineInfo, FixSafety,
+                      LearnCard, LiveParagraphResult, LiveState, Metrics, Mode,
                       NarrativeMap, ProfileChoice, ProfileInfo, ReadingSummary,
                       ReviewReport, RuleInfo, Scope, Span,
                       Suggestion, TableEvidence, TierHealth, WordLocation,
@@ -38,6 +37,7 @@ from researchly import api, learn, packs, profiles, shapes, wordloc
 from researchly.config import Config, apply_remote
 from researchly.document import Document
 from researchly.engine import REGISTRY
+from researchly.utf16 import Utf16Index
 
 ENGINE_LOCK = threading.Lock()
 
@@ -97,27 +97,6 @@ def build_config(options: Optional[AnalyzeOptions],
     return cfg
 
 
-def run_completion(text: str, cursor: Optional[int], fmt: str,
-                   options: Optional[CompleteOptions],
-                   account: Optional[dict] = None, **_who) -> CompleteResponse:
-    """Word prediction: one `api.complete()` call. No spaCy parse, so no
-    engine lock; the model is read-only SQLite opened per thread."""
-    cfg = Config()
-    if account is not None:
-        apply_remote(cfg, account)
-    limit = 3
-    if options is not None:
-        if options.spelling is not None:
-            cfg.spelling = options.spelling.value
-        limit = options.limit
-    got = api.complete(text, cursor, kind=fmt, cfg=cfg, limit=limit)
-    return CompleteResponse(
-        status=got.status,
-        candidates=[CompletionCandidate(text=c.text, start=c.start, end=c.end,
-                                        kind=c.kind)
-                    for c in got.candidates])
-
-
 # Everything beyond the suggestions is shaped once, in the core
 # (researchly.shapes), and validated here; the local Word server sends the
 # same shapes (Codex review R1).
@@ -171,15 +150,18 @@ def _fix_safety(value: str) -> FixSafety:
     return FixSafety.safe if value == "safe" else FixSafety.review
 
 
-def to_suggestion(s) -> Suggestion:
+def to_suggestion(s, index=None) -> Suggestion:
+    """`index` maps offsets in the checked text to UTF-16 (`begin16`,
+    `end16`); without one those fields are left out."""
     conf = float(s.confidence if s.confidence is not None else 1.0)
+    start, end = max(0, s.start), max(0, s.end)
     return Suggestion(
         id=fingerprint(s.rule_id, s.start, s.end, s.text),
         rule_id=s.rule_id,
         rule_name=s.rule_name,
         category=_category(s.category.value),
         tier=s.tier,
-        span=Span(start=max(0, s.start), end=max(0, s.end),
+        span=Span(start=start, end=end,
                   line=max(0, s.line), col=max(0, s.col)),
         text=s.text,
         section=s.section or "unknown",
@@ -193,7 +175,21 @@ def to_suggestion(s) -> Suggestion:
         confidence=min(1.0, max(0.0, conf)),
         table_evidence=(TableEvidence(**s.table_evidence)
                         if getattr(s, "table_evidence", None) else None),
+        critical=s.category.value == "correction",
+        begin16=index(start) if index is not None else None,
+        end16=index(end) if index is not None else None,
     )
+
+
+def _word_location(doc, paragraphs, s, indexes: dict) -> WordLocation:
+    loc = wordloc.locate(doc, paragraphs, s.start, s.end)
+    i = loc["paragraph"]
+    if i not in indexes:
+        text = (paragraphs[i].get("text") or "") if i < len(paragraphs) else ""
+        indexes[i] = Utf16Index(text)
+    index = indexes[i]
+    return WordLocation(**loc, begin16=index(loc["start"]),
+                        end16=index(loc["end"]))
 
 
 def to_tier(t) -> TierHealth:
@@ -242,16 +238,18 @@ def run_analysis(source: Union[str, Document], fmt: str,
     if signed_in:
         health.append(account_tier(account_error))
     paragraphs = extra.pop("word_paragraphs", None)
+    index = (Utf16Index(a.document.original)
+             if a.document is not None else None)
     if paragraphs is not None:
         doc = a.document
+        indexes: dict = {}
         suggestions = [WordSuggestion(
-            **to_suggestion(s).model_dump(),
-            location=WordLocation(**wordloc.locate(doc, paragraphs,
-                                                   s.start, s.end)))
+            **to_suggestion(s, index).model_dump(),
+            location=_word_location(doc, paragraphs, s, indexes))
             for s in a.suggestions]
         extra["coverage"] = Coverage(**wordloc.coverage(paragraphs, doc))
     else:
-        suggestions = [to_suggestion(s) for s in a.suggestions]
+        suggestions = [to_suggestion(s, index) for s in a.suggestions]
     out = response_cls(
         signed_in=signed_in,
         mode=Mode(a.config.mode),
@@ -279,17 +277,47 @@ def run_analysis(source: Union[str, Document], fmt: str,
     return out
 
 
+def run_paragraph_check(paragraphs: list, revision: int,
+                        options: Optional[AnalyzeOptions],
+                        grammar_enabled: bool = True,
+                        account: Optional[dict] = None,
+                        signed_in: bool = False,
+                        account_error: Optional[str] = None
+                        ) -> CheckParagraphsResponse:
+    """The live check (S4d R3): one `api.check_paragraphs()` call under
+    the engine lock, shaped by the core (researchly.shapes) so a local
+    engine can answer the same contract."""
+    t0 = time.perf_counter()
+    cfg = build_config(options, grammar_enabled, account)
+    with ENGINE_LOCK:
+        res = api.check_paragraphs(paragraphs, cfg=cfg)
+    health = [to_tier(t) for t in res.health]
+    if signed_in:
+        health.append(account_tier(account_error))
+    out = CheckParagraphsResponse(
+        revision=revision,
+        paragraphs=[LiveParagraphResult(**p)
+                    for p in shapes.live_paragraphs(res)],
+        state=LiveState.partial if is_degraded(health) else LiveState.ok,
+        health=health,
+        hidden_preferences=res.hidden_preferences,
+        signed_in=signed_in,
+        assessed_rules=list(res.assessed_rules),
+        ruleset=res.ruleset,
+        elapsed_ms=0,
+    )
+    out.elapsed_ms = int(round((time.perf_counter() - t0) * 1000))
+    return out
+
+
 def _reading(document) -> Optional[ReadingSummary]:
     shaped = shapes.reading_summary(document)
     return None if shaped is None else ReadingSummary(**shaped)
 
 
 # Tiers that never make the service "degraded" by being off: gec is opt-in
-# (no model ships), so missing/disabled is its normal state. Word prediction
-# helps the writer type; without its model every check still runs, so its
-# absence is reported on its own tier, not as a degraded service.
-_OPTIONAL_STATES = {"gec": {"missing", "disabled"},
-                    "prediction": {"missing", "disabled"}}
+# (no model ships), so missing/disabled is its normal state.
+_OPTIONAL_STATES = {"gec": {"missing", "disabled"}}
 
 
 def health_tiers(grammar_enabled: bool = True) -> List[TierHealth]:

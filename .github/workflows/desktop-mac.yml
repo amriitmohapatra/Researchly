@@ -1,0 +1,63 @@
+# Desktop overlay (macOS): builds apps/desktop-overlay-mac and runs its
+# core tests on a macOS runner (PLAN S4d R7).
+#
+# Manual only: macOS minutes cost ten times Linux minutes on a private
+# repository, so this never runs on push or pull request. Start it from
+# the Actions tab ("Run workflow"). The core's tests also run on Linux; see
+# the app's README.
+name: Desktop overlay (macOS)
+
+on:
+  workflow_dispatch:
+    inputs:
+      dmg:
+        description: "Also build the .dmg and keep it as an artifact"
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-mac-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/desktop-overlay-mac
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: |
+          sw_vers
+          swift --version
+
+      - name: Core tests
+        run: swift test
+
+      - name: Build the app (release, ad-hoc signed)
+        run: |
+          if [ "${{ inputs.dmg }}" = "true" ]; then ./build.sh --dmg; else ./build.sh; fi
+
+      - name: Check the bundle
+        run: |
+          APP="build/Researchly Overlay.app"
+          test -x "$APP/Contents/MacOS/ResearchlyOverlay"
+          test -f "$APP/Contents/Resources/fields.json"
+          test -f "$APP/Contents/Resources/apps-mac.json"
+          /usr/libexec/PlistBuddy -c "Print :LSUIElement" "$APP/Contents/Info.plist" | grep -q true
+          codesign --verify --verbose=1 "$APP"
+
+      - name: Keep the disk image
+        if: ${{ inputs.dmg }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Researchly-Overlay-dmg
+          path: apps/desktop-overlay-mac/build/Researchly-Overlay.dmg
+          retention-days: 7

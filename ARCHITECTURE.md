@@ -623,6 +623,9 @@ Each record follows the ch. 23.1 format: context, options, decision, and consequ
 - **Consequences.** Some features competitors have (paraphrase, "improve this paragraph") are deliberately absent. The Learn cards and fill-in frames are the answer to "how do I fix it?".
 - **Amendment, 2026-10-14 (owner): word prediction.** The owner made text prediction a core feature after the experiment in `ml/experiments/prediction` (44.6% of keystrokes saved by a model of scientific prose, against 29.6% for an everyday-English one). It stays inside the rule's intent: it offers words, not prose. The limits are in CLAUDE.md #1: at most a three-word fixed term; never inserted without Tab or a click; n-gram counts (no neural model); trained only on CC BY / CC0 articles with attribution, each sequence kept only if at least three articles share it; nothing offered in masked spans; it can be switched off. Engine: `researchly/predict.py` and `api.complete()`. Service: `POST /v1/complete`, under the same confidentiality rules as `/v1/analyze` (in memory only, canary-tested).
 
+- **Amendment, 2026-10-15 (owner): word prediction removed.** "It does not make sense to include it in the app when any person can simply use copilot or other word based tools." The 2026-10-14 amendment above is withdrawn; R1 removes the feature from every surface. Rule #1 is back to its 2026-08-11 form.
+- **Clarification, 2026-10-15 (owner): rules written by Claude at build time.** Claude may author deterministic rules, word lists and explanations from its general knowledge of English grammar ("Researchly grammar notes", ADR-11). That is authorship, not a model at run time: the engine never calls a language model.
+
 ### ADR-08 — Delivery: thin vertical slices, CI as the definition of done
 
 - **Definition of done** for every slice:
@@ -638,6 +641,24 @@ Each record follows the ch. 23.1 format: context, options, decision, and consequ
   - contract drift check (OpenAPI ↔ generated TS);
   - secret scan.
 - **Deployment.** Vercel preview per pull request. Engine staging on every merge to `main`. Production promotion stays an explicit owner decision (continuous *delivery*, not continuous *deployment*).
+
+### ADR-09 — Inline review: underlines where the writer writes
+
+- **Context.** The owner's private study of a commercial field assistant (2026-10-15; outside the repo) shows that advice is easiest to take when it sits on the words themselves, arrives after a pause, and escalates from underline to card to list. Researchly showed advice only after an explicit Check, in a list beside the text. Notes: `docs/inline-review-design.md`.
+- **Decision.** One live-check contract (`POST /v1/check-paragraphs`: paragraphs with a revision and their nearest heading; sentence- and paragraph-scope rules; UTF-16 offsets; stable ids) feeds underlines on every surface. Word draws them with its annotations API (WordApi 1.7; not saved in the file; needs Microsoft 365), falling back to today's pane. The website underlines inside its editor. Desktop clients draw overlays (ADR-10). The full check stays for document-wide rules, the brief and the map. Six shared states and one token file (light and dark) give every surface the same visual grammar.
+- **Consequences.** Live checks multiply requests: the paragraph path has its own budget (p50 < 300 ms) and rate limit. Word's popup is fixed-format, so its text is short and the pane holds the full card. Nothing from the studied product is copied: no colours, names, strings, rules or wire format.
+
+### ADR-10 — Desktop overlay clients for macOS and Windows
+
+- **Context.** D5 made the pyobjc menu-bar app and the Windows scaffold maintenance-only. The owner reopened desktop on 2026-10-15 ("the proposed desktop app", Mac and Windows, "prepare the scripts in dedicated folders that I can later download from github and then run").
+- **Decision.** Two new native clients: `apps/desktop-overlay-mac/` (Swift, AppKit; Accessibility) and `apps/desktop-overlay-win/` (C#, .NET 8, WPF; UI Automation). Each has a platform-neutral core with unit tests (snapshot diff, UTF-16 ranges, eligibility gate, state machine, engine client) and a thin shell (capture, geometry, overlay, write-back). They do no language analysis: they call the engine the writer chose. The eligibility rules are our own data file. Distribution is source plus build scripts; the Mac build is ad-hoc signed (no Developer ID, D9). The old pyobjc app stays maintenance-only.
+- **Consequences.** The shells cannot be compiled in the cloud container; the owner builds them, guided by each README's checks. Ad-hoc signed apps ask for Accessibility again after each rebuild.
+
+### ADR-11 — Researchly grammar notes: rules authored at build time
+
+- **Context.** LanguageTool covers general grammar; research writing and regional conventions need more. The owner: use Claude's knowledge of English grammar "at build time (not LLM)", which also avoids copying anyone's rule tables.
+- **Decision.** `docs/grammar-notes.md` is a source document written for Researchly, in its own words, with further reading at the end. Its rules are ordinary deterministic rules (source code `rgn`, shown as "Researchly grammar notes"), with fire and don't-fire tests, `plain=` text and the noise-floor gate. Regional conventions follow the writer's spelling choice.
+- **Consequences.** Provenance stays traceable (rule #6) without a third-party licence. Precision is guarded the same way as every other rule.
 
 ---
 
@@ -687,10 +708,11 @@ Each slice ends with something the owner can **use**, not just a component (ch. 
 | D2 | Free or paid? | **Free and non-commercial *for now*.** Vercel Hobby is allowed (no document text reaches Vercel). Because "for now" leaves the door open, NC-licensed data is used for evaluation only, and shipped models stay licence-clean so going paid later needs no retraining |
 | D3 | Hosting region | **Singapore**: Vercel `sin1`, Cloud Run `asia-southeast1`, Supabase Singapore |
 | D4 | Baseline tree (ADR-01) | **`Researchly_Updated_14082026`**. Experiment features are ported behind flags |
-| D5 | macOS app and Windows scaffold | **Maintenance-only.** CLI and LSP remain as local mode |
+| D5 | macOS app and Windows scaffold | **Maintenance-only.** CLI and LSP remain as local mode. *Reopened 2026-10-15:* new native overlay clients for Mac and Windows (ADR-10); the pyobjc app stays maintenance-only |
 | D6 | The 8 sample theses | **Private evaluation only.** Thesis-derived exemplars are removed from shipped data |
 | D7 | Training data | **`Notes_On_Writing/`** is the knowledge source (rules, questions, Learn cards via the W5 re-mine). Research papers and theses the owner adds later go through the dataset registry with licences |
 | D8 | Laya | **Adopt only via the S5 bake-off**; never zero-shot |
+| D9 | Distribution (2026-10-15) | **Open source and free to share**; not sold. Desktop clients ship as source with build scripts; the Mac build is ad-hoc signed |
 
 **Product decisions (2026-10-03; detail in §1.4)**
 

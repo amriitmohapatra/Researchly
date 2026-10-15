@@ -6,6 +6,7 @@
  * never red, never worded as an error. Preferences are hidden by default.
  */
 import type { Category } from "@researchly/contract";
+import { CATEGORY_TOKENS, type UnderlinePattern } from "@researchly/design-tokens";
 
 /** Display and highlight priority: when spans overlap, the earlier one styles the text. */
 export const CATEGORY_ORDER: readonly Category[] = [
@@ -22,8 +23,8 @@ export interface CategoryMeta {
   plural: string;
   /** One line telling the writer how to read this kind of suggestion. */
   blurb: string;
-  /** Underline style in the document view (non-colour cue). */
-  underline: "solid" | "double" | "dotted" | "dashed";
+  /** Underline pattern (non-colour cue), from the design tokens: the same on every surface. */
+  underline: UnderlinePattern;
 }
 
 export const CATEGORIES: Readonly<Record<Category, CategoryMeta>> = {
@@ -32,28 +33,28 @@ export const CATEGORIES: Readonly<Record<Category, CategoryMeta>> = {
     label: "Correction",
     plural: "Corrections",
     blurb: "Likely an error: spelling, grammar or a factual slip in form.",
-    underline: "solid",
+    underline: CATEGORY_TOKENS.correction.underline.pattern,
   },
   improvement: {
     id: "improvement",
     label: "Improvement",
     plural: "Improvements",
     blurb: "Correct as written, but a reader would follow it more easily if revised.",
-    underline: "double",
+    underline: CATEGORY_TOKENS.improvement.underline.pattern,
   },
   convention: {
     id: "convention",
     label: "Convention",
     plural: "Conventions",
     blurb: "Not an error: a convention of research writing you may choose to follow.",
-    underline: "dotted",
+    underline: CATEGORY_TOKENS.convention.underline.pattern,
   },
   preference: {
     id: "preference",
     label: "Preference",
     plural: "Preferences",
     blurb: "A matter of taste. Hidden unless you ask for it.",
-    underline: "dashed",
+    underline: CATEGORY_TOKENS.preference.underline.pattern,
   },
 };
 

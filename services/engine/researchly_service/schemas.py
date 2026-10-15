@@ -144,54 +144,6 @@ class AnalyzeRequest(_Strict):
     options: AnalyzeOptions = Field(default_factory=AnalyzeOptions)
 
 
-MAX_COMPLETE_CHARS = 100_000
-
-
-class CompleteOptions(_Strict):
-    spelling: Optional[Spelling] = Field(
-        None, description="The English spelling to offer words in. Omitted: "
-                          "the caller's saved setting, else the spelling the "
-                          "text already uses.")
-    limit: int = Field(3, ge=1, le=5,
-                       description="How many candidates to return at most.")
-
-
-class CompleteRequest(_Strict):
-    """Word prediction at a cursor (2026-10-14). Send the text around the
-    cursor, not necessarily the whole document: a few thousand characters
-    before it are plenty, plus the rest of its paragraph."""
-    format: Format = Field(Format.plain, description="How to read `text`.")
-    text: str = Field(..., max_length=MAX_COMPLETE_CHARS,
-                      description="Text around the cursor. Held in memory for "
-                                  "this request only; never stored or logged.")
-    cursor: Optional[int] = Field(
-        None, ge=0, description="Offset of the cursor in `text`, counted in "
-                                "Unicode code points (not UTF-16 units), like "
-                                "`start` and `end` in the reply. Omitted: the "
-                                "end of `text`.")
-    options: CompleteOptions = Field(default_factory=CompleteOptions)
-
-
-class CompletionCandidate(_Strict):
-    text: str = Field(..., description="What to put in place of "
-                                       "`text[start:end]` if the writer accepts.")
-    start: int = Field(..., ge=0, description="Where the typed part of the "
-                                              "word begins.")
-    end: int = Field(..., ge=0, description="The cursor.")
-    kind: Literal["word", "term"] = Field(
-        ..., description="word: one word; term: a fixed term of two or "
-                         "three words (\"confidence interval\").")
-
-
-class CompleteResponse(_Strict):
-    candidates: List[CompletionCandidate] = Field(default_factory=list)
-    status: Literal["ok", "off", "masked", "unavailable"] = Field(
-        "ok", description="Why there are no candidates, when there are none: "
-                          "off (the writer turned prediction off), masked "
-                          "(the cursor is in maths, code, a citation, a URL "
-                          "or a heading), unavailable (no model).")
-
-
 MAX_WORD_PARAGRAPHS = 50_000
 
 
@@ -295,6 +247,17 @@ class Suggestion(_Strict):
         None, description="X401 only: the table cell the quoted number was "
                           "compared with. Absent when the check fell back to "
                           "the whole table.")
+    critical: Optional[bool] = Field(
+        None, description="True for a Correction (a likely error), false "
+                          "otherwise (S4d R2). Additive: older engines omit it.")
+    begin16: Optional[int] = Field(
+        None, ge=0, description="`span.start` in UTF-16 code units, the "
+        "unit Word, browsers and the desktop accessibility APIs count in "
+        "(S4d R2). `start`/`end` are code points; `begin16`/`end16` here, "
+        "and `begin`/`end` on a live suggestion, are UTF-16. Additive: "
+        "older engines omit it.")
+    end16: Optional[int] = Field(
+        None, ge=0, description="`span.end` in UTF-16 code units (see `begin16`).")
 
 
 class Metrics(_Strict):
@@ -618,6 +581,10 @@ class WordLocation(_Strict):
     occurrence: int = Field(..., ge=0, description="0-based match number within the paragraph.")
     exact: bool = Field(..., description="False when the span is too long or "
                         "unsafe to search for whole; `snippet` is then a prefix.")
+    begin16: Optional[int] = Field(None, ge=0, description="`start` in UTF-16 "
+                                   "code units within the paragraph (S4d R2).")
+    end16: Optional[int] = Field(None, ge=0, description="`end` in UTF-16 "
+                                 "code units within the paragraph (S4d R2).")
 
 
 class WordSuggestion(Suggestion):
@@ -635,6 +602,139 @@ class Coverage(_Strict):
 class AnalyzeWordResponse(AnalyzeResponse):
     suggestions: List[WordSuggestion]
     coverage: Coverage
+
+
+# --- the live check (S4d R3) ------------------------------------------------
+
+MAX_LIVE_PARAGRAPHS = 50
+MAX_LIVE_CHARS = 20_000
+MAX_LIVE_HEADING_CHARS = 300
+# The largest integer a JavaScript client can hold exactly.
+MAX_REVISION = 2 ** 53 - 1
+PARAGRAPH_ID_PATTERN = r"^[A-Za-z0-9._:-]+$"
+
+
+class LiveParagraph(_Strict):
+    """One paragraph to check after a typing pause."""
+    id: str = Field(..., min_length=1, max_length=64,
+                    pattern=PARAGRAPH_ID_PATTERN,
+                    description="The client's own id for the paragraph "
+                    "(letters, digits, . _ : -); echoed back, and part of "
+                    "each suggestion's id.")
+    text: str = Field(..., max_length=MAX_LIVE_CHARS,
+                      description="The paragraph's text. Held in memory for "
+                                  "this request only; never stored or logged.")
+    style: str = Field("", max_length=200, description="Word style name, "
+                       "e.g. \"Normal\" or \"Heading 2\"; empty when the "
+                       "surface has none.")
+    heading: str = Field("", max_length=MAX_LIVE_HEADING_CHARS,
+                         description="The text of the nearest heading above "
+                         "the paragraph, so advice stays section-aware "
+                         "(\"Methods\": passive voice is never flagged). "
+                         "Empty: the article type's body section.")
+
+
+class LiveOptions(AnalyzeOptions):
+    """The check options of /v1/analyze, read tolerantly: every field is
+    optional and an option this engine does not know is ignored, not
+    refused, so a native client built against a newer or older contract
+    keeps working. A known option with a bad value is still refused."""
+    model_config = ConfigDict(extra="ignore")
+
+
+class CheckParagraphsRequest(_Strict):
+    revision: StrictInt = Field(..., ge=0, le=MAX_REVISION,
+                                description="The client's revision counter, "
+                                "echoed back so a stale reply can be dropped.")
+    paragraphs: List[LiveParagraph] = Field(
+        ..., min_length=1, max_length=MAX_LIVE_PARAGRAPHS,
+        description="The paragraphs that changed, each checked on its own.")
+    options: LiveOptions = Field(
+        default_factory=LiveOptions,
+        description="The usual check options, all optional; unknown keys "
+        "are ignored. The live check runs sentence-level rules only, so "
+        "`mode`, `review`, `narrative` and `checklist` have no effect here.")
+
+    @model_validator(mode="after")
+    def _size(self) -> "CheckParagraphsRequest":
+        total = sum(len(p.text) for p in self.paragraphs)
+        if total > MAX_LIVE_CHARS:
+            raise ValueError(f"the paragraphs are longer than "
+                             f"{MAX_LIVE_CHARS:,} characters together")
+        ids = [p.id for p in self.paragraphs]
+        if len(set(ids)) != len(ids):
+            raise ValueError("each paragraph needs its own id")
+        return self
+
+
+class LiveSuggestion(_Strict):
+    """A suggestion of the live check: what an underline, its teaser and
+    its card need, and no more."""
+    id: str = Field(..., description="Opaque and stable: the same for the "
+                    "same rule, paragraph, range and flagged words on every "
+                    "check. A hash; it never contains the text.")
+    rule_id: str = Field(..., description="For actions (mute, feedback) and "
+                         "tests; never shown to the writer.")
+    rule_name: str
+    category: Category
+    critical: bool = Field(..., description="True for a Correction (a likely "
+                           "error); false for the other three types.")
+    tier: str = Field(..., description="spelling | grammar | gec | craft | lens")
+    begin: int = Field(..., ge=0, description="Start of the flagged words "
+                       "within the paragraph, in UTF-16 code units.")
+    end: int = Field(..., ge=0, description="End (exclusive), in UTF-16 code units.")
+    text: str = Field(..., description="The flagged words, so a client can "
+                      "check they are still there before it applies a revision.")
+    section: str = Field(..., description="The section the advice assumed, "
+                         "e.g. methods, discussion, unknown.")
+    message: str = Field(..., description="One-line rationale, always shown.")
+    plain: str = Field("", description="The explanation in everyday words, shown first.")
+    why: str = Field(..., description="The fuller, teachable explanation.")
+    source: str = Field(..., description="Named provenance of the advice.")
+    learn_ref: Optional[str] = Field(None, description="The Learn card "
+                                     "(GET /v1/learn/{id}).")
+    replacements: List[str] = Field(
+        default_factory=list, description="Concrete revisions, best first; "
+        "empty when there is none. Only from deterministic rules or a "
+        "≤40-char learned edit, never generated prose.")
+    fix_safety: FixSafety
+
+
+class LiveParagraphResult(_Strict):
+    id: str = Field(..., description="The request's paragraph id.")
+    section: str = Field(..., description="The section the paragraph was "
+                         "checked as.")
+    suggestions: List[LiveSuggestion]
+
+
+class LiveState(str, Enum):
+    """ok: every tier ran. partial: a tier was down (e.g. grammar) or the
+    caller's settings could not be loaded; `health` says which."""
+    ok = "ok"
+    partial = "partial"
+
+
+class CheckParagraphsResponse(_Strict):
+    schema_version: Literal["1"] = SCHEMA_VERSION
+    revision: int = Field(..., ge=0, description="The request's revision, echoed.")
+    paragraphs: List[LiveParagraphResult] = Field(
+        ..., description="One per requested paragraph, in request order.")
+    state: LiveState
+    health: List[TierHealth] = Field(..., description="Every surface must "
+                                     "show a degraded tier.")
+    hidden_preferences: int = Field(0, ge=0, description="Preference-type "
+                                    "findings held back (not shown unless "
+                                    "`options.show_preferences`).")
+    signed_in: bool = Field(False, description="True when a valid account "
+                            "token came with the request and its settings "
+                            "were looked up.")
+    assessed_rules: List[str] = Field(
+        default_factory=list, description="The rules this check could show: "
+        "sentence-level, not muted, not off for the article type, not on a "
+        "tier that is down.")
+    ruleset: Optional[str] = Field(None, description="Engine version and a "
+                                   "fingerprint of its rules.")
+    elapsed_ms: int = Field(..., ge=0)
 
 
 class SourceFormat(str, Enum):

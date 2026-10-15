@@ -1,0 +1,39 @@
+{
+  "revision": "7",
+  "engine": { "service_version": "9.9.9", "something_new": [1, 2, 3] },
+  "timing_ms": 123.4,
+  "paragraphs": [
+    {
+      "id": "p1",
+      "extra": true,
+      "suggestions": [
+        {
+          "id": 42,
+          "begin": "26",
+          "end": 29,
+          "category": "Correction",
+          "message": "Possible spelling mistake.",
+          "why": "A synthetic explanation written for this test.",
+          "source": { "label": "Researchly test fixture", "url": "https://example.invalid/" },
+          "replacements": [{ "text": "the" }, { "value": "tea" }, "ten", null],
+          "future_field": { "nested": ["ignored"] }
+        },
+        {
+          "id": "single-replacement",
+          "begin": 4,
+          "end": 8,
+          "category": "IMPROVEMENT",
+          "critical": "false",
+          "message": "Synthetic improvement.",
+          "replacement": "facts",
+          "fix_safety": "review"
+        }
+      ]
+    },
+    null,
+    { "id": "p2" }
+  ],
+  "health": [
+    { "tier": "grammar", "label": "Grammar", "ok": false, "state": "error" }
+  ]
+}

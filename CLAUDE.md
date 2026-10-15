@@ -40,25 +40,15 @@ prototype trees into the monorepo layout below.
    - Rationale: Grammarly's pre-ChatGPT quality came from learned GEC, not
      regex. The compliance promise is *local-first*, which a bundled
      on-device tagger does not violate.
-   - **Word prediction is permitted** *(amended 2026-10-14, owner: "I want
-     to have it as a core feature of the app")*, within these limits, which
-     `researchly/predict.py` and its tests hold:
-     - it offers the end of the word being typed, or the next word, or a
-       fixed term of at most three words ("confidence interval"), and never
-       a clause or a sentence;
-     - it is never inserted by itself: the writer accepts it with Tab or a
-       click;
-     - it comes from counts of word sequences (n-grams), not a neural
-       language model, and it runs locally or in the pinned engine, never
-       through a cloud model;
-     - it is trained only on licence-clean text (CC BY / CC0 articles, each
-       licence read from the article and attributed in
-       `data/predict_sources.tsv`), never on theses or the owner's
-       documents. A sequence is kept only if it occurs in at least three
-       articles, so no one author's sentence can be reproduced;
-     - it offers nothing inside masked spans (maths, code, citations,
-       URLs, headings), and the writer can turn it off
-       (`[features] prediction`).
+   - **Word prediction was removed** *(owner, 2026-10-15: "It does not make
+     sense to include it in the app when any person can simply use copilot
+     or other word based tools")*. The 2026-10-14 permission is withdrawn;
+     do not reintroduce prediction or completion on any surface.
+   - **Rules written by Claude at build time are permitted** *(owner,
+     2026-10-15)*: deterministic rules, word lists and explanations authored
+     from general knowledge of English grammar, documented in
+     `docs/grammar-notes.md` and cited as "Researchly grammar notes" (source
+     code `rgn`). This is authorship; the engine never calls a language model.
 2. **Confidential by design.** Document text is processed in memory in a
    pinned region and is never stored, logged, shared, or used for training
    unless the user explicitly opts in, per feature. No cloud LLM ever sees
@@ -104,6 +94,7 @@ Researchly/
 │   ├── dogfooding-report.md      ← how precision tuning was done (methodology)
 │   ├── adr/                      ← decision records (index; ADRs live in ARCHITECTURE.md §10)
 │   └── roadmap-rewrite-and-desktop.md   ← superseded by ARCHITECTURE.md
+├── packages/design-tokens/       ← S4d R2: one token file → CSS, Swift, C# (light + dark)
 ├── packages/core/                ← THE ENGINE (`researchly` package; every surface uses it)
 │   ├── researchly/
 │   │   ├── api.py                ← analyze(): THE entry point every surface calls
@@ -120,7 +111,6 @@ Researchly/
 │   │   ├── transform.py          ← deterministic Polish rewriter
 │   │   ├── spelling.py           ← SymSpell wrapper + guards + user dictionary + VarCon dialects
 │   │   ├── spellrank.py          ← noisy-channel ranking of spelling suggestions (P40)
-│   │   ├── predict.py            ← word prediction (n-grams; data/predict.sqlite; P42)
 │   │   ├── reading.py            ← pasted code, inline maths, other languages → masked (P42)
 │   │   ├── tables.py             ← tables as rows × columns for X401 (P42)
 │   │   ├── lexicons.py           ← ALL word lists (auditable; extend here)
@@ -133,6 +123,8 @@ Researchly/
 │   ├── word-addin/               ← Office JS taskpane + localhost:3517 server
 │   ├── vscode-extension/         ← pre-bundled (esbuild); no npm needed on user's Mac
 │   ├── desktop-mac/              ← MAINTENANCE-ONLY (D5): pyobjc menu-bar app + .dmg build
+│   ├── desktop-overlay-mac/      ← S4d R7: Swift overlay client (underlines in any app; ADR-10)
+│   ├── desktop-overlay-win/      ← S4d R8: C#/.NET overlay client (UI Automation; ADR-10)
 │   └── desktop-win/              ← MAINTENANCE-ONLY (D5): untested scaffold
 ├── services/                     ← hosted engine service (arrives in S1)
 ├── tools/public-export/          ← generates the public repository (never exported itself)

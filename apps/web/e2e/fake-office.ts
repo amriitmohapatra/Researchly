@@ -20,6 +20,12 @@
  * - table cells (WordApi 1.3) report rowIndex, cellIndex and the row's
  *   cellCount only after `context.sync()`, and are null objects for a table
  *   paragraph the fake was given no cell for.
+ * - annotations (S4d R4, WordApi 1.7; popups 1.8): inserted, read, deleted,
+ *   accepted and rejected at sync; a range outside the paragraph, or
+ *   popupOptions without 1.8, fails the batch as Word does. Paragraph ids
+ *   and paragraph events need 1.6; without them, edits are reported as
+ *   selection changes only. Tests act as the writer through `__fakeWordType`,
+ *   `__fakeWordClick`, `__fakeWordHover` and `__fakeWordPopup`.
  */
 
 export interface FakeParagraph {
@@ -33,6 +39,23 @@ export interface FakeParagraph {
    * out on a table paragraph: Word gives a null object (an unplaceable cell).
    */
   cell?: { rowIndex: number; cellIndex: number; cellCount: number };
+  /** Word's paragraph id (assigned by the fake; exposed as `uniqueLocalId` with WordApi 1.6). */
+  uid?: string;
+}
+
+/** An underline in the fake document (WordApi 1.7). */
+export interface FakeAnnotation {
+  id: string;
+  /** The paragraph's uid. */
+  paragraph: string;
+  start: number;
+  length: number;
+  /** The text under it when it was drawn. */
+  text: string;
+  colorScheme: string;
+  /** The popup's resources and revisions (WordApi 1.8), or null without them. */
+  popup: { branding: string; title: string; subtitle: string; suggestions: string[] } | null;
+  state: "Created" | "Accepted" | "Rejected";
 }
 
 export interface FakeWordConfig {
@@ -41,8 +64,16 @@ export interface FakeWordConfig {
   host?: string | null;
   /** WordApi 1.4 (tracked changes, fields). Default true. */
   api14?: boolean;
-  /** WordApi 1.3 (table cells, word prediction). Default true; false also means no 1.4. */
+  /** WordApi 1.3 (table cells). Default true; false also means no 1.4. */
   api13?: boolean;
+  /** WordApi 1.6 (paragraph ids and events). Default false. */
+  api16?: boolean;
+  /** WordApi 1.7 (annotations: underlines). Default false. */
+  api17?: boolean;
+  /** WordApi 1.8 (the annotation popup). Default false. */
+  api18?: boolean;
+  /** Word applies a popup's chosen revision itself on Accept (default: it only reports it). */
+  popupAppliesText?: boolean;
   /** The writer's Track Changes setting before any apply. Default "Off". */
   trackingMode?: string;
   /** Paragraph indexes whose ranges sit inside a Word field (a citation). */
@@ -51,8 +82,6 @@ export interface FakeWordConfig {
   nullHistory?: boolean;
   /** Where the cursor is when the pane opens: a paragraph index (default 0). */
   cursor?: number;
-  /** ... and the offset in that paragraph (default 0): word prediction reads up to it. */
-  cursorAt?: number;
   /**
    * Host failures to reproduce (Codex review R3), each at `context.sync()`
    * like a real Word error:
@@ -64,7 +93,15 @@ export interface FakeWordConfig {
    *   than TrackAll) fails;
    * - `cells`: loading a table cell's place fails.
    */
-  failures?: { fields?: boolean; insert?: "before" | "after"; select?: boolean; restoreTracking?: boolean; cells?: boolean };
+  failures?: {
+    fields?: boolean;
+    insert?: "before" | "after";
+    select?: boolean;
+    restoreTracking?: boolean;
+    cells?: boolean;
+    /** `insert`: every insertAnnotations fails (a Word without Microsoft 365); `popup`: only those with popupOptions. */
+    annotations?: "insert" | "popup";
+  };
 }
 
 export interface FakeEdit {
@@ -84,28 +121,53 @@ export interface FakeWordState {
   failedBatches: number;
   /** Every changeTrackingMode assignment, in order. */
   trackingWrites: string[];
-  /** How many selection-changed handlers are registered (word prediction's panel). */
-  selectionHandlers: number;
+  /** Underlines in the document (WordApi 1.7). */
+  annotations: FakeAnnotation[];
+  /** insertAnnotations batches that failed. */
+  failedAnnotationInserts: number;
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export function installFakeOffice(target: any, config: FakeWordConfig): FakeWordState {
   const api13 = config.api13 !== false;
   const api14 = api13 && config.api14 !== false;
+  const api16 = api14 && config.api16 === true;
+  const api17 = api14 && config.api17 === true;
+  const api18 = api17 && config.api18 === true;
   const failures = config.failures ?? {};
+  let uidCounter = 0;
+  const newUid = () => "{0000" + (++uidCounter).toString(16).padStart(4, "0") + "-FA4E-4D0C-9A11-" + String(uidCounter).padStart(12, "0") + "}";
+  let annotationCounter = 0;
   const state: FakeWordState = {
-    paragraphs: config.paragraphs.map((p) => ({ ...p })),
+    paragraphs: config.paragraphs.map((p) => ({ ...p, uid: newUid() })),
     selection: null,
     trackingMode: config.trackingMode ?? "Off",
     edits: [],
     failedBatches: 0,
     trackingWrites: [],
-    selectionHandlers: 0,
+    annotations: [],
+    failedAnnotationInserts: 0,
   };
+  // Word's event handlers, by event (held here: functions are not part of the state).
+  const handlers: Record<string, ((args: any) => unknown)[]> = {
+    clicked: [],
+    hovered: [],
+    popup: [],
+    paragraphChanged: [],
+    paragraphAdded: [],
+    paragraphDeleted: [],
+    selection: [],
+  };
+  const fire = (name: string, args: unknown) => {
+    for (const h of handlers[name] ?? []) setTimeout(() => void h(args), 0);
+  };
+  const source = (name: string) => ({
+    add(h: (args: any) => unknown) {
+      handlers[name]!.push(h);
+      return { remove() {} };
+    },
+  });
   target.__fakeWord = state;
-  const handlers: (() => void)[] = [];
-  // Tests move the cursor, then call this as Word would after a selection change.
-  target.__fakeWordSelectionChanged = () => handlers.forEach((h) => h());
   if (config.nullHistory && target.history) {
     target.history.pushState = null;
     target.history.replaceState = null;
@@ -150,33 +212,26 @@ export function installFakeOffice(target: any, config: FakeWordConfig): FakeWord
           for (let i = r.pi; i <= r.endPi; i++) items.push(makeParagraph(i));
           return { items, load() {} };
         },
-        select(mode?: string) {
+        select() {
           ops.push(() => {
             if (failures.select) throw new Error("GeneralException: the selection could not be made");
-            const s = mode === "End" ? r.end : r.start;
-            const e = mode === "End" || mode === "Start" ? s : r.end;
-            state.selection = { paragraph: r.pi, start: s, end: e, text: state.paragraphs[r.pi]!.text.slice(s, e) };
+            state.selection = { paragraph: r.pi, start: r.start, end: r.end, text: state.paragraphs[r.pi]!.text.slice(r.start, r.end) };
           });
         },
         insertText(text: string, where: string) {
-          if (where === "End") {
-            // Word prediction: text added at the end of a (collapsed) range; returns the new text's range.
-            const added = makeRange(r.endPi, r.end, r.end);
-            ops.push(() => {
-              const p = state.paragraphs[r.endPi]!;
-              p.text = p.text.slice(0, r.end) + text + p.text.slice(r.end);
-              state.edits.push({ paragraph: r.endPi, start: r.end, end: r.end, before: "", text, tracked: state.trackingMode === "TrackAll" });
-              added.end = r.end + text.length;
-              added.text = text;
-            });
-            return added;
-          }
           if (where !== "Replace") throw new Error(`fake office: unsupported insert location ${where}`);
           ops.push(() => {
             if (failures.insert === "before") throw new Error("GeneralException: the text could not be inserted");
             const p = state.paragraphs[r.pi]!;
             const before = p.text.slice(r.start, r.end);
             p.text = p.text.slice(0, r.start) + text + p.text.slice(r.end);
+            // Word takes an underline away with the words under it.
+            state.annotations = state.annotations.filter(
+              (a) => a.paragraph !== p.uid || a.start + a.length <= r.start || a.start >= r.end,
+            );
+            // Like any edit, it is reported (paragraph events with 1.6; the selection moves).
+            if (api16) fire("paragraphChanged", { type: "Changed", uniqueLocalIds: [p.uid] });
+            fire("selection", { type: "documentSelectionChanged" });
             state.edits.push({ paragraph: r.pi, start: r.start, end: r.end, before, text, tracked: state.trackingMode === "TrackAll" });
             r.end = r.start + text.length;
             r.text = text;
@@ -228,6 +283,39 @@ export function installFakeOffice(target: any, config: FakeWordConfig): FakeWord
       return cell;
     }
 
+    // An annotation proxy (WordApi 1.7): its actions run at sync, and fail there if it is gone.
+    function makeAnnotation(id: string) {
+      const find = () => {
+        const a = state.annotations.find((x) => x.id === id);
+        if (!a) throw new Error("ItemNotFound: the annotation does not exist");
+        return a;
+      };
+      const current = state.annotations.find((x) => x.id === id);
+      return {
+        id,
+        state: current?.state,
+        critiqueAnnotation: {
+          accept() {
+            ops.push(() => {
+              find().state = "Accepted";
+            });
+          },
+          reject() {
+            ops.push(() => {
+              find().state = "Rejected";
+            });
+          },
+        },
+        delete() {
+          ops.push(() => {
+            find();
+            state.annotations = state.annotations.filter((x) => x.id !== id);
+          });
+        },
+        load() {},
+      };
+    }
+
     function makeParagraph(pi: number) {
       const p: FakeParagraph = state.paragraphs[pi]!;
       const para: any = {
@@ -235,11 +323,6 @@ export function installFakeOffice(target: any, config: FakeWordConfig): FakeWord
         style: p.style ?? "Normal",
         styleBuiltIn: p.styleBuiltIn ?? "Other",
         tableNestingLevel: p.tableNestingLevel ?? 0,
-        getRange(where?: string) {
-          if (where === "Start") return makeRange(pi, 0, 0);
-          if (where === "End") return makeRange(pi, p.text.length, p.text.length);
-          return makeRange(pi, 0, p.text.length);
-        },
         search(needle: string, options: { matchCase?: boolean }) {
           const hay = options?.matchCase ? p.text : p.text.toLowerCase();
           const n = options?.matchCase ? needle : needle.toLowerCase();
@@ -251,6 +334,58 @@ export function installFakeOffice(target: any, config: FakeWordConfig): FakeWord
       // Older Word has no table-cell API at all.
       if (api13) {
         Object.defineProperty(para, "parentTableCellOrNullObject", { get: () => makeCell(p), enumerable: true });
+      }
+      if (api16) para.uniqueLocalId = p.uid;
+      if (api17) {
+        para.insertAnnotations = (set: { critiques: any[] }) => {
+          const result: { value: any } = { value: undefined };
+          ops.push(() => {
+            const withPopup = set.critiques.some((c) => c.popupOptions);
+            if (failures.annotations === "insert" || (failures.annotations === "popup" && withPopup)) {
+              state.failedAnnotationInserts++;
+              throw new Error("GeneralException: annotations are not available");
+            }
+            if (withPopup && !api18) {
+              state.failedAnnotationInserts++;
+              throw new Error("InvalidArgument: popupOptions");
+            }
+            for (const c of set.critiques) {
+              if (!(c.start >= 0 && c.length > 0 && c.start + c.length <= p.text.length)) {
+                state.failedAnnotationInserts++;
+                throw new Error("InvalidArgument: the critique is outside the paragraph");
+              }
+            }
+            result.value = set.critiques.map((c) => {
+              const id = "ann-" + ++annotationCounter;
+              const o = c.popupOptions;
+              state.annotations.push({
+                id,
+                paragraph: p.uid!,
+                start: c.start,
+                length: c.length,
+                text: p.text.slice(c.start, c.start + c.length),
+                colorScheme: c.colorScheme,
+                popup: o
+                  ? { branding: o.brandingTextResourceId, title: o.titleResourceId, subtitle: o.subtitleResourceId, suggestions: [...o.suggestions] }
+                  : null,
+                state: "Created",
+              });
+              return id;
+            });
+          });
+          return result;
+        };
+        para.getAnnotations = () => {
+          const coll: any = {
+            items: [],
+            load() {
+              ops.push(() => {
+                coll.items = state.annotations.filter((a) => a.paragraph === p.uid).map((a) => makeAnnotation(a.id));
+              });
+            },
+          };
+          return coll;
+        };
       }
       return para;
     }
@@ -277,10 +412,20 @@ export function installFakeOffice(target: any, config: FakeWordConfig): FakeWord
         const sel = state.selection;
         if (sel) return makeRange(sel.paragraph, sel.start, sel.end);
         const pi = Math.min(Math.max(config.cursor ?? 0, 0), state.paragraphs.length - 1);
-        const at = Math.min(Math.max(config.cursorAt ?? 0, 0), state.paragraphs[pi]!.text.length);
-        return makeRange(pi, at, at);
+        return makeRange(pi, 0, 0);
       },
     };
+    if (api16) {
+      document.onParagraphChanged = source("paragraphChanged");
+      document.onParagraphAdded = source("paragraphAdded");
+      document.onParagraphDeleted = source("paragraphDeleted");
+    }
+    if (api17) {
+      document.getAnnotationById = (id: string) => makeAnnotation(id);
+      document.onAnnotationClicked = source("clicked");
+      document.onAnnotationHovered = source("hovered");
+    }
+    if (api18) document.onAnnotationPopupAction = source("popup");
     Object.defineProperty(document, "changeTrackingMode", {
       get: () => state.trackingMode,
       set: (mode: string) => {
@@ -327,25 +472,15 @@ export function installFakeOffice(target: any, config: FakeWordConfig): FakeWord
     },
     EventType: { DocumentSelectionChanged: "documentSelectionChanged" },
     context: {
+      document: {
+        addHandlerAsync(type: string, h: () => void) {
+          if (type === "documentSelectionChanged") handlers.selection!.push(h);
+        },
+      },
       requirements: {
         isSetSupported(name: string, version?: string) {
           if (name !== "WordApi") return false;
-          return versionAtMost(version, api14 ? "1.4" : api13 ? "1.3" : "1.2");
-        },
-      },
-      document: {
-        addHandlerAsync(type: string, handler: () => void, cb?: (r: { status: string }) => void) {
-          if (type === "documentSelectionChanged") {
-            handlers.push(handler);
-            state.selectionHandlers = handlers.length;
-          }
-          if (cb) cb({ status: "succeeded" });
-        },
-        removeHandlerAsync(type: string, options?: { handler?: () => void }, cb?: (r: { status: string }) => void) {
-          const i = options?.handler ? handlers.indexOf(options.handler) : -1;
-          if (type === "documentSelectionChanged" && i >= 0) handlers.splice(i, 1);
-          state.selectionHandlers = handlers.length;
-          if (cb) cb({ status: "succeeded" });
+          return versionAtMost(version, api18 ? "1.8" : api17 ? "1.7" : api16 ? "1.6" : api14 ? "1.4" : api13 ? "1.3" : "1.2");
         },
       },
     },
@@ -357,6 +492,39 @@ export function installFakeOffice(target: any, config: FakeWordConfig): FakeWord
   };
   // For unit tests that act after start-up: Word as it is once ready.
   target.__fakeWordNamespace = wordNamespace;
+
+  /* ---------- the writer, for tests ---------- */
+
+  /** The writer changes paragraph `pi` to `text` (Word reports it as 1.6 paragraph events, and the selection moves). */
+  target.__fakeWordType = (pi: number, text: string) => {
+    const p = state.paragraphs[pi]!;
+    p.text = text;
+    // Word takes an underline away when the words under it change (shifting is not modelled: those go too).
+    state.annotations = state.annotations.filter((a) => a.paragraph !== p.uid || text.slice(a.start, a.start + a.length) === a.text);
+    fire("paragraphChanged", { type: "Changed", uniqueLocalIds: [p.uid] });
+    fire("selection", { type: "documentSelectionChanged" });
+  };
+  /** The writer adds a paragraph after `pi`. */
+  target.__fakeWordAddParagraph = (pi: number, text: string, styleBuiltIn = "Normal") => {
+    const p: FakeParagraph = { text, styleBuiltIn, uid: newUid() };
+    state.paragraphs.splice(pi + 1, 0, p);
+    fire("paragraphAdded", { type: "Added", uniqueLocalIds: [p.uid] });
+    fire("selection", { type: "documentSelectionChanged" });
+  };
+  target.__fakeWordClick = (id: string) => fire("clicked", { id });
+  target.__fakeWordHover = (id: string) => fire("hovered", { id });
+  /** The writer chooses Accept (with a revision) or Reject in an underline's popup. */
+  target.__fakeWordPopup = (id: string, action: "Accept" | "Reject", suggestion?: string) => {
+    const a = state.annotations.find((x) => x.id === id);
+    if (!a) return;
+    a.state = action === "Accept" ? "Accepted" : "Rejected";
+    if (action === "Accept" && suggestion !== undefined && config.popupAppliesText) {
+      const p = state.paragraphs.find((x) => x.uid === a.paragraph)!;
+      p.text = p.text.slice(0, a.start) + suggestion + p.text.slice(a.start + a.length);
+      state.annotations = state.annotations.filter((x) => x.id !== id);
+    }
+    fire("popup", { id, action, critiqueSuggestion: action === "Accept" ? suggestion : undefined });
+  };
   return state;
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */

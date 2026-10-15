@@ -72,8 +72,10 @@ def test_is_prose_threshold():
     assert not ctp.is_prose("table 2 3 4 5 6 7 8".split())
 
 
-def test_the_prediction_attribution_list_is_not_scanned():
-    # authors and titles that theses also cite: bibliographic records
+def test_only_the_symspell_dictionaries_are_skipped_by_name():
+    # The word-prediction attribution list was skipped until the feature
+    # was removed (2026-10-15); nothing else is exempt by name now.
     import check_third_party as ctp
-    assert ctp.SKIP_NAME_RX.match("predict_sources.tsv")
-    assert not ctp.SKIP_NAME_RX.match("predict.py")
+    assert ctp.SKIP_NAME_RX.match("frequency_dictionary_en_82_765.txt")
+    assert ctp.SKIP_NAME_RX.match("frequency_bigramdictionary_en_243_342.txt")
+    assert not ctp.SKIP_NAME_RX.match("predict_sources.tsv")

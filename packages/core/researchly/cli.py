@@ -430,18 +430,6 @@ def cmd_explain(args) -> int:
     return 0
 
 
-def cmd_complete(args) -> int:
-    """Word prediction at the end of the text: what an editor would offer."""
-    from . import api
-    got = api.complete(args.text, kind=args.kind)
-    if got.status != "ok":
-        print(f"(no prediction: {got.status})")
-        return 0
-    for c in got.candidates:
-        print(c.text)
-    return 0
-
-
 # --- entry -----------------------------------------------------------------
 
 def main(argv=None) -> int:
@@ -512,13 +500,6 @@ def main(argv=None) -> int:
     p_polish.add_argument("--kind", default="plain",
                           choices=["plain", "markdown", "latex"])
     p_polish.set_defaults(func=cmd_polish)
-
-    p_complete = sub.add_parser(
-        "complete", help="word prediction: how the text might go on")
-    p_complete.add_argument("text")
-    p_complete.add_argument("--kind", default="plain",
-                            choices=["plain", "markdown", "latex"])
-    p_complete.set_defaults(func=cmd_complete)
 
     args = parser.parse_args(argv)
     return args.func(args)

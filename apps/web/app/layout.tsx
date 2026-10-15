@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { connection } from "next/server";
+// The design tokens first (category colours, light and dark: S4d R2), then the page's own styles.
+import "../../../packages/design-tokens/dist/tokens.css";
 import "./globals.css";
 
 export const metadata: Metadata = {

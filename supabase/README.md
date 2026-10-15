@@ -20,7 +20,7 @@ that proves it.
 
 | Table | Holds | Limits |
 |---|---|---|
-| `user_settings` | muted rule ids, show-preferences switch, locale, mode, article type, spelling, prediction switch, keep-progress switch, `updated_at` | ≤ 200 rule ids, each like `S001` / `LT001`; locale `en-US` or `en-GB`; spelling one of `auto` (default), `us`, `uk`, `uk-oxford`, `ca`, `au`, `in` |
+| `user_settings` | muted rule ids, show-preferences switch, locale, mode, article type, spelling, prediction switch (unused since 2026-10-15), keep-progress switch, `updated_at` | ≤ 200 rule ids, each like `S001` / `LT001`; locale `en-US` or `en-GB`; spelling one of `auto` (default), `us`, `uk`, `uk-oxford`, `ca`, `au`, `in` |
 | `dictionary_words` | one word per row, `added_at` | 1–64 characters, no spaces; ≤ 5,000 per user |
 
 No document text, ever. No `profiles`, usage or feedback tables yet: a table
@@ -59,6 +59,9 @@ returns the defaults) now includes `"spelling": "auto"` and
 `"prediction": true`. Until it is applied, the website and the Word add-in
 still work: the spelling choice is then kept in the browser only and says it
 could not be saved to the account, and prediction stays on.
+Word prediction was removed on 2026-10-15: the `prediction` column and its
+key in `my_config()` stay, so the deployed database needs no change, but
+nothing writes them any more and the engine ignores the key.
 
 ## Running the tests
 

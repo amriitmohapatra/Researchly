@@ -107,6 +107,9 @@ jobs:
           cache-dependency-path: packages/contract/package-lock.json
       - working-directory: packages/contract
         run: npm ci && npm run check
+      - name: Design tokens (light and dark everywhere, contrast floors, dist up to date)
+        working-directory: packages/design-tokens
+        run: npm run check && npm test
 
   web:
     runs-on: ubuntu-latest

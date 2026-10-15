@@ -1,0 +1,27 @@
+{
+  "revision": 1,
+  "paragraphs": [
+    {
+      "id": "p1",
+      "suggestions": [
+        {
+          "id": "after-emoji",
+          "begin": 16,
+          "end": 19,
+          "text": "teh",
+          "category": "correction",
+          "message": "Possible spelling mistake.",
+          "replacements": ["the"]
+        },
+        {
+          "id": "accented-word",
+          "begin": 23,
+          "end": 29,
+          "category": "convention",
+          "message": "Synthetic convention on a word with a combining accent."
+        }
+      ]
+    }
+  ],
+  "state": "issues"
+}

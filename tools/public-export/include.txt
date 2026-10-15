@@ -36,3 +36,6 @@ ml/realdocs/
 docs/labelling-guide.md
 docs/s2-design.md
 docs/windows-smoke-checklist.md
+# The source document cards cite as "Researchly grammar notes" (our own
+# words, invented examples; ADR-11).
+docs/grammar-notes.md

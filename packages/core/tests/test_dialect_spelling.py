@@ -82,10 +82,24 @@ def test_supabase_check_lists_every_spelling():
     listed = re.search(r"check \(spelling in \(([^)]*)\)\)", sql).group(1)
     assert tuple(re.findall(r"'([^']+)'", listed)) == config.SPELLINGS
     assert "spelling text not null default 'auto'" in sql
-    # The same migration stores word prediction, on by default as in Config.
-    assert "prediction boolean not null default true" in sql
-    assert config.Config().prediction is True
-    assert "'prediction',       coalesce(s.prediction, true)" in sql
+
+
+def test_a_stored_prediction_setting_is_ignored(tmp_path):
+    # Word prediction was removed on 2026-10-15. The account column stays
+    # (no migration), so my_config() may still send it, and an older
+    # .researchly.toml may still carry [features] prediction: both are
+    # read and ignored, never an error.
+    cfg = config.apply_remote(config.Config(),
+                              {"prediction": True, "spelling": "uk"})
+    assert cfg.spelling == "uk"
+    assert not hasattr(cfg, "prediction")
+    assert "prediction" not in cfg.to_dict()
+    (tmp_path / ".researchly.toml").write_text(
+        '[features]\nprediction = true\n[document]\nspelling = "uk"\n',
+        encoding="utf-8")
+    loaded = config.load(tmp_path / "paper.md")
+    assert loaded.spelling == "uk"
+    assert "prediction" not in loaded.to_dict()
 
 
 # --- W213: a chosen dialect --------------------------------------------------

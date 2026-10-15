@@ -50,12 +50,12 @@ own "Whole document" group so they are never lost. The chooser starts at
 ## Article type and the reviewer's brief (S4)
 
 - **"Check as"** is one more control in the composer's row (Format, Check
-  as, Reporting checklist, Show preferences), a select whose labels come
+  as, Reporting checklist, Show preferences, Underlines while writing), a select whose labels come
   from the engine's registry, default Auto. The chosen type's one-line
   summary reads under it. A change checks again whatever is on screen,
   like a stage change in Word. The choice is remembered (this browser, or
-  the account when signed in). The format, the type and the checklist are
-  the only things remembered.
+  the account when signed in). The format, the type, the checklist and the
+  "Underlines while writing" switch are the only things remembered.
 - **One line under the results heading** says what the check ran as:
   "Checked as Research article (from the headings: Methods, Results)."
   for a guess, naming the headings it rested on so a wrong guess is easy
@@ -323,28 +323,6 @@ own "Whole document" group so they are never lost. The chooser starts at
   alone). Nothing is checked until Check. The same row links the Word and
   Overleaf versions for download. The example-draft button in the key stays.
 
-## Word prediction (2026-10-14, CLAUDE.md #1)
-
-- **A quiet strip under the editor**, its height held so the text never
-  jumps: after a pause in typing (250 ms), up to three candidates as small
-  bordered buttons in the serif (they are the writer's words to be), the
-  first with a slightly stronger border, then "Tab to accept · Esc to
-  dismiss" in the muted ink. A word, the end of the word being typed, or a
-  fixed term of at most three words; never more.
-- **Never inserted by itself.** Tab takes the first candidate, a click takes
-  any; only into the very text and caret they were offered for. Esc, a
-  moved caret, leaving the editor or more typing drop the offer. With
-  nothing shown, Tab moves focus as it always did. The buttons are out of
-  the tab order; a polite live region (always mounted) says each offer.
-- **"Word prediction"** is a switch in the composer's row after "Show
-  preferences" (on by default) and a panel in Settings when signed in.
-  Remembered in this browser (`researchly.prediction`, on/off only) and in
-  the account when signed in. Off means nothing is asked for.
-- Only a window around the cursor is sent (up to 4,000 characters before it
-  and the rest of its paragraph); it is never stored. A reply that answers
-  older text is dropped. Nothing shows unless the engine says "ok"; after
-  "too many requests" the strip stays quiet for a minute. Not on paper.
-
 ## The table cell on an X401 card (2026-10-14)
 
 When a sentence names a row and a column of a table and quotes a number
@@ -396,7 +374,7 @@ jump.
   or approximated while reading. A reader of the PDF can tell what version
   and which parts were assessed without the app.
 - Light ink only: a grey tint on highlights, an underline whose style says
-  the category (solid, double, dotted, dashed), bold numbers, no colour by
+  the category (solid, dashed, dotted, wavy), bold numbers, no colour by
   verdict, no meters. A4 and Letter both fit; the two columns are a grid,
   so they flow across pages together.
 - The report is mounted only while printing (the button, or the browser's
@@ -423,10 +401,83 @@ jump.
   cream.
 - The four categories use the Okabe-Ito colour-blind-safe palette and are
   always encoded four ways: colour, label, icon shape, underline style
-  (Correction solid, Improvement double, Convention dotted, Preference
-  dashed). Conventions are green-teal, never red. Health notices are blue,
-  never red.
+  (Correction solid, Improvement dashed, Convention dotted, Preference
+  wavy; S4d R2 made these the patterns every surface draws). Conventions
+  are green-teal, never red. Health notices are blue, never red.
+- Category colours come **only** from the design tokens
+  (`packages/design-tokens`, next section): `app/layout.tsx` loads the
+  generated `tokens.css` before `globals.css`, and `globals.css` reads
+  `--rl-*` variables. It writes no category colour of its own.
 - AA contrast in light and dark, checked by axe in the e2e suite.
+
+## Design tokens (S4d R2)
+
+One file, `packages/design-tokens/tokens.json`, is the design language of
+every surface: this site, the Word pane (`/word`) and the desktop clients.
+`node packages/design-tokens/scripts/build.mjs` generates
+`dist/tokens.css` (custom properties: light by default, dark under
+`prefers-color-scheme` unless `data-theme="light"`, and always under
+`data-theme="dark"`), `dist/tokens.ts` (typed map with icon names, Word
+annotation colours and the six states), `dist/ResearchlyTokens.swift` and
+`dist/ResearchlyTokens.cs`. Never edit `dist/` by hand: `--check` (in this
+app's lint and in CI) fails when it is stale.
+
+Three tiers:
+
+1. **Primitive hues**: Researchly's own ramps, taken from this site's
+   palette (paper, slate, night, navy, azure, vermillion, blue, green,
+   orchid, amber). No mode; only the tiers below use them.
+2. **Semantic roles**: `surface.page|raised|sunken`, `text.primary|
+   secondary|on-accent`, `line.hairline|strong`, `accent`, and the roles
+   `correction`, `improvement`, `convention`, `preference`, `focus`,
+   `warning`, `offline`, each with `strong` (lines, rails, marks),
+   `subtle` (tints) and `text`. CSS: `--rl-correction-strong`.
+3. **Component tokens**: `underline.<category>` (colour, pattern,
+   thickness), `highlight.<category>`, `card.rail.<category>`,
+   `badge.<category>.text|background`, `widget.surface|border|mark|ring|
+   warning|offline` and `widget.badge.background|text`. CSS:
+   `--rl-underline-preference-style`, `--rl-card-rail-convention`.
+
+Every semantic and component colour has a light **and** a dark value. The
+generator refuses (and the package's tests fail) when one is missing, when
+text falls below 4.5:1 against the page, a card, a sunken panel or its own
+tint, or when an underline, rail or mark falls below 3:1 against the page
+or a card, in either mode. That floor moved one colour: the Preference line
+is `#c06c9b` (3.28:1 on the paper) where it was `#cc79a7` (2.80:1).
+
+Each category names its icon (ours: circle-cross, arrow-up, open-book,
+sliders, as `CategoryIcon` draws them; an SF Symbol and a Segoe glyph for the
+native clients), its underline pattern (solid, dashed, dotted,
+wavy-dotted; CSS draws the last as wavy) and its Word annotation colour
+scheme (Correction Red, Improvement Blue, Convention Green, Preference
+Lavender). The page's neutrals (`--bg`, `--ink`, …) keep their names here
+and match the tokens' surface and text roles (a unit test holds them
+equal).
+
+## The six states (S4d R2)
+
+Every surface that checks while the writer writes shows one of six states,
+with one look each (`lib/check-state.ts`, `components/StatusMark.tsx`;
+labels from the tokens, so the website, Word and the desktop clients say
+the same words):
+
+| State | Meaning | Look | Words |
+|---|---|---|---|
+| `hidden` | Not eligible here, or paused | Nothing drawn (a screen reader hears "Paused") | Paused |
+| `checking` | A check is in flight for the latest revision | A ring in `widget.ring`; turning, static under reduced motion | Checking… |
+| `issues` | Visible suggestions | A count badge (`widget.badge`) | 3 suggestions / 1 suggestion |
+| `clear` | Checked, nothing to show | A plain mark with a tick (`widget.mark`) | Nothing to suggest |
+| `partial` | Checked, but a tier was down | The mark with a small warning sign (`widget.warning`); the reason in the label | Checked in part |
+| `offline` | The engine can’t be reached or refused | The mark crossed out (`widget.offline`); the next step in the label | Can’t check right now |
+
+Transitions (a pure reducer, unit-tested): an edit goes to `checking`; a
+reply for the latest revision goes to `issues`, `clear` or `partial` (a
+reply for an older revision is dropped); a failure goes to `offline` and
+retries after 2, 4, 8, 16 and 30 s, then every 30 s, staying `offline`
+while a retry is in flight; any success leaves `offline`; leaving the
+field or pausing goes to `hidden`. The Word pane shows them in its header
+(R4, below); the website shows them beside the editor's privacy line (R5,
+below).
 
 ## Shape and density
 
@@ -471,7 +522,7 @@ sign-in, no upload, no settings route.
 The same coach inside Word's sidebar, which is 320 to 400px wide. One
 column, the site's tokens, cards and notices; nothing new to learn.
 
-- **Order**: header (brand, Sign in or the email), then one panel with the
+- **Order**: header (brand, the status mark (S4d R4), Sign in or the email), then one panel with the
   Draft / Revise choice (a two-part segmented control, 8px radius, under it
   exactly "Draft: check what you’ve written so far. Revise: check the
   finished manuscript."), **Check document** (the only primary button) beside
@@ -480,7 +531,7 @@ column, the site's tokens, cards and notices; nothing new to learn.
   and then lists only the section the cursor is in (from its heading to the
   next), with document-wide suggestions under "Whole document" and a note
   saying how many are elsewhere, with "Show the whole document". Then health, errors, results,
-  and a closed **Settings** disclosure (engine, show preferences, account).
+  and a closed **Settings** disclosure (engine, show preferences, live underlines, account).
   The footer holds "Report a problem" (mailto, never with document text).
 - **Results**: "N suggestions", then quiet grey notes: what Draft held back
   (with "Switch to Revise"), hidden preferences (with "Show them"), and what
@@ -515,18 +566,6 @@ column, the site's tokens, cards and notices; nothing new to learn.
   under the quiet notes as a two-by-two grid; a pass replaces the cards
   with the same queue as on the site (one column), and each step selects
   the finding's words in Word, as clicking its card does.
-- **Next words (2026-10-14)**: Office JS cannot show words inline, so a
-  small panel under the check panel, titled "Next words" with a quiet
-  "Hide" link, offers up to three words as buttons when the cursor moves
-  (typing moves it). A click inserts the rest of the word at the cursor
-  (the typed letters stay as typed), only if the paragraph up to the cursor
-  still reads as it did; otherwise it says nothing was inserted. Track
-  Changes is never touched, so with it on the insertion is tracked like
-  typing. Nothing for selected words or in headings, said in one line;
-  Word older than WordApi 1.3 is told the panel is not available there.
-  "Word prediction" in Settings brings a hidden panel back. States: idle,
-  words offered, selection, heading, unsupported, text at the cursor
-  changed.
 - **Sign-in** replaces the main column: email, then the emailed code. No
   dialog (Office's dialog API is not used).
 - **States**: connecting to Word, outside Word, office.js missing, idle,
@@ -538,6 +577,141 @@ column, the site's tokens, cards and notices; nothing new to learn.
   section), cursor not readable. S4c adds: checklist needs Revise, nothing
   in the text points to a checklist, the engine has none, card out of
   date, applied without restoring Track Changes, unknown outcome.
+  S4d R4 adds the six states in the header, live underlines (live-only
+  results, a card in the text, dismissed cards, applied from the popup,
+  applied by Word itself), live underlines paused, and underlines
+  unavailable (older Word, no Microsoft 365).
+
+## Underlines in Word (S4d R4)
+
+Word draws the underlines itself (annotations, WordApi 1.7); the pane owns
+when they appear and what they mean (docs/inline-review-design.md).
+
+- **Colour by type, from the tokens**: Correction red, Improvement blue,
+  Convention green, Preference lavender (Word's fixed schemes, mapped in
+  `packages/design-tokens`). Red only for a likely error. Preferences are
+  underlined only with "Show preferences" on. Underlines never overlap:
+  where two findings cover the same words, the more serious type wins and
+  the other stays a card without "In the text".
+- **When**: about 1.5 s after typing stops, only the paragraphs that
+  changed (each sent with the heading above it), at most one request in
+  flight, at most 50 paragraphs and 20,000 characters per request. When
+  the pane opens it underlines the document once. Headings, table cells
+  and blank lines are never checked live. A reply is drawn only if its
+  paragraph still reads exactly as sent; otherwise it is dropped and the
+  new text is checked.
+- **What is underlined**: sentence-level findings only. Check document's
+  whole-document findings stay in the pane, never as underlines. After
+  Check document its sentence-level findings are drawn and the live
+  results give way; a paragraph edited later shows its live cards in
+  place of the full check's.
+- **Escalation**: hover or click an underline and its card is highlighted
+  and scrolled into view in the pane (a click also leaves a section view
+  or a pass so the card is shown); focus stays in the document. With
+  WordApi 1.8, the underline's popup shows the type as its title, "Why and
+  source: in the Researchly pane" and the brand; it offers the revision
+  only when the rule's fix is `safe` (a revision to read first is applied
+  from the card). Popup Accept applies the revision through the same
+  tracked Apply as the card (or recognises that Word made it); Reject is
+  "Not an issue here".
+- **Cards**: an underlined finding's card carries "In the text" in its
+  head, drawn as the type's underline (colour and pattern from the
+  tokens). Every card gains a quiet "Not an issue here" (right-aligned, the
+  last action), which removes the card and its underline while the pane
+  is open; the notes then say "N suggestions dismissed while the pane is
+  open. Show them". Nothing about a dismissal is stored or sent.
+- **Before any Check document**, the live cards are listed under "N
+  suggestions in the text" with one line saying Check document adds the
+  whole-document checks, the brief and the map.
+- **States in the header**: the status mark sits between the brand and
+  the account control: checking while a live or full check runs, the
+  count, nothing to suggest, checked in part (with the tier that was off),
+  can't check right now (retrying after 2, 4, 8, 16, 30 s, back by itself).
+  Nothing is drawn before the first check; "Paused" (to a screen reader)
+  when the writer turned underlines off. The count is always what the pane
+  lists, so dismissing or applying updates it at once.
+- **Settings**: a "Live underlines" switch under "Show preferences", on by
+  default, remembered on this computer like the engine and stage, with one
+  help line (with "This computer": underlines after Check document only).
+  Where Word cannot draw underlines (no WordApi 1.7, or the first
+  insertion refused: no Microsoft 365) the switch is replaced by one quiet
+  line: "Underlines in the document need Word for Microsoft 365, version
+  16.79 or later. Suggestions still appear here in the pane." Everything
+  else works as before.
+- **Privacy**: underlines live only in the open document (Word does not
+  save them); the pane keeps the checked text in memory only.
+
+## Underlines while writing (S4d R5)
+
+The website's editor underlines as the writer writes; the textarea stays
+native (typing, IME, paste, undo and screen readers are the browser's own).
+
+- **How it is drawn**: behind the textarea, a mirror with the same box,
+  type, wrapping, padding and scroll draws the text in transparent ink and
+  the underlined words with their type's line, colour, pattern and
+  thickness from the tokens (Correction solid, Improvement dashed,
+  Convention dotted, Preference wavy, so colour is never the only cue). A
+  missing word or comma is a small wedge at the insertion point. One block
+  per paragraph, so a keystroke re-lays out only its own paragraph; the
+  mirror follows in the frame after the key, never in it.
+- **When**: about 1.5 s after typing stops, only the paragraphs the writer
+  changed, each with the heading that decides its section (a Markdown
+  `#` line or a plain-text section name such as "Methods"; a "Priors"
+  subsection under "Methods" is sent as Methods, as the full check reads
+  it), one request at a time. Never a sweep of the whole text: switching
+  underlines on, changing the format or loading the demo sends nothing by
+  itself, and a long paste is checked nearest the caret, one request's
+  worth, with one quiet line: "Underlines follow the paragraphs you
+  change; for a long paste, press Check to see the whole text." Answers
+  are kept in memory by a hash of heading and text, so an undo brings its
+  underlines back without a request. A reply for words that changed while
+  it was out is never drawn; underlines on unchanged words in an edited
+  paragraph move with the edit until the answer comes.
+- **Markdown** is sent with its formatting blanked (emphasis marks, link
+  brackets and targets, citations, tags), same length, so every offset
+  still points at the writer's words. **LaTeX** is not underlined (the
+  live check reads plain paragraphs, not markup): one quiet line under the
+  editor says "Underlines while writing are available for plain text and
+  Markdown; press Check for LaTeX." An uploaded file is never live-checked.
+- **Escalation**: hover an underline (about 0.2 s) for the **teaser**, a
+  small panel under the words: the type's badge (icon and name), what was
+  noticed (bold), "Suggested revision (your call):" with the words in the
+  serif, then "Use it" and "Why?" as links. A click on the teaser or "Why?"
+  opens the **full card** (the results' card, unchanged) anchored under the
+  words inside the editor, with "Use this revision" (or "Remove these
+  words") and "Back to your text"; Escape or a click outside closes it and
+  focus returns to the text with the words selected. The revision queue in
+  the results remains the list layer.
+- **Keyboard**: the caret resting in an underline (after arrow keys or a
+  click, never while typing) shows the same teaser after 0.6 s, described
+  to the textarea (`aria-describedby`) and said once in a polite region
+  with the shortcut. **Ctrl + .** (⌘ + . on a Mac) opens the card for the
+  underline at the caret, or the next one. "Underlines in your text (N)",
+  a quiet disclosure under the editor, lists them (type: message (“words”));
+  choosing one selects the words and opens the card.
+- **Accepting** a revision replaces the words through the browser's own
+  editing command, so Ctrl/Cmd + Z undoes it; the words are checked to be
+  unchanged first ("These words have changed since they were checked, so
+  nothing was replaced."), and the paragraph is checked again at once.
+  "Not an issue here" on the card hides that underline for this page;
+  nothing is stored or sent.
+- **States**: the status mark (count badge, ring, tick, warning, crossed
+  out) sits at the end of the privacy row: checking during a live check or
+  Check, the count, nothing to suggest, checked in part (which part was
+  off), can’t check right now with a quiet "Try now" (retrying by itself
+  after 2, 4, 8, 16, 30 s; old underlines are not drawn as current).
+  Nothing before the first check, nothing when switched off. It is not a
+  live region here: one polite region says only a settled count, going
+  offline, an applied revision or a caret teaser, at most every 8 s.
+- **After Check**: the full check's sentence-level suggestions become the
+  underlines of the paragraphs it read, so the two agree exactly;
+  whole-document findings (figure order, abbreviations defined once) are
+  never underlines. A paragraph edited afterwards shows its live answer.
+- **The switch**: "Underlines while writing" beside "Show preferences" in
+  the composer's switch row, on by default, remembered in this browser
+  (`researchly.web.underlines`, a sibling of the Word pane's switch).
+- **Privacy**: the text goes only to the engine, as with Check; answers
+  are held in this page's memory and never stored.
 
 ## States (all reachable, all covered by e2e)
 
@@ -569,6 +743,12 @@ a card dismissed inside a pass, a long check (still checking), previous
 results while checking, after a cancel and after a failure, the cancelled
 note with and without earlier results.
 
+S4d R5 adds: underlines while writing (each type, a Preference only with
+"Show preferences"), the teaser (by hover and by caret), the card over the
+editor, a revision applied and undone, the underline list, checking,
+count, clear, partial, offline with "Try now", a long paste left to Check,
+LaTeX's one line, switched off.
+
 ## Responsive
 
 - 960px and up: composer beside the key; results in two columns with the
@@ -579,7 +759,7 @@ note with and without earlier results.
   phone the composer's selects stack at one full width, as in the Word pane.
 - In the composer the selects come first, their labels lined up along the
   top; a help line under a select (Check as, Spelling) hangs below it. The
-  switches (Show preferences, Word prediction) and Check take their own row
+  switches (Show preferences, Underlines while writing) and Check take their own row
   under them, so a switch never floats beside a help line.
 - Every disclosure shows its marker: where a summary is a flex row (the
   Word pane's Settings, the queue's "Every issue in this pass" list) it draws the cards'

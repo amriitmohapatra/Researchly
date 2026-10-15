@@ -66,11 +66,48 @@ export interface OfficeParagraph {
   style: string;
   styleBuiltIn?: string;
   tableNestingLevel?: number;
+  /** WordApi 1.6+ only: Word's own id for the paragraph, stable while the document is open. */
+  uniqueLocalId?: string;
+  /** WordApi 1.7+ only (S4d R4): underline ranges of this paragraph; the ids arrive at sync. */
+  insertAnnotations?(set: { critiques: OfficeCritique[] }): { value: string[] };
+  /** WordApi 1.7+ only. */
+  getAnnotations?(): OfficeAnnotationCollection;
   /** WordApi 1.3+ only: the table cell this paragraph is in (a null object outside tables). */
   parentTableCellOrNullObject?: OfficeTableCell;
   search(searchText: string, options: { matchCase: boolean }): OfficeRangeCollection;
-  /** WordApi 1.3+ only (word prediction reads the paragraph up to the cursor with it). */
-  getRange?(rangeLocation?: string): OfficeRange;
+}
+
+/** A Word critique (WordApi 1.7): a coloured underline over `start`..`start+length` (UTF-16) of a paragraph. */
+export interface OfficeCritique {
+  colorScheme: string;
+  start: number;
+  length: number;
+  /** WordApi 1.8+ only: the popup's manifest string resources and up to three revisions. */
+  popupOptions?: {
+    brandingTextResourceId: string;
+    titleResourceId: string;
+    subtitleResourceId: string;
+    suggestions: string[];
+  };
+}
+
+/** WordApi 1.7+ only. */
+export interface OfficeAnnotation {
+  id: string;
+  state?: string;
+  critiqueAnnotation: { accept(): void; reject(): void };
+  delete(): void;
+  load(props?: string): void;
+}
+
+export interface OfficeAnnotationCollection {
+  items: OfficeAnnotation[];
+  load(props?: string): void;
+}
+
+/** An Office.js event source on the document (`context.document.onX.add(handler)`). */
+export interface OfficeEventSource<T> {
+  add(handler: (args: T) => Promise<unknown> | void): unknown;
 }
 
 export interface OfficeParagraphCollection {
@@ -85,6 +122,16 @@ export interface WordRequestContext {
     load(props: string): void;
     /** The current selection, or the insertion point. */
     getSelection(): OfficeRange;
+    /** WordApi 1.7+ only (S4d R4). */
+    getAnnotationById?(id: string): OfficeAnnotation;
+    onAnnotationClicked?: OfficeEventSource<{ id: string }>;
+    onAnnotationHovered?: OfficeEventSource<{ id: string }>;
+    /** WordApi 1.8+ only: Accept (with the chosen revision) or Reject in the underline's popup. */
+    onAnnotationPopupAction?: OfficeEventSource<{ id: string; action: string; critiqueSuggestion?: string }>;
+    /** WordApi 1.6+ only. */
+    onParagraphChanged?: OfficeEventSource<{ uniqueLocalIds?: string[] }>;
+    onParagraphAdded?: OfficeEventSource<{ uniqueLocalIds?: string[] }>;
+    onParagraphDeleted?: OfficeEventSource<{ uniqueLocalIds?: string[] }>;
   };
   sync(): Promise<unknown>;
 }
@@ -97,13 +144,10 @@ export interface OfficeApi {
     }>;
     context: {
       requirements: { isSetSupported(name: string, minVersion?: string): boolean };
-      /** The Common API's document events (word prediction listens for selection changes). */
-      document?: {
-        addHandlerAsync?(eventType: string, handler: () => void, callback?: (result: { status: string }) => void): void;
-        removeHandlerAsync?(eventType: string, options?: { handler?: () => void }, callback?: (result: { status: string }) => void): void;
-      };
+      /** The common API's document: where Word without paragraph events reports a moved selection (any edit moves it). */
+      document?: { addHandlerAsync?(eventType: string, handler: () => void, callback?: (result: unknown) => void): void };
     };
-    EventType?: { DocumentSelectionChanged?: string };
+    EventType?: { DocumentSelectionChanged: string };
   };
   Word: {
     run<T>(batch: (context: WordRequestContext) => Promise<T>): Promise<T>;
@@ -158,7 +202,7 @@ export type HostStatus =
   | { status: "unavailable" };
 
 /** Whether this Word supports WordApi `version`; false when it cannot say. */
-function wordApiAtLeast(api: OfficeApi, version: string): boolean {
+export function wordApiAtLeast(api: OfficeApi, version: string): boolean {
   try {
     return api.Office.context.requirements.isSetSupported("WordApi", version);
   } catch {
@@ -245,17 +289,30 @@ export function toWordParagraph(p: {
  * boxes are not included). A table paragraph also carries its `cell` place
  * where Word can report it reliably (readCellPlaces).
  */
-export function readParagraphs(api: OfficeApi): Promise<WordParagraph[]> {
+export async function readParagraphs(api: OfficeApi): Promise<WordParagraph[]> {
+  return (await readParagraphsAndIds(api, false)).paragraphs;
+}
+
+/**
+ * The paragraphs and, with `withIds` (WordApi 1.6), Word's own id for each
+ * (`uniqueLocalId`; null without it). The ids are never sent to the engine
+ * with the full check: they let the underlines (S4d R4) follow a paragraph
+ * that moved.
+ */
+export function readParagraphsAndIds(
+  api: OfficeApi,
+  withIds: boolean,
+): Promise<{ paragraphs: WordParagraph[]; ids: (string | null)[] }> {
   return api.Word.run(async (ctx) => {
     const paras = ctx.document.body.paragraphs;
-    paras.load("items/text,items/style,items/styleBuiltIn,items/tableNestingLevel");
+    paras.load(`items/text,items/style,items/styleBuiltIn,items/tableNestingLevel${withIds ? ",items/uniqueLocalId" : ""}`);
     await ctx.sync();
     const out = paras.items.map((p) => toWordParagraph(p));
     const places = await readCellPlaces(api, ctx, paras.items);
     places.forEach((cell, i) => {
       if (cell && out[i]) out[i].cell = cell;
     });
-    return out;
+    return { paragraphs: out, ids: paras.items.map((p) => (withIds ? (p.uniqueLocalId ?? null) : null)) };
   });
 }
 
@@ -600,109 +657,4 @@ async function restoreTracking(ctx: WordRequestContext, track: boolean, prior: s
   } catch {
     return false;
   }
-}
-
-/* ---------- word prediction (2026-10-14): the "Next words" panel ---------- */
-
-/**
- * Reading the paragraph up to the cursor needs `Paragraph.getRange` and
- * `Range.expandTo`, which arrived with WordApi 1.3. Older Word gets no
- * panel rather than a guess.
- */
-export function canPredict(api: OfficeApi): boolean {
-  return wordApiAtLeast(api, "1.3");
-}
-
-/** The text of the cursor's paragraph up to the cursor, or why there is none to read. */
-export type CursorContext =
-  | { ok: true; before: string }
-  | { ok: false; reason: "unsupported" | "selection" | "heading" | "failed" };
-
-const HEADING_STYLE = /^(Heading\d|Title|Subtitle)$/;
-
-/**
- * Read the paragraph the cursor is in, from its start to the cursor. Only
- * an insertion point counts: with words selected there is no cursor to
- * predict at. A heading gets nothing (prediction stays out of headings).
- * Reads only; nothing in the document changes.
- */
-export async function readCursorContext(api: OfficeApi): Promise<CursorContext> {
-  if (!canPredict(api)) return { ok: false, reason: "unsupported" };
-  try {
-    return await api.Word.run(async (ctx): Promise<CursorContext> => {
-      const sel = ctx.document.getSelection();
-      sel.load("text");
-      const paras = sel.paragraphs;
-      paras.load("items/style,items/styleBuiltIn");
-      await ctx.sync();
-      if (sel.text !== "") return { ok: false, reason: "selection" };
-      const para = paras.items[0];
-      if (!para || !para.getRange) return { ok: false, reason: "failed" };
-      if (HEADING_STYLE.test(para.styleBuiltIn ?? "")) return { ok: false, reason: "heading" };
-      const upTo = para.getRange("Start").expandTo(sel.getRange("Start"));
-      upTo.load("text");
-      await ctx.sync();
-      return { ok: true, before: upTo.text ?? "" };
-    });
-  } catch {
-    return { ok: false, reason: "failed" };
-  }
-}
-
-export const CURSOR_MOVED_MESSAGE = "The text at the cursor has changed, so nothing was inserted. Choose again from the new words.";
-
-/**
- * Insert `insertion` at the cursor, and leave the cursor after it. Only if
- * the paragraph up to the cursor still reads `expectedBefore` (what the
- * words were offered for); otherwise nothing changes. Track Changes is left
- * exactly as the writer set it (never touched here), so with it on the
- * insertion is tracked like any typing.
- */
-export async function insertAtCursor(api: OfficeApi, insertion: string, expectedBefore: string): Promise<ActionResult<object>> {
-  if (!insertion) return { ok: false, message: CURSOR_MOVED_MESSAGE };
-  const now = await readCursorContext(api);
-  if (!now.ok || now.before !== expectedBefore) return { ok: false, message: CURSOR_MOVED_MESSAGE };
-  try {
-    return await api.Word.run(async (ctx) => {
-      const sel = ctx.document.getSelection();
-      const added = sel.insertText(insertion, "End") as OfficeRange | undefined;
-      await ctx.sync();
-      try {
-        added?.select("End");
-        await ctx.sync();
-      } catch {
-        /* inserted; only the cursor did not follow */
-      }
-      return { ok: true as const };
-    });
-  } catch {
-    return { ok: false, message: WORD_FAILED_MESSAGE };
-  }
-}
-
-/**
- * Call `fn` whenever the selection moves (typing moves it too). Returns the
- * way to stop listening, or null where Word offers no such event (the panel
- * then has a button to ask instead).
- */
-export function canListen(api: OfficeApi): boolean {
-  return Boolean(api.Office.context.document?.addHandlerAsync && api.Office.EventType?.DocumentSelectionChanged);
-}
-
-export function onSelectionChange(api: OfficeApi, fn: () => void): (() => void) | null {
-  const doc = api.Office.context.document;
-  const type = api.Office.EventType?.DocumentSelectionChanged;
-  if (!doc?.addHandlerAsync || !type) return null;
-  try {
-    doc.addHandlerAsync(type, fn);
-  } catch {
-    return null;
-  }
-  return () => {
-    try {
-      doc.removeHandlerAsync?.(type, { handler: fn });
-    } catch {
-      /* the pane is closing */
-    }
-  };
 }

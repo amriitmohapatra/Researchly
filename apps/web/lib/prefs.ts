@@ -3,8 +3,9 @@
  * the article type to check as (S4) and the English spelling to keep to (both
  * shared by the website and the Word add-in, which are one origin) and, in
  * the Word add-in, the engine choice and
- * Draft/Revise and (S4c) the reporting checklist; whether word prediction is
- * on (2026-10-14, only once the writer switches it); on the Label page, the
+ * Draft/Revise, (S4c) the reporting checklist and (S4d R4) whether live
+ * underlines are on, and (S4d R5) whether the website's editor underlines while
+ * writing; on the Label page, the
  * verdicts given so far (rule ids and verdicts, never text). The document
  * itself is never persisted (no localStorage, sessionStorage or IndexedDB
  * for text) — scripts/check-boundary.mjs enforces that storage APIs are used
@@ -87,6 +88,30 @@ export function subscribeSpelling(onChange: () => void): () => void {
   return () => window.removeEventListener("storage", handler);
 }
 
+/* ---------- underlines while writing (S4d R5): a choice, never text ---------- */
+
+/** A sibling of the Word pane's key below: the two surfaces are switched separately. */
+const LIVE_UNDERLINES_KEY = "researchly.web.underlines";
+
+/** Whether the editor underlines while the writer writes; null when never chosen (then on). */
+export function loadLiveUnderlines(): boolean | null {
+  const v = read(LIVE_UNDERLINES_KEY);
+  return v === "on" ? true : v === "off" ? false : null;
+}
+
+export function saveLiveUnderlines(on: boolean): void {
+  write(LIVE_UNDERLINES_KEY, on ? "on" : "off");
+}
+
+/** For useSyncExternalStore: another tab switching underlines updates this one. */
+export function subscribeLiveUnderlines(onChange: () => void): () => void {
+  const handler = (e: StorageEvent) => {
+    if (e.key === LIVE_UNDERLINES_KEY) onChange();
+  };
+  window.addEventListener("storage", handler);
+  return () => window.removeEventListener("storage", handler);
+}
+
 /* ---------- the Word add-in (S3): per-viewer choices, never text ---------- */
 
 /** Which engine the add-in checks with: the hosted one, or server.py on this computer (ADR-02 local mode). */
@@ -152,7 +177,7 @@ export function saveModeChoice(v: ModeChoice): void {
 /** For useSyncExternalStore: another taskpane or tab changing a Word preference updates this one. */
 export function subscribeWordPrefs(onChange: () => void): () => void {
   const handler = (e: StorageEvent) => {
-    if (e.key === ENGINE_KEY || e.key === MODE_KEY || e.key === CHECKLIST_KEY) onChange();
+    if (e.key === ENGINE_KEY || e.key === MODE_KEY || e.key === CHECKLIST_KEY || e.key === UNDERLINES_KEY) onChange();
   };
   window.addEventListener("storage", handler);
   return () => window.removeEventListener("storage", handler);
@@ -180,27 +205,18 @@ export function saveChecklistChoice(v: ChecklistPref): void {
   write(CHECKLIST_KEY, v);
 }
 
-/* ---------- word prediction (2026-10-14): on or off, never text ---------- */
+/* ---------- live underlines in Word (S4d R4): on or off, never text ---------- */
 
-const PREDICTION_KEY = "researchly.prediction";
+const UNDERLINES_KEY = "researchly.word.underlines";
 
-/** The switch as set in this browser ("on"/"off"), or null when never touched (prediction is on by default). */
-export function loadPredictionChoice(): boolean | null {
-  const v = read(PREDICTION_KEY);
+/** Whether the writer turned live underlines on or off on this computer; null when never chosen (on, where Word can draw them). */
+export function loadUnderlinesChoice(): boolean | null {
+  const v = read(UNDERLINES_KEY);
   return v === "on" ? true : v === "off" ? false : null;
 }
 
-export function savePredictionChoice(on: boolean): void {
-  write(PREDICTION_KEY, on ? "on" : "off");
-}
-
-/** For useSyncExternalStore: the website and the Word pane share the switch (one origin). */
-export function subscribePrediction(onChange: () => void): () => void {
-  const handler = (e: StorageEvent) => {
-    if (e.key === PREDICTION_KEY) onChange();
-  };
-  window.addEventListener("storage", handler);
-  return () => window.removeEventListener("storage", handler);
+export function saveUnderlinesChoice(on: boolean): void {
+  write(UNDERLINES_KEY, on ? "on" : "off");
 }
 
 /* ---------- the Label page (S4 exit check): verdicts on flags, never text ---------- */

@@ -30,7 +30,6 @@ import {
 import { SPELLING_LABELS } from "@/lib/spelling";
 import { CategoryIcon } from "./CategoryIcon";
 import { ConfirmDelete } from "./pages/ConfirmDelete";
-import { PredictionSettings } from "./PredictionSettings";
 import { SpellingSelect } from "./SpellingSelect";
 
 const nf = new Intl.NumberFormat("en-GB");
@@ -244,8 +243,6 @@ function SignedInSettings() {
           });
         }}
       />
-
-      <PredictionSettings />
 
       <Dictionary
         words={words}

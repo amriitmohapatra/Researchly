@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The Windows shell: UI Automation capture, overlay windows, field widget,
+       teaser and card, write-back, notification-area icon. Builds only for
+       Windows (it can be compile-checked elsewhere with EnableWindowsTargeting). -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>Researchly.Overlay</RootNamespace>
+    <AssemblyName>Researchly.Overlay</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Lets the project be compiled (not run) on Linux or macOS, e.g. to check API use. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <!-- WFAC010 is the Windows Forms analyzer asking for ApplicationHighDpiMode. This is
+         a WPF app (Windows Forms only provides the notification-area icon), and WPF
+         reads per-monitor DPI awareness from app.manifest, so the manifest is right. -->
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
+    <!-- Never written to disk by the app: no logs of text. Diagnostics go to the debugger only. -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- UI Automation 3 COM interfaces (IUIAutomation, TextPattern2, ...). MIT licence. -->
+    <PackageReference Include="Interop.UIAutomationClient" Version="10.19041.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Researchly.Overlay.Core\Researchly.Overlay.Core.csproj" />
+  </ItemGroup>
+</Project>

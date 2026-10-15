@@ -38,6 +38,7 @@ services:
       RESEARCHLY_ENV: development            # CORS: http://localhost:3000
       RESEARCHLY_LT_URL: http://languagetool:8010
       RESEARCHLY_RATE_LIMIT_PER_MIN: "120"
+      RESEARCHLY_LIVE_RATE_LIMIT_PER_MIN: "240"
       # RESEARCHLY_ALLOWED_ORIGINS: http://localhost:3000,http://localhost:5173
     depends_on:
       languagetool:

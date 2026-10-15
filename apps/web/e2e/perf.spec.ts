@@ -176,6 +176,10 @@ test("a thesis-sized result: check, filter, section, show in text, typing", asyn
   await instrument(page);
   await mockEngine(page, async (_req, route) => json(route, 200, big));
   if (process.env.PERF_REDUCED_MOTION) await page.emulateMedia({ reducedMotion: "reduce" });
+  // PERF_UNDERLINES=off: the same run with underlines while writing switched off (S4d R5), for an A/B on one machine.
+  if (process.env.PERF_UNDERLINES === "off") {
+    await page.addInitScript(() => window.localStorage.setItem("researchly.web.underlines", "off"));
+  }
   await page.goto("/");
   // PERF_CSS: try a stylesheet change without a rebuild.
   if (process.env.PERF_CSS) {

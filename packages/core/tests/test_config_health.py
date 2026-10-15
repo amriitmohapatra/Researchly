@@ -135,6 +135,18 @@ def test_engine_status_reports_every_tier():
             assert s.detail, f"{s.tier} is down without saying why"
 
 
+def test_word_prediction_is_gone_from_every_layer():
+    """Word prediction was removed on 2026-10-15 (owner decision): no
+    health tier, no api.complete(), no CLI command, no LSP completion."""
+    from researchly import api, cli, lsp
+    assert "prediction" not in {s.tier for s in health_mod.engine_status(
+        config_mod.Config())}
+    assert not hasattr(api, "complete")
+    assert not hasattr(lsp, "completion")
+    with pytest.raises(SystemExit):
+        cli.main(["complete", "the basic rep"])
+
+
 def test_file_readers_reported_only_when_missing(monkeypatch):
     """A missing pylatexenc silently degrades LaTeX masking on every
     surface; it must show up with a remedy. Installed, it adds no line."""

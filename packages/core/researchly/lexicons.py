@@ -549,6 +549,121 @@ CONFUSIONS = (
 )
 
 
+# --- Researchly grammar notes (R6, 2026-10-15; docs/grammar-notes.md) -------
+# Lists written for Researchly from general knowledge of English grammar.
+# Each one is deliberately short: a word earns its place only if the rule is
+# right for it in every context a research paper is likely to put it in.
+
+# GN101: nouns for a group of people that American English treats as one
+# thing ("the committee was"), where British, Australian and Indian English
+# may also treat them as the people in it ("the committee were").
+COLLECTIVE_NOUNS = frozenset("""
+team committee government panel board council jury cohort consortium
+family company audience ministry department public group population
+""".split())
+
+# GN201: head nouns that name one quantity or one thing even when an
+# "of" phrase full of plurals follows ("the proportion of cases was").
+# Left out on purpose, because they agree with what follows them in
+# careful writing everywhere: majority, minority, half, rest, remainder,
+# bulk, range, variety, series, set, group, total, lot, couple, kind, type.
+AGREEMENT_HEADS = frozenset("""
+proportion percentage fraction share number rate risk incidence prevalence
+probability likelihood mean median average sum distribution frequency
+ratio level concentration duration size magnitude variance accuracy
+sensitivity specificity performance quality effect impact estimate aim
+purpose goal objective timing severity burden cost age
+""".split())
+# ("length" is left out: "length of stay" is a term that is itself a
+# modifier, as in "length of stay statistics were".)
+# Of those, the ones that take a plural verb after "a" ("a proportion of
+# patients were", "an average of 40 samples were taken"): the writer means
+# the patients or the samples, not the proportion or the average.
+AGREEMENT_HEADS_NEED_THE = frozenset({
+    "proportion", "percentage", "fraction", "share", "number", "average",
+    "mean", "median", "sum"})
+# Pronoun heads that are singular however plural their "of" phrase is
+# ("each of the models was"). "none", "neither" and "either" are left out:
+# a plural verb after them is accepted in careful writing.
+AGREEMENT_PRONOUN_HEADS = frozenset({"each", "one"})
+
+# GN201, GN202, GN203, GN101: a plural verb form and its singular.
+PLURAL_TO_SINGULAR_VERB = {"are": "is", "were": "was", "have": "has",
+                           "do": "does"}
+SINGULAR_TO_PLURAL_VERB = {v: k for k, v in PLURAL_TO_SINGULAR_VERB.items()}
+
+# GN205: participles that open a sentence without needing a doer, because
+# they work as prepositions ("Assuming a fixed interval, ...", "Given
+# these counts, ...") or set phrases ("Starting from April, ..."), and the
+# mathematician's "Taking X to denote ...", "Letting n be ...".
+DANGLING_OK = frozenset("""
+assuming considering given including excluding regarding concerning
+following according depending notwithstanding provided providing owing
+barring speaking judging granted being having starting beginning taking
+letting denoting writing
+""".split())
+# Prepositions that can carry an -ing opener ("After fitting the model, ...").
+DANGLING_PREPOSITIONS = frozenset({
+    "after", "before", "by", "on", "upon", "when", "while", "whilst",
+    "through"})
+
+# GN206: abbreviations, how they are said, and so whether they take "a" or
+# "an". The article follows the first SOUND, not the first letter: MCMC is
+# said "em-see-em-see" (an), NATO "nay-toe" (a), UK "you-kay" (a).
+# Abbreviations said two ways in published work are left out on purpose:
+# SIR and SEIR ("ess-eye-ar" or "sir", "seer"), MAP, LOO, WAIC, SQL; and
+# SE, which is "ess-ee" as a standard error but "south-east" in "SE Asia".
+ABBREVIATION_ARTICLE = {
+    # said letter by letter, first letter F, H, L, M, N, R, S or X
+    "MCMC": ("an", "em-see-em-see"), "MRI": ("an", "em-ar-eye"),
+    "HIV": ("an", "aitch-eye-vee"), "HPV": ("an", "aitch-pee-vee"),
+    "RCT": ("an", "ar-see-tee"), "LMIC": ("an", "el-em-eye-see"),
+    "NGO": ("an", "en-gee-oh"), "SD": ("an", "ess-dee"),
+    "FDA": ("an", "ef-dee-ay"),
+    "MSM": ("an", "em-ess-em"), "NHS": ("an", "en-aitch-ess"),
+    "RNA": ("an", "ar-en-ay"), "mRNA": ("an", "em-ar-en-ay"),
+    "LSTM": ("an", "el-ess-tee-em"), "MLE": ("an", "em-el-ee"),
+    "NPI": ("an", "en-pee-eye"), "HR": ("an", "aitch-ar"),
+    "RR": ("an", "ar-ar"), "SMR": ("an", "ess-em-ar"),
+    "FOI": ("an", "ef-oh-eye"), "HMC": ("an", "aitch-em-see"),
+    "SVM": ("an", "ess-vee-em"), "MSE": ("an", "em-ess-ee"),
+    "RMSE": ("an", "ar-em-ess-ee"), "MAE": ("an", "em-ay-ee"),
+    "R0": ("an", "ar-nought"), "Rt": ("an", "ar-tee"),
+    "SDE": ("an", "ess-dee-ee"), "HDI": ("an", "aitch-dee-eye"),
+    "SNR": ("an", "ess-en-ar"), "NIH": ("an", "en-eye-aitch"),
+    "FMD": ("an", "ef-em-dee"), "STI": ("an", "ess-tee-eye"),
+    "MDR": ("an", "em-dee-ar"), "LTBI": ("an", "el-tee-bee-eye"),
+    "NTD": ("an", "en-tee-dee"),
+    # said as a word, or starting with a "you" or "double-you" sound
+    "UK": ("a", "you-kay"), "US": ("a", "you-ess"),
+    "USA": ("a", "you-ess-ay"), "UN": ("a", "you-en"),
+    "URL": ("a", "you-ar-el"), "UTI": ("a", "you-tee-eye"),
+    "UV": ("a", "you-vee"), "WHO": ("a", "double-you-aitch-oh"),
+    "SNP": ("a", "snip"), "NATO": ("a", "nay-toe"),
+    "SARS": ("a", "sars"), "MERS": ("a", "murz"),
+    "NICE": ("a", "nice"), "LASSO": ("a", "lasso"),
+    "NASA": ("a", "nassa"), "UNICEF": ("a", "you-ni-sef"),
+    "LOESS": ("a", "low-ess"), "HEPA": ("a", "heppa"),
+}
+
+# GN102: the word after "different to" that makes it about how something
+# looks to someone ("different to the reader"), which every English allows.
+PERCEIVERS = frozenset("""
+me us you him her them reader readers observer observers clinicians
+clinician patients patient participants respondents people users eye eyes
+""".split())
+
+# GN105: what follows "was fit"/"were fit" when it is the past participle
+# of fitting a model ("were fit to the data", "was fit using a sampler").
+FIT_FOLLOWERS = frozenset({
+    "to", "using", "with", "by", "in", "on", "separately", "independently",
+    "jointly", "simultaneously", "via", "within", "across", "against"})
+
+# GN107: month names for dates in prose.
+MONTHS = ("January", "February", "March", "April", "May", "June", "July",
+          "August", "September", "October", "November", "December")
+
+
 # --- Language detection (2026-10-14; reading.py) --------------------------
 # Researchly checks English. A paragraph in another language (a thesis's
 # second abstract, a quotation) is masked rather than flagged word by word.

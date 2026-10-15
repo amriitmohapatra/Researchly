@@ -14,7 +14,6 @@ detected sections, engine health, and the resolved config.
 
 from __future__ import annotations
 
-import re
 import threading
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -289,6 +288,150 @@ def analyze(source: Union[str, Path, Sequence[dict], Document],
     )
 
 
+# --- the live check (S4d R3) -------------------------------------------------
+
+# The heading a live paragraph sits under is placed above it as a Word
+# heading, so section detection is the full check's own (document.py).
+LIVE_HEADING_STYLE = "Heading 1"
+
+
+@dataclass
+class ParagraphResult:
+    """One paragraph of a live check. `suggestions` carry code-point
+    offsets within the paragraph's own text (UTF-16 is the edge's job,
+    researchly.utf16)."""
+    id: str
+    text: str
+    section: str
+    suggestions: list[Suggestion] = field(default_factory=list)
+
+
+@dataclass
+class ParagraphCheck:
+    """The result of `check_paragraphs()`."""
+    paragraphs: list[ParagraphResult] = field(default_factory=list)
+    hidden_preferences: int = 0
+    health: list = field(default_factory=list)
+    config: Config = field(default_factory=Config)
+    assessed_rules: list = field(default_factory=list)
+    ruleset: str = ""
+
+
+def live_rule_ids() -> frozenset:
+    """The rules the live check runs: those judged from the sentence in
+    front of the writer. Document-scope rules (figure order, abbreviations
+    defined once, the abstract's moves) need the whole document and stay in
+    the full check, with the brief, the map, checklists and read-outs."""
+    ensure_rules_loaded()
+    return frozenset(r.id for r in REGISTRY.values() if r.scope == "sentence")
+
+
+def paragraph_document(text: str, style: str = "",
+                       heading: str = "") -> tuple[Document, int]:
+    """The document a live paragraph is checked as, and where the
+    paragraph starts in it: the paragraph under its nearest heading,
+    exactly as the full check would read those two Word paragraphs."""
+    heading = " ".join((heading or "").split())
+    items = []
+    if heading:
+        items.append({"text": heading, "style": LIVE_HEADING_STYLE})
+    items.append({"text": text, "style": style or ""})
+    offset = len(heading) + 2 if heading else 0
+    return Document.from_word(items), offset
+
+
+def check_paragraphs(paragraphs: Sequence[dict],
+                     *,
+                     nlp=None,
+                     cfg: Optional[Config] = None,
+                     near: Optional[Path] = None,
+                     **overrides: Any) -> ParagraphCheck:
+    """The live check: a few paragraphs, each in isolation (S4d R3).
+
+    Each item is `{"id", "text", "style"?, "heading"?}`; `heading` is the
+    text of the nearest heading above the paragraph, so advice stays
+    section-aware without the whole document. A paragraph with no heading
+    gets the article type's body section, as unheaded prose does in the
+    full check.
+
+    For every paragraph the findings are exactly those `analyze()` gives
+    for a document made of the heading and the paragraph, restricted to
+    sentence-scope rules and to the paragraph's own text
+    (tests/test_live_check.py proves it per section). Masking is the full
+    check's: maths, code, citations, URLs and headings are never flagged.
+
+    Cheap for short inputs: every grammar request starts before the parse
+    (one LanguageTool request per paragraph, run concurrently), and the
+    paragraphs are parsed in one `nlp.pipe` call. Document-wide rules are
+    not run at all.
+    """
+    if cfg is None:
+        cfg = config_mod.load(near, **overrides)
+    elif overrides:
+        cfg = cfg.with_overrides(**overrides)
+
+    live = live_rule_ids()
+    not_live = {rid for rid in REGISTRY if rid not in live}
+    grammar = "LT001" in live and "LT001" not in cfg.disabled
+
+    prepared = []
+    for p in paragraphs:
+        text = p.get("text") or ""
+        document, offset = paragraph_document(text, p.get("style") or "",
+                                              p.get("heading") or "")
+        document.config = cfg
+        document.extra_dictionary = list(cfg.dictionary)
+        profile, _ = profiles_mod.resolve(cfg.document_type, document)
+        document.default_section = profile.body_section
+        disabled = set(cfg.disabled) | set(profile.rules_off) | not_live
+        blank = not text.strip()
+        if grammar and not blank and "LT001" not in disabled:
+            from .rules_grammar import start_check
+            start_check(document)
+        prepared.append((p, text, document, offset, disabled, blank))
+
+    nlp = nlp or get_nlp()
+    todo = [d for _, _, d, _, _, blank in prepared if not blank]
+    parsed = iter(nlp.pipe([d.masked for d in todo]))
+
+    out: list[ParagraphResult] = []
+    prefs = 0
+    for p, text, document, offset, disabled, blank in prepared:
+        section = document.section_at(offset)
+        result = ParagraphResult(id=str(p.get("id") or ""), text=text,
+                                 section=section)
+        out.append(result)
+        if blank:
+            continue
+        found = check(document, nlp, disabled=disabled,
+                      show_preferences=True, spacy_doc=next(parsed))
+        kept = []
+        for s in found:
+            if s.start < offset:          # on the heading, not the paragraph
+                continue
+            if s.category is Category.PREFERENCE:
+                prefs += 1
+                if not cfg.show_preferences:
+                    continue
+            s.start -= offset
+            s.end -= offset
+            s.line, s.col = 0, 0          # a paragraph has no lines of its own
+            kept.append(s)
+        result.suggestions = kept
+
+    health = engine_status(cfg, nlp=nlp)
+    assessed = [rid for rid in assessed_rules(cfg, set(cfg.disabled), health)
+                if rid in live]
+    return ParagraphCheck(
+        paragraphs=out,
+        hidden_preferences=0 if cfg.show_preferences else prefs,
+        health=health,
+        config=cfg,
+        assessed_rules=assessed,
+        ruleset=ruleset_id(),
+    )
+
+
 def assessed_rules(cfg: Config, disabled: set, health: list) -> list:
     """The rules whose findings a check with these settings could show
     (Codex review N2): the progress view counts a rule outside this list as
@@ -321,118 +464,6 @@ def ruleset_id() -> str:
         _RULESET = __version__ + "+" + hashlib.sha256(
             key.encode()).hexdigest()[:8]
     return _RULESET
-
-
-# --- word prediction (2026-10-14) ---------------------------------------------
-
-# LaTeX commands whose argument is prose; any other command's argument
-# (\cite{, \ref{, \label{, \begin{, \url{ ...) is not.
-_PROSE_COMMANDS = frozenset({
-    "emph", "textbf", "textit", "textsl", "textsc", "text", "underline",
-    "footnote", "caption", "section", "subsection", "subsubsection",
-    "paragraph", "subparagraph", "chapter", "part", "title", "item",
-    "mbox", "textrm", "textsf", "enquote"})
-_OPEN_ARG = re.compile(r"\\([A-Za-z@]+)\*?(?:\[[^\]]*\])?\{[^{}]*$")
-_URLISH = re.compile(r"(?:://|www\.|@)\S*$")
-COMPLETE_WINDOW = 50_000      # characters of a long document read around
-
-
-@dataclass
-class Completion:
-    """What `complete()` returns. `status` says why there is nothing when
-    there is nothing: "ok", "off" (the writer turned prediction off),
-    "masked" (the cursor is in maths, code, a citation or a URL) or
-    "unavailable" (no model; health.py says why)."""
-    candidates: list = field(default_factory=list)
-    status: str = "ok"
-
-    def to_dict(self) -> dict:
-        return {"candidates": [c.to_dict() for c in self.candidates],
-                "status": self.status}
-
-
-def _in_unfinished_markup(before: str, kind: str) -> bool:
-    """The cursor is inside something still being typed that the masker
-    cannot see yet: an unclosed $...$, a citation key, a code span."""
-    para = before[before.rfind("\n\n") + 1:]
-    if _URLISH.search(para):
-        return True
-    if kind in ("latex", "markdown"):
-        dollars = len(re.findall(r"(?<!\\)\$", para))
-        if dollars % 2:
-            return True
-    if kind == "latex":
-        if re.search(r"\\[A-Za-z@]*$", para):
-            return True             # a command name being typed
-        m = _OPEN_ARG.search(para)
-        if m and m.group(1) not in _PROSE_COMMANDS:
-            return True
-    if kind == "markdown":
-        if before.count("```") % 2 or para.count("`") % 2:
-            return True
-        if re.search(r"\]\([^)]*$", para):
-            return True             # a link target
-    return False
-
-
-def complete(text: str, cursor: Optional[int] = None, *,
-             kind: str = "plain",
-             cfg: Optional[Config] = None,
-             near: Optional[Path] = None,
-             limit: int = 3,
-             **overrides: Any) -> Completion:
-    """Word prediction at `cursor` (default: the end of `text`).
-
-    Offers the end of the word being typed, or the next word or short
-    fixed term, ranked by how often published scientific prose continues
-    this way (researchly/predict.py). Never inserts anything: a surface
-    shows the candidates and replaces `[start, end)` with one only when the
-    writer accepts it. Nothing is offered inside masked material (maths,
-    code, citations, URLs, headings) or when the writer has turned
-    prediction off. The text is read in memory and kept nowhere.
-    """
-    from . import predict as predict_mod
-
-    if cfg is None:
-        cfg = config_mod.load(near, **overrides)
-    elif overrides:
-        cfg = cfg.with_overrides(**overrides)
-    if not cfg.prediction:
-        return Completion(status="off")
-    cursor = len(text) if cursor is None else max(0, min(cursor, len(text)))
-
-    # A long document is read around the cursor, from a paragraph break.
-    lo = 0
-    if cursor > COMPLETE_WINDOW:
-        lo = text.rfind("\n\n", 0, cursor - COMPLETE_WINDOW)
-        lo = 0 if lo < 0 else lo
-    hi = text.find("\n\n", cursor)
-    hi = len(text) if hi < 0 else hi
-    window = text[lo:hi]
-    at = cursor - lo
-    before = window[:at]
-    if _in_unfinished_markup(before, kind):
-        return Completion(status="masked")
-    document = Document.from_text(window, kind)
-    word_start = at - len(re.search(r"[A-Za-z'\-]*$", before).group(0))
-    check_from = word_start if word_start < at else max(0, at - 1)
-    if at and document.masked[check_from:at] != window[check_from:at]:
-        return Completion(status="masked")
-    # Masked atoms (citations, inline maths) break the context: the words
-    # either side of "[12]" are not a sequence.
-    chars = list(before)
-    for a, b in document.atoms:
-        if a < at:
-            for i in range(a, min(b, at)):
-                chars[i] = "\n"
-    context = "".join(chars)
-    model = predict_mod.get_model()
-    if model is None:
-        return Completion(status="unavailable")
-    found = predict_mod.complete(context, cursor,
-                                 spelling_choice=cfg.spelling, limit=limit,
-                                 model=model)
-    return Completion(candidates=found)
 
 
 def status(cfg: Optional[Config] = None, probe: bool = False

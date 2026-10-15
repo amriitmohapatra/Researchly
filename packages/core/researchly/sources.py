@@ -110,6 +110,12 @@ WORKS = {
                  "Management 27(5)"),
     "Swan": ("M. Swan (2016), Practical English Usage, 4th ed., Oxford "
              "University Press, on uncountable nouns"),
+    # Rules written for Researchly at build time from general knowledge of
+    # English grammar (ADR-11, owner 2026-10-15); docs/grammar-notes.md is
+    # the source document, with further reading at its end.
+    "rgn": ("Researchly grammar notes: grammar and regional usage written "
+            "for Researchly in its own words, with further reading "
+            "(docs/grammar-notes.md in the Researchly repository)"),
 }
 
 
