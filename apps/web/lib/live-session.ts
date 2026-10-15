@@ -191,6 +191,11 @@ export class LiveSession {
     return out;
   }
 
+  /** How many underlines are drawn now. */
+  drawnCount(): number {
+    return this.count();
+  }
+
   private count(): number {
     let n = 0;
     for (const p of this.doc.paragraphs) n += this.itemsFor(p).length;
@@ -239,7 +244,8 @@ export class LiveSession {
     const formatChanged = live !== this.format;
     this.text = text;
     this.format = live;
-    this.doc = live ? splitParagraphs(text, live, this.keyOf) : { paragraphs: [], headings: [] };
+    // Switched off, the text is not even split: typing costs nothing extra.
+    this.doc = live && this.wanted ? splitParagraphs(text, live, this.keyOf) : { paragraphs: [], headings: [] };
     const was = this.keys;
     this.keys = new Set(this.doc.paragraphs.map((p) => p.key));
     this.changed = this.doc.paragraphs.filter((p) => !was.has(p.key)).map((p) => p.key);
@@ -301,6 +307,12 @@ export class LiveSession {
   setEnabled(on: boolean) {
     if (on === this.wanted) return;
     this.wanted = on;
+    if (on && this.format) {
+      this.doc = splitParagraphs(this.text, this.format, this.keyOf);
+      this.keys = new Set(this.doc.paragraphs.map((p) => p.key));
+      this.changed = [];
+      this.provisional.clear();
+    }
     if (!this.enabled) {
       this.stop();
       this.dispatch({ type: on ? "leave" : "pause" });

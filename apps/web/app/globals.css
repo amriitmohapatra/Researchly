@@ -4126,6 +4126,8 @@ main:focus {
   tab-size: 8;
   color: transparent;
   user-select: none;
+  /* Its layout and paint never reach outside its box: a keystroke re-lays out one block in here and nothing else. */
+  contain: strict;
 }
 
 .lu-correction {

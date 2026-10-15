@@ -21,6 +21,7 @@ import {
   useCallback,
   useEffect,
   useId,
+  useDeferredValue,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -181,7 +182,8 @@ const Mirror = memo(function Mirror({
     const occ = seen.get(p.key) ?? 0;
     seen.set(p.key, occ + 1);
     const isActive = active && active.key === p.key && active.occ === occ ? active.item.id : null;
-    nodes.push(<MirrorParagraph key={`${p.key}.${occ}`} text={p.text} items={snap.itemsFor(p)} pkey={p.key} occ={occ} active={isActive} />);
+    // Keyed by position, so typing in a paragraph updates its block in place rather than replacing it.
+    nodes.push(<MirrorParagraph key={`p${p.index}`} text={p.text} items={snap.itemsFor(p)} pkey={p.key} occ={occ} active={isActive} />);
     at = p.end;
   }
   if (paragraphs.length) nodes.push(<MirrorLines key="tail" text={text.slice(at)} where="tail" />);
@@ -303,10 +305,17 @@ export function LiveEditor({ session, value, format, onChange, textareaRef, id, 
   const ids = { teaser: useId(), list: useId(), help: useId(), cardTitle: useId() };
 
   const drawing = snap.enabled && snap.doc.paragraphs.length > 0;
-  const drawn = useMemo(() => (snap.enabled ? session.drawn() : []), [session, snap]);
-  const hasMarks = drawn.length > 0;
+  // The count on every keystroke is cheap; the list itself is built only while it is open.
+  const [listOpen, setListOpen] = useState(false);
+  const marks = useMemo(() => (snap.enabled ? session.drawnCount() : 0), [session, snap]);
+  const hasMarks = marks > 0;
+  // The mirror follows in the frame after a keystroke, never in it: the textarea answers the key first
+  // (typing latency, P45). Text and paragraphs are deferred together, so they always agree.
+  const mirrorText = useDeferredValue(value);
+  const mirrorSnap = useDeferredValue(snap);
+  const drawn = useMemo(() => (listOpen && snap.enabled ? session.drawn() : []), [listOpen, session, snap]);
 
-  // The mirror follows every change of the text before the browser paints, so underlines never lag the words.
+  // The session reads every change of the text (typed, pasted, loaded or applied) before the browser paints.
   useLayoutEffect(() => {
     session.setDocument(value, format);
   }, [session, value, format]);
@@ -323,7 +332,6 @@ export function LiveEditor({ session, value, format, onChange, textareaRef, id, 
     if (m.scrollLeft !== ta.scrollLeft) m.scrollLeft = ta.scrollLeft;
   }, [textareaRef]);
 
-  // After the mirror re-renders, its scroll position follows the textarea's; the cached rectangles are out of date.
   // A new mirror starts where the textarea is scrolled to; after that, scroll events keep them together.
   useLayoutEffect(() => {
     if (hasMarks) syncScroll();
@@ -331,7 +339,7 @@ export function LiveEditor({ session, value, format, onChange, textareaRef, id, 
   // Anything drawn may have moved: the cached rectangles are out of date (nothing is measured here).
   useEffect(() => {
     rects.current = null;
-  }, [snap.version]);
+  }, [mirrorSnap.version]);
 
   // Rectangles are in viewport coordinates: a resize or any scroll makes them stale, and a hover teaser left behind.
   useEffect(() => {
@@ -606,7 +614,8 @@ export function LiveEditor({ session, value, format, onChange, textareaRef, id, 
       }
       // None at the caret: the next one after it (then the first).
       const at = textareaRef.current?.selectionEnd ?? 0;
-      const next = drawn.find((d) => d.paragraph.start + d.item.begin >= at) ?? drawn[0];
+      const all = session.drawn();
+      const next = all.find((d) => d.paragraph.start + d.item.begin >= at) ?? all[0];
       if (next) goTo({ key: next.paragraph.key, occ: occurrenceOf(snap, next.paragraph), item: next.item });
       return;
     }
@@ -657,7 +666,7 @@ export function LiveEditor({ session, value, format, onChange, textareaRef, id, 
         onPointerMove={drawing ? onPointerMove : undefined}
         onPointerLeave={drawing ? onPointerLeave : undefined}
       >
-        {drawing && hasMarks ? <Mirror text={value} snap={snap} active={shownCard ?? shownTeaser} mirrorRef={mirrorRef} /> : null}
+        {drawing && hasMarks ? <Mirror text={mirrorText} snap={mirrorSnap} active={shownCard ?? shownTeaser} mirrorRef={mirrorRef} /> : null}
         <textarea
           id={id}
           ref={textareaRef}
@@ -751,9 +760,9 @@ export function LiveEditor({ session, value, format, onChange, textareaRef, id, 
       ) : null}
 
       {hasMarks ? (
-        <details className="lu-list" data-testid="underline-list">
+        <details className="lu-list" data-testid="underline-list" onToggle={(e) => setListOpen(e.currentTarget.open)}>
           <summary>
-            Underlines in your text <span className="lu-count">({drawn.length.toLocaleString("en-GB")})</span>
+            Underlines in your text <span className="lu-count">({marks.toLocaleString("en-GB")})</span>
           </summary>
           <p id={ids.help} className="help lu-help">
             Hover over an underline, or put the cursor in it, for a short note. Ctrl + . (⌘ + . on a Mac) opens the full card for
@@ -777,7 +786,7 @@ export function LiveEditor({ session, value, format, onChange, textareaRef, id, 
               );
             })}
           </ol>
-          {drawn.length > LIST_LIMIT ? (
+          {marks > LIST_LIMIT ? (
             <p className="help">The first {LIST_LIMIT} are listed; press Check for every suggestion in the results.</p>
           ) : null}
         </details>

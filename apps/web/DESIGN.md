@@ -50,12 +50,12 @@ own "Whole document" group so they are never lost. The chooser starts at
 ## Article type and the reviewer's brief (S4)
 
 - **"Check as"** is one more control in the composer's row (Format, Check
-  as, Reporting checklist, Show preferences), a select whose labels come
+  as, Reporting checklist, Show preferences, Underlines while writing), a select whose labels come
   from the engine's registry, default Auto. The chosen type's one-line
   summary reads under it. A change checks again whatever is on screen,
   like a stage change in Word. The choice is remembered (this browser, or
-  the account when signed in). The format, the type and the checklist are
-  the only things remembered.
+  the account when signed in). The format, the type, the checklist and the
+  "Underlines while writing" switch are the only things remembered.
 - **One line under the results heading** says what the check ran as:
   "Checked as Research article (from the headings: Methods, Results)."
   for a guess, naming the headings it rested on so a wrong guess is easy
@@ -476,7 +476,8 @@ reply for an older revision is dropped); a failure goes to `offline` and
 retries after 2, 4, 8, 16 and 30 s, then every 30 s, staying `offline`
 while a retry is in flight; any success leaves `offline`; leaving the
 field or pausing goes to `hidden`. The Word pane shows them in its header
-(R4, below); the editor follows in R5.
+(R4, below); the website shows them beside the editor's privacy line (R5,
+below).
 
 ## Shape and density
 
@@ -640,6 +641,78 @@ when they appear and what they mean (docs/inline-review-design.md).
 - **Privacy**: underlines live only in the open document (Word does not
   save them); the pane keeps the checked text in memory only.
 
+## Underlines while writing (S4d R5)
+
+The website's editor underlines as the writer writes; the textarea stays
+native (typing, IME, paste, undo and screen readers are the browser's own).
+
+- **How it is drawn**: behind the textarea, a mirror with the same box,
+  type, wrapping, padding and scroll draws the text in transparent ink and
+  the underlined words with their type's line, colour, pattern and
+  thickness from the tokens (Correction solid, Improvement dashed,
+  Convention dotted, Preference wavy, so colour is never the only cue). A
+  missing word or comma is a small wedge at the insertion point. One block
+  per paragraph, so a keystroke re-lays out only its own paragraph; the
+  mirror follows in the frame after the key, never in it.
+- **When**: about 1.5 s after typing stops, only the paragraphs the writer
+  changed, each with the heading that decides its section (a Markdown
+  `#` line or a plain-text section name such as "Methods"; a "Priors"
+  subsection under "Methods" is sent as Methods, as the full check reads
+  it), one request at a time. Never a sweep of the whole text: switching
+  underlines on, changing the format or loading the demo sends nothing by
+  itself, and a long paste is checked nearest the caret, one request's
+  worth, with one quiet line: "Underlines follow the paragraphs you
+  change; for a long paste, press Check to see the whole text." Answers
+  are kept in memory by a hash of heading and text, so an undo brings its
+  underlines back without a request. A reply for words that changed while
+  it was out is never drawn; underlines on unchanged words in an edited
+  paragraph move with the edit until the answer comes.
+- **Markdown** is sent with its formatting blanked (emphasis marks, link
+  brackets and targets, citations, tags), same length, so every offset
+  still points at the writer's words. **LaTeX** is not underlined (the
+  live check reads plain paragraphs, not markup): one quiet line under the
+  editor says "Underlines while writing are available for plain text and
+  Markdown; press Check for LaTeX." An uploaded file is never live-checked.
+- **Escalation**: hover an underline (about 0.2 s) for the **teaser**, a
+  small panel under the words: the type's badge (icon and name), what was
+  noticed (bold), "Suggested revision (your call):" with the words in the
+  serif, then "Use it" and "Why?" as links. A click on the teaser or "Why?"
+  opens the **full card** (the results' card, unchanged) anchored under the
+  words inside the editor, with "Use this revision" (or "Remove these
+  words") and "Back to your text"; Escape or a click outside closes it and
+  focus returns to the text with the words selected. The revision queue in
+  the results remains the list layer.
+- **Keyboard**: the caret resting in an underline (after arrow keys or a
+  click, never while typing) shows the same teaser after 0.6 s, described
+  to the textarea (`aria-describedby`) and said once in a polite region
+  with the shortcut. **Ctrl + .** (⌘ + . on a Mac) opens the card for the
+  underline at the caret, or the next one. "Underlines in your text (N)",
+  a quiet disclosure under the editor, lists them (type: message (“words”));
+  choosing one selects the words and opens the card.
+- **Accepting** a revision replaces the words through the browser's own
+  editing command, so Ctrl/Cmd + Z undoes it; the words are checked to be
+  unchanged first ("These words have changed since they were checked, so
+  nothing was replaced."), and the paragraph is checked again at once.
+  "Not an issue here" on the card hides that underline for this page;
+  nothing is stored or sent.
+- **States**: the status mark (count badge, ring, tick, warning, crossed
+  out) sits at the end of the privacy row: checking during a live check or
+  Check, the count, nothing to suggest, checked in part (which part was
+  off), can’t check right now with a quiet "Try now" (retrying by itself
+  after 2, 4, 8, 16, 30 s; old underlines are not drawn as current).
+  Nothing before the first check, nothing when switched off. It is not a
+  live region here: one polite region says only a settled count, going
+  offline, an applied revision or a caret teaser, at most every 8 s.
+- **After Check**: the full check's sentence-level suggestions become the
+  underlines of the paragraphs it read, so the two agree exactly;
+  whole-document findings (figure order, abbreviations defined once) are
+  never underlines. A paragraph edited afterwards shows its live answer.
+- **The switch**: "Underlines while writing" beside "Show preferences" in
+  the composer's switch row, on by default, remembered in this browser
+  (`researchly.web.underlines`, a sibling of the Word pane's switch).
+- **Privacy**: the text goes only to the engine, as with Check; answers
+  are held in this page's memory and never stored.
+
 ## States (all reachable, all covered by e2e)
 
 Idle (key + example), invalid input, loading (skeleton, cancellable),
@@ -670,6 +743,12 @@ a card dismissed inside a pass, a long check (still checking), previous
 results while checking, after a cancel and after a failure, the cancelled
 note with and without earlier results.
 
+S4d R5 adds: underlines while writing (each type, a Preference only with
+"Show preferences"), the teaser (by hover and by caret), the card over the
+editor, a revision applied and undone, the underline list, checking,
+count, clear, partial, offline with "Try now", a long paste left to Check,
+LaTeX's one line, switched off.
+
 ## Responsive
 
 - 960px and up: composer beside the key; results in two columns with the
@@ -680,7 +759,7 @@ note with and without earlier results.
   phone the composer's selects stack at one full width, as in the Word pane.
 - In the composer the selects come first, their labels lined up along the
   top; a help line under a select (Check as, Spelling) hangs below it. The
-  switch (Show preferences) and Check take their own row
+  switches (Show preferences, Underlines while writing) and Check take their own row
   under them, so a switch never floats beside a help line.
 - Every disclosure shows its marker: where a summary is a flex row (the
   Word pane's Settings, the queue's "Every issue in this pass" list) it draws the cards'
