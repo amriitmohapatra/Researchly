@@ -9,6 +9,11 @@ combined text back to its file and offset, so a suggestion can be shown in
 `chapters/methods.tex`, not "character 48,112 of a file that does not
 exist".
 
+When several files have a `\\documentclass` of their own (a cover letter
+beside the paper), one is chosen (choose_main) and the Document lists them
+all (`main_candidates`) with the one read (`main_file`); the writer can
+name another (`load_zip(..., main_file=...)`).
+
 Only `.tex` members are read; images, .bib files and nested zips are
 ignored. A missing or non-UTF-8 input, a cycle or nesting deeper than
 MAX_DEPTH is skipped with a warning rather than failing the whole project.
@@ -41,7 +46,11 @@ _DOCCLASS = re.compile(
 _COMMENT = re.compile(r"(?<!\\)%")
 
 
-def load_zip(filename: str, data: bytes) -> Document:
+def load_zip(filename: str, data: bytes,
+             main_file: str | None = None) -> Document:
+    """`main_file` names the project's main .tex file when the writer chose
+    one (the website's "Main file" choice, the CLI's --main); otherwise it
+    is found (choose_main)."""
     zf, members = open_zip(data, ".zip")
     # A .tex that is not UTF-8 is None: an old template nobody \inputs must
     # not sink the project, so it only matters if it is actually read.
@@ -53,10 +62,12 @@ def load_zip(filename: str, data: bytes) -> Document:
                     "utf-8-sig")
             except UnicodeDecodeError:
                 files[name] = None
-    main, note = choose_main(files)
-    text, segments, warnings = expand(files, main)
-    if note:
-        warnings = [note] + warnings
+    candidates = main_candidates(files)
+    if main_file:
+        main = chosen_main(files, main_file)
+    else:
+        main, _ = choose_main(files)
+    text, segments, warnings, skipped = expand(files, main)
 
     def locate(offset: int) -> str:
         path, line, _ = source_position(segments, text, offset)
@@ -66,7 +77,38 @@ def load_zip(filename: str, data: bytes) -> Document:
     doc.path = filename
     doc.segments = segments
     doc.warnings = warnings + doc.warnings
+    # Several files could be the main one: the response lists them and the
+    # one read, so the writer can choose another (Codex review #5).
+    doc.main_file = main
+    doc.main_candidates = candidates
+    if skipped:
+        doc.not_checked = {**doc.not_checked, "skipped_files": skipped}
     return doc
+
+
+def main_candidates(files: dict[str, str | None]) -> list[str]:
+    """Every file that starts a document of its own (a real
+    `\\documentclass`), sorted, when there is more than one; else []."""
+    roots = sorted(n for n, t in files.items() if _is_root(t))
+    return roots if len(roots) > 1 else []
+
+
+def chosen_main(files: dict[str, str | None], wanted: str) -> str:
+    """The .tex file the writer named as the main one."""
+    name = posixpath.normpath(wanted.replace("\\", "/").strip())
+    if name in files:
+        if files[name] is None:
+            raise _not_utf8()
+        return name
+    raise IngestError("unreadable_file",
+                      f"This project has no .tex file called "
+                      f"{_shown(wanted)}. Choose one of its .tex files as "
+                      "the main file.")
+
+
+def _is_root(text: str | None) -> bool:
+    m = _DOCCLASS.search(text) if text is not None else None
+    return bool(m) and m.group(1).strip() != "subfiles"
 
 
 # Files that carry their own \documentclass but are not the paper: a cover
@@ -116,11 +158,7 @@ def find_main_strict(files: dict[str, str | None]) -> str:
                           "This .zip has no .tex files. Download the project "
                           "from Overleaf (Menu, Download, Source) and upload "
                           "that .zip.")
-    roots = []
-    for name, text in files.items():
-        m = _DOCCLASS.search(text) if text is not None else None
-        if m and m.group(1).strip() != "subfiles":
-            roots.append(name)
+    roots = [name for name, text in files.items() if _is_root(text)]
     if not roots and list(files.values()) == [None]:
         raise _not_utf8()
     if len(roots) == 1:
@@ -150,10 +188,13 @@ def _not_utf8() -> IngestError:
 
 
 def expand(files: dict[str, str | None],
-           main: str) -> tuple[str, list[Segment], list[str]]:
+           main: str) -> tuple[str, list[Segment], list[str], int]:
+    """(combined text, segments, warnings, inputs skipped unread). A cycle
+    is warned about but not counted as skipped: its file is read once."""
     parts: list[str] = []
     segments: list[Segment] = []
     warnings: list[str] = []
+    skipped: set[str] = set()
     total = 0
     root = posixpath.dirname(main)
 
@@ -189,15 +230,18 @@ def expand(files: dict[str, str | None],
             cmd, target = m.group(1), _shown(m.group(2))
             child = resolve(files, m.group(2).strip(), path, root)
             if child is None:
+                skipped.add("?" + m.group(2).strip())
                 warn(f"\\{cmd}{{{target}}} was not found in the .zip (or is "
                      "not a .tex file); skipped.")
             elif files[child] is None:
+                skipped.add(child)
                 warn(f"\\{cmd}{{{target}}} is not UTF-8 text; skipped. Save "
                      "it as UTF-8 to have it checked.")
             elif child in stack:
                 warn(f"\\{cmd}{{{target}}} would include a file that is "
                      "already being read (a cycle); skipped.")
             elif len(stack) > MAX_DEPTH:
+                skipped.add(child)
                 warn(f"\\{cmd}{{{target}}} is nested more than {MAX_DEPTH} "
                      "files deep; skipped.")
             else:
@@ -207,7 +251,7 @@ def expand(files: dict[str, str | None],
     if files[main] is None:
         raise _not_utf8()
     visit(main, [main])
-    return "".join(parts), segments, warnings
+    return "".join(parts), segments, warnings, len(skipped)
 
 
 def resolve(files: dict[str, str], target: str, including: str,

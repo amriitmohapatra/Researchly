@@ -33,6 +33,13 @@ describe("upload request builder", () => {
     });
   });
 
+  it("sends the chosen main .tex file of an Overleaf project, and nothing when none was chosen (Codex review #5)", () => {
+    const chosen = buildFileRequest(file("project.zip"), { showPreferences: false, mainFile: "thesis/main.tex" }, null);
+    expect(JSON.parse(chosen.headers["x-researchly-options"]!).main_file).toBe("thesis/main.tex");
+    const none = buildFileRequest(file("project.zip"), { showPreferences: false, mainFile: null }, null);
+    expect(JSON.parse(none.headers["x-researchly-options"]!)).not.toHaveProperty("main_file");
+  });
+
   it("adds the bearer token only when signed in", () => {
     expect(buildFileRequest(file("a.md"), { showPreferences: false }, "tok").headers.authorization).toBe("Bearer tok");
     expect(buildFileRequest(file("a.md"), { showPreferences: false }, null).headers).not.toHaveProperty("authorization");

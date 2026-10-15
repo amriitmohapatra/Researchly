@@ -5,6 +5,7 @@ Usage:
       (.tex .md .qmd .Rmd .txt, Word .docx, Overleaf project .zip)
   python -m researchly rules
   python -m researchly explain RULE_ID
+  python -m researchly doctor      (installation health check)
 
 Options for `check`:
   --all            also show Preference suggestions (hidden by default)
@@ -30,6 +31,7 @@ from pathlib import Path
 from .engine import REGISTRY, Category
 from . import api
 from . import config as config_mod
+from . import shapes
 from .ingest import IngestError, source_position
 
 # --- ANSI ----------------------------------------------------------------
@@ -113,7 +115,12 @@ def cmd_check(args) -> int:
         try:
             # .docx and Overleaf .zip are read by researchly.ingest, the
             # same adapters the hosted engine uses.
-            a = api.analyze(path, nlp=nlp, cfg=cfg,
+            source = path
+            if args.main and path.suffix.lower() == ".zip":
+                from .ingest import load_bytes
+                source = load_bytes(path.name, path.read_bytes(), args.main)
+                source.path = str(path)
+            a = api.analyze(source, nlp=nlp, cfg=cfg,
                             with_metrics=not args.no_metrics)
         except IngestError as e:
             # One unreadable file must not discard the others' results.
@@ -134,6 +141,9 @@ def cmd_check(args) -> int:
             payload.append({
                 "file": str(path),
                 "warnings": list(document.warnings),
+                "reading": shapes.reading_summary(document),
+                "main_file": document.main_file,
+                "main_candidates": list(document.main_candidates),
                 "suggestions": items,
                 "hidden_preferences": a.hidden_preferences,
                 "hidden_by_mode": a.hidden_by_mode,
@@ -185,6 +195,18 @@ def _render(path, document, suggestions, *, hidden_prefs, metrics, explain,
             print(_c(COLORS[Category.CONVENTION], note))
     for w in document.warnings:
         print(_c(COLORS[Category.CONVENTION], f"  ! {w}"))
+    # What was read, set aside and left out (the website's reading line).
+    reading = shapes.reading_sentence(shapes.reading_summary(document))
+    if reading:
+        print(_c(DIM, f"  {reading}"))
+    if document.main_candidates:
+        others = [n for n in document.main_candidates
+                  if n != document.main_file]
+        print(_c(COLORS[Category.CONVENTION],
+                 f"  ! Main file: {document.main_file} (this project has "
+                 f"{len(document.main_candidates)} files that could be the "
+                 f"main one; also {', '.join(others)}). To check another: "
+                 f"--main {others[0] if others else 'FILE'}"))
 
     for s in suggestions:
         tag = _c(COLORS[s.category], f"[{s.category.value}]")
@@ -224,6 +246,17 @@ def _render(path, document, suggestions, *, hidden_prefs, metrics, explain,
         print(_c(DIM, "    (a read-out, not a score — Methods is allowed "
                       "its passives)"))
     print()
+
+
+def cmd_doctor(args) -> int:
+    """The installation health check (Codex review #11)."""
+    from . import doctor
+    cfg = config_mod.load()
+    items = doctor.run(cfg, port=args.port)
+    caps = doctor.capability_summary(cfg)
+    print(doctor.to_json(items, caps) if args.json
+          else doctor.render(items, caps))
+    return doctor.exit_code(items)
 
 
 def cmd_rules(_args) -> int:
@@ -451,7 +484,18 @@ def main(argv=None) -> int:
     p_check.add_argument("--mode", choices=config_mod.MODES, default=None,
                          help="draft: sentence-level checks only; revise: "
                               "everything (default: your settings)")
+    p_check.add_argument("--main", default=None, metavar="FILE",
+                         help="an Overleaf .zip: the main .tex file, by its "
+                              "path in the .zip (default: Researchly chooses)")
     p_check.set_defaults(func=cmd_check)
+
+    p_doc = sub.add_parser(
+        "doctor", help="installation health check: what runs on this "
+                       "computer and what it contacts")
+    p_doc.add_argument("--port", type=int, default=3517,
+                       help="the local server's port (default 3517)")
+    p_doc.add_argument("--json", action="store_true")
+    p_doc.set_defaults(func=cmd_doctor)
 
     p_rules = sub.add_parser("rules", help="list all rules")
     p_rules.set_defaults(func=cmd_rules)

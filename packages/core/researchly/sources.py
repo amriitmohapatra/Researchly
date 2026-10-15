@@ -74,6 +74,15 @@ WORKS = {
                 'research articles: a pedagogically motivated qualitative '
                 'study", English for Specific Purposes 25(3)'),
     "Shehzad": 'W. Shehzad (2008), "Move two: establishing a niche"',
+    # Genre-native units (Codex review #4, 2026-10-15): the parts of a
+    # policy brief, and the comment-and-reply unit of a response letter.
+    "YoungQuinn2002": ("E. Young and L. Quinn (2002), Writing Effective "
+                       "Public Policy Papers: A Guide for Policy Advisers "
+                       "in Central and Eastern Europe, Open Society "
+                       "Institute (the parts of a policy brief)"),
+    "Noble2017": ('W. S. Noble (2017), "Ten simple rules for writing a '
+                  'response to reviewers", PLOS Computational Biology '
+                  "13(10)"),
     "Swales": ("J. M. Swales (1990), Genre Analysis, on the three moves "
                "of a research introduction"),
     "Toulmin": ("S. E. Toulmin (1958), The Uses of Argument, Cambridge "

@@ -2,10 +2,11 @@
 
 import { useCallback, useDeferredValue, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal, flushSync } from "react-dom";
-import type { AnalyzeResponse, ChecklistChoice, SourceInfo, Suggestion } from "@researchly/contract";
+import type { AnalyzeResponse, ChecklistChoice, EvidenceSpan, SourceInfo, Suggestion } from "@researchly/contract";
+import { evidenceHighlight, evidenceId, isEvidenceId, placeable as spanPlaceable, type ScopeChoice } from "@/lib/evidence";
 import { CATEGORIES, CATEGORY_ORDER, countByCategory, sectionLabel } from "@/lib/categories";
 import { toggleMark, type ChecklistMark, type ChecklistMarks, type ChecklistOffer } from "@/lib/checklists";
-import { briefState, narrativeState, profileLine } from "@/lib/profiles";
+import { briefState, narrativeState, profileLine, topicalLine } from "@/lib/profiles";
 import type { ScopeMap } from "@/lib/scope";
 import { resolveSpans, segment, type ResolvedSpan } from "@/lib/segments";
 import { baseId, cellHighlight, cellId } from "@/lib/table-evidence";
@@ -34,6 +35,7 @@ import { NarrativeMap } from "./NarrativeMap";
 import { PrintReport } from "./PrintReport";
 import { ReadingSummary } from "./ReadingSummary";
 import { ReviewBrief } from "./ReviewBrief";
+import { ScopeLine } from "./ScopeLine";
 import { PassChooser, RevisionQueue } from "./RevisionQueue";
 import { SuggestionCard, type CardActions } from "./SuggestionCard";
 import { BASE_VIEWS, ViewTabs, viewIds, type ResultsView } from "./ViewTabs";
@@ -79,7 +81,17 @@ interface Props {
    * under the heading so they are never taken for the new answer.
    */
   previous?: PreviousMark | null;
+  /**
+   * How much of the document the check read the text as (Codex review #4):
+   * the writer's choice this session ("auto" lets the engine infer it), and
+   * a re-check when it changes. Shown beside the brief and the map.
+   */
+  documentScope?: ScopeChoice;
+  onDocumentScope?: ((next: ScopeChoice) => void) | null;
 }
+
+/** A sentence of the brief or the map shown in the text, and where the writer came from. */
+type EvidenceShown = { span: EvidenceSpan; from: ResultsView; key: string };
 
 type FocusRequest = { id: string; target: "mark" | "card" | "undo"; seq: number };
 /** Bring a highlight into view inside the text column without moving keyboard focus (the queue's Next keeps it). */
@@ -116,6 +128,8 @@ export function Results({
   queue: heldQueue,
   onQueue: onHeldQueue,
   previous = null,
+  documentScope = "auto",
+  onDocumentScope = null,
 }: Props) {
   const [ownQueue, setOwnQueue] = useState<QueueState>(QUEUE_START);
   const queueState = heldQueue ?? ownQueue;
@@ -132,6 +146,7 @@ export function Results({
   const sectionId = useId();
   const tabsId = useId();
   const profileText = profileLine(data.profile);
+  const topicalText = topicalLine(data.profile);
   const heldBack = heldBackSentence(data.hidden_by_mode ?? 0);
   const [activeId, setActiveId] = useState<string | null>(null);
   // X401: the card whose table cell is outlined in the text ("Show the cell"), if any.
@@ -204,15 +219,23 @@ export function Results({
     return out;
   }, [submittedText, visible]);
   const shownCell = cellFor ? cells.get(cellFor) : undefined;
+  // A sentence of the brief or the map shown in the text ("Show in text", Codex review #3): outlined, not tinted.
+  const [evidence, setEvidence] = useState<EvidenceShown | null>(null);
+  const textLength = useMemo(() => Array.from(submittedText).length, [submittedText]);
+  const canShow = useCallback((span: EvidenceSpan) => spanPlaceable(span, textLength), [textLength]);
+  const shownEvidence = useMemo(() => {
+    if (!evidence) return undefined;
+    return resolveSpans(submittedText, [evidenceHighlight(evidence.span)]).find((r) => r.inRange);
+  }, [submittedText, evidence]);
   // A grouped spelling question (Codex review #10): every other place the word appears is underlined like its card.
   const places = useMemo(
     () => resolveSpans(submittedText, visible.flatMap(placeHighlights)).filter((r) => r.inRange),
     [submittedText, visible],
   );
-  const segments = useMemo(
-    () => segment(submittedText, [...resolved, ...places, ...(shownCell ? [shownCell] : [])]),
-    [submittedText, resolved, places, shownCell],
-  );
+  const segments = useMemo(() => {
+    const extra = [shownCell, shownEvidence].filter((x): x is ResolvedSpan => !!x);
+    return segment(submittedText, [...resolved, ...places, ...extra]);
+  }, [submittedText, resolved, places, shownCell, shownEvidence]);
   const placeable = useMemo(() => new Set(resolved.map((r) => r.id)), [resolved]);
   const hidden = hiddenPreferenceCount(data, showPreferences);
   // A multi-file upload (an Overleaf project): each card says which file and line it is in.
@@ -291,11 +314,48 @@ export function Results({
     [setQueue],
   );
 
+  /**
+   * "Show in text" from the brief or the map: switch to the text, outline the
+   * sentence and move focus to it. Choosing it, or "Back to …", returns to
+   * the button the writer came from.
+   */
+  const onShowEvidence = useCallback(
+    (span: EvidenceSpan, key: string) => {
+      setCellFor(null);
+      setEvidence({ span, from: view, key });
+      onView("suggestions");
+      setFocusReq((r) => ({ id: evidenceId(span), target: "mark", seq: (r?.seq ?? 0) + 1 }));
+    },
+    [view, onView],
+  );
+  // The "Show in text" button to return focus to once the brief or the map is back on screen.
+  const returnTo = useRef<string | null>(null);
+  const onBackFromEvidence = useCallback(() => {
+    if (!evidence) return;
+    returnTo.current = evidence.key;
+    onView(evidence.from);
+  }, [evidence, onView]);
+  useEffect(() => {
+    const key = returnTo.current;
+    if (!key) return;
+    const el = document.querySelector<HTMLElement>(`[data-show-key="${CSS.escape(key)}"]`);
+    if (!el) return;
+    returnTo.current = null;
+    // A closed disclosure (a map's present move) opens again so the button can take focus.
+    const details = el.closest("details");
+    if (details && !details.open) details.open = true;
+    el.scrollIntoView({ block: "center", inline: "nearest", behavior: "auto" });
+    el.focus({ preventScroll: true });
+  }, [view]);
+
   const onSelectFromText = useCallback(
     (marked: readonly string[]) => {
-      // A table cell's highlight, or another place of a grouped question, stands for its card.
-      const ids = [...new Set(marked.map((m) => placeBase(baseId(m))))];
-      if (ids.length === 0) return;
+      // A table cell's highlight, or another place of a grouped question, stands for its card; an outlined sentence of the brief or the map leads back there.
+      const ids = [...new Set(marked.filter((id) => !isEvidenceId(id)).map((m) => placeBase(baseId(m))))];
+      if (ids.length === 0) {
+        if (marked.some(isEvidenceId)) onBackFromEvidence();
+        return;
+      }
       if (queue) {
         // In a pass, a highlight moves the queue to that finding (repeated clicks cycle overlapping ones).
         const i = queueCurrent ? ids.indexOf(queueCurrent.id) : -1;
@@ -312,10 +372,11 @@ export function Results({
       setActiveId(next);
       setFocusReq((r) => ({ id: next, target: "card", seq: (r?.seq ?? 0) + 1 }));
     },
-    [activeId, queue, queueCurrent, setQueue],
+    [activeId, queue, queueCurrent, setQueue, onBackFromEvidence],
   );
 
   const onShowInText = useCallback((id: string) => {
+    setEvidence(null);
     setCellFor(null);
     setActiveId(id);
     setFocusReq((r) => ({ id, target: "mark", seq: (r?.seq ?? 0) + 1 }));
@@ -330,6 +391,7 @@ export function Results({
 
   /** X401: outline the table cell the card compared, and bring it into view. */
   const onShowCell = useCallback((id: string) => {
+    setEvidence(null);
     setCellFor(id);
     setActiveId(id);
     setFocusReq((r) => ({ id: cellId(id), target: "mark", seq: (r?.seq ?? 0) + 1 }));
@@ -380,6 +442,23 @@ export function Results({
   }, []);
 
   const sections = detected.map(sectionLabel).filter((s): s is string => s !== null);
+  const docLabel = source ? "Text read from your file, with highlighted suggestions" : undefined;
+  // What the check assumed about how much of the document this is, with "Read as" (Codex review #4).
+  const scopeLine = <ScopeLine scope={data.profile?.scope} value={documentScope} onChange={onDocumentScope} disabled={busy} />;
+  // Above the text while a sentence of the brief or the map is outlined in it.
+  const fromLabel = evidence?.from === "narrative" ? "narrative map" : "reviewer’s brief";
+  const evidenceNote = evidence ? (
+    <p className="evidence-back" id="evidence-back-note" data-testid="evidence-back">
+      <span>
+        {shownEvidence
+          ? `Outlined in the text: a sentence from the ${fromLabel}.`
+          : `This sentence from the ${fromLabel} could not be found in the text as checked.`}
+      </span>{" "}
+      <button type="button" className="btn-link" onClick={onBackFromEvidence} data-testid="evidence-back-button">
+        Back to the {fromLabel}
+      </button>
+    </p>
+  ) : null;
   const card = (s: Suggestion, current = false) => (
     <SuggestionCard
       suggestion={s}
@@ -459,6 +538,11 @@ export function Results({
           {profileText}
         </p>
       ) : null}
+      {topicalText ? (
+        <p className="profile-line muted" data-testid="topical-line">
+          {topicalText}
+        </p>
+      ) : null}
       <ReadingSummary reading={data.reading} />
       {heldBack ? (
         <p className="results-line" data-testid="held-back">
@@ -508,11 +592,23 @@ export function Results({
 
       {effectiveView === "brief" ? (
         <div role="tabpanel" {...panelIds("brief")} className="view-panel" data-testid="brief-panel">
-          <ReviewBrief state={briefState(data)} onSwitchToRevise={onRunRevise ?? undefined} />
+          <ReviewBrief
+            state={briefState(data)}
+            onSwitchToRevise={onRunRevise ?? undefined}
+            onShowInText={onShowEvidence}
+            canShow={canShow}
+            scopeLine={scopeLine}
+          />
         </div>
       ) : effectiveView === "narrative" ? (
         <div role="tabpanel" {...panelIds("narrative")} className="view-panel" data-testid="narrative-panel">
-          <NarrativeMap state={narrativeState(data)} onSwitchToRevise={onRunRevise ?? undefined} />
+          <NarrativeMap
+            state={narrativeState(data)}
+            onSwitchToRevise={onRunRevise ?? undefined}
+            onShowInText={onShowEvidence}
+            canShow={canShow}
+            scopeLine={scopeLine}
+          />
         </div>
       ) : effectiveView === "checklist" && data.checklist ? (
         <div role="tabpanel" {...panelIds("checklist")} className="view-panel" data-testid="checklist-panel">
@@ -534,6 +630,13 @@ export function Results({
               </>
             )}
           </div>
+          {/* "Show in text" from the brief or the map still needs the text when there are no suggestions. */}
+          {evidence ? (
+            <div className="doc-col evidence-only" ref={docColRef}>
+              {evidenceNote}
+              <DocumentView segments={segments} activeId={null} onSelect={onSelectFromText} label={docLabel} />
+            </div>
+          ) : null}
         </div>
       ) : (
         <div role="tabpanel" {...panelIds("suggestions")}>
@@ -608,12 +711,8 @@ export function Results({
                 {source ? "Read-only. " : ""}Select a highlight to open its suggestion. Keyboard: Tab into the text, move
                 with the arrow keys, press Enter.
               </p>
-              <DocumentView
-                segments={segments}
-                activeId={queueCurrent?.id ?? activeId}
-                onSelect={onSelectFromText}
-                label={source ? "Text read from your file, with highlighted suggestions" : undefined}
-              />
+              {evidenceNote}
+              <DocumentView segments={segments} activeId={queueCurrent?.id ?? activeId} onSelect={onSelectFromText} label={docLabel} />
             </div>
             {queue ? (
               <div className="list-col">

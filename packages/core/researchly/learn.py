@@ -445,6 +445,43 @@ _CARDS = (
          "the last of your conclusion on one page. They should be about the "
          "same thing, and the last should know more than the first.",
          "workshop-S2+Bunton2005+Kwan2006+Lim2006", rules=("D904", "D905")),
+    Card("policy-brief", "A policy brief: context, evidence, options, "
+         "recommendations", "Structure and argument",
+         "The problem, what is known, the choices, and what to do.",
+         "A policy brief is written for someone who has to decide. It opens "
+         "with the problem and why it needs a decision now, gives the few "
+         "pieces of evidence that matter, sets out the realistic options "
+         "with what each would achieve and cost, and ends with a "
+         "recommendation that names who should act and by when. It argues; "
+         "it does not report a study.",
+         "Measles is a problem. More research is needed. Vaccination is "
+         "important.",
+         "Measles returned to three districts of Oldmere this year after "
+         "uptake fell to 81% (district survey, 2026). Restoring the school "
+         "mandate would lift uptake fastest; funding outreach costs more "
+         "but avoids exclusions. The ministry should restore the mandate "
+         "before the next school year.",
+         "Read only your headings and the first sentence under each: they "
+         "should name the problem, the evidence, the options and the "
+         "action, in that order.",
+         "YoungQuinn2002+§9.8"),
+    Card("response-letter", "A response to reviewers, comment by comment",
+         "Structure and argument",
+         "Each comment, then your reply, then what changed.",
+         "A response letter is read beside the manuscript. Quote or number "
+         "each comment, answer it directly under it, and say exactly what "
+         "changed and where, so the editor can check it without searching. "
+         "Thank the reviewer once, not in every reply, and disagree with "
+         "evidence when you disagree.",
+         "We thank the reviewer for this excellent comment and have "
+         "addressed it.",
+         "Comment 2: the model assumes homogeneous mixing. Response: we "
+         "added an age-structured sensitivity analysis (Methods, second "
+         "paragraph; Supplementary Table 3); the estimates changed by less "
+         "than 5%.",
+         "For every comment, check that the reply names a change and where "
+         "it is, or says why nothing changed.",
+         "Noble2017"),
     # --- Mechanics ------------------------------------------------------------------
     Card("spelling-and-grammar", "Spelling, grammar and slips", "Mechanics",
          "Small slips cost trust out of proportion to their size.",
@@ -511,7 +548,11 @@ _SECTION_CARD = {
     "conclusion": "discussion",
 }
 _MOVE_CARD = {"interpretation": "warranting",
-              "design_limit": "carry-the-gap", "still_open": "carry-the-gap"}
+              "design_limit": "carry-the-gap", "still_open": "carry-the-gap",
+              # A policy brief's units (Codex review #4).
+              "problem": "policy-brief", "brief_evidence": "policy-brief",
+              "options_set_out": "policy-brief", "tradeoffs": "policy-brief",
+              "recommendation": "policy-brief", "who_when": "policy-brief"}
 # The argument's missing links (discourse/argument.py codes).
 LINK_CARD = {
     "claim_without_warrant": "warranting",
@@ -531,6 +572,15 @@ def card_for_rule(rule_id: str):
 
 def card_for_move(section: str, move_id: str):
     return _MOVE_CARD.get(move_id) or _SECTION_CARD.get(section)
+
+
+# The narrative map's genre units that are described rather than mapped
+# to moves (discourse/units.py): a response letter's comment-reply units.
+UNIT_CARD = {"reviewer_comment": "response-letter"}
+
+
+def card_for_unit(kind: str):
+    return UNIT_CARD.get(kind)
 
 
 def card_for_link(code: str):

@@ -333,6 +333,52 @@ own "Whole document" group so they are never lost. The chooser starts at
   alone). Nothing is checked until Check. The same row links the Word and
   Overleaf versions for download. The example-draft button in the key stays.
 
+## Evidence in the text and the scope line (Codex review #3, #4; 2026-10-15)
+
+- **Every sentence the brief or the map rests on can be shown.** Under a
+  question of the brief, each placed sentence has its kind in small sans
+  ("A causal claim", "The gap"), the writer's sentence quoted in the serif
+  with a solid left rule, and a quiet **Show in text** link. A claim sits
+  beside its proposed evidence, two columns that stack on a phone: "Its
+  evidence (found nearby)" with that sentence (dashed rule), or "Its
+  evidence (not detected)" with one plain line saying what was not found.
+  Nothing is ever linked by guess: a sentence the engine could not place,
+  or one outside the checked text, is quoted without a link. A multi-file
+  project names the file and line ("sections/discussion.tex, line 3")
+  before the link. The bare quotes of an older engine still show as before.
+  On the map, a present move's sentence (behind "Show the sentence") and a
+  missing link's sentences carry the same link.
+- **On the website** Show in text switches to the Suggestions tab, outlines
+  the sentence in the text (a solid focus-blue outline, never a tint: it
+  is evidence, not a finding) and moves focus to it. One quiet line above
+  the text says where it came from, "Outlined in the text: a sentence from
+  the reviewer’s brief.", with **Back to the reviewer’s brief**; that link,
+  or choosing the outlined sentence, returns to the tab with focus on the
+  link the writer used. With no suggestions the text still appears under
+  the empty state while a sentence is shown. **In Word** the link selects
+  the sentence in the document, as a card does; an approximate or failed
+  selection is said in one line above the brief.
+- **The scope line**: how much of the document the check took the text to
+  be, separate from the article type. Inferred, never asked up front (the
+  composer row already has its controls): one muted line at the top of the
+  brief and of the map says what was assumed and what it changes ("Read as
+  an excerpt (its only section is Methods): sections that are not in it are
+  not asked for."), with a small **Read as** select (Auto (excerpt), Whole
+  document, Chapter, Excerpt) that checks again. The choice lasts the
+  session and is never stored; Auto is not sent. The same line prints, without
+  the select.
+- **Topical headings** read from their wording are named in one more quiet
+  line under the profile line ("Topical heading read from the wording under
+  it: “Experiment 1: the baseline SEIR” as Methods."), so the writer can see
+  why passive voice was not flagged there.
+- **Genre units on the map.** A policy brief organised by Context,
+  Evidence, Options and Recommendations gets one strip per unit with its
+  own moves, and the note names a unit the headings do not show (whole
+  documents only). A response to reviewers opens with "Comments and
+  replies": each comment beside the reply under it, labelled "Reviewer 1,
+  comment 2", with "No reply was recognised under this comment." where none
+  was; no status words, no judgement.
+
 ## The table cell on an X401 card (2026-10-14)
 
 When a sentence names a row and a column of a table and quotes a number
@@ -384,6 +430,28 @@ and Next as before.
   English." in the engine's own words (singular for one). Only the word
   count when nothing was set aside; nothing from an engine without it. The
   same line in the Word pane's results. Warnings stay where they were.
+- The coverage summary (2026-10-15) extends the same line, never a second
+  one: "Checked 4,210 words, including 3 footnotes." (LaTeX footnotes, read
+  where they are cited); "Not checked: 3 footnotes · 1 text box · 2 headers
+  or footers." (what a .docx upload leaves out; an Overleaf project's
+  included files that could not be read); "Researchly checks English
+  only." when a paragraph was set aside as another language. In Word the
+  pane adds what Word itself counts without reading it (footnotes and
+  endnotes, comments, text boxes, where the host's API can count them).
+  Counts and fixed labels only.
+- **Main file** (2026-10-15): an Overleaf project with more than one file
+  that starts a document gets a "Main file" select in the file panel,
+  below the warnings, set to the file that was read, with one help line
+  ("This project has 2 files that each start a document. Researchly
+  checked main.tex; choose another to check it instead."). Choosing one
+  re-checks the same upload with that root; later re-checks keep it. No
+  select when there was no choice to make.
+- **"This computer" in Word's Settings** (2026-10-15): under the engine
+  choice, one help line from the local server's own health says what it
+  checks and what it contacts ("This computer checks writing rules,
+  spelling, grammar and whole-document checks, and builds the reviewer’s
+  brief and the map. It sends nothing over the network."), naming a check
+  that is off and why. Only when This computer is chosen and answering.
 
 ## The printable report (S4)
 

@@ -278,7 +278,7 @@ def _analyze_file(request: Request, name: str, data: bytes,
                   options: AnalyzeOptions, grammar_enabled: bool,
                   who: dict) -> AnalyzeFileResponse:
     try:
-        doc = ingest.load_bytes(name, data)
+        doc = ingest.load_bytes(name, data, options.main_file)
     except ingest.IngestError as e:
         raise ApiError(INGEST_STATUS.get(e.code, 422), e.code, e.message) from None
     del data
@@ -297,7 +297,8 @@ def _analyze_file(request: Request, name: str, data: bytes,
         structure=[StructureItem(kind=i.kind, start=i.start, end=i.end,
                                  label=i.label) for i in doc.structure
                    if i.kind in PUBLIC_STRUCTURE],
-        warnings=list(doc.warnings))
+        warnings=list(doc.warnings),
+        main_file=doc.main_file, main_candidates=list(doc.main_candidates))
     resp = engine_adapter.run_analysis(
         doc, doc.kind, options, grammar_enabled=grammar_enabled,
         response_cls=AnalyzeFileResponse, document=info, **who)
@@ -309,10 +310,11 @@ def _analyze_file(request: Request, name: str, data: bytes,
             tags=["meta"])
 def health(request: Request) -> HealthResponse:
     """Per-tier status. A degraded tier is reported, never hidden."""
-    tiers = engine_adapter.health_tiers(_settings(request).grammar_enabled)
+    tiers, caps = engine_adapter.health_and_capabilities(
+        _settings(request).grammar_enabled)
     return HealthResponse(
         status="degraded" if engine_adapter.is_degraded(tiers) else "ok",
-        tiers=tiers, engine=engine_adapter.engine_info())
+        tiers=tiers, engine=engine_adapter.engine_info(), capabilities=caps)
 
 
 @router.get("/v1/rules", response_model=RulesResponse, operation_id="listRules",

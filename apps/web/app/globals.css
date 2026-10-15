@@ -1707,6 +1707,13 @@ main:focus {
 .file-panel .controls {
   margin-top: 8px;
 }
+.file-main {
+  margin-top: 8px;
+  max-width: var(--measure);
+}
+.file-main .select {
+  max-width: 100%;
+}
 .busy-label {
   display: inline-flex;
   align-items: center;
@@ -2240,6 +2247,10 @@ main:focus {
   padding: 0;
   border: 0;
   min-width: 0;
+}
+.tp-capabilities {
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
 }
 .tp-radio {
   align-items: flex-start;
@@ -4433,6 +4444,131 @@ main:focus {
 }
 
 /* end Word pane: underlines and states (R4) */
+
+/* ---------- evidence-linked brief and genre-native profiles (Codex review #3, #4) ----------
+   The sentences the brief and the map rest on, each with "Show in text"; a
+   claim beside its proposed evidence; the "Read as" scope line; a response
+   letter's comments beside their replies. Outlined, never tinted: evidence,
+   not a finding. */
+.evl {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.evl-item {
+  display: grid;
+  gap: 8px;
+}
+.evl-pair {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  column-gap: 16px;
+}
+.evl-side {
+  min-width: 0;
+}
+.evl-label {
+  font-size: 0.875rem;
+  color: var(--ink-2);
+}
+.evl-status {
+  font-style: italic;
+}
+.evl-text {
+  margin: 4px 0 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--line-strong);
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.evl-evidence .evl-text {
+  border-left-style: dashed;
+}
+.evl-text q {
+  quotes: "\201C" "\201D";
+}
+.evl-meta {
+  margin-top: 2px;
+  font-size: 0.875rem;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.evl-note {
+  margin-top: 4px;
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+.nmap-show {
+  padding-left: 14px;
+}
+.hl.hl-evidence {
+  background: transparent;
+  color: inherit;
+  text-decoration-line: none;
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.hl.hl-evidence-edge {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.evidence-back {
+  margin: 0 0 8px;
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+}
+.evidence-only {
+  margin-top: 16px;
+}
+.scope-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 16px;
+  margin: 8px 0 4px;
+}
+.scope-note {
+  flex: 1 1 280px;
+  font-size: 0.9375rem;
+  text-wrap: pretty;
+}
+.scope-control {
+  flex: 0 0 auto;
+}
+.nmap-units {
+  margin-top: 16px;
+}
+.nmap-units-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 16px;
+}
+.nmap-unit {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.nmap-unit-label {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+@media print {
+  .evl-show,
+  .scope-control {
+    display: none;
+  }
+  .evl-pair {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+/* end evidence-linked brief and genre-native profiles */
 
 /* ---------- repeated words: one question, every place (Codex review #10; components/PlacesNav.tsx) ---------- */
 

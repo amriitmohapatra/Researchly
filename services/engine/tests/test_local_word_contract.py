@@ -41,7 +41,8 @@ PARAS = [{"text": "Introduction", "style": "Heading 1"},
 EVERY_OPTION = {
     "show_preferences": True, "disabled_rules": ["W204"], "mode": "revise",
     "document_type": "auto", "spelling": "uk", "review": True,
-    "narrative": True, "checklist": "auto",
+    "narrative": True, "checklist": "auto", "document_scope": "chapter",
+    "main_file": "main.tex",
 }
 
 
@@ -55,6 +56,10 @@ def test_the_local_server_accepts_every_option_and_answers_the_contract(server):
     resp = AnalyzeWordResponse.model_validate(raw)    # extra=forbid
     assert resp.review is not None and resp.narrative is not None
     assert resp.profile.id.value == "manuscript"
+    assert resp.profile.scope.id == "chapter" and not resp.profile.scope.guessed
+    # The brief's evidence is placed in Word, as a suggestion is.
+    links = [x for q in resp.review.questions for x in q.links]
+    assert links and all(x.claim.location is not None for x in links)
     assert all(s.plain for s in resp.suggestions)
     assert any(s.learn_ref for s in resp.suggestions)
 

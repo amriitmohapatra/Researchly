@@ -145,10 +145,12 @@ def test_main_file_detection():
                 "Proj/s.tex": "Inside."})
     assert "Inside." in doc.original
     # two indistinguishable roots: one is chosen (deterministically) and the
-    # user is told which, rather than the project being refused (P29)
+    # user is told which, rather than the project being refused (P29); the
+    # response lists both so the writer can choose (Codex review #5)
     tie = load({"a.tex": root, "b.tex": root})
     assert tie.segments[0].path in ("a.tex", "b.tex")
-    assert any("several main .tex files" in w for w in tie.warnings)
+    assert tie.main_file == tie.segments[0].path
+    assert tie.main_candidates == ["a.tex", "b.tex"]
     rejected(zip_bytes({"a.tex": "x", "b.tex": "y"}), "unreadable_file")
     rejected(zip_bytes({"readme.md": SECRET}), "unreadable_file")
 
@@ -305,7 +307,8 @@ def test_cover_letter_beside_the_manuscript_is_not_the_main_file():
     doc = load_bytes("p.zip", zip_bytes(files))
     assert "The model was fitted." in doc.original
     assert "Dear Editor" not in doc.original
-    assert any("checked manuscript.tex" in w for w in doc.warnings)
+    assert doc.main_file == "manuscript.tex"
+    assert doc.main_candidates == ["cover_letter.tex", "manuscript.tex"]
 
 
 def test_two_versions_prefer_the_one_that_includes_more():
@@ -314,4 +317,5 @@ def test_two_versions_prefer_the_one_that_includes_more():
              "a.tex": "Part A.\n", "b.tex": "Part B.\n"}
     doc = load_bytes("p.zip", zip_bytes(files))
     assert "Long version." in doc.original and "Part B." in doc.original
-    assert any("paper_journal.tex" in w and "paper.tex" in w for w in doc.warnings)
+    assert doc.main_file == "paper_journal.tex"
+    assert doc.main_candidates == ["paper.tex", "paper_journal.tex"]
