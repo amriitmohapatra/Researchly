@@ -1,0 +1,66 @@
+{
+  "revision": 7,
+  "paragraphs": [
+    {
+      "id": "p1",
+      "suggestions": [
+        {
+          "id": "sug-spell-1",
+          "begin": 26,
+          "end": 29,
+          "category": "correction",
+          "critical": true,
+          "message": "Possible spelling mistake.",
+          "plain": "This word looks misspelt.",
+          "why": "A synthetic explanation written for this test.",
+          "source": "Researchly test fixture",
+          "replacements": ["the"],
+          "section": "methods",
+          "fix_safety": "safe"
+        },
+        {
+          "id": "sug-agree-1",
+          "begin": 4,
+          "end": 12,
+          "category": "convention",
+          "critical": false,
+          "message": "Many journals treat data as plural.",
+          "plain": "Some style guides prefer 'data were'.",
+          "why": "A synthetic explanation written for this test.",
+          "source": "Researchly test fixture",
+          "replacements": ["data were"],
+          "section": "methods",
+          "fix_safety": "review"
+        }
+      ]
+    },
+    {
+      "id": "p2",
+      "suggestions": [
+        {
+          "id": "sug-pref-1",
+          "begin": 17,
+          "end": 27,
+          "category": "preference",
+          "critical": false,
+          "message": "Consider a more measured claim.",
+          "plain": "",
+          "why": "A synthetic explanation written for this test.",
+          "source": "Researchly test fixture",
+          "replacements": [],
+          "section": "discussion",
+          "fix_safety": "review"
+        }
+      ]
+    }
+  ],
+  "health": {
+    "status": "ok",
+    "tiers": [
+      { "tier": "parser", "label": "Parser", "ok": true, "state": "ready" },
+      { "tier": "grammar", "label": "Grammar", "ok": true, "state": "ready" },
+      { "tier": "gec", "label": "Learned edits", "ok": false, "state": "disabled" }
+    ]
+  },
+  "state": "issues"
+}

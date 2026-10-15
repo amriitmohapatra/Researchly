@@ -1,0 +1,151 @@
+{
+  "$comment": "Researchly's own per-app rules for the Windows overlay client (apps/desktop-overlay-win; docs/inline-review-design.md section 6). Written from scratch for Researchly, 2026-10-15. Apps are matched by executable name, case-insensitively, with or without .exe. An app with no row gets the defaults (on), so any well-behaved text field works; rows hold the exceptions. Widget offsets are inward from the chosen corner, in device-independent pixels (1/96 inch), chosen to clear each app's own scroll bars and resize grips. write_back lists methods in the order they are tried: select-type (select through UI Automation, type the revision), select-paste (select, paste, restore the clipboard), value-set (replace the whole value; may lose the host's undo, so no app uses it first). text_source 'visible' reads only the paragraphs on screen, for long documents. editable_documents marks editors whose document element is always the writing surface; elsewhere a document (such as a web page) counts only when the app says it is editable. Add an app by adding a row, not code.",
+  "version": 1,
+  "defaults": {
+    "enabled": true,
+    "widget": { "corner": "bottom-right", "offset_x": 10, "offset_y": 8 },
+    "forbidden_corners": [],
+    "write_back": ["select-type", "select-paste"],
+    "polling": { "needed": false, "interval_ms": 1000 },
+    "text_source": "document",
+    "document_max_chars": 20000
+  },
+  "apps": [
+    {
+      "label": "Microsoft Word",
+      "process": ["WINWORD.EXE"],
+      "enabled": true,
+      "editable_documents": true,
+      "widget": { "corner": "bottom-right", "offset_x": 30, "offset_y": 14 },
+      "forbidden_corners": ["top-left", "top-right"],
+      "write_back": ["select-type", "select-paste"],
+      "polling": { "needed": true, "interval_ms": 800 },
+      "text_source": "visible"
+    },
+    {
+      "label": "Outlook",
+      "process": ["OUTLOOK.EXE", "olk.exe"],
+      "enabled": true,
+      "editable_documents": true,
+      "widget": { "corner": "bottom-right", "offset_x": 28, "offset_y": 12 },
+      "forbidden_corners": ["top-right"],
+      "write_back": ["select-type", "select-paste"],
+      "polling": { "needed": true, "interval_ms": 800 },
+      "text_source": "visible"
+    },
+    {
+      "label": "Notepad",
+      "process": ["notepad.exe"],
+      "enabled": true,
+      "editable_documents": true,
+      "widget": { "corner": "bottom-right", "offset_x": 26, "offset_y": 10 },
+      "write_back": ["select-type", "select-paste"],
+      "polling": { "needed": false, "interval_ms": 1000 }
+    },
+    {
+      "label": "WordPad",
+      "process": ["wordpad.exe"],
+      "enabled": true,
+      "editable_documents": true,
+      "widget": { "corner": "bottom-right", "offset_x": 26, "offset_y": 10 },
+      "write_back": ["select-type", "select-paste"],
+      "polling": { "needed": true, "interval_ms": 1000 }
+    },
+    {
+      "label": "Microsoft Edge",
+      "process": ["msedge.exe"],
+      "enabled": true,
+      "widget": { "corner": "bottom-right", "offset_x": 20, "offset_y": 6 },
+      "write_back": ["select-type", "select-paste"],
+      "polling": { "needed": false, "interval_ms": 1000 }
+    },
+    {
+      "label": "Google Chrome",
+      "process": ["chrome.exe"],
+      "enabled": true,
+      "widget": { "corner": "bottom-right", "offset_x": 20, "offset_y": 6 },
+      "write_back": ["select-type", "select-paste"],
+      "polling": { "needed": false, "interval_ms": 1000 }
+    },
+    {
+      "label": "Firefox",
+      "process": ["firefox.exe"],
+      "enabled": true,
+      "widget": { "corner": "bottom-right", "offset_x": 20, "offset_y": 6 },
+      "write_back": ["select-type", "select-paste"],
+      "polling": { "needed": true, "interval_ms": 1000 }
+    },
+    {
+      "label": "Microsoft Teams",
+      "process": ["ms-teams.exe", "Teams.exe"],
+      "enabled": true,
+      "widget": { "corner": "top-right", "offset_x": 12, "offset_y": 6 },
+      "forbidden_corners": ["bottom-right"],
+      "write_back": ["select-type", "select-paste"],
+      "polling": { "needed": true, "interval_ms": 1000 }
+    },
+    {
+      "label": "Slack",
+      "process": ["slack.exe"],
+      "enabled": true,
+      "widget": { "corner": "top-right", "offset_x": 12, "offset_y": 6 },
+      "forbidden_corners": ["bottom-right"],
+      "write_back": ["select-type", "select-paste"],
+      "polling": { "needed": true, "interval_ms": 1000 }
+    },
+    {
+      "label": "Windows Terminal",
+      "process": ["WindowsTerminal.exe", "OpenConsole.exe", "conhost.exe"],
+      "enabled": false,
+      "reason": "terminal"
+    },
+    {
+      "label": "Command Prompt",
+      "process": ["cmd.exe"],
+      "enabled": false,
+      "reason": "terminal"
+    },
+    {
+      "label": "PowerShell",
+      "process": ["powershell.exe", "pwsh.exe", "powershell_ise.exe"],
+      "enabled": false,
+      "reason": "terminal"
+    },
+    {
+      "label": "Visual Studio Code",
+      "process": ["Code.exe", "Code - Insiders.exe"],
+      "enabled": false,
+      "reason": "code editor; Researchly's language server already covers VS Code"
+    },
+    {
+      "label": "Visual Studio",
+      "process": ["devenv.exe"],
+      "enabled": false,
+      "reason": "code editor"
+    },
+    {
+      "label": "KeePass",
+      "process": ["KeePass.exe", "KeePassXC.exe"],
+      "enabled": false,
+      "reason": "password manager"
+    },
+    {
+      "label": "1Password",
+      "process": ["1Password.exe"],
+      "enabled": false,
+      "reason": "password manager"
+    },
+    {
+      "label": "Bitwarden",
+      "process": ["Bitwarden.exe"],
+      "enabled": false,
+      "reason": "password manager"
+    },
+    {
+      "label": "Researchly",
+      "process": ["Researchly.Overlay.exe"],
+      "enabled": false,
+      "reason": "Researchly's own windows"
+    }
+  ]
+}

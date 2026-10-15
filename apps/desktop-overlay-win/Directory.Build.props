@@ -1,0 +1,18 @@
+<Project>
+  <!-- Shared settings for every project in the Windows overlay client. -->
+  <PropertyGroup>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <!-- Explicit usings everywhere: WPF and Windows Forms share type names
+         (Application, Point, Color), so implicit global usings would clash. -->
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Deterministic>true</Deterministic>
+    <Version>0.1.0</Version>
+    <Company>Researchly</Company>
+    <Product>Researchly</Product>
+    <Copyright>Researchly contributors. MIT licence.</Copyright>
+    <NeutralLanguage>en</NeutralLanguage>
+    <!-- The repository's rule files (packages/desktop-rules), relative to this folder. -->
+    <ResearchlyRulesDir>$(MSBuildThisFileDirectory)..\..\packages\desktop-rules\</ResearchlyRulesDir>
+  </PropertyGroup>
+</Project>
