@@ -426,7 +426,7 @@ def test_hyperparameters_are_apple_silicon_safe():
     h = pipeline.hyper(5184, "mps", False)
     assert h["micro_batch"] == 1 and h["effective_batch"] == 64
     assert h["epochs"] == 3
-    a = pipeline.hyper(1122, "mps", False)
+    a = pipeline.hyper(1033, "mps", False)
     assert a["micro_batch"] == 1 and a["grad_accum"] == 32 and a["epochs"] == 5
     c = pipeline.hyper(5184, "cuda", False)
     assert c["micro_batch"] * c["grad_accum"] == 64

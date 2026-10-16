@@ -38,16 +38,16 @@ TITLES = {"a": "Task A: is this flag useful?",
 
 # Rough seconds per item (train = forward + backward; eval = forward), for
 # the plan's time estimates. CUDA: Laya's own T4 figure (4-5 h for 4 epochs
-# over ~30k questions). CPU: measured in the container (4 cores, contended).
+# over ~30k questions). CPU and INT8: measured on 2026-10-16 quick runs in a 4-core container.
 # MPS: an estimate for an M1/M2 16 GB. A --quick run measures the real rate on
 # your machine and prints the projection for the full run.
 RATES = {  # device: {task: (train s/item, eval s/item)}
     "cuda": {"b": (0.08, 0.02), "a": (0.20, 0.05)},
-    "mps": {"b": (0.8, 0.15), "a": (2.0, 0.4)},
-    "cpu": {"b": (2.5, 0.5), "a": (7.0, 1.4)},
+    "mps": {"b": (0.8, 0.15), "a": (1.6, 0.35)},
+    "cpu": {"b": (2.4, 0.5), "a": (4.5, 0.9)},
 }
-INT8_EVAL = {"b": 0.25, "a": 0.7}     # seconds per item, ONNX Runtime on CPU
-EXPORT_MIN = 12                        # minutes: trace, quantize, check
+INT8_EVAL = {"b": 0.36, "a": 0.7}     # seconds per item, ONNX Runtime on CPU
+EXPORT_MIN = 6                         # minutes: trace, quantize, check (~4 measured on CPU)
 
 
 def count_lines(path: Path) -> int:
@@ -95,7 +95,7 @@ def default_sizes(task: str, quick: bool) -> dict:
     if quick:
         return ({"train": 96, "dev": 48, "test": 48} if task == "a" else
                 {"train": 240, "dev": 60, "test": 60})
-    return ({"train": 1122, "dev": 162, "test": 246} if task == "a" else
+    return ({"train": 1033, "dev": 217, "test": 280} if task == "a" else
             {"train": 5184, "dev": 565, "test": 790})
 
 

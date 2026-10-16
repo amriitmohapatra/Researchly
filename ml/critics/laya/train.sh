@@ -234,7 +234,7 @@ noise_floor() {
   mkdir -p "$RUN_DIR/noise"
   (cd "$REPO/ml/dogfood" && RESEARCHLY_CORPUS_OUT="$RUN_DIR/noise" \
      PYTHONPATH="$REPO/packages/core" "$PY" run_dogfood.py) > "$RUN_DIR/noise/run.log" 2>&1
-  tail -n 3 "$RUN_DIR/noise/run.log" | head -n 1
+  grep "^TOTAL" "$RUN_DIR/noise/run.log" || tail -n 1 "$RUN_DIR/noise/run.log"
 }
 
 run_gate() {

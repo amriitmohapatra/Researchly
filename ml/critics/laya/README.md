@@ -38,7 +38,7 @@ What you need:
 | Python | Homebrew `python3.10` with the engine installed (`pip install -r packages/core/requirements.txt`, `python -m spacy download en_core_web_sm`, Java for the grammar tier). The script makes its own ML venv in `~/.venvs/laya`. |
 | Disk | About 1 GB for the corpus cache and the base model, plus about 2.5 GB per trained task (checkpoint and INT8 ONNX), plus about 3 GB more while exporting. |
 | Memory | Training holds about 8–10 GB on a 16 GB Mac, so close other large apps. |
-| Time on an M1/M2 (rough) | Task B: about 3.5 hours. Task A: about 3 hours. Export and evaluation: about 40 minutes. On CPU only (no `mps`) it is several times slower: about 2.4 s per training sentence (Task B) was measured on a 4-core Linux container. The `--quick` run measures your Mac's real speed and prints a projection. If you would rather not wait, use Kaggle (below). |
+| Time on an M1/M2 (rough) | Task B: about 3.5 hours. Task A: about 2.5 hours. Export and evaluation: about 40 minutes. On CPU only (no `mps`) it is several times slower: about 2.4 s per training sentence (Task B) was measured on a 4-core Linux container. The `--quick` run measures your Mac's real speed and prints a projection. If you would rather not wait, use Kaggle (below). |
 
 ## …or on Kaggle's free GPU, in 6 steps
 
@@ -81,7 +81,7 @@ inside the kit name every article. Your own paragraphs are never in the kit.
 | 5. Fine-tune Laya (Task B, then Task A) | `pipeline.py` → `finetune.py` | `b/ckpt`, `a/ckpt` |
 | 6. Score dev and test; fit a temperature on dev; choose the threshold on dev | `evaluate.py` | `*/eval-ckpt-*.json` |
 | 7. Export to INT8 ONNX, score it again (this is the graph that would ship), and pin it with SHA-256, `critic.json` and a filled model card | `export_onnx.py`, `evaluate.py` | `*/critic/`, `*/eval-int8-*.json` |
-| 8. Noise floor on the private thesis corpus, if it is on this machine | `ml/dogfood/run_dogfood.py` | `noise/` |
+| 8. Noise floor on the private thesis corpus, if it is on this machine. No critic runtime is wired into the engine yet, so this measures the engine as it is (11.54 on 2026-10-16) | `ml/dogfood/run_dogfood.py` | `noise/` |
 | 9. The promotion gate, and installation into `~/.researchly/models/critic` only on PROMOTE | `gate.py` | `*/gate.txt`, `*/gate.json` |
 | 10. A plain-language summary | `pipeline.py summary` | `SUMMARY.txt` |
 
@@ -89,9 +89,9 @@ inside the kit name every article. Your own paragraphs are never in the kit.
 
 | Task A | train | dev | test |
 |---|---|---|---|
-| Synthetic drafts: parts A, B and C, renumbered 1–450; split 70/15/15 by paragraph | 466 | 109 | 112 |
-| Published articles: the corpus's own test split stays the test; dev is 15% of its train split, taken by article | 590 | 84 | 169 |
-| All (useful / wrong) | 1,056 (≈ 1 : 1) | 193 | 281 |
+| Synthetic drafts: parts A, B and C, renumbered 1–450; split 70/15/15 by paragraph | 467 | 109 | 111 |
+| Published articles: the corpus's own test split stays the test; dev is 15% of its train split, taken by article | 566 | 108 | 169 |
+| All (useful / wrong) | 1,033 (505 / 528) | 217 (116 / 101) | 280 (128 / 152) |
 
 - Every split is stratified by rule and verdict. No paragraph sits in two
   splits, and no corpus article sits in two splits either.
@@ -123,6 +123,7 @@ trainer also fits its own temperatures.
   precision is how many of those answers are right. The gate needs
   precision of at least 0.85 on test. If no threshold reaches 0.85 on dev,
   the critic would never answer (threshold 1.0), and the summary says so.
+- **INT8 versus the checkpoint:** the numbers the gate reads are from the INT8 graph, because that is what would ship. The summary also shows the PyTorch checkpoint's accuracy and how often INT8 gives the same answer. In the smoke runs here, INT8 matched 78–81% of answers and cost accuracy (roles 0.60 → 0.52). Laya's own notes warn of this.
 - **ECE** (calibration error): the gap between how sure the model says it
   is and how often it is right. Lower is better. The gate warns above 0.10.
 - **Task A, with the critic:** the share of the engine's flags that are
