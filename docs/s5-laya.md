@@ -152,7 +152,14 @@ synthetic files. The owner runs it after fine-tuning (§5).
 
 ## 5. What the owner should run
 
-Exact commands are in [`ml/critics/laya/README.md`](../ml/critics/laya/README.md). In short:
+**Since 2026-10-16 this is one command**: `bash ml/critics/laya/train.sh`
+(on the Mac; `--quick` first), or `make_kaggle_kit.sh` +
+`kaggle_notebook.ipynb` + `train.sh --import laya-outputs.zip` (Kaggle's free
+GPU). It fetches the corpus, assembles Task A (synthetic drafts + published
+-article flags) and Task B data, trains, calibrates, exports INT8 ONNX, runs
+the noise floor and the gate, and prints a summary. See
+[`ml/critics/laya/README.md`](../ml/critics/laya/README.md). The manual steps
+below still work:
 
 1. **Corpus on your Mac** (~15 min, ~300 MB outside the repo):
    `python3.10 ml/corpus/harvest.py all --per-discipline 170 && python3.10 ml/corpus/weak_labels.py`

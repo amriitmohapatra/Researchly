@@ -32,9 +32,11 @@ from __future__ import annotations
 import argparse
 import json
 import random
+import shutil
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
+from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import harness  # noqa: E402
@@ -134,29 +136,107 @@ def cmd_data(a) -> int:
     return 0
 
 
-def cmd_train(a) -> int:
-    from laya.train import TrainConfig, finetune
-    cfg = TrainConfig(epochs=a.epochs, micro_batch=a.micro_batch,
-                      grad_accum=a.grad_accum, loss=a.loss,
-                      shuffle_options=("choice",) if a.shuffle_options else (),
-                      seed=a.seed,
-                      eval_data=str(a.eval_data) if a.eval_data else None)
-    base = a.base
-    if not Path(base).exists():
-        # Pin the base checkpoint: Laya's trainer takes a Hub id without a
-        # revision, so fetch the pinned snapshot and train from the folder.
-        from huggingface_hub import snapshot_download
-        base = snapshot_download(base, revision=a.revision, allow_patterns=[
-            "model.safetensors", "rl_agent_config.json", "config.json",
-            "encoder/*", "tokenizer/*"])
-    report = finetune(str(a.data), base, str(a.out_dir), cfg,
-                      device=a.device)
+PROGRESS = "researchly-progress.json"
+
+
+def base_checkpoint(base: str = harness.LAYA_REPO,
+                    revision: str = harness.LAYA_REVISION) -> str:
+    """A local folder for the base model. Laya's trainer takes a Hub id
+    without a revision, so the pinned snapshot is fetched and trained from."""
+    if Path(base).exists():
+        return str(base)
+    from huggingface_hub import snapshot_download
+    return snapshot_download(base, revision=revision, allow_patterns=[
+        "model.safetensors", "rl_agent_config.json", "config.json",
+        "encoder/*", "tokenizer/*"])
+
+
+def read_progress(out_dir: Path) -> dict:
+    try:
+        return json.loads((Path(out_dir) / PROGRESS).read_text())
+    except (OSError, ValueError):
+        return {}
+
+
+def train(data: Path, out_dir: Path, *, eval_data: Optional[Path] = None,
+          base: str = harness.LAYA_REPO, revision: str = harness.LAYA_REVISION,
+          device: str = "auto", epochs: int = 4, micro_batch: int = 8,
+          grad_accum: int = 8, loss: str = "soft-ce",
+          shuffle_options: bool = True, seed: int = 0,
+          resume: bool = True) -> dict:
+    """Laya's trainer, resumable by epoch.
+
+    Laya writes ``checkpoint_latest/`` after every epoch; this wrapper
+    records how many epochs that checkpoint holds (``researchly-progress
+    .json``). Run again after an interruption and it continues from
+    ``checkpoint_latest`` for the epochs still owed (the learning-rate
+    schedule restarts over those epochs: close to, not identical with, an
+    uninterrupted run; the report says so). A finished run is not redone.
+    """
+    import laya.train as lt
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    progress = read_progress(out_dir)
+    if progress.get("finished") and resume:
+        return json.loads((out_dir / "researchly-train-report.json")
+                          .read_text())
+    done = int(progress.get("epochs_done", 0)) if resume else 0
+    latest = out_dir / "checkpoint_latest"
+    start = base_checkpoint(base, revision)
+    resumed_from = None
+    if resume and 0 < done < epochs and latest.is_dir():
+        resume_dir = out_dir / "resume-base"
+        if resume_dir.exists():
+            shutil.rmtree(resume_dir)
+        latest.rename(resume_dir)
+        start, resumed_from = str(resume_dir), done
+    else:
+        done = 0
+    remaining = epochs - done
+    cfg = lt.TrainConfig(epochs=remaining, micro_batch=micro_batch,
+                         grad_accum=grad_accum, loss=loss,
+                         shuffle_options=("choice",) if shuffle_options
+                         else (), seed=seed + done,
+                         eval_data=str(eval_data) if eval_data else None)
+
+    real_save = lt.save_checkpoint
+    state = {"epochs_done": done}
+
+    def save_and_record(model, tok, cfg_dict, path):
+        real_save(model, tok, cfg_dict, path)
+        if Path(path).name == "checkpoint_latest":
+            state["epochs_done"] += 1
+            (out_dir / PROGRESS).write_text(json.dumps(
+                {"epochs_done": state["epochs_done"], "epochs": epochs,
+                 "finished": False}))
+    lt.save_checkpoint = save_and_record
+    try:
+        report = lt.finetune(str(data), start, str(out_dir), cfg,
+                             device=device)
+    finally:
+        lt.save_checkpoint = real_save
     keep = {k: report.get(k) for k in ("train_items", "calibration_items",
-                                        "skipped", "epoch_loss",
+                                        "eval_items", "skipped", "epoch_loss",
                                         "temperature", "calibration")}
-    keep["base"] = a.base if Path(a.base).exists() else f"{a.base}@{a.revision}"
-    (Path(a.out_dir) / "researchly-train-report.json").write_text(
+    keep.update(base=base if Path(base).exists() else f"{base}@{revision}",
+                epochs=epochs, micro_batch=micro_batch, grad_accum=grad_accum,
+                loss=loss, device=device, resumed_after_epoch=resumed_from)
+    (out_dir / "researchly-train-report.json").write_text(
         json.dumps(keep, indent=1, default=str))
+    (out_dir / PROGRESS).write_text(json.dumps(
+        {"epochs_done": epochs, "epochs": epochs, "finished": True}))
+    for d in (out_dir / "resume-base", latest):
+        if d.is_dir():                    # duplicates of the final weights
+            shutil.rmtree(d)
+    return keep
+
+
+def cmd_train(a) -> int:
+    keep = train(a.data, a.out_dir, eval_data=a.eval_data, base=a.base,
+                 revision=a.revision, device=a.device, epochs=a.epochs,
+                 micro_batch=a.micro_batch, grad_accum=a.grad_accum,
+                 loss=a.loss, shuffle_options=a.shuffle_options, seed=a.seed,
+                 resume=not a.no_resume)
     print(json.dumps(keep, indent=1, default=str))
     return 0
 
@@ -188,6 +268,8 @@ def main(argv=None) -> int:
     t.add_argument("--loss", choices=["rlcd", "soft-ce"], default="rlcd")
     t.add_argument("--shuffle-options", action="store_true")
     t.add_argument("--seed", type=int, default=0)
+    t.add_argument("--no-resume", action="store_true",
+                   help="start again even if a run in --out was interrupted")
     a = ap.parse_args(argv)
     if a.cmd == "data":
         if a.task == "flags" and not a.paragraphs:

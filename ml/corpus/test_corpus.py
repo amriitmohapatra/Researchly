@@ -233,3 +233,24 @@ def test_committed_manifest_is_valid_and_text_free():
         trainable = bool(re.fullmatch(r"CC0-1\.0|CC-BY-(\d\.\d|unversioned)",
                                       r["licence"]))
         assert (r["use"] == "train") == trainable, r["pmcid"]
+
+
+def test_mirror_seeds_the_index_from_the_manifest_without_rewriting_it(
+        tmp_path):
+    """harvest.py mirror: the committed manifest's articles, no search."""
+    by = perm('<license xlink:href="https://creativecommons.org/licenses/by/4.0/"/>')
+    cache = _cache(tmp_path, [("PMC1", "epidemiology",
+                               jats(by, pmcid="1", doi="10.1/a"))])
+    out = tmp_path / "manifest.jsonl"
+    harvest.manifest(cache, out, checked="test")
+    before = out.read_text()
+    fresh = tmp_path / "fresh-cache"
+    fresh.mkdir()
+    (fresh / "index.jsonl").write_text(json.dumps(
+        {"pmcid": "PMC9", "discipline": "humanities",
+         "search_licence": ""}) + "\n")
+    assert harvest.seed_from_manifest(fresh, out) == 2
+    index = harvest.read_index(fresh)
+    assert set(index) == {"PMC1", "PMC9"}
+    assert index["PMC1"]["discipline"] == "epidemiology"
+    assert out.read_text() == before

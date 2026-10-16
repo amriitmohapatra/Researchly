@@ -105,6 +105,7 @@ held-out numbers the promotion gate reads.
 
 ```bash
 python3.10 ml/corpus/harvest.py all --per-discipline 150   # find, fetch, manifest
+python3.10 ml/corpus/harvest.py mirror                     # or: fetch exactly the committed manifest's articles (no search; manifest untouched)
 python3.10 ml/corpus/weak_labels.py                        # labels into the cache
 python3.10 ml/corpus/harvest.py summary                    # counts from the manifest
 python3.10 -m pytest ml/corpus -q                          # synthetic tests

@@ -33,11 +33,13 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import shutil
 import sys
 import time
 from pathlib import Path
+from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import harness  # noqa: E402
@@ -138,6 +140,91 @@ def fill_card(values: dict, dst: Path) -> None:
     dst.write_text(text, encoding="utf-8")
 
 
+def check_states(path: Path, n: int = 50) -> tuple:
+    """(states, Laya question) to compare INT8 with the checkpoint on: the
+    first n test-split sentences of a sentences.jsonl, or the first n rows
+    of a Laya-format JSONL (``state`` + ``questions``, e.g. flags-test.jsonl)."""
+    rows = harness.read_jsonl(path)
+    if rows and "state" in rows[0]:
+        q = next(iter(rows[0]["questions"].values()))
+        return [r["state"] for r in rows[:n]], q
+    rows = harness.sample_roles(rows, n)
+    return ([harness.role_state(r) for r in rows],
+            harness.laya_question(harness.critics.SENTENCE_ROLE))
+
+
+def clamp_threshold(t) -> float:
+    """critic.json thresholds must lie in [0.5, 1.0]; no threshold reaching
+    the precision bar means "never answer" (1.0)."""
+    if t is None:
+        return 1.0
+    # round down, so the answers the threshold was chosen on stay answered
+    return min(1.0, max(0.5, math.floor(float(t) * 1e4) / 1e4))
+
+
+def export_graph(checkpoint: Path, out: Path, *, keep_fp32: bool = False,
+                 check: Optional[Path] = None) -> dict:
+    """fp32 ONNX -> INT8, runtime files copied; returns {files, check}."""
+    out.mkdir(parents=True, exist_ok=True)
+    fp32 = out / "laya.onnx"
+    int8 = out / "laya.int8.onnx"
+    export_fp32(str(checkpoint), fp32)
+    quantize_int8(fp32, int8)
+    files = copy_runtime_files(Path(checkpoint), out)
+    result = None
+    if check:
+        states, question = check_states(check)
+        result = check_agreement(str(checkpoint), out, int8.name, states,
+                                 question)
+    if not keep_fp32:
+        fp32.unlink()
+    meta = {"files": files, "int8_check": result,
+            "exported": time.strftime("%Y-%m-%d")}
+    (out / "export-meta.json").write_text(json.dumps(meta, indent=1))
+    return meta
+
+
+def finalise(out: Path, *, version: str, questions: dict,
+             report: Optional[dict] = None,
+             training_data: str = "s5a-oa-corpus-cc-by") -> dict:
+    """Write critic.json (the pin) and the filled model card for an exported
+    folder. Run again after re-evaluating: thresholds and numbers change,
+    the graph's SHA-256 does not."""
+    meta = json.loads((out / "export-meta.json").read_text())
+    int8 = out / "laya.int8.onnx"
+    digest = sha256_file(int8)
+    descriptor = {
+        "model_version": version,
+        "onnx_file": int8.name,
+        "sha256": digest,
+        "questions": {k: clamp_threshold(v) for k, v in questions.items()},
+        "files": {rel: sha256_file(out / rel) for rel in meta["files"]},
+        "base_model": f"{harness.LAYA_REPO}@{harness.LAYA_REVISION}",
+        "exported": meta["exported"],
+    }
+    (out / "critic.json").write_text(json.dumps(descriptor, indent=1))
+    report = report or {}
+    zs = report.get("after_temperature") or report.get("zero_shot") or {}
+    fill_card({
+        "model_version": version,
+        "sha256": digest,
+        "onnx_bytes": int8.stat().st_size,
+        "base_model": descriptor["base_model"],
+        "questions": ", ".join(f"{k} (threshold {v:.2f})"
+                               for k, v in descriptor["questions"].items()),
+        "training_data": training_data,
+        "heldout_accuracy": f"{zs.get('accuracy', float('nan')):.3f}",
+        "heldout_ece": f"{zs.get('ece', float('nan')):.3f}",
+        "heldout_n": zs.get("n", 0),
+        "coverage_at_gate": json.dumps(
+            zs.get("risk_coverage", {}).get("coverage_at_gate", {})),
+        "int8_check": json.dumps(meta["int8_check"]) if meta["int8_check"]
+        else "not run",
+        "exported": descriptor["exported"],
+    }, out / "MODEL_CARD.md")
+    return descriptor
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--checkpoint", type=Path, required=True,
@@ -155,8 +242,9 @@ def main(argv=None) -> int:
                     help="registry ids of the training data, comma-separated")
     ap.add_argument("--keep-fp32", action="store_true")
     ap.add_argument("--check", type=Path,
-                    help="a sentences.jsonl to measure INT8 vs eager on "
-                         "(first 50 test-split rows)")
+                    help="sentences.jsonl, or a Laya JSONL such as flags-test.jsonl, to "
+                         "measure INT8 vs the checkpoint on "
+                         "(first 50 rows)")
     a = ap.parse_args(argv)
     out = a.out.resolve()
     if harness.REPO in out.parents or out == harness.REPO:
@@ -172,53 +260,15 @@ def main(argv=None) -> int:
         ap.error("name at least one --question ID=THRESHOLD")
 
     t0 = time.time()
-    fp32 = out / "laya.onnx"
-    int8 = out / "laya.int8.onnx"
-    export_fp32(str(a.checkpoint), fp32)
-    quantize_int8(fp32, int8)
-    files = copy_runtime_files(a.checkpoint, out)
-    check = None
-    if a.check:
-        rows = harness.sample_roles(harness.read_jsonl(a.check), 50)
-        check = check_agreement(
-            str(a.checkpoint), out, int8.name,
-            [harness.role_state(r) for r in rows],
-            harness.laya_question(harness.critics.SENTENCE_ROLE))
-    if not a.keep_fp32:
-        fp32.unlink()
-    digest = sha256_file(int8)
-    descriptor = {
-        "model_version": a.version,
-        "onnx_file": int8.name,
-        "sha256": digest,
-        "questions": questions,
-        "files": {rel: sha256_file(out / rel) for rel in files},
-        "base_model": f"{harness.LAYA_REPO}@{harness.LAYA_REVISION}",
-        "exported": time.strftime("%Y-%m-%d"),
-    }
-    (out / "critic.json").write_text(json.dumps(descriptor, indent=1))
+    meta = export_graph(a.checkpoint, out, keep_fp32=a.keep_fp32,
+                        check=a.check)
     report = json.loads(a.report.read_text()) if a.report else {}
-    zs = report.get("after_temperature") or report.get("zero_shot") or {}
-    fill_card({
-        "model_version": a.version,
-        "sha256": digest,
-        "onnx_bytes": int8.stat().st_size,
-        "base_model": descriptor["base_model"],
-        "questions": ", ".join(f"{k} (threshold {v:.2f})"
-                               for k, v in questions.items()),
-        "training_data": a.training_data,
-        "heldout_accuracy": f"{zs.get('accuracy', float('nan')):.3f}",
-        "heldout_ece": f"{zs.get('ece', float('nan')):.3f}",
-        "heldout_n": zs.get("n", 0),
-        "coverage_at_gate": json.dumps(
-            zs.get("risk_coverage", {}).get("coverage_at_gate", {})),
-        "int8_check": json.dumps(check) if check else "not run",
-        "exported": descriptor["exported"],
-    }, out / "MODEL_CARD.md")
-    print(json.dumps({"out": str(out), "sha256": digest,
-                      "int8_bytes": int8.stat().st_size,
-                      "check": check, "seconds": round(time.time() - t0)},
-                     indent=1))
+    desc = finalise(out, version=a.version, questions=questions,
+                    report=report, training_data=a.training_data)
+    print(json.dumps({"out": str(out), "sha256": desc["sha256"],
+                      "int8_bytes": (out / desc["onnx_file"]).stat().st_size,
+                      "check": meta["int8_check"],
+                      "seconds": round(time.time() - t0)}, indent=1))
     return 0
 
 

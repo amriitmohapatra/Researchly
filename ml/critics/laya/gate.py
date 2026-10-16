@@ -14,7 +14,9 @@ Checks (ARCHITECTURE.md ADR-06 decision 4, PLAN S5b):
 3. held-out precision: for every question the model may answer, precision
    of the answers kept at its threshold is >= 0.85 on the test split, with
    at least 20 answers kept; Task B must also beat the TF-IDF baseline
-   (82.6%) at full coverage;
+   (82.6%) at full coverage; for Task A (flags) the same bar on the
+   owner's own labels (``--owner-report``), because the training and test
+   labels are Claude's judgments and only the owner's are independent;
 4. calibration: ECE is reported (warns above 0.10);
 5. fire and don't-fire tests: a test module under packages/core/tests names
    the model version and has at least one test whose name says it fires and
@@ -37,6 +39,7 @@ import os
 import re
 import sys
 from pathlib import Path
+from typing import Optional
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
@@ -88,7 +91,8 @@ def precision_at_threshold(report: dict, threshold: float) -> tuple:
     body = report.get("after_temperature") or report.get("zero_shot") or {}
     items = report.get("items")
     if items:
-        kept = [i for i in items if i["confidence"] >= threshold]
+        # item confidences are rounded to 6 places in reports
+        kept = [i for i in items if i["confidence"] >= threshold - 1e-6]
         if not kept:
             return 0.0, 0
         return sum(i["correct"] for i in kept) / len(kept), len(kept)
@@ -104,7 +108,8 @@ def precision_at_threshold(report: dict, threshold: float) -> tuple:
 def check(critic_dir: Path, card_path: Path, report_path: Path,
           noise_path: Path, task: str = "roles",
           tests_dir: Path = REPO / "packages" / "core" / "tests",
-          registry: Path = REPO / "ml" / "datasets.yaml") -> list:
+          registry: Path = REPO / "ml" / "datasets.yaml",
+          owner_report_path: Optional[Path] = None) -> list:
     results = []
 
     def add(name, ok, detail):
@@ -172,13 +177,38 @@ def check(critic_dir: Path, card_path: Path, report_path: Path,
     add("fire and don't-fire tests", fire and dont,
         f"fire={fire}, don't-fire={dont} (tests naming {version!r})")
 
+    # 3b. Task A: the owner's own labels are the independent test (the
+    # training and test labels are Claude's judgments; ADR-06, 2026-10-16)
+    if task == "flags":
+        owner = None
+        if owner_report_path is not None:
+            try:
+                owner = json.loads(Path(owner_report_path).read_text())
+            except (OSError, ValueError):
+                owner = None
+        if owner is None:
+            add("independent test (owner's labels)", False,
+                "not run: label paragraphs on the Label page and set "
+                "RESEARCHLY_LABELS and RESEARCHLY_PARAGRAPHS (the test split "
+                "only measures agreement with Claude's judgments)")
+        else:
+            for qid, thr in desc.get("questions", {}).items():
+                prec, kept = precision_at_threshold(owner, thr)
+                add("independent test (owner's labels)",
+                    prec >= PRECISION_GATE and kept >= MIN_KEPT,
+                    f"{prec:.3f} on {kept} of your flags kept at threshold "
+                    f"{thr:.2f} (gate {PRECISION_GATE}, at least {MIN_KEPT})")
+
     # 6. noise floor
     try:
-        from noise_gate import TARGET
+        from noise_gate import TARGET, summarise
         stats = json.loads(noise_path.read_text())
+        if "per_1000_words" not in stats:     # run_dogfood's per-document file
+            stats = summarise(stats)
         rate = stats["per_1000_words"]
         add("noise floor", rate <= TARGET, f"{rate}/1000w (target <= {TARGET})")
-    except (OSError, ValueError, KeyError, ImportError) as e:
+    except (OSError, ValueError, KeyError, TypeError, ImportError,
+            AttributeError) as e:
         add("noise floor", False, f"no usable run: {e}")
 
     # 7. SHA pin
@@ -232,11 +262,21 @@ def main(argv=None) -> int:
     ap.add_argument("--report", type=Path, required=True)
     ap.add_argument("--noise", type=Path, required=True)
     ap.add_argument("--task", choices=["roles", "flags"], default="roles")
+    ap.add_argument("--owner-report", type=Path,
+                    help="flags: evaluation on the owner's own labels")
+    ap.add_argument("--json-out", type=Path,
+                    help="also write the results as JSON")
     a = ap.parse_args(argv)
     results = check(a.critic_dir, a.card or a.critic_dir / "MODEL_CARD.md",
-                    a.report, a.noise, a.task)
+                    a.report, a.noise, a.task,
+                    owner_report_path=a.owner_report)
+    ok = all(r["ok"] for r in results)
     print(render(results))
-    return 0 if all(r["ok"] for r in results) else 1
+    if a.json_out:
+        a.json_out.write_text(json.dumps(
+            {"verdict": "PROMOTE" if ok else "NOT PROMOTED",
+             "checks": results}, indent=1))
+    return 0 if ok else 1
 
 
 if __name__ == "__main__":

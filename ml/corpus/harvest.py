@@ -13,6 +13,9 @@ Three re-runnable steps, all through Europe PMC's open REST API
     python3.10 ml/corpus/harvest.py manifest
     # or all three:
     python3.10 ml/corpus/harvest.py all --per-discipline 80
+    # or rebuild exactly the committed corpus on another machine: fetch every
+    # manifest article into the cache; the manifest is read, never rewritten
+    python3.10 ml/corpus/harvest.py mirror
 
 The cache defaults to ~/.researchly/corpus ($RESEARCHLY_CORPUS_CACHE or
 --cache to move it); a cache inside the repository is refused. The search
@@ -252,6 +255,22 @@ def fetch(cache: Path, workers: int = 4) -> Counter:
     return done
 
 
+def seed_from_manifest(cache: Path, manifest_path: Path) -> int:
+    """Write the cache's index.jsonl from the committed manifest (no search),
+    so ``fetch`` downloads exactly the articles the manifest lists. Rows
+    already in the index are kept."""
+    seen = read_index(cache)
+    for row in read_manifest(manifest_path):
+        seen.setdefault(row["pmcid"], {"pmcid": row["pmcid"],
+                                       "discipline": row["discipline"],
+                                       "search_licence": ""})
+    cache.mkdir(parents=True, exist_ok=True)
+    with (cache / "index.jsonl").open("w", encoding="utf-8") as f:
+        for row in seen.values():
+            f.write(json.dumps(row) + "\n")
+    return len(seen)
+
+
 # --- 3. manifest -----------------------------------------------------------------------
 
 def build_row(cand: dict, xml: bytes, checked: str) -> tuple:
@@ -364,7 +383,7 @@ def read_manifest(path: Path = common.MANIFEST) -> list:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("step", choices=["find", "fetch", "manifest", "all",
-                                     "summary"])
+                                     "mirror", "summary"])
     ap.add_argument("--cache", type=Path, default=None,
                     help="full-text cache, outside the repo "
                          "(default ~/.researchly/corpus)")
@@ -378,6 +397,12 @@ def main(argv=None) -> int:
         print(json.dumps(summarise(read_manifest(a.out)), indent=1))
         return 0
     cache = common.outside_repo(a.cache or common.default_cache())
+    if a.step == "mirror":
+        n = seed_from_manifest(cache, a.out)
+        print(f"{n} manifest articles in {cache / 'index.jsonl'}",
+              file=sys.stderr)
+        fetch(cache, a.workers)
+        return 0
     if a.step in ("find", "all"):
         find(cache, a.per_discipline, a.discipline)
     if a.step in ("fetch", "all"):

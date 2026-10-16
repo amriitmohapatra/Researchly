@@ -226,6 +226,8 @@ def risk_coverage(conf: list, correct: list,
     hits = 0
     for j, i in enumerate(order, 1):
         hits += correct[i]
+        if j < len(order) and conf[order[j]] == conf[i]:
+            continue        # a threshold keeps every tied answer, not some
         if hits / j >= PRECISION_GATE and j >= 20:
             best = {"coverage": j / len(order), "threshold": conf[i], "n": j}
     out["coverage_at_gate"] = best or {"coverage": 0.0, "threshold": None,
