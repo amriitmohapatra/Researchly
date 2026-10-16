@@ -1,0 +1,756 @@
+{
+ "version": 1,
+ "note": "Part A (epidemiology, public health, clinical research): 150 synthetic paragraphs written for Researchly's S5 critic, 2026-10-16. Original text, nobody's real writing; numbers are invented. Licence: Researchly's own.",
+ "paragraphs": [
+  {
+   "paragraph": 1,
+   "section": "introduction",
+   "text": "Dengue fever is a major public health problem in many tropical and subtropical countries, and it is clearly one of the most important vector-borne diseases in the world today. In recent decades, the incidence of dengue has increased dramatically due to the fact that urbanisation, climate change and increased travel have all created favourable conditions for Aedes mosquitoes. Despite this, the dynamics of DENV transmission in medium-sized cities remains poorly understood. In order to address this gap, this thesis develops a series of mathematical models that aim to characterise seasonal and spatial variation in transmission."
+  },
+  {
+   "paragraph": 2,
+   "section": "introduction",
+   "text": "Respiratory syncytial virus (RSV) is the leading cause of hospitalisation for lower respiratory tract infection in infants. Two new prevention products, a long-acting monoclonal antibody given to newborns and a maternal vaccine given during pregnancy, have recently been licensed in several high-income countries. Their population impact, however, depends on choices that trials could not settle: when in the season to offer them, which birth cohorts to prioritise, and how much indirect protection to expect. Transmission models can help answer these questions before programmes are scaled up. This chapter reviews what is known about RSV seasonality and immunity and sets out the modelling questions that the rest of the thesis addresses."
+  },
+  {
+   "paragraph": 3,
+   "section": "introduction",
+   "text": "Antimicrobial resistance threaten the effectiveness of treatments for common bacterial infections. Many studies have shown that resistance rates differ widely between hospitals, even within the same region. This could possibly suggest that local prescribing practices may play a role, but the evidence is mixed. This is important because hospital-level interventions are cheaper to implement than national policies. Few studies have examined how prescribing and infection control interact at the ward level."
+  },
+  {
+   "paragraph": 4,
+   "section": "introduction",
+   "text": "Tuberculosis (TB) remains a leading infectious cause of death worldwide, and the End TB Strategy set ambitious targets for reducing incidence by 2035, which most high-burden countries are not on track to meet because case detection remains incomplete, diagnostic delays are long, and a substantial proportion of people with active disease are never notified to national programmes, especially in settings where the private sector delivers much of the primary care. Active case finding (ACF) has been proposed as one way of closing this gap. However, the yield of ACF varies greatly by setting and screening algorithm, and its effect on transmission at population level is uncertain. In this study we use a compartmental model to estimate how much ACF must scale up to reach the 2035 targets."
+  },
+  {
+   "paragraph": 5,
+   "section": "introduction",
+   "text": "Mass drug administration is the backbone of efforts to eliminate lymphatic filariasis. Programmes typically stop treating once transmission assessment surveys show that infection in young children has fallen below a threshold. Yet resurgence after stopping has been reported in several districts, which raises the question of whether the survey thresholds are strict enough in places with high vector density. We address this question with an individual-based model calibrated to pre-treatment prevalence data from three ecological settings."
+  },
+  {
+   "paragraph": 6,
+   "section": "introduction",
+   "text": "Outbreaks of measles continue to occur in countries that had previously achieved elimination. The occurence of these outbreaks is usually linked to pockets of low vaccination coverage, often in specific religious or socioeconomic communities. It is important to note that national coverage figures can hide substantial heterogeneity at the local level. The occurence of clustered susceptibility has been studied extensively in theoretical work, but there are relatively few studies that have attempted to quantify its effect using routine immunisation records."
+  },
+  {
+   "paragraph": 7,
+   "section": "introduction",
+   "text": "Hand hygiene is undoubtedly the single most effective measure for preventing healthcare-associated infections. Hospitals that introduced alcohol-based hand rub saw large reductions in MRSA bacteraemia, which proves that improved compliance directly caused the decline. Nevertheless, compliance among healthcare workers remains low in many settings, and the reasons for this are not well understood. Understanding these reasons is the first step towards designing interventions that last."
+  },
+  {
+   "paragraph": 8,
+   "section": "introduction",
+   "text": "Since the start of the COVID-19 pandemic, time-varying reproduction number has become a standard tool for monitoring epidemics in real time. Several methods were developed to estimate it from case counts, and most of them rely on renewal equation. These methods assumed that the generation interval is known and fixed. In practice, the generation interval changes over time as contact patterns and isolation policies change, and estimates of R_t are sensitive to this assumption."
+  },
+  {
+   "paragraph": 9,
+   "section": "introduction",
+   "text": "Influenza vaccine effectiveness varies substantially from season to season, ranging from below 20% to above 60% against medically attended illness. Much of this variation reflects antigenic mismatch between vaccine and circulating strains, but repeated vaccination and prior infection also shape responses in ways that are not yet fully characterized. The test-negative design has become the dominant approach for estimating effectiveness because it is efficient and reduces confounding by healthcare-seeking behavior. Its validity, however, rests on assumptions that are rarely tested. In this chapter, we examine how violations of these assumptions bias estimates under realistic scenarios."
+  },
+  {
+   "paragraph": 10,
+   "section": "introduction",
+   "text": "There are a number of reasons why it is likely that the burden of hepatitis C in prisons may be underestimated. First of all, testing is often only offered at entry. Second, many people are released before results are available. This means that a large proportion of infections are never linked to care. In light of the fact that direct-acting antivirals can cure more than 95% of infections, this represents a major missed opportunity."
+  },
+  {
+   "paragraph": 11,
+   "section": "introduction",
+   "text": "Malaria transmission in the Sahel is highly seasonal, with most cases occurring in the 4 months following the onset of rains. SMC with SPAQ is now recommended for children under 5 in these areas and has been rolled out to more than 30 million children annually. Its effectiveness depends on the timing of the monthly cycles relative to the peak in EIR, which shifts from year to year. Few studies have examined whether adapting the start date to rainfall forecasts could improve protection."
+  },
+  {
+   "paragraph": 12,
+   "section": "introduction",
+   "text": "Health inequalities in infectious disease outcomes were starkly visible during the COVID-19 pandemic: in several high-income countries, age-standardised mortality was markedly higher in the most deprived areas than in the least deprived. Explanations range from occupational exposure and household crowding to differences in underlying health and access to care. Disentangling these pathways matters because each points to a different policy response. This thesis uses linked household and occupational data to estimate how much of the deprivation gradient in infection can be attributed to each pathway."
+  },
+  {
+   "paragraph": 13,
+   "section": "introduction",
+   "text": "The use of mathematical models in order to inform public health decision-making has a long history that goes back to the early work on malaria and has expanded considerably over the last few decades, with models now being routinely used by governments and international agencies for purposes as diverse as planning vaccination campaigns, forecasting hospital demand during epidemics, evaluating the cost-effectiveness of screening programmes and setting targets for elimination. Despite this, relatively little attention has been paid to how model outputs are communicated to decision-makers."
+  },
+  {
+   "paragraph": 14,
+   "section": "introduction",
+   "text": "Contact tracing was one of the main non-pharmaceutical interventions used to control the spread of SARS-CoV-2. Its effectiveness depend on how quickly contacts are identified and how many of them adhere to quarantine. Mathematical models of case tracing have suggested that delays of more than 3 days substantially reduces its impact. However, few of these models has been validated against data from real programmes, and the assumptions about adherance are often taken from surveys rather than observed behaviour."
+  },
+  {
+   "paragraph": 15,
+   "section": "introduction",
+   "text": "Cholera outbreaks frequently follow natural disasters and population displacement, when access to safe water and sanitation collapses. Oral cholera vaccine is now stockpiled for such emergencies, but the stockpile is limited and doses must be allocated across competing requests. Single-dose campaigns protect more people in the short term, whereas two doses give longer protection. Which strategy averts more cases depends on the expected duration of the outbreak and the level of pre-existing immunity. We develop a framework for choosing between them using data that are typically available in the first weeks of a response."
+  },
+  {
+   "paragraph": 16,
+   "section": "introduction",
+   "text": "Obviously, the emergence of mpox outside endemic regions in 2022 caught public health systems unprepared. Transmission was concentrated in sexual networks of men who have sex with men, and this meant that targeted vaccination could be effective. It seems that the decline in cases in late 2022 was partly due to behaviour change and partly due to vaccination, although the relative contribution of each is still debated. This is what motivates the present analysis."
+  },
+  {
+   "paragraph": 17,
+   "section": "introduction",
+   "text": "Rotavirus is most common cause of severe diarrhoea in young children worldwide. After introduction of rotavirus vaccine into national immunisation programme, hospital admissions declined substantially in many countries. However, vaccine performs less well in low-income settings, where efficacy against severe disease is around 50%. Reasons for this lower performance include interference from maternal antibodies, co-administration with oral polio vaccine and enteric infections."
+  },
+  {
+   "paragraph": 18,
+   "section": "introduction",
+   "text": "Seroprevalence surveys estimate the proportion of a population that has been infected, regardless of whether infections were symptomatic or reported. They are therefore a valuable complement to case-based surveillance, which captures only a fraction of infections. Interpreting serological data is not straightforward, however: antibody levels wane, assays differ in sensitivity and specificity, and convenience samples such as blood donors may not represent the wider population. Bayesian models that account for these features jointly have been developed, but they are rarely applied in routine public health practice, partly because they require specialist software."
+  },
+  {
+   "paragraph": 19,
+   "section": "introduction",
+   "text": "HPV vaccination programmes have been introduced in over 100 countries, and there is a growing body of evidence that they have led to substantial reductions in CIN2+ among vaccinated cohorts. With regard to the question of whether boys should also be vaccinated, the evidence is less clear-cut. In many settings, the decision has been made on the basis of equity arguments rather than on the basis of cost-effectiveness. The aim of this chapter is to provide an overview of the existing literature on the topic of gender-neutral vaccination."
+  },
+  {
+   "paragraph": 20,
+   "section": "introduction",
+   "text": "Air pollution is a well-established risk factor for respiratory infections. Studies in several cities showed that days with high levels of fine particulate matter are followed by increases in pneumonia admissions, which demonstrates that pollution causes pneumonia. Whether this relationship holds in rural areas, where exposure comes mainly from household biomass fuel, was less studied. Rural households also differ in their access to care, which complicates any comparison."
+  },
+  {
+   "paragraph": 21,
+   "section": "introduction",
+   "text": "Clinical trials of new tuberculosis regimens have traditionally used culture conversion at eight weeks as an early marker of efficacy. This marker, however, predicts relapse poorly at the level of individual patients, and several regimens that looked promising in phase II failed in phase III. Model-based approaches that use the full time course of bacterial load may extract more information from the same data. We evaluate one such approach by re-analyzing simulated trials in which the true relapse risk is known."
+  },
+  {
+   "paragraph": 22,
+   "section": "introduction",
+   "text": "In many low- and middle-income countries, children who recieve all their routine vaccinations on time are still in the minority. Timeliness matters because delays leave infants unprotected during the age of highest risk for diseases such as pertussis and measles. Most coverage estimates, however, only record whether a child has recieved a dose by the age of 12 months and ignore when it was given. The the aim of this chapter is to describe patterns of vaccination timeliness using household survey data."
+  },
+  {
+   "paragraph": 23,
+   "section": "introduction",
+   "text": "Antibiotic prescribing in primary care has fallen in recent years, but rates still vary threefold between practices. Previous research has linked high prescribing to patient expectations, consultation length and the clinician's experience. Consultations shorter than 8 were associated with higher rates of antibiotic prescription. In this thesis, I examine how general practitioner workload and family doctor characteristics jointly explain variation in prescribing, using data from 450 practices."
+  },
+  {
+   "paragraph": 24,
+   "section": "introduction",
+   "text": "Zoonotic spillover of avian influenza into mammals has become more frequent since 2021, with outbreaks reported in farmed mink, marine mammals and dairy cattle. Each spillover event gives the virus an opportunity to acquire mutations that increase its ability to infect and transmit between humans. Surveillance in animals is therefore a first line of defence, but it is patchy and expensive. This chapter asks how surveillance effort should be distributed across species and regions to detect mammalian adaptation as early as possible, given a fixed budget."
+  },
+  {
+   "paragraph": 25,
+   "section": "introduction",
+   "text": "It may be possible that school closures could potentially reduce influenza transmission by a substantial amount. Some studies have definitely shown large effects, while others found almost none. These differences might perhaps reflect the timing of closures relative to the epidemic peak, or the age groups that drive transmission in different settings. Disentangling these factors requires data on contacts as well as on cases."
+  },
+  {
+   "paragraph": 26,
+   "section": "introduction",
+   "text": "Neglected tropical diseases (NTDs) affect more than a billion people, mostly in the poorest communities. The 2030 roadmap sets targets for elimination as a public health problem for several of them, including trachoma, schistosomiasis and visceral leishmaniasis. Reaching these targets requires reliable estimates of where transmission persists. This is difficult because MDA coverage data are often incomplete and prevalence surveys are infrequent. This chapter addresses this by combining both sources in a geostatistical model."
+  },
+  {
+   "paragraph": 27,
+   "section": "introduction",
+   "text": "Sexually transmitted infections are rising in many countries despite widespread access to testing and treatment. Gonorrhoea is of particular concern because resistance to the last recommended first-line antibiotic has now been reported on several continents. Mathematical models have explored how different testing strategies might slow the spread of resistance, but most assume homogeneous mixing within risk groups. Here we use a network model in which partnership duration and concurrency are explicitly represented, so that the effect of partner notification can be evaluated alongside screening."
+  },
+  {
+   "paragraph": 28,
+   "section": "introduction",
+   "text": "The 2014-2016 West African Ebola epidemic was a very unique event in the history of the disease, both in terms of its scale and in terms of its geographic spread. A large number of studies have been carried out on this. Many of these focused on the effect of safe burial practices, but this is not the only factor that contributed to the decline in transmission. This chapter looks at this in more detail."
+  },
+  {
+   "paragraph": 29,
+   "section": "introduction",
+   "text": "The incidence of Lyme disease have increased across temperate regions of the Northern Hemisphere, a trend often attributed to a warming climate and to changes in land use. Tick density in woodland plots rose from 12 to 31 per 100 m2 over two decades in one long-term study. However, the link between tick density and human cases is not straightforward, because human exposure depends on behaviour as well as on the abundance of infected ticks. Understanding the DIN is therefore central to predicting risk."
+  },
+  {
+   "paragraph": 30,
+   "section": "introduction",
+   "text": "Pregnant women are routinely excluded from vaccine trials, which leaves clinicians and policymakers without direct evidence when new vaccines are introduced. Observational studies conducted after licensure fill some of this gap, but they are vulnerable to healthy-vaccinee bias and to confounding by gestational age at vaccination. This thesis develops and applies methods that address both problems, using linked maternity and immunisation records from a large regional health system."
+  },
+  {
+   "paragraph": 31,
+   "section": "methods",
+   "text": "Weekly counts of laboratory-confirmed influenza were obtained from the national sentinel surveillance network for the 2012/13 to 2019/20 seasons. Counts were aggregated by age group (0-4, 5-17, 18-64 and 65 years and older) and by region. Weeks with missing reports from more than 20% of sentinel sites were excluded from the analysis. Population denominators for each age group and region were taken from mid-year census estimates."
+  },
+  {
+   "paragraph": 32,
+   "section": "methods",
+   "text": "We fit a stochastic SEIR model to the daily case data using particle MCMC. The latent period was fixed at 3 and the infectious period was given a gamma prior with mean 5 days and standard deviation 1.5. The model is fitted separately to each wave. Convergence was assessed using the potential scale reduction factor, and chains were run until all values were below 1.05."
+  },
+  {
+   "paragraph": 33,
+   "section": "methods",
+   "text": "The model was implemented in Stan (version 2.32) and fitted using the No-U-Turn sampler. We ran four chains of 2,000 iterations each, discarding the first 1,000 as warm-up. Convergence was assessed with the rank-normalised split R-hat statistic and the bulk and tail effective sample sizes; all parameters had R-hat below 1.01 and effective sample sizes above 400. Posterior predictive checks were used to compare simulated and observed weekly incidence."
+  },
+  {
+   "paragraph": 34,
+   "section": "methods",
+   "text": "In order to estimate the time-varying reproduction number, we made use of a renewal equation framework in which the expected number of new infections on each day is equal to the sum of the past infections weighted by the generation interval distribution, multiplied by the reproduction number on that day, and we assumed that reported cases were a delayed and under-ascertained version of infections, with the delay from infection to report following a log-normal distribution with parameters taken from the literature. Due to the fact that weekend reporting was lower, a day-of-week effect was also included."
+  },
+  {
+   "paragraph": 35,
+   "section": "methods",
+   "text": "Participants was recruited from five primary health clinics between March 2019 and February 2020. Eligible participants were aged 18 years or older, had confirmed diagnosis of type 2 diabetes and were able to give informed consent. Exclusion criteria included pregnancy and active tuberculosis. A trained research nurse administered questionnaire on household composition, occupation and previous screening history, and blood samples were taken for HbA1c measurment."
+  },
+  {
+   "paragraph": 36,
+   "section": "methods",
+   "text": "Cases were children aged 6 to 59 months admitted with radiologically confirmed pneumonia to the two study hospitals. For each case, up to four controls matched on age (within three months) and district of residence were selected from the community using a household listing. Vaccination status was ascertained from home-based records or, where these were unavailable, from clinic registers; parental recall alone was not accepted. Conditional logistic regression was used to estimate odds ratios, and vaccine effectiveness was calculated as one minus the adjusted odds ratio."
+  },
+  {
+   "paragraph": 37,
+   "section": "methods",
+   "text": "The ABM was initialised with a synthetic population of 50,000 individuals distributed across households, schools and workplaces according to census data. Transmission probabilities per contact were calibrated to reproduce an R0 of 2.5. The simulation time step was 0.5 and each scenario was run 200 times. NPIs were introduced on day 30 and lifted on day 90. Results were summarised as the median and 95% interval across runs."
+  },
+  {
+   "paragraph": 38,
+   "section": "methods",
+   "text": "For the purpose of assessing the robustness of our results, a number of sensitivity analyses were conducted. Firstly, the generation interval was varied between a mean of 4 and 7 days. Secondly, the reporting proportion was allowed to vary over time. Thirdly, the analysis was repeated with the exclusion of the first two weeks of data, during which testing was limited. It should be noted that all sensitivity analyses were pre-specified prior to looking at the data."
+  },
+  {
+   "paragraph": 39,
+   "section": "methods",
+   "text": "This was a pragmatic, cluster-randomized trial in 24 villages. Villages were randomized in a 1:1 ratio, stratified by baseline malaria prevalence, to receive either spatial repellents in addition to standard bed nets or bed nets alone. The randomization sequence was generated by an independent statistician using computer software. The primary outcome was the incidence of clinical malaria in children aged 6 months to 10 years, detected through active weekly case surveillance over 24 months. Field staff who assessed outcomes were not told which arm each village was allocated to."
+  },
+  {
+   "paragraph": 40,
+   "section": "methods",
+   "text": "Data on vaccination status were extracted from the national immunisation register. A child was classified as vaccinated if they had recieved at least one dose 14 days or more before symptom onset. Children who recieved a dose within 14 days before onset are classified as partially vaccinated and were excluded from the primary analysis. We then link the register to hospital admission records using a unique health identifier."
+  },
+  {
+   "paragraph": 41,
+   "section": "methods",
+   "text": "Household secondary attack rate was defined as the number of household contacts who tested positive within 14 days of the index case's symptom onset divided by the total number of household contacts, and we estimated it using a binomial model with a random effect for household to account for clustering, adjusting for the age of the index case, the age of the contacts, household size and vaccination status of the contacts, which were all obtained from the case investigation forms completed by public health officers. The household transmission probability was then compared between variants."
+  },
+  {
+   "paragraph": 42,
+   "section": "methods",
+   "text": "The study was approved by the ethics board of the host university and by the national health research ethics committee. Written informed consent was obtained from all adult participants and from the parents or guardians of participants under 18 years of age; children aged 12 to 17 also gave written assent. Data were pseudonymised at the point of entry and stored on a password-protected server."
+  },
+  {
+   "paragraph": 43,
+   "section": "methods",
+   "text": "The prior for the transmission rate was chosen to be weakly informative. This was done in order to allow the data to dominate the posterior while still ruling out implausible values. This was checked by prior predictive simulation. We have also carried out a check of the identifiability of the parameters by fitting the model to simulated data with known parameter values."
+  },
+  {
+   "paragraph": 44,
+   "section": "methods",
+   "text": "Serum samples were tested for IgG antibodies against the nucleocapsid protein using commercial ELISA. Optical density ratio above 1.1 was considered positive. To adjust for imperfect test performance, we used standard misclassification correction with sensitivity of 0.92 and specificity of 0.99 taken from manufacturer's validation study. Samples were stored at -80 until testing. All samples from the same participant were tested on the same plate."
+  },
+  {
+   "paragraph": 45,
+   "section": "methods",
+   "text": "We constructed a retrospective cohort of all adults aged 65 years and over registered with participating general practices on 1 September 2021. Follow-up began on that date and ended at the earliest of hospital admission with influenza, death, deregistration or 31 March 2022. Vaccination was treated as a time-varying exposure, with person-time counted as unvaccinated until 14 days after the vaccine was given. Hazard ratios were estimated using proportional hazards regression with calendar time as the underlying time scale, adjusting for age, sex, deprivation quintile and the number of chronic conditions."
+  },
+  {
+   "paragraph": 46,
+   "section": "methods",
+   "text": "A total of 1,240 participants were enrolled into the study. We tried to make sure that the sample was representative by recruiting from both urban and rural sites, but this was not always possible. In some sites, recruitment was very slow due to the fact that the rainy season made travel difficult. Baseline characteristics were recorded using a structured questionnaire that had been piloted in a previous study."
+  },
+  {
+   "paragraph": 47,
+   "section": "methods",
+   "text": "The probability of transmission per sexual act was modelled as a function of viral load, with a 2.5-fold increase for each log10 increase in viral load. Partnership formation and dissolution were modelled using a separable TERGM fitted to egocentric network data. The mean duration of main partnerships was set to 400 and casual partnerships to 100. Partnerships that occured between individuals of different risk groups were assigned the lower group's act rate."
+  },
+  {
+   "paragraph": 48,
+   "section": "methods",
+   "text": "Reported cases are an incomplete and delayed record of infections. We therefore linked infections to reports through a convolution: the expected number of cases reported on day t was the sum of infections on earlier days, each multiplied by the probability of a given delay from infection to report and by a time-varying ascertainment rate. The delay distribution was the convolution of an incubation period and an onset-to-report delay, both estimated from line-list data for cases with known exposure dates. Observed counts were modelled with a negative binomial likelihood to allow for overdispersion."
+  },
+  {
+   "paragraph": 49,
+   "section": "methods",
+   "text": "It is worth noting that the cohort was restricted to individuals who had at least one year of continuous registration before the index date, which was done to ensure that baseline covariates such as previous hospital admissions, prescriptions for immunosuppressants and recorded comorbidities could be reliably ascertained from the electronic health records, since individuals with shorter registration would have had incomplete histories and this would have introduced misclassification of confounders. This reduced the sample by 8%."
+  },
+  {
+   "paragraph": 50,
+   "section": "methods",
+   "text": "Missing data in covariates was handled using multiple imputation by chained equations, with 20 imputed datasets. The imputation model included all variables in the analysis model as well as the outcome. Estimates were combined using standard rules. To account for confounding by indication, we used IPTW with stabilised weights, and weights greater than 10 were truncated. Balance between groups after weighting was checked using standardised mean differences."
+  },
+  {
+   "paragraph": 51,
+   "section": "methods",
+   "text": "We searched MEDLINE, Embase and Web of Science from inception to June 2024 for studies reporting the serial interval of respiratory syncytial virus. Search terms combined the virus name with synonyms of serial interval, generation time and household transmission. Two reviewers independently screened titles and abstracts and then full texts, resolving disagreements by discussion. Data were extracted using a standardized form that recorded the study design, setting, sample size, and the mean and standard deviation of the serial interval."
+  },
+  {
+   "paragraph": 52,
+   "section": "methods",
+   "text": "The data was cleaned in R. Duplicate records were removed and dates of onset that were after the date of report were set to missing. Cases with age recorded as greater than 110 were treated as data entry errors. The final dataset contained 18,432 cases from 2015 to 2022, which were aggregated to weekly counts by district for the analysis."
+  },
+  {
+   "paragraph": 53,
+   "section": "methods",
+   "text": "We will use a difference-in-differences approach in order to estimate the effect of the sugar tax on dental caries admissions. Districts that implemented the tax in 2018 are compared to districts that did not. The key assumption is that, in the absence of the tax, trends in admissions would have been more or less roughly parallel in both groups. We checked this assumption by plotting trends in the five years before the tax was introduced."
+  },
+  {
+   "paragraph": 54,
+   "section": "methods",
+   "text": "Spatial variation in incidence was modelled with a conditional autoregressive random effect on districts, combining a spatially structured component, in which each district is informed by its neighbours, with an unstructured component for district-specific noise. Two districts were treated as neighbours if they shared a border. The model was fitted using integrated nested Laplace approximation, and the proportion of variance explained by the structured component was reported as a measure of spatial dependence."
+  },
+  {
+   "paragraph": 55,
+   "section": "methods",
+   "text": "Mosquitoes were collected using CDC light traps placed indoors overnight in 60 randomly selected households each month. Specimens were identified morphologically and a subset was tested for sporozoites by ELISA. Seperate traps were placed outdoors near animal shelters. The HBR was calculated as the mean number of An. gambiae s.l. caught per trap per night multiplied by a conversion factor of 1.6, and EIR as the product of HBR and the sporozoite rate."
+  },
+  {
+   "paragraph": 56,
+   "section": "methods",
+   "text": "To estimate vaccine effectiveness against hospitalisation we used a test-negative design in which cases were patients admitted with severe acute respiratory infection who tested positive for influenza by RT-PCR and controls were patients admitted with the same syndrome who tested negative, with vaccination status obtained from the immunisation register and the odds ratio estimated by logistic regression adjusted for age, sex, calendar week, number of comorbidities and hospital, and effectiveness calculated as one minus the adjusted odds ratio multiplied by 100."
+  },
+  {
+   "paragraph": 57,
+   "section": "methods",
+   "text": "Sample size was calculated for the primary outcome. Assuming a control-arm incidence of 0.8 episodes per child-year, an intracluster correlation coefficient of 0.05 and 120 children followed up per cluster, 12 clusters per arm would give 80% power to detect a 30% reduction in incidence at a two-sided significance level of 5%. To allow for the loss of one cluster per arm, 13 clusters per arm were randomised."
+  },
+  {
+   "paragraph": 58,
+   "section": "methods",
+   "text": "Participants were followed up by telephone at 3, 6 and 12 months. Subjects who could not be reached after three attempts were visited at home. Patients who had moved out of the study area were considered lost to follow-up. This led to some differential loss between arms, which we address in the sensitivity analysis. Reasons for loss to follow-up were recorded where they were known."
+  },
+  {
+   "paragraph": 59,
+   "section": "methods",
+   "text": "The model was perhaps somewhat simplified in terms of its age structure, with only three age groups considered. In terms of contact patterns, we used a contact matrix that was derived from a survey carried out in a neighbouring country, because no local data were available. It is possible that this may have affected the results to some extent. Age-specific susceptibility was assumed to be equal in all three groups."
+  },
+  {
+   "paragraph": 60,
+   "section": "methods",
+   "text": "Children were eligible if they were aged 2 to 10 years, lived in the study area and had no history of sickle cell disease. At enrolment, a finger-prick blood sample was taken for a rapid diagnostic test and thick and thin blood films. Children with a positive rapid test were treated according to national guidelines. Follow-up visits took place every four weeks for one year, at which axillary temperature was measured and a blood film was prepared regardless of symptoms."
+  },
+  {
+   "paragraph": 61,
+   "section": "methods",
+   "text": "Each paramter was given a weakly informative prior, listed in Table 2. The model was run with 4 chains and 4000 iterations, and we check that the ESS for each paramter exceeded 400. Divergent transitions were monitored and the adapt_delta was increased to 0.99 where they occured. Posterior summaries are reported as medians with 95% credible intervals, and all code was run on a desktop computer."
+  },
+  {
+   "paragraph": 62,
+   "section": "methods",
+   "text": "Each of the 47 districts were assigned to one of three transmission strata on the basis of the mean annual parasite prevalence in children over the period from 2015 to 2019. With respect to the intervention, the districts in the high stratum received indoor residual spraying in addition to bed nets, while the districts in the other two strata received bed nets only."
+  },
+  {
+   "paragraph": 63,
+   "section": "methods",
+   "text": "Two investigators independently assessed the risk of bias of each included trial using a standard tool covering random sequence generation, allocation concealment, blinding, incomplete outcome data and selective reporting. Disagreements were resolved by a third investigator. We pooled risk ratios using a random-effects model and quantified heterogeneity with the I-squared statistic. Publication bias was assessed visually with a funnel plot when ten or more trials contributed to an outcome."
+  },
+  {
+   "paragraph": 64,
+   "section": "methods",
+   "text": "Meteorological data were obtained from the nearest weather station for each district. Daily mean temperature, relative humidity and rainfall was averaged to weekly values. We used a DLNM to model the lagged association between temperature and dengue incidence, with a maximum lag of 12 and a natural cubic spline with 3 degrees of freedom for the exposure-response function. Relative risks were reported relative to the median temperature over the study period."
+  },
+  {
+   "paragraph": 65,
+   "section": "methods",
+   "text": "Interviews were conducted in the participant's preferred language by trained interviewers who were not involved in the participants' care. Each interview lasted between 30 and 60 minutes and was audio-recorded with consent. Recordings were transcribed verbatim and translated into English, and a random sample of 10% of translations was checked by a second translator. We analysed the transcripts thematically, starting with a coding frame based on the study's topic guide and adding new codes as they emerged."
+  },
+  {
+   "paragraph": 66,
+   "section": "results",
+   "text": "Between January 2018 and December 2022, 3,412 cases of invasive pneumococcal disease were reported, of whom 1,186 (34.8%) were aged 65 years or older. Incidence in this age group fell from 21.3 to 14.7 per 100,000 population per year over the study period, whereas incidence in adults aged 18 to 64 years remained stable. The proportion of cases caused by serotypes included in the 13-valent conjugate vaccine declined from 28% in 2018 to 11% in 2022 (Table 2)."
+  },
+  {
+   "paragraph": 67,
+   "section": "results",
+   "text": "The estimated reproduction number dropped below one within two weeks of the lockdown being announced, which clearly shows that the the lockdown was highly effective. The median R_t in the four weeks before the announcement was 1.6 (95% CrI 1.4-1.8), compared with 0.8 (0.7-0.9) in the four weeks after. Similar declines were seen in all regions, although the timing differed by up to five days."
+  },
+  {
+   "paragraph": 68,
+   "section": "results",
+   "text": "The median time from symptom onset to hospital admission was 6 (IQR 4-9) and the median length of stay was 8. This was longer in patients over 70 years of age than in younger patients. In-hospital mortality was 14.2%, and this increased with age and the number of comorbidities (Table 3). Patients admitted at the weekend had a similar length of stay to those admitted on weekdays."
+  },
+  {
+   "paragraph": 69,
+   "section": "results",
+   "text": "Vaccine effectiveness against hospitalisation was 71% (95% CI 58-80) in the first three months after vaccination. It declines to 45% (95% CI 27-59) after six months. Effectiveness against medically attended illness is lower at all time points. The data shows a consistent pattern of waning across all age groups, although confidence intervals in children were wide. Waning was faster in adults aged 75 years and older."
+  },
+  {
+   "paragraph": 70,
+   "section": "results",
+   "text": "Of the 2,846 households approached, 2,311 (81.2%) agreed to participate. Participating and non-participating households were similar in size and location, but participating households were more likely to include a child under five years of age (42% versus 35%). Seroprevalence of dengue IgG was 48.6% (95% CI, 46.1-51.1) overall and increased steeply with age, from 9.4% among children aged 1 to 4 years to 87.2% among adults aged 40 years or older (Figure 1)."
+  },
+  {
+   "paragraph": 71,
+   "section": "results",
+   "text": "It can be seen from Figure 3 that the incidence of cholera was highest in the districts that had the lowest coverage of improved sanitation, and that the difference between the districts in the highest and lowest quintiles of coverage was substantial, with the incidence in the lowest quintile being more than four times higher than in the highest quintile, even after adjusting for population density, distance to the nearest health facility and the proportion of the population living in informal settlements."
+  },
+  {
+   "paragraph": 72,
+   "section": "results",
+   "text": "Children who attended day care had higher rates of RSV infection than children cared for at home (incidence rate ratio 2.3, 95% CI 1.7-3.1). This shows that day care attendance causes infection. There was possibly perhaps a slight trend towards higher rates in larger day care centres, but this was not statistically significant (p = 0.12). Rates were similar in boys and girls in both groups."
+  },
+  {
+   "paragraph": 73,
+   "section": "results",
+   "text": "The model reproduced the timing and size of the three observed epidemic waves (Figure 2). The posterior median of the basic reproduction number was 2.9 (95% credible interval 2.6-3.3), and the posterior median of the infection fatality ratio in people aged 75 years and older was 6.1% (4.8-7.6). Posterior predictive intervals contained 92% of the observed weekly death counts, and the residuals showed no systematic pattern over time."
+  },
+  {
+   "paragraph": 74,
+   "section": "results",
+   "text": "There was a signficant reduction in the prevalence of trachoma after three rounds of mass drug administration, from 23.4% at baseline to 6.1% at the impact survey. The reduction were greater in children aged 1-4 than in those aged 5-9. Facial cleanliness also improved signficantly over the same period, but latrine access did not change in most of the surveyed villages."
+  },
+  {
+   "paragraph": 75,
+   "section": "results",
+   "text": "The mean CD4 count at ART initiation was 312 and increased to 498 after 12 months. VL suppression at 12 months was achieved in 84% of participants. Participants who initiated on the same day as diagnosis were more likely to be retained in care at 12 months (aOR 1.45, 95% CI 1.12-1.88). Retention did not differ by sex or clinic type."
+  },
+  {
+   "paragraph": 76,
+   "section": "results",
+   "text": "In total, 487 of 5,120 contacts (9.5%) became infected during follow-up. The secondary attack rate was highest among household contacts (18.2%) and lowest among workplace contacts (2.1%). Among household contacts, the attack rate was higher when the index case was symptomatic at the time of identification than when the index case was asymptomatic (21.0% versus 8.7%). Attack rates did not differ by the sex of the contact."
+  },
+  {
+   "paragraph": 77,
+   "section": "results",
+   "text": "With regard to antibiotic resistance, a very high proportion of E. coli isolates (62%) were resistant to ampicillin, and 18% were resistant to third-generation cephalosporins. This was higher than in the previous surveillance period. In terms of carbapenem resistance, only 3 isolates were resistant, all of which were from the intensive care unit. Resistance patterns did not differ between male and female patients."
+  },
+  {
+   "paragraph": 78,
+   "section": "results",
+   "text": "Remarkably, the incidence of hand, foot and mouth disease peaked every year in late spring, with a smaller secondary peak in autumn. The amplitude of the spring peak varied between years from 41 to 112 cases per 100,000 children. This might suggest that school terms could be one of the drivers of transmission, as has been proposed for other childhood infections."
+  },
+  {
+   "paragraph": 79,
+   "section": "results",
+   "text": "Among the 1,034 trial participants, 517 were randomly assigned to the intervention group and 517 to the control group. Baseline characteristics were well balanced (Table 1). Over 12 months of follow-up, 38 participants in the intervention group and 71 in the control group had a laboratory-confirmed infection, corresponding to an efficacy of 47.2% (95% CI, 21.6 to 64.4). Adverse events were reported by 9.1% and 8.7% of participants, respectively, and no serious adverse events were judged to be related to the intervention."
+  },
+  {
+   "paragraph": 80,
+   "section": "results",
+   "text": "Proportion of cases detected through active case finding was 22% in first year and rises to 31% in the second year. Yield of screening was highest in prisons, where number needed to screen to detect one case was 54, and lowest in general population, where it was 610. Cases detected through active case finding were less likely to be smear-positive than those detected passively."
+  },
+  {
+   "paragraph": 81,
+   "section": "results",
+   "text": "The mean serial interval was 5.2 (95% CI 4.6-5.8), with a standard deviation of 2.9. The generation time was shorter in households with more than four members. Of the 214 transmission pairs, 31 (14.5%) had a negative serial interval, indicating pre-symptomatic transmission. The serial interval did not differ significantly between the two variant periods. Most transmission pairs involved a parent and a child."
+  },
+  {
+   "paragraph": 82,
+   "section": "results",
+   "text": "Coverage of the first dose of measles-containing vaccine was above 90% in 38 of the 52 districts, but coverage of the second dose exceeded 90% in only 11. The districts with the lowest second-dose coverage were concentrated in the north-east, where the dropout between the first and second doses reached 25 percentage points. Districts with lower second-dose coverage had larger outbreaks in 2023, with a correlation of -0.61 between second-dose coverage and attack rate."
+  },
+  {
+   "paragraph": 83,
+   "section": "results",
+   "text": "It is interesting to note that the proportion of asymptomatic infections was higher in children than in adults. Among children aged 5 to 14 years who were seropositive at the end of the study, 64% did not report any symptoms during the follow-up period, compared with 39% of adults aged 18 to 59 years and 27% of adults aged 60 years or older, and this difference remained after adjusting for sex, household size, the number of symptom diaries completed and the frequency of weekly follow-up visits."
+  },
+  {
+   "paragraph": 84,
+   "section": "results",
+   "text": "The median LOS was 4 in the intervention hospitals and 6 in the control hospitals. Readmission within 30 days occurred in 8.3% and 9.1% respectively. Costs per hospitalisaton were lower in the intervention hospitals, mainly due to fewer days in intensive care. The difference in costs remained after excluding the two hospitals that changed their discharge policy during the study."
+  },
+  {
+   "paragraph": 85,
+   "section": "results",
+   "text": "Of the 312 people who started pre-exposure prophylaxis during the study, 241 (77.2%) were still taking it at six months. Discontinuation was more common among participants under 25 years of age (hazard ratio 2.1, 95% confidence interval 1.3-3.4) and among those who reported no condomless sex in the three months before enrolment. No HIV infections occurred among participants while they were taking prophylaxis; two occurred after discontinuation."
+  },
+  {
+   "paragraph": 86,
+   "section": "results",
+   "text": "The incidence of norovirus outbreaks in care homes was 40% lower in the season after the new cleaning protocol was introduced. This proves that the protocol prevented outbreaks. Outbreaks that did occur were also shorter, with a median duration of 9 days compared with 14 days in the previous season. The proportion of residents affected per outbreak was similar in both seasons."
+  },
+  {
+   "paragraph": 87,
+   "section": "results",
+   "text": "The results of the sensitivity analysis appeared to seem broadly similar to those of the main analysis. When the generation interval was set to a mean of 7 days, the estimates of R_t were higher during periods of growth and lower during periods of decline, as would be expected. In the case of the analysis that excluded the first two weeks, the estimates were almost identical to the main analysis."
+  },
+  {
+   "paragraph": 88,
+   "section": "results",
+   "text": "The age-specific force of infection estimated from the serological data was highest in children aged 5 to 9 years (0.12 per year) and declined steadily with age. Under the fitted model, the average age at first infection was 7.4 years and the basic reproduction number was 3.8 (95% credible interval 3.1-4.6). A model in which the force of infection was constant across ages fitted the data considerably worse."
+  },
+  {
+   "paragraph": 89,
+   "section": "results",
+   "text": "Among the 1,812 HCWs tested, 214 (11.8%) were seropositive at baseline. This was higher among staff working on the the COVID-19 wards (17.4%) than among those working elsewhere (8.2%). This difference persisted after adjusting for age, sex and household exposure. Seroprevalence did not differ between nurses and doctors once ward type was taken into account. Most seropositive staff reported no previous positive test."
+  },
+  {
+   "paragraph": 90,
+   "section": "results",
+   "text": "The VE against symptomatic infection was 62% for two doses and 81% for three doses. Vaccine efficacy against hospitalisation was higher, reaching 93% after three doses. The median time since last dose was 112 among the cases and 98 among the controls. Estimates were similar when the analysis was restricted to participants without a previous positive test. Effectiveness was lower in adults aged 80 years and older."
+  },
+  {
+   "paragraph": 91,
+   "section": "results",
+   "text": "A total of 18 studies met the inclusion criteria, including 11 cohort studies and 7 case-control studies. The pooled relative risk of severe disease among people with diabetes was 1.74 (95% CI, 1.48 to 2.05), with substantial heterogeneity across studies (I-squared, 71%). Heterogeneity was reduced when the analysis was restricted to studies that adjusted for obesity (relative risk, 1.39; I-squared, 34%)."
+  },
+  {
+   "paragraph": 92,
+   "section": "results",
+   "text": "The proportion of children who completed the full vaccination schedule by 24 months were 71.2% in urban areas and 58.4% in rural areas, and in both settings completion was strongly associated with maternal education, household wealth, birth order and whether the child was born in a health facility, with the gap between the richest and poorest wealth quintiles being 22 percentage points in rural areas compared with 14 percentage points in urban areas, while the gap by maternal education was similar in both settings."
+  },
+  {
+   "paragraph": 93,
+   "section": "results",
+   "text": "The model fitted the data quite well, and the posterior distributions were very narrow for most parameters. The reporting rate was definitely lower in the first wave (posterior median 0.18) than in the second (0.42). The posterior for the incubation period was very similar to the prior, indicating that it was not well informed by the data. Estimates of the transmission rate were robust to the choice of prior."
+  },
+  {
+   "paragraph": 94,
+   "section": "results",
+   "text": "Overall, 26 of 410 surgical patients (6.3%) developed a surgical site infection within 30 days. The infection rate was 3.9% after clean procedures and 11.6% after contaminated procedures. In the multivariable model, longer operative duration (odds ratio 1.31 per additional hour, 95% CI 1.08-1.59) and diabetes (odds ratio 2.44, 1.06-5.62) were associated with infection, whereas timing of antibiotic prophylaxis was not."
+  },
+  {
+   "paragraph": 95,
+   "section": "results",
+   "text": "In total, 2,450 pregnant women recieved the RSV vaccine during the study period. The occurence of preterm birth was 6.1% among vaccinated women and 6.4% among unvaccinated women. After adjustment for gestational age at vaccination, the hazard ratio is 0.97 (95% CI 0.81-1.16). No increase in stillbirth was observed, and birthweight was similar in the two groups. Similar results were seen when the analysis was restricted to first pregnancies."
+  },
+  {
+   "paragraph": 96,
+   "section": "discussion",
+   "text": "Our analysis suggests that the decline in measles incidence after the 2019 campaign was driven mainly by the campaign itself rather than by the build-up of natural immunity. Two observations support this interpretation. First, incidence fell in all age groups targeted by the campaign but not in older adults, who were not targeted. Second, the timing of the decline in each district matched the date the campaign reached it, with a delay of about one generation interval. Natural immunity alone would not produce this staggered pattern."
+  },
+  {
+   "paragraph": 97,
+   "section": "discussion",
+   "text": "It was found that school closures had only a modest effect on transmission. This is clearly in contrast to earlier modelling studies. It has been suggested that this discrepancy is due to the fact that children mixed outside school when schools were closed. It is recommended that future policies take this into account when deciding whether to close schools during the next pandemic."
+  },
+  {
+   "paragraph": 98,
+   "section": "discussion",
+   "text": "These findings may possibly indicate that the vaccine might offer somewhat less protection against the newer variants, although it could perhaps also be the case that the apparent waning is partly explained by changes in testing behaviour over time, since people who had been vaccinated earlier may have been less likely to seek testing when they developed mild symptoms. Distinguishing between these explanations would require data on testing behaviour by vaccination status."
+  },
+  {
+   "paragraph": 99,
+   "section": "discussion",
+   "text": "Our results prove that community health workers reduce child mortality. Villages with a community health worker had 30% fewer deaths among children under five than villages without one. Therefore, every country should invest in community health worker programmes as a matter of priority. This finding is undoubtedly one of the most important in the field of global child health in recent years."
+  },
+  {
+   "paragraph": 100,
+   "section": "discussion",
+   "text": "Our estimate of vaccine effectiveness against hospitalisation is lower than that reported in the phase III trial, which is not unexpected. Trial participants were younger and healthier than the general population of older adults, and the trial was conducted during a season in which the circulating strain was well matched to the vaccine. Observational estimates from other countries in the same season ranged from 35% to 55%, which brackets our estimate of 44%."
+  },
+  {
+   "paragraph": 101,
+   "section": "discussion",
+   "text": "In terms of the implications for policy, this suggests that there is a need for more targeted interventions. It is important to note that the populations at highest risk are often those that are hardest to reach. This means that a different approach may be needed. A number of studies have looked at this issue, but more research is needed in order to identify the most effective strategies."
+  },
+  {
+   "paragraph": 102,
+   "section": "discussion",
+   "text": "Several limitations should be acknowledged. Mistakes were made in the coding of the occupation variable during the first year of data collection, and these are corrected by the second year. The decision was taken to exclude participants with missing data, which may introduce bias. It is also the case that the sample was drawn from a single region, which limits how far the results can be generalised."
+  },
+  {
+   "paragraph": 103,
+   "section": "discussion",
+   "text": "One explanation for the late peak in older adults is that transmission spread from children to adults through household contact, rather than through independent introductions into each age group. Our household data are consistent with this: in most households with more than one case, the first case was a child. An alternative explanation, that older adults delayed testing, cannot be excluded, but it would not account for the similar delay seen in hospital admissions, which are less affected by testing behaviour."
+  },
+  {
+   "paragraph": 104,
+   "section": "discussion",
+   "text": "The higher ART coverage among women is consistent with previous studies in the region. Women have more frequent contact with health services, particularly through ANC, which provide routine opportunities for HIV testing. However, men who test positive are less likely to link to care, and this gap have persisted despite targeted campaigns. Interventions that reach men in workplaces or through partner notifcation may be needed."
+  },
+  {
+   "paragraph": 105,
+   "section": "discussion",
+   "text": "To our knowledge, this is the first study ever to estimate the effect of rainfall on cholera in this region. Our findings clearly demonstrate that heavy rainfall is the main driver of outbreaks. Public health authorities should therefore use rainfall forecasts to trigger preparedness activities, such as pre-positioning of oral rehydration supplies and chlorination of water sources. This would allow resources to be in place before cases start to rise."
+  },
+  {
+   "paragraph": 106,
+   "section": "discussion",
+   "text": "Our finding that the test-negative design was unbiased only when vaccination did not affect the probability of seeking care for non-influenza illness has practical implications. In settings where vaccinated people are more health-conscious, they may be more likely to seek care for any respiratory illness, and the design will then overestimate effectiveness. Investigators can partly address this by restricting analyses to patients meeting a strict case definition, which reduces the role of discretionary care-seeking."
+  },
+  {
+   "paragraph": 107,
+   "section": "discussion",
+   "text": "The fact that the model was able to reproduce the observed dynamics without the inclusion of a seasonal forcing term is perhaps surprising given the strong seasonality that has been documented for this pathogen in temperate settings, and it suggests that in this particular tropical setting the timing of epidemics may be determined more by the depletion and replenishment of susceptible individuals through births and waning immunity than by climatic factors such as temperature or humidity, which vary relatively little over the course of the year."
+  },
+  {
+   "paragraph": 108,
+   "section": "discussion",
+   "text": "It was decided early on that only laboratory-confirmed cases would be included. This means that the incidence of mild disease is likely underestimated. Probable cases were excluded because their diagnoses were less reliable, but suspected infections may still have been transmitting. This should be considered when interpreting the results, particularly the estimates for the first month of the outbreak. A sensitivity analysis including probable cases gave a higher incidence but a similar trend."
+  },
+  {
+   "paragraph": 109,
+   "section": "discussion",
+   "text": "Why did the intervention fail to reduce transmission in the urban clusters? Adherence was similar in urban and rural clusters, so differences in uptake are unlikely to explain it. A more plausible explanation is that urban residents spent more time away from home, where the intervention offered no protection. Our travel survey supports this: urban adults reported spending a median of 9 hours per day outside their home neighbourhood, compared with 4 hours among rural adults."
+  },
+  {
+   "paragraph": 110,
+   "section": "discussion",
+   "text": "It is possible that the variation in incidence accross districts may be related to differences in diagnostic capacity. Districts with more laboratories reported more cases, which may suggest that higher reported incidence reflects better detection rather than more transmission. Similar patterns have been observed accross other notifiable diseases. However, it is also possible that districts with more laboratories are more urban and therefore have higher true incidence."
+  },
+  {
+   "paragraph": 111,
+   "section": "discussion",
+   "text": "Our estimate of the IFR in adults over 80 was considerably higher than estimates from other countries. One possible reason is the high proportion of deaths that occurred in LTCFs, where residents have more comorbidities. Another reason is the timing of the first wave, which coincided with the peak of seasonal influenza. The median delay from infection to death of 23 is consistent with previous estimates."
+  },
+  {
+   "paragraph": 112,
+   "section": "discussion",
+   "text": "Compared with previous estimates, our analysis places more weight on the role of asymptomatic infection in sustaining transmission between seasons. Earlier models assumed that asymptomatic infections were less infectious than symptomatic ones by a factor of two or more; our household data suggest the difference is smaller. If this is correct, surveillance based on symptomatic cases will underestimate the size of the reservoir during the low season, and the timing of the annual epidemic may depend more on this reservoir than on reintroduction from neighbouring regions."
+  },
+  {
+   "paragraph": 113,
+   "section": "discussion",
+   "text": "Errors were introduced into the dataset during the transfer from paper forms to the electronic database. These were identified late in the analysis. This affected around 5% of records. Although corrections were applied, it cannot be ruled out that some errors remain. Records from two of the twelve sites were the most affected, and estimates for those sites should be read with caution."
+  },
+  {
+   "paragraph": 114,
+   "section": "discussion",
+   "text": "Obviously, the main strength of this study is the use of linked data, which allowed us to follow individuals from the time of vaccination through to hospital admission and death, and to adjust for a wide range of confounders that are not usually available in surveillance-based studies, including previous healthcare use, socioeconomic deprivation measured at the small-area level, and household composition derived from shared addresses."
+  },
+  {
+   "paragraph": 115,
+   "section": "discussion",
+   "text": "Our study found that adolescent girls in rural area was less likely to complete the HPV vaccine schedule. This finding is consistent with study from neighbouring country, which reports similar disparities. Possible explanation is that school-based delivery does not reach girls who left school early. Outreach through community health workers, rather than schools alone, may help close the gap. Data on school attendance would help to test this explanation."
+  },
+  {
+   "paragraph": 116,
+   "section": "discussion",
+   "text": "The renewal model assumes that the generation interval is the same throughout the epidemic. This is unlikely to hold exactly. When isolation becomes faster, infections that would have occurred late in an infectious period are prevented, and the realised generation interval shortens. Our sensitivity analysis shows that a shortening of one day would raise our estimates of R_t during growth by about 0.1 and lower them by a similar amount during decline; it would not change the date on which R_t crossed one."
+  },
+  {
+   "paragraph": 117,
+   "section": "discussion",
+   "text": "At the present time, there is a lack of evidence regarding the cost-effectiveness of the intervention in low-income settings. In view of the fact that resources are limited, it is essential that decisions are made on the basis of the best available evidence. With this in mind, our study provides a useful contribution to the literature in the area of health economics of infectious disease."
+  },
+  {
+   "paragraph": 118,
+   "section": "discussion",
+   "text": "The strong correlation between mobility and R_t (r = 0.78) demonstrates that reductions in movement caused the decline in transmission. Policymakers can therefore use mobility data as a direct measure of the effectiveness of lockdowns. Mobility data are available in near real time, which makes them more useful than case counts for this purpose. This finding has major implications for future epidemic planning."
+  },
+  {
+   "paragraph": 119,
+   "section": "discussion",
+   "text": "An important strength of this trial is that outcomes were ascertained through active weekly visits rather than through passive presentation to clinics. Passive surveillance would have missed many mild episodes and could have been biased if the intervention changed care-seeking. The main limitation is that the trial was conducted in a single district with high transmission; the absolute benefit would likely be smaller where incidence is lower, although the relative reduction may be similar."
+  },
+  {
+   "paragraph": 120,
+   "section": "discussion",
+   "text": "The occurence of resistance in this setting is concerning. It has been shown that the occurence of resistance is associated with prior antibiotic exposure, and antibiotics are widely available without prescription in the study area. Restrictions on over-the-counter sales were introduced but were not enforced. Stewardship programmes that include community pharmacies may therefore be needed alongside hospital-based measures. Surveillance of resistance in the community is currently very limited."
+  },
+  {
+   "paragraph": 121,
+   "section": "discussion",
+   "text": "It is certainly possible that maybe the lower uptake among younger adults reflects lower perceived risk. Surveys conducted during the campaign showed that younger adults were less worried about severe disease, but we did not collect information on risk perception ourselves. Other explanations, such as difficulty taking time off work to attend vaccination clinics, are also plausible. A follow-up survey could distinguish between these explanations."
+  },
+  {
+   "paragraph": 122,
+   "section": "discussion",
+   "text": "These results have direct implications for programme design. If the goal is to reduce hospital admissions in the first season, maternal vaccination should be offered to women due to give birth in the three months before the expected peak, because infants born in this window are at highest risk. If supply allows year-round use, the additional benefit for infants born outside this window is small, and the doses might be better used in a catch-up campaign for infants at high risk."
+  },
+  {
+   "paragraph": 123,
+   "section": "discussion",
+   "text": "The higher incidence of TB among people living with diabetes in our cohort is consistent with the biological evidence that hyperglycaemia impairs the innate and adaptive immune response, and with previous cohort studies, although the magnitude of the association that we observed was somewhat larger than in most previous studies, possibly because our cohort included a higher proportion of individuals with poorly controlled diabetes as measured by HbA1c. This has implications for screening."
+  },
+  {
+   "paragraph": 124,
+   "section": "discussion",
+   "text": "Efforts were made to reduce selection bias, but participation was lower among men and among younger adults. Weights were applied to correct for this. It should be noted that weighting cannot correct for differences in unmeasured characteristics, and it is acknowledged that the estimates may therefore not fully represent the target population. Response rates were also lower in the two urban sites than in the rural ones."
+  },
+  {
+   "paragraph": 125,
+   "section": "discussion",
+   "text": "We found no evidence that the intervention reduced antibiotic prescribing for respiratory infections in children, despite a clear reduction in adults. Parents may have been more reluctant than adult patients to accept a delayed prescription, or clinicians may have been more cautious with children. Our qualitative interviews point to the second explanation: several clinicians described feeling unable to justify a delayed prescription for a febrile child, even when they judged the infection to be viral."
+  },
+  {
+   "paragraph": 126,
+   "section": "discussion",
+   "text": "Our estimate of R0 (2.1) is lower than the basic reproductive ratio reported in earlier outbreaks in the region (2.5-3.0). This difference may reflect the earlier implementation of NPIs. The estimated doubling time of 4.5 is also longer than in previous reports. Differences in the methods used to estimate the reproduction number could account for part of the gap. The serial interval used in our analysis was also slightly shorter."
+  },
+  {
+   "paragraph": 127,
+   "section": "discussion",
+   "text": "This is a really important finding because it shows that very small changes in vaccine coverage can have very large effects on the risk of outbreaks. In a situation where coverage is already close to the threshold, even a small decline could lead to a resurgence. For this reason, it is very important that coverage is monitored at a fine spatial scale."
+  },
+  {
+   "paragraph": 128,
+   "section": "discussion",
+   "text": "Our model did not include spatial structure, and treating the province as a single well-mixed population is a simplification. However, the sensitivity analysis with a two-patch model gave similar estimates of the reproduction number and of the effect of the intervention, which suggests that the conclusions are not driven by this assumption. A spatially explicit model would be needed to answer a different question: where the intervention should be targeted first."
+  },
+  {
+   "paragraph": 129,
+   "section": "discussion",
+   "text": "The results of this study suggests that integrating hepatitis B screening into antenatal care is feasible. Uptake was high, and most women who tested positive were linked to care. However, follow-up of their infants were incomplete, and only half received the birth-dose vaccine within 24 hours. Future programs should adress this gap. Training midwives to give the birth dose at delivery was proposed by several participants."
+  },
+  {
+   "paragraph": 130,
+   "section": "discussion",
+   "text": "Taken together, the evidence appears to suggest that the intervention is effective in all settings. Although our trial was conducted in one urban area, the mechanism of action does not depend on local conditions, and the results can therefore be generalised to rural populations and to other countries. Scaling up the intervention nationally should be a priority. Other countries should consider adopting it as well."
+  },
+  {
+   "paragraph": 131,
+   "section": "abstract",
+   "text": "Background: Seasonal malaria chemoprevention reduces malaria in young children, but its effect wanes when the transmission season extends beyond the four monthly cycles. Methods: We fitted a transmission model to weekly clinic data from 18 health districts and compared four- and five-cycle schedules under observed rainfall. Results: A fifth cycle averted a median of 11% (95% credible interval 7-16) more clinical cases per child per year, with the largest gains in districts where rains ended late. Conclusions: Districts with late-ending rains should consider a fifth cycle."
+  },
+  {
+   "paragraph": 132,
+   "section": "abstract",
+   "text": "Dengue is a very serious public health problem in many countries. In order to better understand transmission, we developed an SEIR-SEI model and fitted it to weekly DHF case data from 2010 to 2020 using MCMC. The results clearly show that temperature is the main driver of the seasonal pattern. Our findings have important implications for the planning of vector control activities and will undoubtedly help public health authorities."
+  },
+  {
+   "paragraph": 133,
+   "section": "abstract",
+   "text": "Estimates of the time-varying reproduction number are widely used to monitor epidemics, but their sensitivity to the assumed generation interval is rarely reported. We re-estimated the reproduction number for six respiratory epidemics using generation intervals from published ranges. Changing the mean generation interval by one day altered estimates by up to 0.3 during periods of rapid growth but did not change the dates on which the reproduction number crossed one. We recommend reporting the generation interval alongside every estimate."
+  },
+  {
+   "paragraph": 134,
+   "section": "abstract",
+   "text": "This study aims to assess the effectiveness of the influenza vaccine among adults aged 65 and above using a test-negative design. We included 4,210 patients who were tested for influenza at 12 hospitals during the 2022/23 season, of whom 1,105 tested positive and 3,105 tested negative, and vaccination status was obtained from the national register. Vaccine effectiveness against hospitalisation is 41%. Effectiveness was lower in those aged 80 and above. These results support continued vaccination of older adults."
+  },
+  {
+   "paragraph": 135,
+   "section": "abstract",
+   "text": "Little is known about how household crowding affects tuberculosis transmission in urban slums. We carried out a cross-sectional survey of 1,200 households and found that crowding may possibly be associated with latent infection in children. This could perhaps suggest that housing interventions might potentially reduce transmission. This should be investigated further. Children in the most crowded households were also less likely to have received BCG vaccination."
+  },
+  {
+   "paragraph": 136,
+   "section": "abstract",
+   "text": "Hepatitis C remains common among people who inject drugs, but few are treated. We evaluated a nurse-led test-and-treat service in four community drug services using a before-and-after design. In the twelve months after the service started, the proportion of clients tested rose from 38% to 79%, and 142 of 168 clients with chronic infection started treatment, compared with 21 of 155 in the previous year. Nurse-led services in drug treatment settings can substantially increase treatment uptake."
+  },
+  {
+   "paragraph": 137,
+   "section": "abstract",
+   "text": "We analysed EHR data from 85,000 children to investigate the association between early antibiotic exposure and childhood asthma. Children exposed to antibiotics in the first year of life had a 1.6-fold higher risk of asthma. These results prove that early antibiotic use causes asthma and that prescribing guidelines must be changed immediately. Clinicians should avoid antibiotics in infants wherever possible."
+  },
+  {
+   "paragraph": 138,
+   "section": "abstract",
+   "text": "Cholera vaccination campaign was conducted in displacement camp following floods. We estimated vaccine coverage and effectiveness using household survey and case-control study. Coverage of two doses were 68%. Effectiveness of two doses against medically attended cholera was 76% (95% CI 52-88), and effectiveness of single dose was 59% (95% CI 21-79). Single-dose campaigns may be reasonable option when supply is limited."
+  },
+  {
+   "paragraph": 139,
+   "section": "abstract",
+   "text": "The aim of this study was to evaluate the impact of a school-based handwashing intervension on absenteeism due to gastrointestinal and respiratory illness. A total of 40 schools were randomised to receive the intervension or to continue with usual practice. Absence due to illness was 21% lower in the intervention schools (rate ratio 0.79, 95% CI 0.67-0.93). It is important to note that the effect was largest in the youngest children."
+  },
+  {
+   "paragraph": 140,
+   "section": "abstract",
+   "text": "Mpox case numbers rose quickly in 2022 among men who have sex with men. We estimated the incubation period from 120 cases with known exposure dates and the serial interval from 57 transmission pairs. The mean incubation period was 8.5 and the mean serial interval was 7.8, which is very important because this means that a lot of transmission occurred before symptoms appeared."
+  },
+  {
+   "paragraph": 141,
+   "section": "discussion",
+   "text": "This study has three main limitations. First, vaccination status was taken from a register that may miss doses given in private clinics, which would bias effectiveness towards zero. Second, we could not measure prior infection directly and relied on previous positive tests, which undercount infections. Third, the study period covered a single season dominated by one subtype, so our estimates may not apply to seasons in which other subtypes predominate."
+  },
+  {
+   "paragraph": 142,
+   "section": "conclusion",
+   "text": "In conclusion, it is clear that the new surveillance system have greatly improved the timeliness of outbreak detection. The median delay from first case to notification fell from 12 days to 4 days. This system should definitely be extended to all provinces as soon as possible, as it will undoubtedly save many lives. The cost of the system was modest compared with the cost of a single large outbreak."
+  },
+  {
+   "paragraph": 143,
+   "section": "discussion",
+   "text": "Some limitations were identified. The sample size was perhaps somewhat small, which may possibly have limited the power to detect differences between subgroups. This means that the null findings should be interpreted with caution. It was not possible to blind participants. Outcome assessors were also aware of allocation, which may have influenced the classification of borderline cases. Larger studies will be needed to confirm these results."
+  },
+  {
+   "paragraph": 144,
+   "section": "conclusion",
+   "text": "Vaccine effectiveness can be estimated from routinely collected hospital data within weeks of the start of a season, at a fraction of the cost of a dedicated study. The estimates we obtained were close to those from the national sentinel network in each of the three seasons we examined. Health departments that already link immunization registries to hospital records could adopt this approach with modest additional investment."
+  },
+  {
+   "paragraph": 145,
+   "section": "conclusion",
+   "text": "In summary, the findings of this thesis indicate that mathematical models that incorporate realistic contact patterns, waning immunity and heterogeneity in vaccine uptake can provide useful insights into the likely impact of different vaccination strategies, and that such models should be used more widely by policymakers when making decisions about the introduction of new vaccines, the timing of vaccination campaigns and the allocation of limited vaccine supplies between different population groups and geographical areas."
+  },
+  {
+   "paragraph": 146,
+   "section": "conclusion",
+   "text": "The findings of this study have importnat implications for the PMTCT programme. Early infant diagnosis using POC testing reduced the time to result from 45 days to the same day, and the proportion of HIV-positive infants who started ART within 60 days increases from 48% to 89%. Scale-up of POC testing should be prioritised in high-burden districts. Supply chains for test cartridges will need to be strengthened before this can happen."
+  },
+  {
+   "paragraph": 147,
+   "section": "discussion",
+   "text": "Our findings should be read in light of how cases were ascertained. Notification depends on a patient seeking care and a clinician requesting a test, and both are more likely in areas with better access to services. If access improved over the study period, part of the apparent increase in incidence may reflect detection rather than transmission. We partly addressed this by restricting the analysis to severe cases, for whom testing is routine, and the trend was similar but less steep."
+  },
+  {
+   "paragraph": 148,
+   "section": "conclusion",
+   "text": "Overall, the intervention reduced the incidence of clinical malaria by 34% and the prevalence of anaemia by 21%. The programme was well accepted by communities, and the cost of the scheme was 4.2 per child per year. Given these results, the intervention should be considered for inclusion in national guidelines. Further work is needed to assess whether the effect is sustained beyond two transmission seasons."
+  },
+  {
+   "paragraph": 149,
+   "section": "discussion",
+   "text": "There are a number of limitations with the present work. Firstly, the model does not account for age structure, spatial heterogeneity, behavioural change etc. This might affect the results. Secondly, data on vaccination coverage were only available at the national level, which means that local variation could not be captured. Thirdly, this study only considered one pathogen. Future work should address these limitations by using local data where they become available."
+  },
+  {
+   "paragraph": 150,
+   "section": "conclusion",
+   "text": "This thesis has shown beyond doubt that renewal-equation models provide the most accurate estimates of transmission in every setting. The methods developed here are therefore ready to be adopted by all public health agencies. In future work, I intend to extend the framework to account for spatial spread and to incorporate genomic data, which will further improve the estimates. These extensions will be the subject of a follow-up project."
+  }
+ ]
+}
