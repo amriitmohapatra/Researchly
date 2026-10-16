@@ -3129,3 +3129,83 @@ each resumed from its saved work.
 - Latency-budget tests fail when the machine is loaded by parallel jobs;
   they pass alone. Run them last, or alone, before reading a failure as a
   regression.
+
+## P49 — 2026-10-16 — Laya's training data, and training in one command
+
+**What.** The owner had no paragraphs of their own to label and asked for
+"all the ingredients ready … so that I simply run the program that trains
+laya". Fifty paragraphs could only ever be a rough final check, not training
+data, so this round built the training set and a one-command trainer.
+- *Synthetic drafts* (`ml/critics/data/synthetic/`, parts A–C):
+  - 450 paragraphs written for the purpose, with every engine flag judged
+    useful, wrong or unsure: 749 judgments.
+  - Decided precision by part: A 0.79, B 0.68, C 0.59.
+  - Registry: `s5-synthetic-drafts`.
+- *Corpus flag judgments* (`ml/critics/data/corpus/`):
+  - 1,001 judgments on 374 paragraphs from 164 CC BY / CC0 articles.
+  - Only labels, paragraph indices and SHA-256 hashes are committed;
+    `rebuild.py` rebuilds the text locally.
+  - The test split (201 judgments) is held out.
+  - Registry: `s5-corpus-flag-judgments`.
+- *Trainer* (`ml/critics/laya/`):
+  - `assemble.py`: pools the data with no paragraph or article in two
+    splits, keeps the owner's labels as test only, writes a data report,
+    and stops if labels have drifted from the engine.
+  - `pipeline.py` / `evaluate.py`: train with resume, evaluate, calibrate,
+    export INT8 ONNX, then re-score the INT8 graph.
+  - `train.sh`: one command for the whole run (macOS bash 3.2 safe).
+  - `make_kaggle_kit.sh` + `kaggle_notebook.ipynb`; the results come back
+    through `train.sh --import`.
+  - `ml/corpus/harvest.py mirror` fetches exactly the committed manifest.
+- *Gate fixes*:
+  - reads `run_dogfood`'s per-document `corpus_stats.json`;
+  - Task A needs the owner's labels as the independent test;
+  - a threshold can no longer fall inside a tie of equal confidences.
+- *PLAN* records the precision findings from the judgments in the Inbox
+  (accented names split by the tokenizer, D902/C303/AB802/G103/G107 mostly
+  wrong, recall gaps), plus the S5 ticks.
+
+**Data counts.**
+
+| Task A | Synthetic | Corpus | Total |
+|---|---|---|---|
+| Train | 467 | 566 | 1,033 |
+| Dev | 109 | 108 | 217 |
+| Test | 111 | 169 | 280 |
+
+The training set is about 1 : 1 useful to wrong (505 / 528). Task B has
+5,184 train sentences from 383 articles, 565 dev, and 790 test.
+
+**Evidence.**
+- ML suites: critics 60, corpus 36, eval 29, dogfood 25, tools 5.
+- ruff clean; third-party scan 0 hits.
+- Smoke runs on CPU (quick mode) completed for both tasks, each NOT
+  PROMOTED, as expected:
+  - Task B dev 0.37 → 0.70;
+  - Task A dev 0.52 → 0.65.
+- `train.sh --import` was exercised on a zip packed as the notebook packs
+  it.
+- Not run: the Kaggle notebook on Kaggle, and MPS.
+- The engine is unchanged, so no noise-gate rerun was needed (the import
+  run measured 11.54).
+
+**For the owner.**
+- On the Mac:
+  - `bash ml/critics/laya/train.sh --dry-run`
+  - then `--quick`
+  - then the full run (≈6.5 h on MPS, a guess).
+- Or the Kaggle kit (≈75 min on a T4).
+- Disk: ≈1 GB, plus ≈2.5 GB per task, plus ≈3 GB while exporting.
+- Memory: 8–10 GB.
+- Task A cannot be promoted until the owner labels their own paragraphs at
+  `/label`.
+
+**Lessons.**
+- Labels written by the same assistant that wrote the rules are not an
+  independent test, however careful. The gate now says so in code: Task A
+  needs the owner's labels to pass.
+- INT8 export cost real accuracy on Task B (0.60 → 0.52 in the smoke run).
+  Report both numbers, and let the gate read the INT8 one, since that is
+  what ships.
+- `harvest.py all` rewrites the committed manifest. Any step that depends
+  on paragraph hashes must use `mirror`.
