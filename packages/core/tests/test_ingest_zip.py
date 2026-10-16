@@ -52,6 +52,11 @@ def assert_round_trip(doc, files):
         assert seg.start == pos and seg.end > seg.start
         src = files[seg.path]
         n = seg.end - seg.start
+        if seg.source_start == len(src) and not src.endswith("\n"):
+            # TeX's end of line after an input file that lacks one
+            assert doc.original[seg.start:seg.end] == "\n"
+            pos = seg.end
+            continue
         assert doc.original[seg.start:seg.end] == \
             src[seg.source_start:seg.source_start + n]
         pos = seg.end
@@ -111,6 +116,43 @@ def test_section_awareness_and_spelling_survive_the_project():
     assert spelled == ["mispeled"]
 
 
+def test_tex_ends_an_input_file_with_an_end_of_line():
+    # PLAN S2 known gap: a child whose last line is a `%` comment with no
+    # final newline swallowed the text after `\input{x}` on the same line.
+    main = ("\\documentclass{article}\n\\begin{document}\n"
+            "\\section{Results}\n"
+            "\\input{note} The weekly counts rose in every ward.\n"
+            "\\input{tail}continued here.\n"
+            "\\end{document}\n")
+    files = {"main.tex": main,
+             "note.tex": "Cases were counted each week. % a draft remark",
+             "tail.tex": "The rate fell and it"}
+    doc = load(files)
+    assert_round_trip(doc, files)
+    assert "The weekly counts rose in every ward." in doc.masked
+    assert "it\ncontinued here." in doc.masked        # not "itcontinued"
+    out = check(doc, NLP, show_preferences=True, disabled={"LT001"})
+    assert not [s for s in out if s.rule_id == "S001"]
+    at = doc.original.find("The weekly counts")
+    assert source_position(doc.segments, doc.original, at)[:2] == \
+        ("main.tex", 4)
+    at = doc.original.find("continued here")
+    assert source_position(doc.segments, doc.original, at)[:2] == \
+        ("main.tex", 5)
+
+
+def test_an_input_file_is_joined_as_before_when_nothing_follows_it():
+    # Only text after the command on the same line needs TeX's end of line:
+    # otherwise the combined text is the files' text, character for character.
+    files = {"main.tex": "\\documentclass{article}\n\\begin{document}\n"
+                         "\\input{a}\n\\end{document}\n",
+             "a.tex": "No final newline here % a remark"}
+    doc = load(files)
+    assert len(doc.segments) == 3
+    assert doc.original == files["main.tex"].replace(
+        "\\input{a}", "\\input{a}" + files["a.tex"])
+
+
 def test_missing_cycle_and_depth_skip_with_warnings():
     files = {"main.tex": "\\documentclass{article}\n\\begin{document}\n"
                          "A.\\input{nope}\n\\input{a}\n\\input{d0}\n"
@@ -145,10 +187,12 @@ def test_main_file_detection():
                 "Proj/s.tex": "Inside."})
     assert "Inside." in doc.original
     # two indistinguishable roots: one is chosen (deterministically) and the
-    # user is told which, rather than the project being refused (P29)
+    # user is told which, rather than the project being refused (P29); the
+    # response lists both so the writer can choose (Codex review #5)
     tie = load({"a.tex": root, "b.tex": root})
     assert tie.segments[0].path in ("a.tex", "b.tex")
-    assert any("several main .tex files" in w for w in tie.warnings)
+    assert tie.main_file == tie.segments[0].path
+    assert tie.main_candidates == ["a.tex", "b.tex"]
     rejected(zip_bytes({"a.tex": "x", "b.tex": "y"}), "unreadable_file")
     rejected(zip_bytes({"readme.md": SECRET}), "unreadable_file")
 
@@ -305,7 +349,8 @@ def test_cover_letter_beside_the_manuscript_is_not_the_main_file():
     doc = load_bytes("p.zip", zip_bytes(files))
     assert "The model was fitted." in doc.original
     assert "Dear Editor" not in doc.original
-    assert any("checked manuscript.tex" in w for w in doc.warnings)
+    assert doc.main_file == "manuscript.tex"
+    assert doc.main_candidates == ["cover_letter.tex", "manuscript.tex"]
 
 
 def test_two_versions_prefer_the_one_that_includes_more():
@@ -314,4 +359,5 @@ def test_two_versions_prefer_the_one_that_includes_more():
              "a.tex": "Part A.\n", "b.tex": "Part B.\n"}
     doc = load_bytes("p.zip", zip_bytes(files))
     assert "Long version." in doc.original and "Part B." in doc.original
-    assert any("paper_journal.tex" in w and "paper.tex" in w for w in doc.warnings)
+    assert doc.main_file == "paper_journal.tex"
+    assert doc.main_candidates == ["paper.tex", "paper_journal.tex"]

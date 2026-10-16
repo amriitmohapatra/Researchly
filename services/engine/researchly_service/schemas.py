@@ -87,6 +87,16 @@ class Scope(str, Enum):
     document = "document"
 
 
+class DocumentScope(str, Enum):
+    """How much of a document the text is (Codex review #4), separate from
+    its article type: a whole manuscript, one chapter, or an excerpt.
+    `auto` infers it from the headings."""
+    auto = "auto"
+    whole = "whole"
+    chapter = "chapter"
+    excerpt = "excerpt"
+
+
 class Category(str, Enum):
     """The four-type taxonomy (CLAUDE.md #3). Conventions are never errors;
     preferences are hidden unless asked for."""
@@ -134,6 +144,19 @@ class AnalyzeOptions(_Strict):
         None, description="Check the text against a reporting checklist "
                           "(`checklist` in the response): a guideline's id, "
                           "or `auto` for the one the text's words point to.")
+    document_scope: Optional[DocumentScope] = Field(
+        None, description="How much of the document the text is: whole, "
+                          "chapter or excerpt. Omitted or `auto`: inferred "
+                          "from the headings (`profile.scope` says what was "
+                          "assumed). An excerpt is asked for no missing "
+                          "sections; a chapter for no abstract. A choice "
+                          "about this check only, never stored.")
+    main_file: Optional[str] = Field(
+        None, max_length=512,
+        description="/v1/analyze-file with an Overleaf .zip: the project's "
+                    "main .tex file, by its path in the .zip (one of "
+                    "`document.main_candidates`). Omitted: Researchly "
+                    "chooses. Ignored for other files and requests.")
 
 
 class AnalyzeRequest(_Strict):
@@ -221,6 +244,18 @@ class TableEvidence(_Strict):
                                           'to 1 decimal place"; "" for none.')
 
 
+class Occurrence(_Strict):
+    """One place a grouped suggestion is about (S003, Codex review #10)."""
+    start: int = Field(..., ge=0, description="Offset into `content` in code "
+                                              "points, like Span.start.")
+    end: int = Field(..., ge=0, description="End offset, like Span.end.")
+    line: int = Field(..., ge=0, description="1-based line of `start`; 0 if unknown.")
+    col: int = Field(..., ge=0, description="1-based column of `start`; 0 if unknown.")
+    begin16: Optional[int] = Field(None, ge=0, description="`start` in UTF-16 "
+                                   "code units (see Suggestion.begin16).")
+    end16: Optional[int] = Field(None, ge=0, description="`end` in UTF-16 code units.")
+
+
 class Suggestion(_Strict):
     id: str = Field(..., description="Stable fingerprint of (rule_id, start, end, text); "
                                      "used by /v1/feedback in S2.")
@@ -258,6 +293,11 @@ class Suggestion(_Strict):
         "older engines omit it.")
     end16: Optional[int] = Field(
         None, ge=0, description="`span.end` in UTF-16 code units (see `begin16`).")
+    occurrences: Optional[List[Occurrence]] = Field(
+        None, description="A grouped suggestion only (S003: a word used "
+        "three or more times that no dictionary knows): every place it "
+        "appears, in reading order; `span` is one of them. Absent for a "
+        "suggestion about one place. Additive: older engines omit it.")
 
 
 class Metrics(_Strict):
@@ -294,6 +334,22 @@ class EngineInfo(_Strict):
     rules_loaded: int
 
 
+class ScopeInfo(_Strict):
+    """How much of the document the check took the text to be (Codex
+    review #4), and why."""
+    id: Literal["whole", "chapter", "excerpt"]
+    label: str
+    guessed: bool = Field(..., description="True when inferred (auto).")
+    note: str = Field("", description="One line saying what was assumed "
+                      "and what it changes, for the brief and the map.")
+
+
+class TopicalSection(_Strict):
+    """A topical heading read as Methods or Results from its own wording."""
+    heading: str = Field(..., description="The heading as written (never logged).")
+    section: str
+
+
 class ProfileInfo(_Strict):
     """The article-type profile a check ran under."""
     id: DocumentType
@@ -306,6 +362,56 @@ class ProfileInfo(_Strict):
                                  description="Rules not run for this type.")
     evidence: str = Field("", description="For a guessed type: the headings "
                           "the guess rested on.")
+    scope: Optional[ScopeInfo] = Field(
+        None, description="How much of the document the text was taken to "
+        "be. Additive: older engines omit it.")
+    topical: List[TopicalSection] = Field(
+        default_factory=list, description="Topical headings (\"Experiment "
+        "1: the baseline SEIR\") read as a section from the wording under "
+        "them, so the section-aware checks treat them as that section.")
+
+
+class EvidenceSpan(_Strict):
+    """Where in the text a statement of the brief or the map rests (Codex
+    review #3): code-point offsets into the checked text like `Span`, the
+    sentence quoted, and for clients that count in UTF-16 (Word, browsers)
+    `begin16`/`end16`. On the Word routes `location` finds it in Word as a
+    suggestion's does. Document text: never logged."""
+    start: int = Field(..., ge=0)
+    end: int = Field(..., ge=0)
+    text: str = Field(..., description="The sentence, quoted (one line, at "
+                      "most 180 characters).")
+    line: int = Field(0, ge=0, description="1-based line of `start`; 0 if unknown.")
+    col: int = Field(0, ge=0)
+    begin16: Optional[int] = Field(None, ge=0, description="`start` in UTF-16 code units.")
+    end16: Optional[int] = Field(None, ge=0, description="`end` in UTF-16 code units.")
+    file: Optional[str] = Field(None, description="For a project of several "
+                                "files (an Overleaf .zip): the file the "
+                                "sentence is in.")
+    file_line: Optional[int] = Field(None, ge=1, description="The 1-based "
+                                     "line in `file`.")
+    location: Optional["WordLocation"] = Field(
+        None, description="Word routes only: the paragraph and snippet to select.")
+
+
+class EvidenceLink(_Strict):
+    """One point of the brief, placed in the text: the sentence it rests on
+    (`claim`) and, for a claim, the evidence proposed beside it. A point
+    that cannot be placed has no link (it abstains)."""
+    kind: str = Field(..., description="What the sentence is, e.g. "
+                      "causal_claim, aim, gap, stranger, claim_without_grounds.")
+    label: str = Field(..., description="The kind, in plain words.")
+    claim: EvidenceSpan
+    evidence: Optional[EvidenceSpan] = Field(
+        None, description="The nearest sentence in the same section that "
+        "reports a number, a citation or a finding, within two sentences; "
+        "absent when none was detected or none is needed.")
+    evidence_status: Literal["detected", "not_detected", "not_applicable"] = Field(
+        "not_applicable", description="detected (evidence proposed beside "
+        "the claim), not_detected (none was found nearby: not proof there "
+        "is none), not_applicable (a statement that needs no evidence beside it).")
+    evidence_note: str = Field("", description="One line saying what the "
+                               "evidence is, or what was not detected.")
 
 
 class ReviewQuestion(_Strict):
@@ -323,6 +429,9 @@ class ReviewQuestion(_Strict):
     evidence: List[str] = Field(default_factory=list,
                                 description="Sentences of the document the "
                                 "verdict rests on (never logged).")
+    links: List[EvidenceLink] = Field(
+        default_factory=list, description="The points that rest on a "
+        "sentence, each placed in the text (\"Show in text\"). Additive.")
 
 
 class MoveStatus(str, Enum):
@@ -350,6 +459,8 @@ class NarrativeMove(_Strict):
                       "appears before or after.")
     learn_ref: Optional[str] = Field(None, description="The Learn card for "
                                      "this move (GET /v1/learn/{id}).")
+    span: Optional[EvidenceSpan] = Field(None, description="Where `evidence` "
+                                         "is in the text, when it can be placed.")
 
 
 class NarrativeSection(_Strict):
@@ -373,6 +484,8 @@ class MissingLink(_Strict):
     learn_ref: Optional[str] = None
     evidence: List[str] = Field(default_factory=list, description="The "
                                 "sentences concerned (never logged).")
+    spans: List[EvidenceSpan] = Field(default_factory=list, description="Where "
+                                      "those sentences are in the text.")
 
 
 class HedgingPoint(_Strict):
@@ -384,6 +497,17 @@ class HedgingPoint(_Strict):
     boosters_per_100w: float = Field(..., ge=0)
     reading: str = Field(..., description="flat | hedged | assertive | "
                          "balanced | heavily hedged")
+
+
+class ReviewerUnit(_Strict):
+    """A response letter's unit (Codex review #4): a reviewer's comment and
+    the reply under it. Described, never judged."""
+    kind: Literal["reviewer_comment"] = "reviewer_comment"
+    label: str = Field(..., description='e.g. "Reviewer 1, comment 2".')
+    comment: EvidenceSpan
+    reply: Optional[EvidenceSpan] = Field(None, description="Absent when no "
+                                          "reply was recognised under the comment.")
+    learn_ref: Optional[str] = None
 
 
 class NarrativeMap(_Strict):
@@ -399,6 +523,9 @@ class NarrativeMap(_Strict):
     note: str = Field(..., description="One line summing up the map, or why "
                       "there is none.")
     profile: Optional[DocumentType] = None
+    units: List[ReviewerUnit] = Field(
+        default_factory=list, description="For a response to reviewers: "
+        "each comment beside its reply, in order.")
     source: str
 
 
@@ -516,11 +643,35 @@ class SetAside(_Strict):
     label: str = Field(..., description="What it is, in plain words.")
 
 
+class NotChecked(_Strict):
+    kind: Literal["footnotes", "endnotes", "comments", "text_boxes",
+                  "headers_footers", "skipped_files"]
+    count: int = Field(..., ge=0)
+    label: str = Field(..., description="What it is, in plain words.")
+
+
+class Included(_Strict):
+    kind: Literal["footnotes"]
+    count: int = Field(..., ge=0)
+    label: str = Field(..., description="What it is, in plain words.")
+
+
 class ReadingSummary(_Strict):
     """What the checks read and what they set aside (2026-10-14): code,
     maths, layout, paragraphs in another language. Counts only."""
     words_checked: int = Field(..., ge=0)
     set_aside: List[SetAside] = Field(default_factory=list)
+    not_checked: List[NotChecked] = Field(
+        default_factory=list,
+        description="Parts of an uploaded file the checks did not read: a "
+                    ".docx's footnotes, endnotes, comments, text boxes and "
+                    "headers or footers with words in them; files an "
+                    "Overleaf project includes that could not be read. "
+                    "Counted, never read as text.")
+    included: List[Included] = Field(
+        default_factory=list,
+        description="Parts read where they stand that a writer might think "
+                    "were skipped (LaTeX footnotes).")
 
 
 class AnalyzeResponse(_Strict):
@@ -589,6 +740,13 @@ class WordLocation(_Strict):
 
 class WordSuggestion(Suggestion):
     location: WordLocation
+    occurrence_locations: Optional[List[WordLocation]] = Field(
+        None, description="With `occurrences`: where each one is in Word, "
+        "in the same order, for \"Show where\".")
+
+
+# EvidenceSpan names WordLocation before it is defined.
+EvidenceSpan.model_rebuild()
 
 
 class Coverage(_Strict):
@@ -775,10 +933,57 @@ class SourceInfo(_Strict):
     warnings: List[str] = Field(default_factory=list,
                                 description="Things skipped or approximated while "
                                             "reading the file; never document text.")
+    main_file: Optional[str] = Field(
+        None, description="An Overleaf project: the main .tex file that was "
+                          "read (with every \\input in it).")
+    main_candidates: List[str] = Field(
+        default_factory=list,
+        description="An Overleaf project with more than one file that starts "
+                    "a document (\\documentclass): all of them, so the writer "
+                    "can choose another (options.main_file). Empty otherwise.")
 
 
 class AnalyzeFileResponse(AnalyzeResponse):
     document: SourceInfo
+
+
+class CapabilityCheck(_Strict):
+    id: Literal["rules", "spelling", "grammar", "gec", "document", "brief"]
+    label: str = Field(..., description="Plain words: \"writing rules\", "
+                       "\"whole-document checks\".")
+    on: bool
+    note: str = Field("", description="Why it is off, in plain words; empty "
+                      "when on.")
+
+
+class NetworkContact(_Strict):
+    what: str = Field(..., description="What is contacted, in plain words.")
+    when: str = ""
+    sends_text: bool = Field(..., description="Does the document's text go "
+                             "there?")
+    leaves_computer: bool = Field(..., description="Over the network (true), "
+                                  "or to another program on the same "
+                                  "computer (false)?")
+
+
+class NetworkUse(_Strict):
+    sends_text: bool = Field(..., description="True when any check sends "
+                             "the text off this computer (for the hosted "
+                             "engine: beyond the engine).")
+    contacts: List[NetworkContact] = Field(default_factory=list)
+
+
+class Capabilities(_Strict):
+    """What this engine checks and what it contacts over the network (Codex
+    review #11): the local server's \"This computer\" promise, stated from
+    the same health and settings the checks run on."""
+    route: Literal["local_server", "overlay", "lsp", "cli", "service"]
+    label: str
+    where: Literal["this_computer", "service"]
+    checks: List[CapabilityCheck]
+    network: NetworkUse
+    summary: str = Field(..., description="One plain line, for logs and "
+                         "the command line.")
 
 
 class HealthResponse(_Strict):
@@ -787,6 +992,9 @@ class HealthResponse(_Strict):
                          "run is not ok.")
     tiers: List[TierHealth]
     engine: EngineInfo
+    capabilities: Optional[Capabilities] = Field(
+        None, description="What this engine checks and what it contacts. "
+                          "Missing from an older local server.")
 
 
 class RuleInfo(_Strict):

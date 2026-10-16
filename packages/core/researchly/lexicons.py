@@ -157,6 +157,20 @@ APOSTROPHELESS_CONTRACTIONS = {
     "shouldve": "should have",
 }
 
+# --- S001 / S003: endings of coined biomedical names -------------------------
+# A repeated unknown word with one of these endings is built like a term (a
+# drug, an enzyme, a condition, a virus), so it is asked about once (S003)
+# rather than corrected at every use, even when a common word is one letter
+# away. Only endings that general English words seldom share: "-ase" and
+# "-ome" were left out because "increase" and "outcome" end that way, and a
+# typo of them would have been taken for a term.
+TERM_ENDINGS = (
+    "mab", "mabs", "vir", "virs", "cillin", "mycin", "azole", "azoles",
+    "kinase", "kinases", "osis", "oses", "itis", "aemia", "emia", "omics",
+    "virus", "viruses", "phage", "phages", "cyte", "cytes", "plasma",
+    "plasmas", "bacter", "coccus", "cocci",
+)
+
 # --- W212: uncountable nouns given a plural ---------------------------------
 # Mass nouns that standard English does not pluralise: a common slip for
 # writers whose first language counts them ("softwares", "informations"),
@@ -372,6 +386,34 @@ FILL_GAP_RULING_RX = (r"\b(?:not|cannot|never|partly|partially|in part|"
                       r"only|begins? to|began to|starts? to|to|aims? to|"
                       r"aimed to|sought to|seeks? to|attempts? to|"
                       r"attempted to)\s+(?:\w+\s+)?$")
+
+# D906: thread versus tape. A chapter of a thesis: a LaTeX \chapter, or a
+# heading that says "Chapter N" (plain text, Word, Markdown). Front and back
+# matter set as chapters are not chapters of the argument.
+CHAPTER_HEADING_RX = (r"^\s*chapter\s+(\d+|[ivxlc]+|one|two|three|four|five|"
+                      r"six|seven|eight|nine|ten)\b")
+NON_CHAPTER_RX = (r"abstract|summary|acknowledg|declaration|dedicat|"
+                  r"contents|list of|abbreviation|nomenclature|glossary|"
+                  r"preface|foreword|publications?\b|references|"
+                  r"bibliography|appendix|appendices|curriculum|vita\b|"
+                  r"biograph|index\b")
+# The aim of a whole thesis or one of its chapters, which the article-level
+# aim signals (discourse/moves.py) do not name.
+THESIS_AIM_RX = (
+    r"\b(?:this|the present|my|our) (?:thesis|dissertation|chapter|"
+    r"research|programme of work|body of work) (?:aims?|aimed|sets? out|"
+    r"seeks?|sought|asks?|addresses|investigates?|examines?|explores?|"
+    r"estimates?|tests?)\b",
+    r"\b(?:the|my|our) (?:overall |overarching |primary |main )?(?:aims?|"
+    r"objectives?|goals?|purpose|research questions?) of (?:this|the) "
+    r"(?:thesis|dissertation|chapter|research)\b",
+)
+# Near-duplicate test: sets of adjacent word pairs (shingles) with a
+# Jaccard overlap of at least TAPE_JACCARD, between sentences of at least
+# TAPE_MIN_WORDS words. A short aim ("We estimate R.") can recur by
+# coincidence; a 12-word sentence sharing 80% of its word pairs does not.
+TAPE_MIN_WORDS = 12
+TAPE_JACCARD = 0.8
 
 # D905: a generic call for future research ("Further research is needed.",
 # "Future work should explore this.") in a Discussion or Conclusion. The

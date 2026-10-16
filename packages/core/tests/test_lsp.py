@@ -108,6 +108,13 @@ def test_lsp_publishes_diagnostics_and_quickfix_data():
                 + (f"\nserver exited {proc.returncode}:\n"
                    f"{stderr.decode(errors='replace')}" if stderr else ""))
 
+        # Said once on start: what runs and where the text goes (Codex
+        # review #11).
+        logs = [m["params"]["message"] for m in msgs
+                if m.get("method") == "window/logMessage"]
+        assert any(m.startswith("Researchly: This computer: checks")
+                   for m in logs), logs
+
         diags = pubs[-1]["params"]["diagnostics"]
         codes = {d["code"] for d in diags}
         assert "W201" in codes         # utilize

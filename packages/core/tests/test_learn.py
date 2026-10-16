@@ -23,7 +23,11 @@ def test_every_card_is_reached():
     for section, schema in moves_mod.SCHEMAS.items():
         for mid in schema:
             reached.add(learn.card_for_move(section, mid))
+    for unit, schema in moves_mod.UNIT_SCHEMAS.items():
+        for mid in schema:
+            reached.add(learn.card_for_move(unit, mid))
     reached |= set(learn.LINK_CARD.values())
+    reached |= set(learn.UNIT_CARD.values())
     assert set(learn.CARDS) == reached
 
 
@@ -31,6 +35,11 @@ def test_every_move_and_link_resolves():
     for section, schema in moves_mod.SCHEMAS.items():
         for mid in schema:
             assert learn.card_for_move(section, mid) in learn.CARDS
+    for unit, schema in moves_mod.UNIT_SCHEMAS.items():
+        for mid in schema:
+            assert learn.card_for_move(unit, mid) == "policy-brief"
+    for card in learn.UNIT_CARD.values():
+        assert card in learn.CARDS
     for card in learn.LINK_CARD.values():
         assert card in learn.CARDS
 

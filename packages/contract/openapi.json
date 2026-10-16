@@ -209,6 +209,17 @@
             "title": "Disabled Rules",
             "type": "array"
           },
+          "document_scope": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DocumentScope"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How much of the document the text is: whole, chapter or excerpt. Omitted or `auto`: inferred from the headings (`profile.scope` says what was assumed). An excerpt is asked for no missing sections; a chapter for no abstract. A choice about this check only, never stored."
+          },
           "document_type": {
             "anyOf": [
               {
@@ -219,6 +230,19 @@
               }
             ],
             "description": "The article type to check as. Omitted: the caller's saved setting, else auto."
+          },
+          "main_file": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "/v1/analyze-file with an Overleaf .zip: the project's main .tex file, by its path in the .zip (one of `document.main_candidates`). Omitted: Researchly chooses. Ignored for other files and requests.",
+            "title": "Main File"
           },
           "mode": {
             "anyOf": [
@@ -678,6 +702,99 @@
         "title": "AnalyzeWordResponse",
         "type": "object"
       },
+      "Capabilities": {
+        "additionalProperties": false,
+        "description": "What this engine checks and what it contacts over the network (Codex\nreview #11): the local server's \"This computer\" promise, stated from\nthe same health and settings the checks run on.",
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/CapabilityCheck"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "network": {
+            "$ref": "#/components/schemas/NetworkUse"
+          },
+          "route": {
+            "enum": [
+              "local_server",
+              "overlay",
+              "lsp",
+              "cli",
+              "service"
+            ],
+            "title": "Route",
+            "type": "string"
+          },
+          "summary": {
+            "description": "One plain line, for logs and the command line.",
+            "title": "Summary",
+            "type": "string"
+          },
+          "where": {
+            "enum": [
+              "this_computer",
+              "service"
+            ],
+            "title": "Where",
+            "type": "string"
+          }
+        },
+        "required": [
+          "route",
+          "label",
+          "where",
+          "checks",
+          "network",
+          "summary"
+        ],
+        "title": "Capabilities",
+        "type": "object"
+      },
+      "CapabilityCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "enum": [
+              "rules",
+              "spelling",
+              "grammar",
+              "gec",
+              "document",
+              "brief"
+            ],
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "description": "Plain words: \"writing rules\", \"whole-document checks\".",
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "description": "Why it is off, in plain words; empty when on.",
+            "title": "Note",
+            "type": "string"
+          },
+          "on": {
+            "title": "On",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "on"
+        ],
+        "title": "CapabilityCheck",
+        "type": "object"
+      },
       "Category": {
         "description": "The four-type taxonomy (CLAUDE.md #3). Conventions are never errors;\npreferences are hidden unless asked for.",
         "enum": [
@@ -1075,6 +1192,17 @@
         "title": "Coverage",
         "type": "object"
       },
+      "DocumentScope": {
+        "description": "How much of a document the text is (Codex review #4), separate from\nits article type: a whole manuscript, one chapter, or an excerpt.\n`auto` infers it from the headings.",
+        "enum": [
+          "auto",
+          "whole",
+          "chapter",
+          "excerpt"
+        ],
+        "title": "DocumentScope",
+        "type": "string"
+      },
       "DocumentType": {
         "description": "Article-type profile (S4). `auto` guesses from the headings and is\notherwise `general`; the others switch off the checks that do not\napply to that kind of document and say what section unheaded prose is\nin (a commentary is argued like a Discussion).",
         "enum": [
@@ -1155,6 +1283,163 @@
         "title": "ErrorResponse",
         "type": "object"
       },
+      "EvidenceLink": {
+        "additionalProperties": false,
+        "description": "One point of the brief, placed in the text: the sentence it rests on\n(`claim`) and, for a claim, the evidence proposed beside it. A point\nthat cannot be placed has no link (it abstains).",
+        "properties": {
+          "claim": {
+            "$ref": "#/components/schemas/EvidenceSpan"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceSpan"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The nearest sentence in the same section that reports a number, a citation or a finding, within two sentences; absent when none was detected or none is needed."
+          },
+          "evidence_note": {
+            "default": "",
+            "description": "One line saying what the evidence is, or what was not detected.",
+            "title": "Evidence Note",
+            "type": "string"
+          },
+          "evidence_status": {
+            "default": "not_applicable",
+            "description": "detected (evidence proposed beside the claim), not_detected (none was found nearby: not proof there is none), not_applicable (a statement that needs no evidence beside it).",
+            "enum": [
+              "detected",
+              "not_detected",
+              "not_applicable"
+            ],
+            "title": "Evidence Status",
+            "type": "string"
+          },
+          "kind": {
+            "description": "What the sentence is, e.g. causal_claim, aim, gap, stranger, claim_without_grounds.",
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "description": "The kind, in plain words.",
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "label",
+          "claim"
+        ],
+        "title": "EvidenceLink",
+        "type": "object"
+      },
+      "EvidenceSpan": {
+        "additionalProperties": false,
+        "description": "Where in the text a statement of the brief or the map rests (Codex\nreview #3): code-point offsets into the checked text like `Span`, the\nsentence quoted, and for clients that count in UTF-16 (Word, browsers)\n`begin16`/`end16`. On the Word routes `location` finds it in Word as a\nsuggestion's does. Document text: never logged.",
+        "properties": {
+          "begin16": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`start` in UTF-16 code units.",
+            "title": "Begin16"
+          },
+          "col": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Col",
+            "type": "integer"
+          },
+          "end": {
+            "minimum": 0.0,
+            "title": "End",
+            "type": "integer"
+          },
+          "end16": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`end` in UTF-16 code units.",
+            "title": "End16"
+          },
+          "file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a project of several files (an Overleaf .zip): the file the sentence is in.",
+            "title": "File"
+          },
+          "file_line": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The 1-based line in `file`.",
+            "title": "File Line"
+          },
+          "line": {
+            "default": 0,
+            "description": "1-based line of `start`; 0 if unknown.",
+            "minimum": 0.0,
+            "title": "Line",
+            "type": "integer"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WordLocation"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Word routes only: the paragraph and snippet to select."
+          },
+          "start": {
+            "minimum": 0.0,
+            "title": "Start",
+            "type": "integer"
+          },
+          "text": {
+            "description": "The sentence, quoted (one line, at most 180 characters).",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "text"
+        ],
+        "title": "EvidenceSpan",
+        "type": "object"
+      },
       "FixSafety": {
         "enum": [
           "safe",
@@ -1189,6 +1474,17 @@
       "HealthResponse": {
         "additionalProperties": false,
         "properties": {
+          "capabilities": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Capabilities"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What this engine checks and what it contacts. Missing from an older local server."
+          },
           "engine": {
             "$ref": "#/components/schemas/EngineInfo"
           },
@@ -1259,6 +1555,33 @@
           "reading"
         ],
         "title": "HedgingPoint",
+        "type": "object"
+      },
+      "Included": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "minimum": 0.0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "kind": {
+            "const": "footnotes",
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "description": "What it is, in plain words.",
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "count",
+          "label"
+        ],
+        "title": "Included",
         "type": "object"
       },
       "LearnCard": {
@@ -1370,6 +1693,17 @@
             "title": "Disabled Rules",
             "type": "array"
           },
+          "document_scope": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DocumentScope"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How much of the document the text is: whole, chapter or excerpt. Omitted or `auto`: inferred from the headings (`profile.scope` says what was assumed). An excerpt is asked for no missing sections; a chapter for no abstract. A choice about this check only, never stored."
+          },
           "document_type": {
             "anyOf": [
               {
@@ -1380,6 +1714,19 @@
               }
             ],
             "description": "The article type to check as. Omitted: the caller's saved setting, else auto."
+          },
+          "main_file": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "/v1/analyze-file with an Overleaf .zip: the project's main .tex file, by its path in the .zip (one of `document.main_candidates`). Omitted: Researchly chooses. Ignored for other files and requests.",
+            "title": "Main File"
           },
           "mode": {
             "anyOf": [
@@ -1731,6 +2078,14 @@
           "source": {
             "title": "Source",
             "type": "string"
+          },
+          "spans": {
+            "description": "Where those sentences are in the text.",
+            "items": {
+              "$ref": "#/components/schemas/EvidenceSpan"
+            },
+            "title": "Spans",
+            "type": "array"
           }
         },
         "required": [
@@ -1805,6 +2160,14 @@
           "source": {
             "title": "Source",
             "type": "string"
+          },
+          "units": {
+            "description": "For a response to reviewers: each comment beside its reply, in order.",
+            "items": {
+              "$ref": "#/components/schemas/ReviewerUnit"
+            },
+            "title": "Units",
+            "type": "array"
           },
           "unmapped": {
             "description": "Sections found that have no expected moves (topical headings).",
@@ -1883,6 +2246,17 @@
             "title": "Source",
             "type": "string"
           },
+          "span": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceSpan"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where `evidence` is in the text, when it can be placed."
+          },
           "status": {
             "$ref": "#/components/schemas/MoveStatus"
           }
@@ -1950,6 +2324,94 @@
         "title": "NarrativeSection",
         "type": "object"
       },
+      "NetworkContact": {
+        "additionalProperties": false,
+        "properties": {
+          "leaves_computer": {
+            "description": "Over the network (true), or to another program on the same computer (false)?",
+            "title": "Leaves Computer",
+            "type": "boolean"
+          },
+          "sends_text": {
+            "description": "Does the document's text go there?",
+            "title": "Sends Text",
+            "type": "boolean"
+          },
+          "what": {
+            "description": "What is contacted, in plain words.",
+            "title": "What",
+            "type": "string"
+          },
+          "when": {
+            "default": "",
+            "title": "When",
+            "type": "string"
+          }
+        },
+        "required": [
+          "what",
+          "sends_text",
+          "leaves_computer"
+        ],
+        "title": "NetworkContact",
+        "type": "object"
+      },
+      "NetworkUse": {
+        "additionalProperties": false,
+        "properties": {
+          "contacts": {
+            "items": {
+              "$ref": "#/components/schemas/NetworkContact"
+            },
+            "title": "Contacts",
+            "type": "array"
+          },
+          "sends_text": {
+            "description": "True when any check sends the text off this computer (for the hosted engine: beyond the engine).",
+            "title": "Sends Text",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "sends_text"
+        ],
+        "title": "NetworkUse",
+        "type": "object"
+      },
+      "NotChecked": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "minimum": 0.0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "footnotes",
+              "endnotes",
+              "comments",
+              "text_boxes",
+              "headers_footers",
+              "skipped_files"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "description": "What it is, in plain words.",
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "count",
+          "label"
+        ],
+        "title": "NotChecked",
+        "type": "object"
+      },
       "NotCounted": {
         "additionalProperties": false,
         "description": "A sentence the signals matched that was not counted as reporting.",
@@ -1981,6 +2443,70 @@
           "quote"
         ],
         "title": "NotCounted",
+        "type": "object"
+      },
+      "Occurrence": {
+        "additionalProperties": false,
+        "description": "One place a grouped suggestion is about (S003, Codex review #10).",
+        "properties": {
+          "begin16": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`start` in UTF-16 code units (see Suggestion.begin16).",
+            "title": "Begin16"
+          },
+          "col": {
+            "description": "1-based column of `start`; 0 if unknown.",
+            "minimum": 0.0,
+            "title": "Col",
+            "type": "integer"
+          },
+          "end": {
+            "description": "End offset, like Span.end.",
+            "minimum": 0.0,
+            "title": "End",
+            "type": "integer"
+          },
+          "end16": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`end` in UTF-16 code units.",
+            "title": "End16"
+          },
+          "line": {
+            "description": "1-based line of `start`; 0 if unknown.",
+            "minimum": 0.0,
+            "title": "Line",
+            "type": "integer"
+          },
+          "start": {
+            "description": "Offset into `content` in code points, like Span.start.",
+            "minimum": 0.0,
+            "title": "Start",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "line",
+          "col"
+        ],
+        "title": "Occurrence",
         "type": "object"
       },
       "ProfileChoice": {
@@ -2041,6 +2567,25 @@
             },
             "title": "Rules Off",
             "type": "array"
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScopeInfo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How much of the document the text was taken to be. Additive: older engines omit it."
+          },
+          "topical": {
+            "description": "Topical headings (\"Experiment 1: the baseline SEIR\") read as a section from the wording under them, so the section-aware checks treat them as that section.",
+            "items": {
+              "$ref": "#/components/schemas/TopicalSection"
+            },
+            "title": "Topical",
+            "type": "array"
           }
         },
         "required": [
@@ -2055,6 +2600,22 @@
         "additionalProperties": false,
         "description": "What the checks read and what they set aside (2026-10-14): code,\nmaths, layout, paragraphs in another language. Counts only.",
         "properties": {
+          "included": {
+            "description": "Parts read where they stand that a writer might think were skipped (LaTeX footnotes).",
+            "items": {
+              "$ref": "#/components/schemas/Included"
+            },
+            "title": "Included",
+            "type": "array"
+          },
+          "not_checked": {
+            "description": "Parts of an uploaded file the checks did not read: a .docx's footnotes, endnotes, comments, text boxes and headers or footers with words in them; files an Overleaf project includes that could not be read. Counted, never read as text.",
+            "items": {
+              "$ref": "#/components/schemas/NotChecked"
+            },
+            "title": "Not Checked",
+            "type": "array"
+          },
           "set_aside": {
             "items": {
               "$ref": "#/components/schemas/SetAside"
@@ -2089,6 +2650,14 @@
             "description": "A to E.",
             "title": "Id",
             "type": "string"
+          },
+          "links": {
+            "description": "The points that rest on a sentence, each placed in the text (\"Show in text\"). Additive.",
+            "items": {
+              "$ref": "#/components/schemas/EvidenceLink"
+            },
+            "title": "Links",
+            "type": "array"
           },
           "points": {
             "items": {
@@ -2201,6 +2770,54 @@
           "count"
         ],
         "title": "ReviewRuleCount",
+        "type": "object"
+      },
+      "ReviewerUnit": {
+        "additionalProperties": false,
+        "description": "A response letter's unit (Codex review #4): a reviewer's comment and\nthe reply under it. Described, never judged.",
+        "properties": {
+          "comment": {
+            "$ref": "#/components/schemas/EvidenceSpan"
+          },
+          "kind": {
+            "const": "reviewer_comment",
+            "default": "reviewer_comment",
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "description": "e.g. \"Reviewer 1, comment 2\".",
+            "title": "Label",
+            "type": "string"
+          },
+          "learn_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Learn Ref"
+          },
+          "reply": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceSpan"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Absent when no reply was recognised under the comment."
+          }
+        },
+        "required": [
+          "label",
+          "comment"
+        ],
+        "title": "ReviewerUnit",
         "type": "object"
       },
       "RuleInfo": {
@@ -2341,6 +2958,43 @@
         "title": "Scope",
         "type": "string"
       },
+      "ScopeInfo": {
+        "additionalProperties": false,
+        "description": "How much of the document the check took the text to be (Codex\nreview #4), and why.",
+        "properties": {
+          "guessed": {
+            "description": "True when inferred (auto).",
+            "title": "Guessed",
+            "type": "boolean"
+          },
+          "id": {
+            "enum": [
+              "whole",
+              "chapter",
+              "excerpt"
+            ],
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "description": "One line saying what was assumed and what it changes, for the brief and the map.",
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "guessed"
+        ],
+        "title": "ScopeInfo",
+        "type": "object"
+      },
       "Segment": {
         "additionalProperties": false,
         "description": "A stretch of `document.text` that came from one source file.\n`text[start:end]` equals that file's `[source_start : source_start + (end - start)]`.",
@@ -2430,6 +3084,26 @@
           },
           "format": {
             "$ref": "#/components/schemas/SourceFormat"
+          },
+          "main_candidates": {
+            "description": "An Overleaf project with more than one file that starts a document (\\documentclass): all of them, so the writer can choose another (options.main_file). Empty otherwise.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Main Candidates",
+            "type": "array"
+          },
+          "main_file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "An Overleaf project: the main .tex file that was read (with every \\input in it).",
+            "title": "Main File"
           },
           "segments": {
             "items": {
@@ -2640,6 +3314,21 @@
             "title": "Message",
             "type": "string"
           },
+          "occurrences": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Occurrence"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A grouped suggestion only (S003: a word used three or more times that no dictionary knows): every place it appears, in reading order; `span` is one of them. Absent for a suggestion about one place. Additive: older engines omit it.",
+            "title": "Occurrences"
+          },
           "plain": {
             "default": "",
             "description": "The explanation in everyday words, shown first; `why` is the fuller account.",
@@ -2844,6 +3533,27 @@
           "state"
         ],
         "title": "TierHealth",
+        "type": "object"
+      },
+      "TopicalSection": {
+        "additionalProperties": false,
+        "description": "A topical heading read as Methods or Results from its own wording.",
+        "properties": {
+          "heading": {
+            "description": "The heading as written (never logged).",
+            "title": "Heading",
+            "type": "string"
+          },
+          "section": {
+            "title": "Section",
+            "type": "string"
+          }
+        },
+        "required": [
+          "heading",
+          "section"
+        ],
+        "title": "TopicalSection",
         "type": "object"
       },
       "ValidationError": {
@@ -3088,6 +3798,36 @@
             "description": "One-line rationale, always shown.",
             "title": "Message",
             "type": "string"
+          },
+          "occurrence_locations": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/WordLocation"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "With `occurrences`: where each one is in Word, in the same order, for \"Show where\".",
+            "title": "Occurrence Locations"
+          },
+          "occurrences": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Occurrence"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A grouped suggestion only (S003: a word used three or more times that no dictionary knows): every place it appears, in reading order; `span` is one of them. Absent for a suggestion about one place. Additive: older engines omit it.",
+            "title": "Occurrences"
           },
           "plain": {
             "default": "",

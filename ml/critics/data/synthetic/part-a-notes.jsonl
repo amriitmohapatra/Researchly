@@ -1,0 +1,227 @@
+{"paragraph": 1, "flag": 0, "rule_id": "C305", "verdict": "useful", "reason": "'clearly' boosts an unsupported ranking claim; cutting it is right", "words": "clearly"}
+{"paragraph": 1, "flag": 1, "rule_id": "W202", "verdict": "useful", "reason": "'due to the fact that' -> 'because' is a real tightening", "words": "due to the fact that"}
+{"paragraph": 1, "flag": 2, "rule_id": "F601", "verdict": "useful", "reason": "DENV is never spelled out in the paragraph", "words": "DENV"}
+{"paragraph": 1, "flag": 3, "rule_id": "W202", "verdict": "useful", "reason": "'In order to' -> 'To' loses nothing", "words": "In order to"}
+{"paragraph": 2, "flag": 0, "rule_id": "D902", "verdict": "wrong", "reason": "the gap is stated ('depends on choices that trials could not settle')", "words": "Introduction"}
+{"paragraph": 2, "flag": 1, "rule_id": "G101", "verdict": "useful", "reason": "18-word appositive delays the verb; a colon list after 'licensed' reads better", "words": "products, a long-acting monoclonal antibody given to newborns and a maternal ..."}
+{"paragraph": 3, "flag": 0, "rule_id": "C301", "verdict": "useful", "reason": "'could possibly suggest ... may play' is a genuine hedge stack", "words": "could possibly"}
+{"paragraph": 4, "flag": 0, "rule_id": "G106", "verdict": "useful", "reason": "71-word opening sentence chains four clauses; splitting helps", "words": "Tuberculosis (TB) remains a leading infectious cause of death worldwide, and ..."}
+{"paragraph": 6, "flag": 0, "rule_id": "S001", "verdict": "useful", "reason": "real misspelling 'occurence'", "words": "occurence"}
+{"paragraph": 6, "flag": 1, "rule_id": "W205", "verdict": "useful", "reason": "'It is important to note that' is empty preamble", "words": "It is important to note that"}
+{"paragraph": 6, "flag": 2, "rule_id": "S001", "verdict": "useful", "reason": "real misspelling 'occurence' (repeated)", "words": "occurence"}
+{"paragraph": 6, "flag": 3, "rule_id": "E706", "verdict": "unsure", "reason": "'relatively few studies' contrasts with the theoretical work just named; cutting is optional", "words": "relatively"}
+{"paragraph": 7, "flag": 0, "rule_id": "C302", "verdict": "useful", "reason": "'undoubtedly the single most effective' overclaims", "words": "undoubtedly"}
+{"paragraph": 7, "flag": 1, "rule_id": "F601", "verdict": "useful", "reason": "MRSA not spelled out; most journals want it expanded once", "words": "MRSA"}
+{"paragraph": 7, "flag": 2, "rule_id": "C302", "verdict": "useful", "reason": "'proves ... directly caused' from before-after hospital data is overclaiming", "words": "proves"}
+{"paragraph": 8, "flag": 0, "rule_id": "G101", "verdict": "wrong", "reason": "misparse: 'changes' is not the subject of 'are' (subject is 'estimates')", "words": "changes over time as contact patterns and isolation policies change, and esti..."}
+{"paragraph": 9, "flag": 0, "rule_id": "D902", "verdict": "wrong", "reason": "gap is explicit ('Its validity, however, rests on assumptions that are rarely tested')", "words": "Introduction"}
+{"paragraph": 10, "flag": 0, "rule_id": "G105", "verdict": "useful", "reason": "'There are a number of reasons why it is likely' is a weak, wordy opener", "words": "There are"}
+{"paragraph": 11, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "SMC undefined", "words": "SMC"}
+{"paragraph": 11, "flag": 1, "rule_id": "F601", "verdict": "useful", "reason": "SPAQ undefined", "words": "SPAQ"}
+{"paragraph": 11, "flag": 2, "rule_id": "F601", "verdict": "useful", "reason": "EIR undefined", "words": "EIR"}
+{"paragraph": 12, "flag": 0, "rule_id": "D902", "verdict": "unsure", "reason": "gap is implied ('Disentangling these pathways matters') but not stated as unknown; explicit gap would help a little", "words": "Introduction"}
+{"paragraph": 13, "flag": 0, "rule_id": "G106", "verdict": "useful", "reason": "71-word sentence listing uses of models; should be split", "words": "The use of mathematical models in order to inform public health decision-maki..."}
+{"paragraph": 13, "flag": 1, "rule_id": "W202", "verdict": "useful", "reason": "'in order to inform' -> 'to inform'", "words": "in order to"}
+{"paragraph": 13, "flag": 2, "rule_id": "E706", "verdict": "unsure", "reason": "'relatively little attention' has an implied comparison with model use; taste", "words": "relatively"}
+{"paragraph": 14, "flag": 0, "rule_id": "S001", "verdict": "useful", "reason": "real misspelling 'adherance'", "words": "adherance"}
+{"paragraph": 16, "flag": 0, "rule_id": "C305", "verdict": "useful", "reason": "'Obviously' asserts what is not obvious", "words": "Obviously"}
+{"paragraph": 16, "flag": 1, "rule_id": "E703", "verdict": "useful", "reason": "'This is what motivates' points vaguely at the debate; name it", "words": "This is"}
+{"paragraph": 17, "flag": 0, "rule_id": "LT001", "verdict": "useful", "reason": "missing article: 'the most common cause'", "words": "most"}
+{"paragraph": 17, "flag": 1, "rule_id": "G103", "verdict": "wrong", "reason": "list of causes (interference, co-administration) is naturally nominal; verbs would not help", "words": "performance include interference from maternal antibodies, co-administration"}
+{"paragraph": 18, "flag": 0, "rule_id": "D902", "verdict": "wrong", "reason": "gap stated: 'rarely applied in routine public health practice'", "words": "Introduction"}
+{"paragraph": 19, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "HPV not spelled out in this paragraph", "words": "HPV"}
+{"paragraph": 22, "flag": 0, "rule_id": "S001", "verdict": "useful", "reason": "real misspelling 'recieve'", "words": "recieve"}
+{"paragraph": 22, "flag": 1, "rule_id": "S001", "verdict": "useful", "reason": "real misspelling 'recieved'", "words": "recieved"}
+{"paragraph": 22, "flag": 2, "rule_id": "W207", "verdict": "useful", "reason": "doubled 'The the'", "words": "The the"}
+{"paragraph": 25, "flag": 0, "rule_id": "C301", "verdict": "useful", "reason": "'may be possible ... could potentially' is stacked hedging", "words": "could potentially"}
+{"paragraph": 25, "flag": 1, "rule_id": "C301", "verdict": "useful", "reason": "'might perhaps' doubles the hedge", "words": "might perhaps"}
+{"paragraph": 26, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "MDA undefined", "words": "MDA"}
+{"paragraph": 27, "flag": 0, "rule_id": "D902", "verdict": "wrong", "reason": "gap stated: 'but most assume homogeneous mixing within risk groups'", "words": "Introduction"}
+{"paragraph": 27, "flag": 1, "rule_id": "G103", "verdict": "wrong", "reason": "duration, concurrency, notification are technical terms, not hidden actions", "words": "duration and concurrency are explicitly represented, so that the effect of pa..."}
+{"paragraph": 28, "flag": 0, "rule_id": "W202", "verdict": "useful", "reason": "'A large number of' -> 'Many'", "words": "A large number of"}
+{"paragraph": 29, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "DIN undefined", "words": "DIN"}
+{"paragraph": 34, "flag": 0, "rule_id": "G106", "verdict": "useful", "reason": "84-word sentence describing the model; must be split", "words": "In order to estimate the time-varying reproduction number, we made use of a r..."}
+{"paragraph": 34, "flag": 1, "rule_id": "W202", "verdict": "useful", "reason": "'In order to' -> 'To'", "words": "In order to"}
+{"paragraph": 34, "flag": 2, "rule_id": "W202", "verdict": "useful", "reason": "'Due to the fact that' -> 'Because'", "words": "Due to the fact that"}
+{"paragraph": 35, "flag": 0, "rule_id": "LT001", "verdict": "useful", "reason": "'Participants was' agreement error", "words": "was"}
+{"paragraph": 35, "flag": 1, "rule_id": "G103", "verdict": "wrong", "reason": "list of questionnaire topics; nouns are the natural form", "words": "composition, occupation and previous screening history, and blood samples wer..."}
+{"paragraph": 35, "flag": 2, "rule_id": "S001", "verdict": "useful", "reason": "real misspelling 'measurment'", "words": "measurment"}
+{"paragraph": 36, "flag": 0, "rule_id": "G101", "verdict": "wrong", "reason": "standard matched-control phrasing; 11 words with a short parenthesis reads fine", "words": "controls matched on age (within three months) and district of residence were ..."}
+{"paragraph": 37, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "ABM undefined", "words": "ABM"}
+{"paragraph": 37, "flag": 1, "rule_id": "S001", "verdict": "wrong", "reason": "'NPIs' is a plural abbreviation, not a misspelling of 'Apis'", "words": "NPIs"}
+{"paragraph": 37, "flag": 2, "rule_id": "F601", "verdict": "useful", "reason": "NPI undefined", "words": "NPIs"}
+{"paragraph": 38, "flag": 0, "rule_id": "W205", "verdict": "useful", "reason": "'It should be noted that' is empty preamble", "words": "It should be noted that"}
+{"paragraph": 38, "flag": 1, "rule_id": "W202", "verdict": "useful", "reason": "'pre-specified prior to' -> 'before'; also removes the redundancy", "words": "prior to"}
+{"paragraph": 40, "flag": 0, "rule_id": "S001", "verdict": "useful", "reason": "real misspelling 'recieved'", "words": "recieved"}
+{"paragraph": 40, "flag": 1, "rule_id": "S001", "verdict": "useful", "reason": "real misspelling 'recieved' (repeated)", "words": "recieved"}
+{"paragraph": 41, "flag": 0, "rule_id": "G106", "verdict": "useful", "reason": "86-word definition sentence; split definition from estimation", "words": "Household secondary attack rate was defined as the number of household contac..."}
+{"paragraph": 42, "flag": 0, "rule_id": "S001", "verdict": "wrong", "reason": "'pseudonymised' is a correct UK word; 'unimpressed' is absurd", "words": "pseudonymised"}
+{"paragraph": 43, "flag": 0, "rule_id": "W202", "verdict": "useful", "reason": "'in order to allow' -> 'to allow'", "words": "in order to"}
+{"paragraph": 43, "flag": 1, "rule_id": "E703", "verdict": "useful", "reason": "'This was checked' could mean the prior choice or the data dominating; name it", "words": "This was"}
+{"paragraph": 44, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "ELISA not spelled out", "words": "ELISA"}
+{"paragraph": 45, "flag": 0, "rule_id": "S001", "verdict": "wrong", "reason": "'deregistration' is a standard term in GP-registry cohorts", "words": "deregistration"}
+{"paragraph": 46, "flag": 0, "rule_id": "W202", "verdict": "useful", "reason": "'due to the fact that' -> 'because'", "words": "due to the fact that"}
+{"paragraph": 47, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "TERGM undefined", "words": "TERGM"}
+{"paragraph": 47, "flag": 1, "rule_id": "S001", "verdict": "useful", "reason": "real misspelling 'occured'", "words": "occured"}
+{"paragraph": 49, "flag": 0, "rule_id": "G106", "verdict": "useful", "reason": "70-word justification sentence; split", "words": "It is worth noting that the cohort was restricted to individuals who had at l..."}
+{"paragraph": 49, "flag": 1, "rule_id": "W205", "verdict": "useful", "reason": "'It is worth noting that' is empty preamble", "words": "It is worth noting that"}
+{"paragraph": 49, "flag": 2, "rule_id": "G103", "verdict": "wrong", "reason": "registration and misclassification are technical terms; span is a whole clause", "words": "registration before the index date, which was done to ensure that baseline co..."}
+{"paragraph": 50, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "IPTW undefined", "words": "IPTW"}
+{"paragraph": 53, "flag": 0, "rule_id": "W202", "verdict": "useful", "reason": "'in order to estimate' -> 'to estimate'", "words": "in order to"}
+{"paragraph": 53, "flag": 1, "rule_id": "W202", "verdict": "unsure", "reason": "'in the absence of the tax' is the stock counterfactual phrase in DiD; 'without' is only marginally tighter", "words": "in the absence of"}
+{"paragraph": 55, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "ELISA not spelled out", "words": "ELISA"}
+{"paragraph": 55, "flag": 1, "rule_id": "S001", "verdict": "useful", "reason": "real misspelling 'Seperate'", "words": "Seperate"}
+{"paragraph": 55, "flag": 2, "rule_id": "F601", "verdict": "useful", "reason": "HBR undefined", "words": "HBR"}
+{"paragraph": 55, "flag": 3, "rule_id": "F601", "verdict": "useful", "reason": "EIR undefined", "words": "EIR"}
+{"paragraph": 56, "flag": 0, "rule_id": "G106", "verdict": "useful", "reason": "83-word test-negative design sentence; split", "words": "To estimate vaccine effectiveness against hospitalisation we used a test-nega..."}
+{"paragraph": 56, "flag": 1, "rule_id": "G101", "verdict": "wrong", "reason": "misparse: subject of 'were' is 'controls', not 'patients'", "words": "patients admitted with severe acute respiratory infection who tested positive..."}
+{"paragraph": 56, "flag": 2, "rule_id": "F601", "verdict": "wrong", "reason": "'RT' is part of the standard term RT-PCR; asking to expand 'RT' alone is the wrong fix", "words": "RT"}
+{"paragraph": 59, "flag": 0, "rule_id": "C301", "verdict": "useful", "reason": "'perhaps somewhat simplified' stacks hedges", "words": "perhaps somewhat"}
+{"paragraph": 59, "flag": 1, "rule_id": "G105", "verdict": "useful", "reason": "'It is possible that this may have' is a weak, doubly hedged opener", "words": "It is possible that"}
+{"paragraph": 59, "flag": 2, "rule_id": "W202", "verdict": "useful", "reason": "same span as G105; advice ('may') is right, though the card duplicates G105", "words": "It is possible that"}
+{"paragraph": 61, "flag": 0, "rule_id": "S001", "verdict": "useful", "reason": "real misspelling 'paramter'", "words": "paramter"}
+{"paragraph": 61, "flag": 1, "rule_id": "S001", "verdict": "useful", "reason": "real misspelling 'paramter' (repeated)", "words": "paramter"}
+{"paragraph": 61, "flag": 2, "rule_id": "S001", "verdict": "useful", "reason": "real misspelling 'occured'", "words": "occured"}
+{"paragraph": 62, "flag": 0, "rule_id": "GN201", "verdict": "useful", "reason": "'Each of the 47 districts were' -> 'was'", "words": "were"}
+{"paragraph": 64, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "DLNM undefined", "words": "DLNM"}
+{"paragraph": 66, "flag": 0, "rule_id": "C303", "verdict": "wrong", "reason": "'cases caused by serotypes' is microbiological causation, not an inferential claim", "words": "caused"}
+{"paragraph": 67, "flag": 0, "rule_id": "C305", "verdict": "useful", "reason": "'clearly shows ... highly effective' overinterprets in Results", "words": "clearly"}
+{"paragraph": 67, "flag": 1, "rule_id": "W207", "verdict": "useful", "reason": "doubled 'the the'", "words": "the the"}
+{"paragraph": 68, "flag": 0, "rule_id": "E703", "verdict": "useful", "reason": "'This was longer' is ambiguous: time to admission or length of stay", "words": "This was"}
+{"paragraph": 69, "flag": 0, "rule_id": "LT001", "verdict": "wrong", "reason": "'at all time points' needs no hyphen; 'all-time' is a different word", "words": "all time"}
+{"paragraph": 71, "flag": 0, "rule_id": "G106", "verdict": "useful", "reason": "82-word results sentence; split", "words": "It can be seen from Figure 3 that the incidence of cholera was highest in the..."}
+{"paragraph": 72, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "RSV not spelled out in this paragraph", "words": "RSV"}
+{"paragraph": 72, "flag": 1, "rule_id": "E703", "verdict": "unsure", "reason": "the referent (the rate ratio) is fairly clear; the real problem is the causal claim", "words": "This shows"}
+{"paragraph": 72, "flag": 2, "rule_id": "C303", "verdict": "useful", "reason": "'day care attendance causes infection' from an observational rate ratio", "words": "causes"}
+{"paragraph": 72, "flag": 3, "rule_id": "G105", "verdict": "useful", "reason": "'There was possibly perhaps a slight trend' should start with the real subject", "words": "There was"}
+{"paragraph": 72, "flag": 4, "rule_id": "C301", "verdict": "useful", "reason": "'possibly perhaps' is a doubled hedge", "words": "possibly perhaps"}
+{"paragraph": 74, "flag": 0, "rule_id": "G105", "verdict": "useful", "reason": "'There was a significant reduction in' -> 'Prevalence fell'", "words": "There was"}
+{"paragraph": 74, "flag": 1, "rule_id": "S001", "verdict": "useful", "reason": "real misspelling 'signficant'", "words": "signficant"}
+{"paragraph": 74, "flag": 2, "rule_id": "S001", "verdict": "useful", "reason": "real misspelling 'signficantly'", "words": "signficantly"}
+{"paragraph": 75, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "ART undefined", "words": "ART"}
+{"paragraph": 75, "flag": 1, "rule_id": "F601", "verdict": "useful", "reason": "VL undefined", "words": "VL"}
+{"paragraph": 77, "flag": 0, "rule_id": "E703", "verdict": "useful", "reason": "'This was higher' could be the ampicillin or the cephalosporin figure", "words": "This was"}
+{"paragraph": 78, "flag": 0, "rule_id": "C301", "verdict": "useful", "reason": "'might suggest ... could be' is a hedge stack", "words": "might suggest"}
+{"paragraph": 81, "flag": 0, "rule_id": "C304", "verdict": "useful", "reason": "'did not differ significantly' with no test or interval; ask for the estimate", "words": "significantly"}
+{"paragraph": 83, "flag": 0, "rule_id": "W205", "verdict": "useful", "reason": "'It is interesting to note that' is empty preamble", "words": "It is interesting to note that"}
+{"paragraph": 83, "flag": 1, "rule_id": "G106", "verdict": "useful", "reason": "70-word sentence of comparisons plus adjustment; split", "words": "Among children aged 5 to 14 years who were seropositive at the end of the stu..."}
+{"paragraph": 84, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "LOS undefined", "words": "LOS"}
+{"paragraph": 84, "flag": 1, "rule_id": "S001", "verdict": "useful", "reason": "real misspelling 'hospitalisaton'", "words": "hospitalisaton"}
+{"paragraph": 85, "flag": 0, "rule_id": "S001", "verdict": "wrong", "reason": "'condomless' is a standard term in HIV research", "words": "condomless"}
+{"paragraph": 86, "flag": 0, "rule_id": "C302", "verdict": "useful", "reason": "'This proves' from a one-season before-after comparison", "words": "proves"}
+{"paragraph": 86, "flag": 1, "rule_id": "C303", "verdict": "useful", "reason": "'prevented outbreaks' is causal language the design cannot support", "words": "prevented"}
+{"paragraph": 86, "flag": 2, "rule_id": "C303", "verdict": "wrong", "reason": "'residents affected' means residents who fell ill; no causal claim", "words": "affected"}
+{"paragraph": 89, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "HCW undefined", "words": "HCWs"}
+{"paragraph": 89, "flag": 1, "rule_id": "W207", "verdict": "useful", "reason": "doubled 'the the'", "words": "the the"}
+{"paragraph": 90, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "VE undefined (and 'vaccine efficacy' used inconsistently later)", "words": "VE"}
+{"paragraph": 91, "flag": 0, "rule_id": "C303", "verdict": "wrong", "reason": "'Heterogeneity was reduced' describes a statistic, not a causal claim", "words": "reduced"}
+{"paragraph": 92, "flag": 0, "rule_id": "G106", "verdict": "useful", "reason": "84-word results sentence; split", "words": "The proportion of children who completed the full vaccination schedule by 24 ..."}
+{"paragraph": 92, "flag": 1, "rule_id": "GN201", "verdict": "useful", "reason": "'The proportion ... were' -> 'was'", "words": "were"}
+{"paragraph": 92, "flag": 2, "rule_id": "G103", "verdict": "wrong", "reason": "completion and education are variable names; nothing to verb-ify", "words": "completion was strongly associated with maternal education, household wealth,..."}
+{"paragraph": 94, "flag": 0, "rule_id": "G101", "verdict": "wrong", "reason": "the 'interruption' is the effect estimates in parentheses, standard in Results", "words": "duration (odds ratio 1.31 per additional hour, 95% CI 1.08-1.59) and diabetes..."}
+{"paragraph": 95, "flag": 0, "rule_id": "S001", "verdict": "useful", "reason": "real misspelling 'recieved'", "words": "recieved"}
+{"paragraph": 95, "flag": 1, "rule_id": "F601", "verdict": "useful", "reason": "RSV not spelled out in this paragraph", "words": "RSV"}
+{"paragraph": 95, "flag": 2, "rule_id": "S001", "verdict": "useful", "reason": "real misspelling 'occurence'", "words": "occurence"}
+{"paragraph": 97, "flag": 0, "rule_id": "G105", "verdict": "useful", "reason": "'It was found that' hides who found it", "words": "It was found that"}
+{"paragraph": 97, "flag": 1, "rule_id": "C305", "verdict": "useful", "reason": "'clearly in contrast' overstates", "words": "clearly"}
+{"paragraph": 97, "flag": 2, "rule_id": "W202", "verdict": "useful", "reason": "'due to the fact that' -> 'because'", "words": "due to the fact that"}
+{"paragraph": 97, "flag": 3, "rule_id": "G105", "verdict": "useful", "reason": "'It is recommended that' hides who recommends", "words": "It is recommended that"}
+{"paragraph": 98, "flag": 0, "rule_id": "G106", "verdict": "useful", "reason": "59-word over-hedged sentence; splitting would help", "words": "These findings may possibly indicate that the vaccine might offer somewhat le..."}
+{"paragraph": 98, "flag": 1, "rule_id": "C301", "verdict": "useful", "reason": "'may possibly' doubled hedge", "words": "may possibly"}
+{"paragraph": 98, "flag": 2, "rule_id": "C301", "verdict": "unsure", "reason": "'somewhat' qualifies the size of the effect, not certainty; only partly a stack", "words": "might offer somewhat"}
+{"paragraph": 98, "flag": 3, "rule_id": "C301", "verdict": "useful", "reason": "'could perhaps' doubled hedge", "words": "could perhaps"}
+{"paragraph": 98, "flag": 4, "rule_id": "C301", "verdict": "wrong", "reason": "'less likely to seek testing' is a behavioural probability, not a hedge", "words": "may have been less likely"}
+{"paragraph": 99, "flag": 0, "rule_id": "C302", "verdict": "useful", "reason": "'prove' from a village comparison", "words": "prove"}
+{"paragraph": 99, "flag": 1, "rule_id": "C303", "verdict": "useful", "reason": "'reduce child mortality' asserted from an observational comparison", "words": "reduce"}
+{"paragraph": 99, "flag": 2, "rule_id": "G107", "verdict": "wrong", "reason": "'community health worker programmes' is a fixed compound term", "words": "community health worker programmes"}
+{"paragraph": 99, "flag": 3, "rule_id": "C302", "verdict": "useful", "reason": "'undoubtedly one of the most important' overclaims", "words": "undoubtedly"}
+{"paragraph": 101, "flag": 0, "rule_id": "W205", "verdict": "useful", "reason": "'It is important to note that' is empty preamble", "words": "It is important to note that"}
+{"paragraph": 101, "flag": 1, "rule_id": "E703", "verdict": "useful", "reason": "'This means' has no clear referent", "words": "This means"}
+{"paragraph": 101, "flag": 2, "rule_id": "W202", "verdict": "useful", "reason": "'in order to identify' -> 'to identify'", "words": "in order to"}
+{"paragraph": 103, "flag": 0, "rule_id": "C303", "verdict": "wrong", "reason": "'less affected by testing behaviour' is reasoned mechanism, not an inferential claim", "words": "affected"}
+{"paragraph": 104, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "ART undefined in this paragraph", "words": "ART"}
+{"paragraph": 104, "flag": 1, "rule_id": "F601", "verdict": "useful", "reason": "ANC undefined", "words": "ANC"}
+{"paragraph": 104, "flag": 2, "rule_id": "S001", "verdict": "useful", "reason": "real misspelling 'notifcation'", "words": "notifcation"}
+{"paragraph": 105, "flag": 0, "rule_id": "C305", "verdict": "useful", "reason": "'clearly demonstrate ... the main driver' overclaims", "words": "clearly"}
+{"paragraph": 105, "flag": 1, "rule_id": "E703", "verdict": "unsure", "reason": "'This would allow' refers fairly plainly to using forecasts; naming it is optional", "words": "This would"}
+{"paragraph": 106, "flag": 0, "rule_id": "G101", "verdict": "useful", "reason": "22-word subject before 'has'; restructuring would help the reader", "words": "finding that the test-negative design was unbiased only when vaccination did ..."}
+{"paragraph": 106, "flag": 1, "rule_id": "C303", "verdict": "wrong", "reason": "'did not affect' states a simulation condition, not a causal finding", "words": "affect"}
+{"paragraph": 106, "flag": 2, "rule_id": "C301", "verdict": "wrong", "reason": "'may be more likely to seek care' combines possibility with a behavioural probability; not a stack", "words": "may be more likely"}
+{"paragraph": 106, "flag": 3, "rule_id": "C303", "verdict": "wrong", "reason": "'reduces the role' is methodological reasoning, not a causal claim from data", "words": "reduces"}
+{"paragraph": 107, "flag": 0, "rule_id": "G106", "verdict": "useful", "reason": "86-word discussion sentence; split", "words": "The fact that the model was able to reproduce the observed dynamics without t..."}
+{"paragraph": 107, "flag": 1, "rule_id": "G101", "verdict": "useful", "reason": "'The fact that ... is' delays the verb 18 words", "words": "fact that the model was able to reproduce the observed dynamics without the i..."}
+{"paragraph": 107, "flag": 2, "rule_id": "G103", "verdict": "unsure", "reason": "'the inclusion of' -> 'including' helps, but depletion/replenishment are technical terms", "words": "inclusion of a seasonal forcing term is perhaps surprising given the strong s..."}
+{"paragraph": 107, "flag": 3, "rule_id": "E706", "verdict": "unsure", "reason": "'relatively little' has an implied comparison with temperate settings", "words": "relatively"}
+{"paragraph": 110, "flag": 0, "rule_id": "G105", "verdict": "useful", "reason": "'It is possible that ... may' is a weak doubled-hedge opener", "words": "It is possible that"}
+{"paragraph": 110, "flag": 1, "rule_id": "W202", "verdict": "useful", "reason": "same span as G105; 'may' alone is right (duplicate card)", "words": "It is possible that"}
+{"paragraph": 110, "flag": 2, "rule_id": "S001", "verdict": "useful", "reason": "real misspelling 'accross'", "words": "accross"}
+{"paragraph": 110, "flag": 3, "rule_id": "C301", "verdict": "useful", "reason": "'may suggest' doubles the hedge", "words": "may suggest"}
+{"paragraph": 110, "flag": 4, "rule_id": "S001", "verdict": "useful", "reason": "real misspelling 'accross' (repeated)", "words": "accross"}
+{"paragraph": 111, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "IFR undefined", "words": "IFR"}
+{"paragraph": 111, "flag": 1, "rule_id": "F601", "verdict": "useful", "reason": "LTCF undefined", "words": "LTCFs"}
+{"paragraph": 113, "flag": 0, "rule_id": "C303", "verdict": "wrong", "reason": "'This affected around 5% of records' is bookkeeping, not a causal claim", "words": "affected"}
+{"paragraph": 114, "flag": 0, "rule_id": "G106", "verdict": "useful", "reason": "67-word strengths sentence; split", "words": "Obviously, the main strength of this study is the use of linked data, which a..."}
+{"paragraph": 114, "flag": 1, "rule_id": "C305", "verdict": "useful", "reason": "'Obviously' adds nothing", "words": "Obviously"}
+{"paragraph": 114, "flag": 2, "rule_id": "G103", "verdict": "wrong", "reason": "admission, deprivation and composition are measured variables", "words": "admission and death, and to adjust for a wide range of confounders that are n..."}
+{"paragraph": 115, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "HPV undefined in this paragraph", "words": "HPV"}
+{"paragraph": 116, "flag": 0, "rule_id": "C303", "verdict": "wrong", "reason": "'are prevented' describes the model mechanism, not an empirical claim", "words": "prevented"}
+{"paragraph": 116, "flag": 1, "rule_id": "C303", "verdict": "wrong", "reason": "'lower them' is a verb about estimates in a sensitivity analysis", "words": "lower"}
+{"paragraph": 118, "flag": 0, "rule_id": "C303", "verdict": "useful", "reason": "'reductions in movement caused the decline' inferred from a correlation", "words": "caused"}
+{"paragraph": 120, "flag": 0, "rule_id": "S001", "verdict": "useful", "reason": "real misspelling 'occurence'", "words": "occurence"}
+{"paragraph": 120, "flag": 1, "rule_id": "S001", "verdict": "useful", "reason": "real misspelling 'occurence' (repeated)", "words": "occurence"}
+{"paragraph": 120, "flag": 2, "rule_id": "G103", "verdict": "wrong", "reason": "resistance and prescription are domain nouns; 'without prescription' is idiomatic", "words": "occurence of resistance is associated with prior antibiotic exposure, and ant..."}
+{"paragraph": 121, "flag": 0, "rule_id": "G101", "verdict": "wrong", "reason": "short 'such as' example between commas; fine as written", "words": "explanations, such as difficulty taking time off work to attend vaccination c..."}
+{"paragraph": 123, "flag": 0, "rule_id": "G106", "verdict": "useful", "reason": "68-word sentence; split", "words": "The higher incidence of TB among people living with diabetes in our cohort is..."}
+{"paragraph": 123, "flag": 1, "rule_id": "F601", "verdict": "useful", "reason": "TB undefined in this paragraph", "words": "TB"}
+{"paragraph": 123, "flag": 2, "rule_id": "E703", "verdict": "useful", "reason": "'This has implications' could be the association or its size; name it", "words": "This has"}
+{"paragraph": 124, "flag": 0, "rule_id": "W205", "verdict": "useful", "reason": "'It should be noted that' is empty preamble", "words": "It should be noted that"}
+{"paragraph": 125, "flag": 0, "rule_id": "C303", "verdict": "wrong", "reason": "trial result stated as a negation ('no evidence that ... reduced'); causal wording is supported", "words": "reduced"}
+{"paragraph": 126, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "NPI undefined", "words": "NPIs"}
+{"paragraph": 129, "flag": 0, "rule_id": "LT001", "verdict": "useful", "reason": "'The results ... suggests' agreement error", "words": "suggests"}
+{"paragraph": 129, "flag": 1, "rule_id": "S001", "verdict": "useful", "reason": "real misspelling 'adress'", "words": "adress"}
+{"paragraph": 131, "flag": 0, "rule_id": "AB802", "verdict": "wrong", "reason": "structured abstract with gap, implicit aim and an explicit implication; 'significance' is present", "words": "Background: Seasonal malaria chemoprevention reduces malaria in young childre..."}
+{"paragraph": 131, "flag": 1, "rule_id": "C303", "verdict": "wrong", "reason": "'chemoprevention reduces malaria' is established background, supported by trials", "words": "reduces"}
+{"paragraph": 131, "flag": 2, "rule_id": "C303", "verdict": "wrong", "reason": "'averted' is the standard counterfactual output of a transmission model", "words": "averted"}
+{"paragraph": 132, "flag": 0, "rule_id": "AB802", "verdict": "unsure", "reason": "gap really is missing, but findings are present (vague) and an aim is stated", "words": "Dengue is a very serious public health problem in many countries."}
+{"paragraph": 132, "flag": 1, "rule_id": "W202", "verdict": "useful", "reason": "'In order to' -> 'To'", "words": "In order to"}
+{"paragraph": 132, "flag": 2, "rule_id": "F601", "verdict": "useful", "reason": "SEIR-SEI structure not spelled out in an abstract", "words": "SEI"}
+{"paragraph": 132, "flag": 3, "rule_id": "F601", "verdict": "useful", "reason": "DHF undefined", "words": "DHF"}
+{"paragraph": 132, "flag": 4, "rule_id": "C305", "verdict": "useful", "reason": "'clearly show ... main driver' overclaims", "words": "clearly"}
+{"paragraph": 132, "flag": 5, "rule_id": "C302", "verdict": "useful", "reason": "'will undoubtedly help' overclaims", "words": "undoubtedly"}
+{"paragraph": 133, "flag": 0, "rule_id": "AB802", "verdict": "wrong", "reason": "all six moves present: gap, aim/method, findings, recommendation", "words": "Estimates of the time-varying reproduction number are widely used to monitor ..."}
+{"paragraph": 134, "flag": 0, "rule_id": "AB802", "verdict": "useful", "reason": "abstract opens with the aim: background and gap really are missing (significance is present)", "words": "This study aims to assess the effectiveness of the influenza vaccine among ad..."}
+{"paragraph": 135, "flag": 0, "rule_id": "AB802", "verdict": "wrong", "reason": "findings and implication are present; only the aim is missing", "words": "Little is known about how household crowding affects tuberculosis transmissio..."}
+{"paragraph": 135, "flag": 1, "rule_id": "G107", "verdict": "wrong", "reason": "misparse: 'affects' is a verb, there is no noun stack", "words": "household crowding affects tuberculosis transmission"}
+{"paragraph": 135, "flag": 2, "rule_id": "C301", "verdict": "useful", "reason": "'may possibly' doubled hedge", "words": "may possibly"}
+{"paragraph": 135, "flag": 3, "rule_id": "E703", "verdict": "unsure", "reason": "'This could' refers to the single finding; the hedging is the real problem", "words": "This could"}
+{"paragraph": 135, "flag": 4, "rule_id": "C301", "verdict": "useful", "reason": "'could perhaps' doubled hedge", "words": "could perhaps"}
+{"paragraph": 135, "flag": 5, "rule_id": "C301", "verdict": "useful", "reason": "'might potentially' doubled hedge", "words": "might potentially"}
+{"paragraph": 135, "flag": 6, "rule_id": "F601", "verdict": "unsure", "reason": "BCG is very widely used unexpanded; journals differ", "words": "BCG"}
+{"paragraph": 136, "flag": 0, "rule_id": "AB802", "verdict": "wrong", "reason": "gap ('but few are treated') and implication (last sentence) are present", "words": "Hepatitis C remains common among people who inject drugs, but few are treated."}
+{"paragraph": 137, "flag": 0, "rule_id": "AB802", "verdict": "useful", "reason": "no background or gap before the methods sentence (findings are present)", "words": "We analysed EHR data from 85,000 children to investigate the association betw..."}
+{"paragraph": 137, "flag": 1, "rule_id": "F601", "verdict": "useful", "reason": "EHR undefined", "words": "EHR"}
+{"paragraph": 137, "flag": 2, "rule_id": "C302", "verdict": "useful", "reason": "'prove' from an observational cohort", "words": "prove"}
+{"paragraph": 137, "flag": 3, "rule_id": "C303", "verdict": "useful", "reason": "'causes asthma' from an association", "words": "causes"}
+{"paragraph": 138, "flag": 0, "rule_id": "AB802", "verdict": "useful", "reason": "no gap and no explicit aim; the implication is there but the main gaps are real", "words": "Cholera vaccination campaign was conducted in displacement camp following flo..."}
+{"paragraph": 139, "flag": 0, "rule_id": "AB802", "verdict": "useful", "reason": "background, gap and implication really are missing", "words": "The aim of this study was to evaluate the impact of a school-based handwashin..."}
+{"paragraph": 139, "flag": 1, "rule_id": "S001", "verdict": "useful", "reason": "real misspelling 'intervension'", "words": "intervension"}
+{"paragraph": 139, "flag": 2, "rule_id": "S001", "verdict": "useful", "reason": "real misspelling 'intervension' (repeated)", "words": "intervension"}
+{"paragraph": 139, "flag": 3, "rule_id": "W205", "verdict": "useful", "reason": "'It is important to note that' is empty preamble", "words": "It is important to note that"}
+{"paragraph": 140, "flag": 0, "rule_id": "AB802", "verdict": "wrong", "reason": "findings (8.5 and 7.8) and an implication are present; only gap/aim are thin", "words": "Mpox case numbers rose quickly in 2022 among men who have sex with men."}
+{"paragraph": 142, "flag": 0, "rule_id": "C305", "verdict": "useful", "reason": "'it is clear that' boosts a before-after claim", "words": "it is clear that"}
+{"paragraph": 142, "flag": 1, "rule_id": "C303", "verdict": "unsure", "reason": "before-after evaluation of a system; 'improved' is common evaluation language but attribution is untested", "words": "improved"}
+{"paragraph": 142, "flag": 2, "rule_id": "C302", "verdict": "useful", "reason": "'will undoubtedly save many lives' overclaims", "words": "undoubtedly"}
+{"paragraph": 143, "flag": 0, "rule_id": "C301", "verdict": "useful", "reason": "'perhaps somewhat small' stacks hedges", "words": "perhaps somewhat"}
+{"paragraph": 143, "flag": 1, "rule_id": "C301", "verdict": "useful", "reason": "'may possibly' doubled hedge", "words": "may possibly"}
+{"paragraph": 143, "flag": 2, "rule_id": "E703", "verdict": "unsure", "reason": "'This means' refers to small sample/low power; either reading gives the same meaning", "words": "This means"}
+{"paragraph": 145, "flag": 0, "rule_id": "G106", "verdict": "useful", "reason": "74-word concluding sentence; split", "words": "In summary, the findings of this thesis indicate that mathematical models tha..."}
+{"paragraph": 145, "flag": 1, "rule_id": "G101", "verdict": "unsure", "reason": "defining relative clause; restructuring possible but the advice to move it is awkward", "words": "models that incorporate realistic contact patterns, waning immunity and heter..."}
+{"paragraph": 146, "flag": 0, "rule_id": "S001", "verdict": "useful", "reason": "real misspelling 'importnat'", "words": "importnat"}
+{"paragraph": 146, "flag": 1, "rule_id": "F601", "verdict": "useful", "reason": "PMTCT undefined", "words": "PMTCT"}
+{"paragraph": 146, "flag": 2, "rule_id": "F601", "verdict": "useful", "reason": "POC undefined", "words": "POC"}
+{"paragraph": 146, "flag": 3, "rule_id": "C303", "verdict": "wrong", "reason": "point-of-care testing mechanically shortens time to result; causal wording is fine", "words": "reduced"}
+{"paragraph": 146, "flag": 4, "rule_id": "F601", "verdict": "useful", "reason": "ART undefined in this paragraph", "words": "ART"}
+{"paragraph": 148, "flag": 0, "rule_id": "C303", "verdict": "unsure", "reason": "design not stated in the paragraph; fine for a trial, overclaiming otherwise", "words": "reduced"}
+{"paragraph": 149, "flag": 0, "rule_id": "G105", "verdict": "useful", "reason": "'There are a number of limitations' -> 'This work has several limitations'", "words": "There are"}
+{"paragraph": 150, "flag": 0, "rule_id": "C302", "verdict": "useful", "reason": "'shown beyond doubt' overclaims", "words": "beyond doubt"}
+{"paragraph": 150, "flag": 1, "rule_id": "C303", "verdict": "wrong", "reason": "'will further improve' is a plan for future work, not an association read as causal", "words": "improve"}

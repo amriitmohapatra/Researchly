@@ -46,7 +46,7 @@ from researchly import wordloc                         # noqa: E402
 from researchly import packs as packs_mod              # noqa: E402
 from researchly import shapes                          # noqa: E402
 from researchly.document import cell_place            # noqa: E402
-from researchly.profiles import DOCUMENT_TYPES         # noqa: E402
+from researchly.profiles import DOCUMENT_TYPES, SCOPES  # noqa: E402
 
 _NLP_LOCK = threading.Lock()
 
@@ -147,7 +147,7 @@ MODES = ("draft", "revise")
 # Every option of the contract's AnalyzeOptions (packages/contract).
 OPTION_KEYS = {"show_preferences", "disabled_rules", "mode",
                "document_type", "spelling", "review", "narrative",
-               "checklist"}
+               "checklist", "document_scope", "main_file"}
 CHECKLISTS = {"auto"} | set(packs_mod.checklists())
 # The live check's limits, as the hosted engine's (services/engine
 # schemas.py, packages/contract MAX_LIVE_*): a service test posts the
@@ -281,6 +281,16 @@ def _parse_options(opts: dict) -> tuple:
     if checklist is not None and checklist not in CHECKLISTS:
         raise bad("checklist must be one of " + ", ".join(sorted(CHECKLISTS)))
     extra["checklist"] = checklist
+    scope = opts.get("document_scope")
+    if scope is not None and scope not in SCOPES:
+        raise bad("document_scope must be one of " + ", ".join(SCOPES))
+    extra["document_scope"] = scope
+    # An Overleaf project's main file: meaningless for Word paragraphs, so
+    # checked for shape and otherwise ignored (as the hosted engine does).
+    main_file = opts.get("main_file")
+    if main_file is not None and (not isinstance(main_file, str)
+                                  or len(main_file) > 512):
+        raise bad("main_file must be a file name")
     return prefs, disabled, mode, extra
 
 
@@ -288,7 +298,7 @@ def _word_suggestion(s, doc, paragraphs: list) -> dict:
     """One suggestion in the contract's WordSuggestion shape (as
     services/engine/researchly_service/engine_adapter.to_suggestion)."""
     conf = float(s.confidence if s.confidence is not None else 1.0)
-    return {
+    out = {
         "id": _fingerprint(s.rule_id, s.start, s.end, s.text),
         "rule_id": s.rule_id,
         "rule_name": s.rule_name,
@@ -309,6 +319,16 @@ def _word_suggestion(s, doc, paragraphs: list) -> dict:
         "table_evidence": s.table_evidence,
         "location": wordloc.locate(doc, paragraphs, s.start, s.end),
     }
+    # A grouped suggestion (S003): every place, and where each is in Word.
+    if s.occurrences:
+        out["occurrences"] = [
+            {"start": max(0, o["start"]), "end": max(0, o["end"]),
+             "line": max(0, o.get("line", 0)), "col": max(0, o.get("col", 0))}
+            for o in s.occurrences]
+        out["occurrence_locations"] = [
+            wordloc.locate(doc, paragraphs, o["start"], o["end"])
+            for o in s.occurrences]
+    return out
 
 
 def _config(prefs: bool, disabled: list, mode, extra: dict):
@@ -441,7 +461,8 @@ def analyze_word(payload) -> dict:
     a = api.analyze(paragraphs, nlp=get_nlp(), cfg=cfg,
                     with_review=extra["review"],
                     with_narrative=extra["narrative"],
-                    checklist=extra["checklist"])
+                    checklist=extra["checklist"],
+                    document_scope=extra["document_scope"])
     doc = a.document
     out = {
         "schema_version": SCHEMA_VERSION,
@@ -459,17 +480,25 @@ def analyze_word(payload) -> dict:
         "elapsed_ms": 0,
         "warnings": list(doc.warnings) if doc is not None else [],
         "coverage": wordloc.coverage(paragraphs, doc),
-        **shapes.extras(a),
+        **shapes.extras(a, locate=wordloc.locator(doc, paragraphs)),
     }
     out["elapsed_ms"] = int(round((time.perf_counter() - t0) * 1000))
     return out
 
 
 def health_v1() -> dict:
-    """GET /v1/health: HealthResponse (no probe: it must answer at once)."""
-    tiers = [t.to_dict() for t in api.status(config_mod.load(), probe=False)]
+    """GET /v1/health: HealthResponse (no probe: it must answer at once),
+    with `capabilities`: what this computer checks and what it contacts
+    over the network, from the same settings and health the checks run on
+    (Codex review #11; the Word pane's Settings shows it)."""
+    from researchly import capabilities
+    cfg = config_mod.load()
+    statuses = api.status(cfg, probe=False)
+    tiers = [t.to_dict() for t in statuses]
     return {"status": "degraded" if _degraded(tiers) else "ok", "tiers": tiers,
-            "engine": _engine_info()}
+            "engine": _engine_info(),
+            "capabilities": capabilities.describe(cfg, statuses,
+                                                  "local_server")}
 
 
 def cors_headers(origin, private_network: bool = False) -> dict:

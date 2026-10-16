@@ -107,6 +107,29 @@ test.describe("Word taskpane, signed out (accounts configured)", () => {
 });
 
 test.describe("Word taskpane, signed in", () => {
+  test("the header at 320px: the state and a long email never overlap, and the host's top-right corner stays clear", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+    await seedSession(page);
+    await mockSupabase(page);
+    await fakeOffice(page);
+    await mockEngineAuth(page, (_c, route) => reply(route, 200, { ...reviseResponse, signed_in: true }));
+    await page.goto("/word");
+    await expect(page.getByTestId("tp-account")).toContainText(USER.email);
+    await check(page);
+    await expect(page.getByTestId("tp-status")).toContainText(/suggestion/);
+    const box = async (id: string) => (await page.getByTestId(id).boundingBox())!;
+    const status = await box("tp-status");
+    const account = await box("tp-account");
+    const header = (await page.locator(".tp-header").boundingBox())!;
+    // No overlap: the account is on its own row, below the state.
+    expect(account.y).toBeGreaterThanOrEqual(status.y + status.height - 1);
+    // The state ends before the 40px the host's own button covers.
+    expect(status.x + status.width).toBeLessThanOrEqual(header.x + header.width - 40 + 1);
+    // The email fits its row (shortened with an ellipsis, never wider than the pane).
+    expect(account.x + account.width).toBeLessThanOrEqual(header.x + header.width);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+
   test("the bearer token goes to the cloud engine; mute and add-to-dictionary use the account, then re-check", async ({ page }) => {
     await seedSession(page);
     const sb = await mockSupabase(page);

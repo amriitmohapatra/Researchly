@@ -2984,3 +2984,228 @@ strings), ADR-09 to ADR-11, D5 reopened.
   sizes above the engine's limit.
 - A noise floor is a false-flag alarm, not a quota: when new flags are read
   and found true, the baseline moves, with the evidence in its note.
+
+## P47 — 2026-10-15 — The Word pane's header no longer overlaps
+
+**Why.** The owner tried the add-in after P46: "It works! the word
+suggestions work really well now." The screenshot showed one thing to fix:
+in Word on the Mac, the header put four things in one row. The brand, the
+status mark ("10 suggestions"), the signed-in email and Word's own "i"
+button (drawn over the pane's top-right corner) collided. The email was
+printed over the state and ran under the button.
+
+**What.**
+- `components/word/Taskpane.tsx`: the header now has two rows.
+  - Row 1 holds the brand and the status mark, with the right 40px kept
+    clear for the host's button.
+  - Row 2 holds "Signed in as …", shortened with an ellipsis, or Sign in.
+- `globals.css`: a long state label wraps instead of running under
+  anything.
+- `DESIGN.md`: both header lines updated.
+- New e2e test in `accounts-word.spec.ts`. At 320px, signed in with
+  suggestions:
+  - the account sits below the state;
+  - the state ends 40px short of the edge;
+  - the email fits its row;
+  - nothing scrolls sideways.
+
+**Evidence.** Web lint and typecheck clean; 577 unit tests. The Word, Word
+underlines and signed-in Word e2e specs: 61 passed. Screenshots at 340px,
+light and dark, checked by eye.
+
+**Lesson.** A pane inside someone else's app shares its corners with the
+host. Word on the Mac covers the top-right of every add-in pane, so a header
+that fills its row will always collide there.
+
+## P48 — 2026-10-15 — Account controls, coverage, the evidence-linked brief, repeated words, Laya groundwork, an installable app, and an honest noise floor
+
+**Why.** Owner, after P47: proceed with the plan. Decisions:
+- the friend's keyboard-engine source is no longer needed ("we have our own
+  keyboard engine now");
+- S5 sticks to Laya ("open source and free");
+- the comparison study and AppSource are dropped ("I have no desire to
+  monetize the app");
+- the web app idea is kept;
+- "Plan tasks, line them up and proceed without stopping."
+
+Two waves of helpers ran. A usage-limit pause stopped all of them mid-way;
+each resumed from its saved work.
+
+**What.**
+- *#12, account controls.*
+  - Settings has "Reset preferences…", which keeps the dictionary and
+    progress.
+  - "Delete my account…" is type-to-confirm. It deletes the sign-in and every
+    row by cascade (`supabase/migrations/20261015120000_account_controls.sql`).
+  - "Clear my dictionary…" is new. The Word pane links to the website for
+    all of these.
+  - The engine limits per signed-in user (30, 120 live and 10 uploads per
+    minute), with the IP limit for anonymous callers.
+  - Sign-in keys are re-fetched at most once a minute; inside that window
+    the answer is 503, not a sign-out.
+  - Supabase two-user tests: 133.
+- *#5 and #11, coverage and local mode.*
+  - Uploaded `.docx` files say what was not checked (footnotes, endnotes,
+    comments, text boxes, headers and footers).
+  - LaTeX says footnotes were read in place.
+  - An Overleaf project with several roots offers a "Main file" choice.
+  - Word counts its unread parts without reading them.
+  - `/v1/health` describes what each local route runs and contacts
+    (`docs/local-mode.md`); `researchly doctor` checks an installation.
+- *#3 and #4, the brief and document scope.*
+  - Every brief point that rests on a sentence quotes it with "Show in
+    text"; a claim sits beside its evidence, or the brief says "not
+    detected".
+  - A "Read as" line (whole document, chapter, excerpt) sets expectations.
+  - Policy briefs are mapped by their parts; a response to reviewers is
+    shown comment beside reply.
+  - Topical headings are read as Methods or Results when their prose
+    reports, so passive voice is no longer flagged there as if in
+    Discussion.
+  - New sources: Young & Quinn (2002) and Noble (2017).
+- *#10, repeated words.*
+  - The "used three times = vocabulary" exemption is gone. A repeated slip
+    is flagged at every use (S001).
+  - A repeated unknown term gets one grouped question (S003, Convention)
+    with "Show where" and Add to dictionary; names stay quiet.
+  - Held out: typo recall per use 0 → 0.624; terms falsely flagged 0.013.
+- *S5, Laya only.*
+  - The Critic interface ships with a null critic, so engine behaviour is
+    unchanged; a health entry appears once a critic is installed.
+  - Laya: Apache-2.0, verified at the source and pinned by revision and
+    SHA.
+  - Corpus manifest: 1,566 articles in 10 disciplines, of which 1,350 are
+    CC BY or CC0 and trainable. The texts stay outside the repo.
+  - Untrained, on 300 held-out sentences, Laya labels sentence roles with
+    0.470 accuracy, against 0.637 for the TF-IDF baseline. That baseline
+    was 82.6% on PubMed-RCT, which remains the bar.
+  - Fine-tuning, ONNX export and the gate are scripted for Kaggle or the
+    owner's Mac (`ml/critics/laya/README.md`).
+- *Installable web app.*
+  - Manifest and icons. The service worker caches only static files from
+    this site; it never caches pages, engine replies, POSTs or Supabase, and
+    is never registered on `/word`.
+  - An offline page.
+  - Muting on an uploaded file now hides that rule's findings in the
+    browser instead of re-sending the file.
+  - Uploads work in local development without Supabase.
+- *Noise floor, large documents, LaTeX, thread vs tape, preprints.*
+  - The thesis corpus is re-extracted with a tested repair pass (line-end
+    hyphens, page breaks and page numbers, reference lists), so the noise
+    floor is now 12.07 → **11.54**. No rule changed: S001 367 → 218, S003
+    38 → 27, F601 208 → 162, W211 102 → 77.
+  - Texts over 200k characters are parsed in pieces, giving identical
+    findings (a 120k-word thesis peaks at 1.02 GB instead of 2.49 GB).
+  - LaTeX:
+    - findings that straddle a footnote's edge are dropped;
+    - the implicit end of line after `\input` is restored;
+    - redefined built-in macros keep the document's argument count.
+  - D906 flags a gap or aim sentence repeated across chapters.
+  - Eight abstract-only preprints in the bench are replaced with full-text
+    ones.
+
+**Evidence (merged branch).**
+- Python: core 1587 passed / 2 skipped; service 349; ML suites 143 (dogfood
+  25, realdocs 26, tools 5, eval 29, corpus 35, critics 23).
+- Supabase two-user tests: 133 (re-run by the lead through the usual
+  route).
+- Web: lint, typecheck, token and contract checks clean; 663 unit tests;
+  e2e chromium + accounts: 235 passed.
+- Third-party scan 0 hits; ruff clean; noise gate OK at 11.54/1000w.
+
+**For the owner.**
+- Run `supabase/migrations/20261015120000_account_controls.sql` after the
+  progress migration, check that the privilege query in `docs/deploy.md`
+  §10 returns true, then deploy the engine.
+- S5: fine-tune Laya (README), and label 50+ paragraphs at `/label`.
+
+**Lessons.**
+- A helper that hits a refused permission must stop and report, not work
+  around it. One did, to run the Supabase tests; the lead re-ran them the
+  sanctioned way (133 passed).
+- A noise floor measured on PDF-extracted text partly measures the PDF tool.
+  Fixing the extraction moved the number more than any rule change this
+  round did.
+- Latency-budget tests fail when the machine is loaded by parallel jobs;
+  they pass alone. Run them last, or alone, before reading a failure as a
+  regression.
+
+## P49 — 2026-10-16 — Laya's training data, and training in one command
+
+**What.** The owner had no paragraphs of their own to label and asked for
+"all the ingredients ready … so that I simply run the program that trains
+laya". Fifty paragraphs could only ever be a rough final check, not training
+data, so this round built the training set and a one-command trainer.
+- *Synthetic drafts* (`ml/critics/data/synthetic/`, parts A–C):
+  - 450 paragraphs written for the purpose, with every engine flag judged
+    useful, wrong or unsure: 749 judgments.
+  - Decided precision by part: A 0.79, B 0.68, C 0.59.
+  - Registry: `s5-synthetic-drafts`.
+- *Corpus flag judgments* (`ml/critics/data/corpus/`):
+  - 1,001 judgments on 374 paragraphs from 164 CC BY / CC0 articles.
+  - Only labels, paragraph indices and SHA-256 hashes are committed;
+    `rebuild.py` rebuilds the text locally.
+  - The test split (201 judgments) is held out.
+  - Registry: `s5-corpus-flag-judgments`.
+- *Trainer* (`ml/critics/laya/`):
+  - `assemble.py`: pools the data with no paragraph or article in two
+    splits, keeps the owner's labels as test only, writes a data report,
+    and stops if labels have drifted from the engine.
+  - `pipeline.py` / `evaluate.py`: train with resume, evaluate, calibrate,
+    export INT8 ONNX, then re-score the INT8 graph.
+  - `train.sh`: one command for the whole run (macOS bash 3.2 safe).
+  - `make_kaggle_kit.sh` + `kaggle_notebook.ipynb`; the results come back
+    through `train.sh --import`.
+  - `ml/corpus/harvest.py mirror` fetches exactly the committed manifest.
+- *Gate fixes*:
+  - reads `run_dogfood`'s per-document `corpus_stats.json`;
+  - Task A needs the owner's labels as the independent test;
+  - a threshold can no longer fall inside a tie of equal confidences.
+- *PLAN* records the precision findings from the judgments in the Inbox
+  (accented names split by the tokenizer, D902/C303/AB802/G103/G107 mostly
+  wrong, recall gaps), plus the S5 ticks.
+
+**Data counts.**
+
+| Task A | Synthetic | Corpus | Total |
+|---|---|---|---|
+| Train | 467 | 566 | 1,033 |
+| Dev | 109 | 108 | 217 |
+| Test | 111 | 169 | 280 |
+
+The training set is about 1 : 1 useful to wrong (505 / 528). Task B has
+5,184 train sentences from 383 articles, 565 dev, and 790 test.
+
+**Evidence.**
+- ML suites: critics 60, corpus 36, eval 29, dogfood 25, tools 5.
+- ruff clean; third-party scan 0 hits.
+- Smoke runs on CPU (quick mode) completed for both tasks, each NOT
+  PROMOTED, as expected:
+  - Task B dev 0.37 → 0.70;
+  - Task A dev 0.52 → 0.65.
+- `train.sh --import` was exercised on a zip packed as the notebook packs
+  it.
+- Not run: the Kaggle notebook on Kaggle, and MPS.
+- The engine is unchanged, so no noise-gate rerun was needed (the import
+  run measured 11.54).
+
+**For the owner.**
+- On the Mac:
+  - `bash ml/critics/laya/train.sh --dry-run`
+  - then `--quick`
+  - then the full run (≈6.5 h on MPS, a guess).
+- Or the Kaggle kit (≈75 min on a T4).
+- Disk: ≈1 GB, plus ≈2.5 GB per task, plus ≈3 GB while exporting.
+- Memory: 8–10 GB.
+- Task A cannot be promoted until the owner labels their own paragraphs at
+  `/label`.
+
+**Lessons.**
+- Labels written by the same assistant that wrote the rules are not an
+  independent test, however careful. The gate now says so in code: Task A
+  needs the owner's labels to pass.
+- INT8 export cost real accuracy on Task B (0.60 → 0.52 in the smoke run).
+  Report both numbers, and let the gate read the INT8 one, since that is
+  what ships.
+- `harvest.py all` rewrites the committed manifest. Any step that depends
+  on paragraph hashes must use `mirror`.

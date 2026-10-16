@@ -359,6 +359,64 @@ test.describe("signed in", () => {
   });
 });
 
+/* ---------- a word used again and again (Codex review #10) ---------- */
+
+const REPEAT_TEXT = "Methods\nWe fitted numpyro models. The numpyro sampler ran quickly. Then numpyro stopped.\n";
+const REPEAT_AT = [0, 1, 2].map((n) => {
+  let i = -1;
+  for (let k = 0; k <= n; k++) i = REPEAT_TEXT.indexOf("numpyro", i + 1);
+  return i;
+});
+const repeatQuestion = {
+  ...signedInPaste.suggestions[0]!,
+  id: "e2e-s003-1",
+  rule_id: "S003",
+  rule_name: "repeated-unknown-word",
+  category: "convention" as const,
+  tier: "spelling",
+  span: { start: REPEAT_AT[0]!, end: REPEAT_AT[0]! + 7, line: 2, col: REPEAT_AT[0]! - 7 },
+  text: "numpyro",
+  message:
+    "‘numpyro’ appears 3 times and isn’t in the dictionary. If it’s a term, add it to your dictionary; otherwise check its spelling.",
+  replacement: null,
+  occurrences: REPEAT_AT.map((a) => ({ start: a, end: a + 7, line: 2, col: a - 7 })),
+};
+const repeatAnswer = { ...signedInPaste, suggestions: [repeatQuestion], counts: { convention: 1 } };
+const repeatCleared = { ...signedInPaste, suggestions: [], counts: {} };
+
+test.describe("a word used again and again", () => {
+  test("Add to dictionary on the one question clears every use", async ({ page }) => {
+    await seedSession(page);
+    const sb = await mockSupabase(page);
+    const calls = await mockEngineAuth(page, (_c, route, n) => reply(route, 200, n === 1 ? repeatAnswer : repeatCleared));
+    await page.goto("/");
+    await expect(page.getByTestId("account-button")).toBeVisible();
+    await pasteAndCheck(page, REPEAT_TEXT);
+    const card = page.locator("#card-e2e-s003-1");
+    await expect(page.getByTestId("document").locator("mark")).toHaveCount(3);
+    await expect(card.getByTestId("dictionary-note")).toHaveCount(0);
+    await card.getByTestId("add-word").click();
+    await expect(page.getByTestId("account-note")).toContainText("Added “numpyro” to your dictionary");
+    await expect(page.getByRole("heading", { name: "No suggestions" })).toBeVisible();
+    await expect(page.getByTestId("document").locator("mark")).toHaveCount(0);
+    expect(sb.words).toEqual(["numpyro"]);
+    expect(calls).toHaveLength(2);
+    expect(await axeSerious(page)).toEqual([]);
+  });
+
+  test("signed out, the question says where a dictionary is kept", async ({ page }) => {
+    await mockSupabase(page);
+    await mockEngineAuth(page, (_c, route) => reply(route, 200, { ...repeatAnswer, signed_in: false }));
+    await page.goto("/");
+    await pasteAndCheck(page, REPEAT_TEXT);
+    const card = page.locator("#card-e2e-s003-1");
+    await expect(card.getByTestId("add-word")).toHaveCount(0);
+    await expect(card.getByTestId("dictionary-note")).toHaveText(
+      "Sign in to keep a dictionary: a word you add is never questioned again, here or in Word.",
+    );
+  });
+});
+
 test.describe("uploads", () => {
   test("a .md file: raw bytes, encoded name, bearer token; read-only view with highlights", async ({ page }) => {
     await seedSession(page);
@@ -423,6 +481,66 @@ test.describe("uploads", () => {
       "In file: sections/methods.tex, line 3",
     );
     expect(await axeSerious(page)).toEqual([]);
+  });
+
+  test("an Overleaf .zip with two main files: the one read is named, another can be chosen; the reading line says what was left out", async ({
+    page,
+  }) => {
+    // Codex review #5: no silent guess of the main .tex file, and what the check did not read, in counts.
+    const reading = {
+      words_checked: 1204,
+      set_aside: [],
+      not_checked: [{ kind: "skipped_files" as const, count: 1, label: "included files that could not be read" }],
+      included: [{ kind: "footnotes" as const, count: 2, label: "footnotes" }],
+    };
+    const answer = (main: string) => ({
+      ...zipResponse,
+      reading,
+      document: { ...zipResponse.document, main_file: main, main_candidates: ["cover-letter.tex", "main.tex"] },
+    });
+    await seedSession(page);
+    await mockSupabase(page);
+    const calls = await mockEngineAuth(page, (_c, route, n) => reply(route, 200, answer(n === 1 ? "main.tex" : "cover-letter.tex")));
+    await page.goto("/");
+    await expect(page.getByTestId("account-button")).toBeVisible();
+    await page.getByTestId("file-input").setInputFiles({ name: "paper.zip", mimeType: "application/zip", buffer: Buffer.from("PK synthetic") });
+    await expect(page.getByRole("heading", { name: "2 suggestions" })).toBeVisible();
+    await expect(page.getByTestId("reading-summary")).toHaveText(
+      "Checked 1,204 words, including 2 footnotes. Not checked: 1 included file that could not be read.",
+    );
+    const choice = page.getByTestId("main-file");
+    await expect(choice).toContainText("This project has 2 files that each start a document. Researchly checked main.tex");
+    await expect(page.getByLabel("Main file")).toHaveValue("main.tex");
+    expect(JSON.parse(calls[0]!.headers["x-researchly-options"]!)).not.toHaveProperty("main_file");
+
+    await page.getByLabel("Main file").selectOption("cover-letter.tex");
+    await expect(choice).toContainText("Researchly checked cover-letter.tex");
+    expect(calls).toHaveLength(2);
+    expect(JSON.parse(calls[1]!.headers["x-researchly-options"]!).main_file).toBe("cover-letter.tex");
+    expect(await axeSerious(page)).toEqual([]);
+  });
+
+  test("a .docx with footnotes and a text box: the reading line says they were not checked", async ({ page }) => {
+    const docx = {
+      ...mdResponse,
+      reading: {
+        words_checked: 87,
+        set_aside: [],
+        not_checked: [
+          { kind: "footnotes" as const, count: 3, label: "footnotes" },
+          { kind: "text_boxes" as const, count: 1, label: "text boxes" },
+        ],
+      },
+      document: { ...mdResponse.document, filename: "chapter.docx", format: "docx" as const },
+    };
+    await seedSession(page);
+    await mockSupabase(page);
+    await mockEngineAuth(page, (_c, route) => reply(route, 200, docx));
+    await page.goto("/");
+    await expect(page.getByTestId("account-button")).toBeVisible();
+    await page.getByTestId("file-input").setInputFiles({ name: "chapter.docx", mimeType: "application/octet-stream", buffer: Buffer.from("PK synthetic") });
+    await expect(page.getByTestId("reading-summary")).toHaveText("Checked 87 words. Not checked: 3 footnotes · 1 text box.");
+    await expect(page.getByTestId("main-file")).toHaveCount(0);
   });
 
   test("drag and drop onto the editor checks the file", async ({ page }) => {
@@ -562,25 +680,25 @@ test.describe("settings page", () => {
     await expect(page.getByTestId("settings-status")).toHaveText("Removed “Rt” from your dictionary.");
     expect(sb.words).toEqual(["nowcasting", "serial-interval"]);
 
-    await page.getByTestId("delete-open").click();
-    const dialog = page.getByTestId("delete-dialog");
+    // "Clear my dictionary" (PLAN #12): the words only, by the caller's own id; the settings stay.
+    await page.getByTestId("clear-dictionary-open").click();
+    const dialog = page.getByTestId("clear-dictionary-dialog");
     await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText("All 2 words will be removed from your dictionary");
     await expect(dialog.getByRole("button", { name: "Keep them" })).toBeFocused();
     expect(await axeSerious(page)).toEqual([]);
-    await dialog.getByTestId("delete-confirm").click();
-    await expect(page.getByTestId("settings-status")).toHaveText("Your settings, dictionary and progress were deleted.");
+    await dialog.getByTestId("clear-dictionary-confirm").click();
+    await expect(page.getByTestId("settings-status")).toHaveText("Your dictionary was cleared.");
     await expect(dialog).toBeHidden();
-    await expect(page.getByTestId("muted-empty")).toBeVisible();
     await expect(page.getByTestId("word-count")).toHaveText("Your dictionary is empty.");
-    expect(sb.settings).toBeNull();
+    await expect(page.getByTestId("clear-dictionary-open")).toHaveCount(0);
+    await expect(muted).toHaveCount(1);
     expect(sb.words).toEqual([]);
+    expect(sb.settings?.disabled_rules).toEqual(["G101"]);
 
     const deletes = sb.sent.filter((r) => r.method === "DELETE");
-    // "Delete my data": progress first (S4c), then the dictionary and the settings, each by the caller's own id.
     const wholesale = deletes.filter((r) => r.search.includes(`user_id=eq.${USER.id}`)).map((r) => r.path);
-    expect(wholesale[0]).toBe("/rest/v1/progress_events");
-    expect(deletes.some((r) => r.path === "/rest/v1/user_settings" && r.search.includes(`user_id=eq.${USER.id}`))).toBe(true);
-    expect(deletes.some((r) => r.path === "/rest/v1/dictionary_words" && r.search.includes(`user_id=eq.${USER.id}`))).toBe(true);
+    expect(wholesale).toEqual(["/rest/v1/dictionary_words"]);
     // Never another user's id; inserts and upserts carry no user id at all (the column defaults to auth.uid()).
     for (const r of sb.sent) {
       expect(r.body + r.search).not.toContain(OTHER_USER_ID);
@@ -667,8 +785,9 @@ for (const width of [375, 1280]) {
       expect(await noOverflow(page)).toBeLessThanOrEqual(0);
       await page.screenshot({ path: `${shots}/accounts-settings-${width}.png`, fullPage: true });
 
-      await page.getByTestId("delete-open").click();
-      await expect(page.getByTestId("delete-dialog")).toBeVisible();
+      await page.getByTestId("delete-account-open").click();
+      await expect(page.getByTestId("delete-account-dialog")).toBeVisible();
+      expect(await noOverflow(page)).toBeLessThanOrEqual(0);
       await page.screenshot({ path: `${shots}/accounts-delete-dialog-${width}.png` });
     });
 
@@ -696,4 +815,74 @@ test("dark mode: no serious axe violations on signed-in results and settings", a
   await page.goto("/settings");
   await expect(page.getByTestId("muted-rule")).toHaveCount(1);
   expect(await axeSerious(page, [...AXE_TAGS, "best-practice"])).toEqual([]);
+});
+
+test.describe("muting a rule on an uploaded file (Inbox: no second upload)", () => {
+  test("its cards leave at once, the mute is saved, the file is not sent again; Undo brings them back at once", async ({ page }) => {
+    await seedSession(page);
+    const sb = await mockSupabase(page);
+    const calls = await mockEngineAuth(page, (_c, route) => reply(route, 200, zipResponse));
+    await page.goto("/");
+    await expect(page.getByTestId("account-button")).toBeVisible();
+    await page.getByTestId("file-input").setInputFiles({ name: "thesis-chapter.zip", mimeType: "application/zip", buffer: Buffer.from("PK") });
+    await expect(page.getByRole("heading", { name: "2 suggestions" })).toBeVisible();
+    const uploads = () => calls.filter((c) => c.path === "/v1/analyze-file").length;
+    expect(uploads()).toBe(1);
+
+    await page.locator("#card-e2e-zip-1").getByTestId("mute-rule").click();
+    await expect(page.getByTestId("account-note")).toContainText("Muted “Booster overclaims certainty”");
+    await expect(page.getByRole("heading", { name: "1 suggestion" })).toBeVisible();
+    await expect(page.locator("#card-e2e-zip-1")).toHaveCount(0);
+    await expect(page.getByTestId("document").locator('[data-sids~="e2e-zip-1"]')).toHaveCount(0);
+    expect(sb.settings?.disabled_rules).toEqual(["C201"]);
+    // Focus lands on Undo, one key away, as after "Not an issue here".
+    await expect(page.getByTestId("undo-mute")).toBeFocused();
+    await expect(page.getByTestId("file-panel")).toBeVisible();
+
+    await page.getByTestId("undo-mute").click();
+    await expect(page.getByTestId("account-note")).toContainText("Unmuted “Booster overclaims certainty”");
+    await expect(page.getByRole("heading", { name: "2 suggestions" })).toBeVisible();
+    await expect(page.locator("#card-e2e-zip-1")).toBeVisible();
+    await expect.poll(() => sb.settings?.disabled_rules).toEqual([]);
+    expect(sb.sent.filter((r) => r.path === "/rest/v1/rpc/unmute_rule")).toHaveLength(1);
+
+    // Neither the mute nor its undo sent the file again.
+    await page.waitForTimeout(300);
+    expect(uploads()).toBe(1);
+    expect(await axeSerious(page)).toEqual([]);
+  });
+
+  test("a failed save brings the cards back and says why; still no second upload", async ({ page }) => {
+    await seedSession(page);
+    await mockSupabase(page);
+    const calls = await mockEngineAuth(page, (_c, route) => reply(route, 200, zipResponse));
+    await page.route(`${SUPABASE_URL}/rest/v1/rpc/mute_rule`, (route) =>
+      route.request().method() === "OPTIONS" ? route.fallback() : reply(route, 401, { code: "PGRST301", message: "JWT expired" }),
+    );
+    await page.goto("/");
+    await expect(page.getByTestId("account-button")).toBeVisible();
+    await page.getByTestId("file-input").setInputFiles({ name: "thesis-chapter.zip", mimeType: "application/zip", buffer: Buffer.from("PK") });
+    await expect(page.getByRole("heading", { name: "2 suggestions" })).toBeVisible();
+    await page.locator("#card-e2e-zip-1").getByTestId("mute-rule").click();
+    await expect(page.getByTestId("account-note")).toContainText("Your sign-in has expired");
+    await expect(page.getByRole("heading", { name: "2 suggestions" })).toBeVisible();
+    await expect(page.getByTestId("undo-mute")).toHaveCount(0);
+    expect(calls).toHaveLength(1);
+  });
+
+  test("pasted text: Undo unmutes and checks again, so the engine's answer has the cards back", async ({ page }) => {
+    await seedSession(page);
+    const sb = await mockSupabase(page);
+    const calls = await mockEngineAuth(page, (_c, route, n) => reply(route, 200, n === 2 ? afterMute : signedInPaste));
+    await page.goto("/");
+    await expect(page.getByTestId("account-button")).toBeVisible();
+    await pasteAndCheck(page);
+    await page.locator("#card-e2e-wordy-1").getByTestId("mute-rule").click();
+    await expect(page.getByRole("heading", { name: "1 suggestion" })).toBeVisible();
+    await expect.poll(() => calls.length).toBe(2);
+    await page.getByTestId("undo-mute").click();
+    await expect(page.getByRole("heading", { name: "2 suggestions" })).toBeVisible();
+    await expect.poll(() => calls.length).toBe(3);
+    expect(sb.settings?.disabled_rules).toEqual([]);
+  });
 });

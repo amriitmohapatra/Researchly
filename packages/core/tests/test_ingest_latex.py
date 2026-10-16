@@ -376,3 +376,118 @@ def test_equation_and_cite_key_not_spellchecked():
            "\\begin{equation}\\text{mispeled} = 1\\end{equation}\n")
     hits = flagged(src, "S001", disabled={"LT001"})
     assert hits == []
+
+
+# --- footnotes: read where they stand, never spliced into a finding ----------
+# A footnote's text is checked where it is cited, so the parser and the
+# grammar tier read "every district Counts were taken" across the splice.
+# PLAN S2 known gap; synthetic sentences.
+
+def test_footnote_text_is_an_aside_on_both_readers():
+    src = ("\\begin{document}\nCases rose in each ward\\footnote{Counts came "
+           "from a bulletin.} during the wave.\n\\end{document}\n")
+    doc = Document.from_text(src, "latex")
+    assert [src[a:b] for a, b in doc.asides] == ["Counts came from a bulletin."]
+    # The simpler reader (after a parse failure) finds the same asides.
+    from researchly.ingest.latex import _footnote_spans
+    other = ("A rise\\footnote{Seen in \\emph{every} ward.} was clear. "
+             "% \\footnote{an old note}\nNext\\footnote[2]{Second note.}.\n")
+    assert [other[a:b] for a, b in _footnote_spans(other)] == [
+        "Seen in \\emph{every} ward.", "Second note."]
+    broken = src.replace("\\end{document}", "$x\n\\end{document}")
+    res = mask_latex(broken)
+    assert res.warnings
+    assert [broken[a:b] for a, b in res.asides] == [
+        "Counts came from a bulletin."]
+
+
+def test_a_doubled_word_across_a_footnote_is_not_flagged():
+    src = ("\\begin{document}\nWe fitted the model to the weekly "
+           "counts\\footnote{Counts were taken from the bulletin.} in every "
+           "ward.\n\\end{document}\n")
+    assert not flagged(src, "W207")
+
+
+def test_a_doubled_word_inside_a_footnote_is_still_flagged():
+    src = ("\\begin{document}\nWe fitted the model\\footnote{The the fit "
+           "used four chains.} to the weekly counts.\n\\end{document}\n")
+    assert flagged(src, "W207")
+
+
+def test_a_doubled_word_in_the_sentence_around_a_footnote_is_still_flagged():
+    src = ("\\begin{document}\nWe fitted the the model\\footnote{The fit "
+           "used four chains.} to the weekly counts.\n\\end{document}\n")
+    assert flagged(src, "W207")
+
+
+def test_crosses_aside_reads_one_edge_only():
+    src = ("\\begin{document}\nThe rate fell in May\\footnote{Data from the "
+           "registry.} and stayed low.\n\\end{document}\n")
+    doc = Document.from_text(src, "latex")
+    a, b = doc.asides[0]
+    assert doc.crosses_aside(src.index("in May"), src.index("registry"))
+    assert doc.crosses_aside(src.index("Data"), src.index("stayed") + 6)
+    assert not doc.crosses_aside(a, b)                   # the note itself
+    assert not doc.crosses_aside(src.index("The"), src.index("in May") + 6)
+    # A finding about the whole sentence, footnote and all, is kept.
+    assert not doc.crosses_aside(src.index("The"), src.index("low") + 3)
+
+
+def test_a_lower_case_continuation_after_a_footnote_is_not_flagged():
+    # The note ends with a full stop and the sentence resumes in lower case:
+    # no finding may read across the note's edge, or start on the words
+    # that resume the sentence.
+    host = ("The weekly incidence rose in every ward\\footnote{Counts were "
+            "taken from the weekly bulletin.} during the second wave, and the "
+            "admissions followed\\footnote{See the appendix.} within a week.")
+    src = ("\\begin{document}\n\\section{Results}\n" + host
+           + "\n\\end{document}\n")
+    doc = Document.from_text(src, "latex")
+    hits = check(doc, NLP, show_preferences=True, disabled={"LT001"})
+    for s in hits:
+        assert not doc.crosses_aside(s.start, s.end)
+    after = [src.index("during"), src.index("within")]
+    assert not [s for s in hits if s.start in after], \
+        [(s.rule_id, s.text) for s in hits]
+
+
+# --- a built-in macro the document redefines ----------------------------------
+# P29's "custom \Set macro" project: `\def\H{H}` turned the Hungarian accent
+# `\H` (one argument) into a symbol, `$\H$` lost its closing `$` to the accent,
+# and every `$` after it was read the wrong way round.
+
+REDEFINED = ("\\documentclass{article}\n\\def\\H{H}\n"
+             "\\newcommand{\\Set}[1]{\\left\\{#1\\right\\}}\n"
+             "\\begin{document}\n"
+             "If $\\H$ is a history, $\\Hr_t$, we write $\\Set{a,b}$ for its "
+             "times.\nThe model was fitted to weekly counts.\n"
+             "\\end{document}\n")
+
+
+def test_a_redefined_accent_macro_keeps_the_maths_in_step():
+    from researchly.ingest.latex import redefined_macros
+    assert redefined_macros(REDEFINED) == {"H": 0}
+    res = mask_latex(REDEFINED)
+    assert res.warnings == []                     # parsed, not the fallback
+    assert_offsets(REDEFINED, res.masked)
+    body = res.masked[REDEFINED.index("If"):]
+    assert "\\" not in body and "$" not in body
+    assert "we write" in body and "The model was fitted" in body
+
+
+def test_only_redefinitions_that_take_fewer_arguments_count():
+    from researchly.ingest.latex import redefined_macros
+    text = ("\\renewcommand{\\c}[1]{c#1}\n"       # same count as the accent
+            "\\def\\u#1#2{#1#2}\n"                # more: harmless
+            "\\renewcommand\\v{v}\n"              # fewer: counts
+            "\\renewcommand{\\section}{x}\n"      # structural: never
+            "\\newcommand{\\Set}[1]{\\{#1\\}}\n"  # not built in
+            "% \\def\\H{H}\n")                    # commented out
+    assert redefined_macros(text) == {"v": 0}
+
+
+def test_the_accent_still_reads_as_an_accent_when_not_redefined():
+    src = "\\begin{document}\nThe author Erd\\H{o}s wrote it.\n\\end{document}\n"
+    res = mask_latex(src)
+    assert res.warnings == []
+    assert "wrote it." in res.masked

@@ -238,9 +238,10 @@ Each item is paraphrased in Researchly's words, with the section it belongs in a
 | Strangers | the narrative map's link `stranger_sources` (Discussion) and a point in the brief's question D: sources cited in two or more sentences of the Discussion and nowhere before it; shown, never flagged; abstains without a review section or with fewer than three readable citations in it (`researchly/discourse/citations.py`) | `workshop-S2+Kwan2006` |
 | Make it answerable: what the design cannot show | the narrative map's Methods move `design_limit`, thesis chapters only | `workshop-S2+Lim2006` |
 | The triad: what is still open | the narrative map's Conclusion move `still_open`, thesis chapters only | `workshop-S2+Bunton2005` |
+| Thread versus tape: keep the key noun, not the sentence; the later chapter's sentence should know something the first did not | **D906 gap-pasted-across-chapters** (Improvement, document scope: a gap or aim sentence of 12+ words whose word pairs overlap ≥ 0.8 with one in an earlier chapter; points back at that chapter; Learn card carry-the-gap) | `workshop-S2` |
 | Lessons | Learn cards **gap-stake** ("Say what the gap costs") and **carry-the-gap** ("Carry the gap to the end"), with examples written for Researchly | as above |
 
-**Not built, and why.** The key-noun thread (one noun per chapter, drift when it changes): the slides' own key nouns include verbs ("decide"), so picking the noun needs judgement a parse cannot supply; recorded in PLAN as research-grade. Orphan review sections: a section's return address is an idea, not a citation, so citation overlap would call a used section an orphan. The four cracks and the three tests beyond the consequence test (adjudication, inheritance), "the gap picks the method", inherited methods and wrong measures: they judge the science, not the wording. A ruling move on the Discussion map (closed / narrowed / reframed / reopened): the words for a verdict are too varied to detect, so most discussions would show it as missing; D904 catches the anti-pattern instead. "Taken together" as buried tension and "well suited to exploring" in Methods: common and usually innocent, so they would cost precision. "Contributes to a deeper understanding": a vague-contribution phrase better handled as an extension of E701's empty phrases after a corpus check. Thread versus tape (the same sentence pasted into every chapter) is deterministic and could be built later.
+**Not built, and why.** The key-noun thread (one noun per chapter, drift when it changes): the slides' own key nouns include verbs ("decide"), so picking the noun needs judgement a parse cannot supply; recorded in PLAN as research-grade. Orphan review sections: a section's return address is an idea, not a citation, so citation overlap would call a used section an orphan. The four cracks and the three tests beyond the consequence test (adjudication, inheritance), "the gap picks the method", inherited methods and wrong measures: they judge the science, not the wording. A ruling move on the Discussion map (closed / narrowed / reframed / reopened): the words for a verdict are too varied to detect, so most discussions would show it as missing; D904 catches the anti-pattern instead. "Taken together" as buried tension and "well suited to exploring" in Methods: common and usually innocent, so they would cost precision. "Contributes to a deeper understanding": a vague-contribution phrase better handled as an extension of E701's empty phrases after a corpus check. Thread versus tape was built later as D906 (2026-10-15).
 
 ## 14. Researchly grammar notes (`docs/grammar-notes.md`; R6, 2026-10-15)
 
@@ -290,6 +291,19 @@ GN204 1), every one judged a true finding on reading the matches locally
 of them. On 115 cached open-access articles (735k words) GN201 found 12
 agreement slips, all real. The regional notes stay silent under auto and
 were read under each chosen English on both corpora.
+
+## 15. Genre-native units: the policy brief and the response letter (Codex review #4, 2026-10-15)
+
+`researchly/discourse/units.py` and `discourse/moves.py` (`UNIT_SCHEMAS`). Recognised from headings (and, in plain text, from a line of its own); they change the narrative map only, never a suggestion. Questions, lessons and frames are Researchly's own wording; the works are cited by name on the source line, nothing is quoted.
+
+| Unit | Moves (in order) | Sources |
+|---|---|---|
+| Context | the problem, and why now | Young & Quinn (2002), the parts of a policy paper |
+| Evidence | what the evidence shows | Young & Quinn (2002); guide §9.8 |
+| Options | the options; what each would cost or achieve | Young & Quinn (2002) |
+| Recommendations | a clear recommendation; who acts, and by when | Young & Quinn (2002); guide §9.8 |
+
+A response to reviewers is read as comment-and-reply units ("Reviewer 1, Comment 2", "R1.2", "Comment 3" under a "Reviewer 2" line, a quoted comment followed by its reply) and described, never judged; its Learn card ("A response to reviewers, comment by comment") cites Noble (2017), "Ten simple rules for writing a response to reviewers". The policy-brief card cites Young & Quinn (2002) and guide §9.8.
 
 ## Shipped this phase (v0.4)
 

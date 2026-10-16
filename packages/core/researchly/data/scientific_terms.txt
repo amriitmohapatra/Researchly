@@ -15,6 +15,7 @@ serosurvey
 serosurveys
 serotype
 serotypes
+sera
 arbovirus
 arboviruses
 chikungunya

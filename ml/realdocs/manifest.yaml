@@ -1822,42 +1822,6 @@ items:
     notes: "doi:10.1101/2024.01.01.573813; version 1 posted 2024-01-02; not peer reviewed; NC/ND: evaluation only (D2)"
 
   # ---- medRxiv / bioRxiv preprints mirrored in PMC (NIH Preprint Pilot; JATS via Europe PMC): 11 ----
-  - id: pmcpreprint-PMC13596594
-    kind: preprint
-    source: europepmc
-    format: jats
-    url: https://www.ebi.ac.uk/europepmc/webservices/rest/PMC13596594/fullTextXML
-    licence: CC-BY-4.0
-    licence_evidence: "PubMed get_copyright_status 2026-10-04: PMC licence CC BY 4.0"
-    discipline: epidemiology
-    title: "Protective association between recent insecticide-treated bed net use and falciparum malaria in three provinces of the Democratic Republic of the Congo."
-    year: 2026
-    permitted_use: [ci_eval, train_experimental]
-    notes: "medRxiv preprint in PMC via the NIH Preprint Pilot; PMID 42780165; doi:10.64898/2026.09.15.26363108; not peer reviewed. Replaces the server download, which medRxiv/bioRxiv refuse to automated clients"
-  - id: pmcpreprint-PMC13484801
-    kind: preprint
-    source: europepmc
-    format: jats
-    url: https://www.ebi.ac.uk/europepmc/webservices/rest/PMC13484801/fullTextXML
-    licence: CC-BY-4.0
-    licence_evidence: "PubMed get_copyright_status 2026-10-04: PMC licence CC BY 4.0"
-    discipline: epidemiology
-    title: "Inferring heterogeneous transmission and community introduction of antibiotic-resistant bacteria in hospital settings."
-    year: 2026
-    permitted_use: [ci_eval, train_experimental]
-    notes: "medRxiv preprint in PMC via the NIH Preprint Pilot; PMID 42620202; doi:10.64898/2026.08.02.26359521; not peer reviewed. Replaces the server download, which medRxiv/bioRxiv refuse to automated clients"
-  - id: pmcpreprint-PMC13484830
-    kind: preprint
-    source: europepmc
-    format: jats
-    url: https://www.ebi.ac.uk/europepmc/webservices/rest/PMC13484830/fullTextXML
-    licence: CC-BY-4.0
-    licence_evidence: "PubMed get_copyright_status 2026-10-04: PMC licence CC BY 4.0"
-    discipline: epidemiology
-    title: "Molecular Epidemiology of HIV in an African Epidemic with Declining HIV incidence but High Prevalence: A Longitudinal, Population-based Study in Uganda."
-    year: 2026
-    permitted_use: [ci_eval, train_experimental]
-    notes: "medRxiv preprint in PMC via the NIH Preprint Pilot; PMID 42620149; doi:10.64898/2026.08.04.26359711; not peer reviewed. Replaces the server download, which medRxiv/bioRxiv refuse to automated clients"
   - id: pmcpreprint-PMC13484347
     kind: preprint
     source: europepmc
@@ -1882,54 +1846,6 @@ items:
     year: 2026
     permitted_use: [ci_eval, train_experimental]
     notes: "bioRxiv preprint in PMC via the NIH Preprint Pilot; PMID 42779989; doi:10.64898/2026.09.15.751875; not peer reviewed. Replaces the server download, which medRxiv/bioRxiv refuse to automated clients"
-  - id: pmcpreprint-PMC13484082
-    kind: preprint
-    source: europepmc
-    format: jats
-    url: https://www.ebi.ac.uk/europepmc/webservices/rest/PMC13484082/fullTextXML
-    licence: CC-BY-4.0
-    licence_evidence: "PubMed get_copyright_status 2026-10-04: PMC licence CC BY 4.0"
-    discipline: molecular-biology
-    title: "Molecular basis for chikungunya virus recognition of a mosquito-specific receptor."
-    year: 2026
-    permitted_use: [ci_eval, train_experimental]
-    notes: "bioRxiv preprint in PMC via the NIH Preprint Pilot; PMID 42620031; doi:10.64898/2026.07.28.741352; not peer reviewed. Replaces the server download, which medRxiv/bioRxiv refuse to automated clients"
-  - id: pmcpreprint-PMC13483925
-    kind: preprint
-    source: europepmc
-    format: jats
-    url: https://www.ebi.ac.uk/europepmc/webservices/rest/PMC13483925/fullTextXML
-    licence: CC-BY-4.0
-    licence_evidence: "PubMed get_copyright_status 2026-10-04: PMC licence CC BY 4.0"
-    discipline: molecular-biology
-    title: "Phage VP882 possesses quorum-sensing-driven lytic induction and stress-mediated host growth suppression mechanisms."
-    year: 2026
-    permitted_use: [ci_eval, train_experimental]
-    notes: "bioRxiv preprint in PMC via the NIH Preprint Pilot; PMID 42619886; doi:10.64898/2026.07.27.740977; not peer reviewed. Replaces the server download, which medRxiv/bioRxiv refuse to automated clients"
-  - id: pmcpreprint-PMC13484500
-    kind: preprint
-    source: europepmc
-    format: jats
-    url: https://www.ebi.ac.uk/europepmc/webservices/rest/PMC13484500/fullTextXML
-    licence: CC-BY-4.0
-    licence_evidence: "PubMed get_copyright_status 2026-10-04: PMC licence CC BY 4.0"
-    discipline: molecular-biology
-    title: "Single-cell transcriptomics reveals a multiphasic host infection trajectory."
-    year: 2026
-    permitted_use: [ci_eval, train_experimental]
-    notes: "bioRxiv preprint in PMC via the NIH Preprint Pilot; PMID 42620189; doi:10.64898/2026.07.29.741357; not peer reviewed. Replaces the server download, which medRxiv/bioRxiv refuse to automated clients"
-  - id: pmcpreprint-PMC13596262
-    kind: preprint
-    source: europepmc
-    format: jats
-    url: https://www.ebi.ac.uk/europepmc/webservices/rest/PMC13596262/fullTextXML
-    licence: CC-BY-4.0
-    licence_evidence: "PubMed get_copyright_status 2026-10-04: PMC licence CC BY 4.0"
-    discipline: molecular-biology
-    title: "Human-specific remodeling of an endogenous retrovirus shapes structural diversity at acrocentric nucleolar organizer regions."
-    year: 2026
-    permitted_use: [ci_eval, train_experimental]
-    notes: "bioRxiv preprint in PMC via the NIH Preprint Pilot; PMID 42779673; doi:10.64898/2026.09.11.751073; not peer reviewed. Replaces the server download, which medRxiv/bioRxiv refuse to automated clients"
   - id: pmcpreprint-PMC13596531
     kind: preprint
     source: europepmc
@@ -1942,18 +1858,102 @@ items:
     year: 2026
     permitted_use: [ci_eval, train_experimental]
     notes: "bioRxiv preprint in PMC via the NIH Preprint Pilot; PMID 42779898; doi:10.64898/2026.09.10.750344; not peer reviewed. Replaces the server download, which medRxiv/bioRxiv refuse to automated clients"
-  - id: pmcpreprint-PMC13483939
+  - id: pmcpreprint-PMC13345484
     kind: preprint
     source: europepmc
     format: jats
-    url: https://www.ebi.ac.uk/europepmc/webservices/rest/PMC13483939/fullTextXML
+    url: https://www.ebi.ac.uk/europepmc/webservices/rest/PMC13345484/fullTextXML
     licence: CC-BY-4.0
-    licence_evidence: "PubMed get_copyright_status 2026-10-04: PMC licence CC BY 4.0"
-    discipline: neuroscience
-    title: "Early Amyloid-beta Toxicity Disrupts Nervous System Connectivity During Aging."
+    licence_evidence: "PubMed get_copyright_status 2026-10-15: PMC licence CC BY 4.0; Europe PMC fullTextXML <license> agrees"
+    discipline: epidemiology
+    title: "Adaptive multi-model ensembles for improved epidemic projections and decision support."
     year: 2026
     permitted_use: [ci_eval, train_experimental]
-    notes: "bioRxiv preprint in PMC via the NIH Preprint Pilot; PMID 42619712; doi:10.64898/2026.07.27.740981; not peer reviewed. Replaces the server download, which medRxiv/bioRxiv refuse to automated clients"
+    notes: "medRxiv preprint in PMC via the NIH Preprint Pilot; PMID 42428121; doi:10.64898/2026.06.26.26356648; not peer reviewed. Europe PMC fullTextXML has a body (12,928 words, 2026-10-15); replaces an abstract-only record"
+  - id: pmcpreprint-PMC13320923
+    kind: preprint
+    source: europepmc
+    format: jats
+    url: https://www.ebi.ac.uk/europepmc/webservices/rest/PMC13320923/fullTextXML
+    licence: CC-BY-4.0
+    licence_evidence: "PubMed get_copyright_status 2026-10-15: PMC licence CC BY 4.0; Europe PMC fullTextXML <license> agrees"
+    discipline: epidemiology
+    title: "Dengue and chikungunya virus transmission in Kinshasa, Democratic Republic of the Congo."
+    year: 2026
+    permitted_use: [ci_eval, train_experimental]
+    notes: "medRxiv preprint in PMC via the NIH Preprint Pilot; PMID 42396307; doi:10.64898/2026.06.11.26355423; not peer reviewed. Europe PMC fullTextXML has a body (3,594 words, 2026-10-15); replaces an abstract-only record"
+  - id: pmcpreprint-PMC13321187
+    kind: preprint
+    source: europepmc
+    format: jats
+    url: https://www.ebi.ac.uk/europepmc/webservices/rest/PMC13321187/fullTextXML
+    licence: CC-BY-4.0
+    licence_evidence: "PubMed get_copyright_status 2026-10-15: PMC licence CC BY 4.0; Europe PMC fullTextXML <license> agrees"
+    discipline: epidemiology
+    title: "Sources and transmission dynamics of Campylobacter and Shigella using culture-independent molecular methods in Tanzania (SCAT): a protocol for a prospective observational cohort study."
+    year: 2026
+    permitted_use: [ci_eval, train_experimental]
+    notes: "medRxiv preprint in PMC via the NIH Preprint Pilot; PMID 42396335; doi:10.64898/2026.06.23.26356359; not peer reviewed. Europe PMC fullTextXML has a body (3,419 words, 2026-10-15); replaces an abstract-only record"
+  - id: pmcpreprint-PMC13321200
+    kind: preprint
+    source: europepmc
+    format: jats
+    url: https://www.ebi.ac.uk/europepmc/webservices/rest/PMC13321200/fullTextXML
+    licence: CC-BY-4.0
+    licence_evidence: "PubMed get_copyright_status 2026-10-15: PMC licence CC BY 4.0; Europe PMC fullTextXML <license> agrees"
+    discipline: epidemiology
+    title: "Durability and Seasonal Variation in the Effectiveness of Nirsevimab over Three Seasons in Connecticut."
+    year: 2026
+    permitted_use: [ci_eval, train_experimental]
+    notes: "medRxiv preprint in PMC via the NIH Preprint Pilot; PMID 42396301; doi:10.64898/2026.06.22.26356264; not peer reviewed. Europe PMC fullTextXML has a body (3,227 words, 2026-10-15); replaces an abstract-only record"
+  - id: pmcpreprint-PMC13321214
+    kind: preprint
+    source: europepmc
+    format: jats
+    url: https://www.ebi.ac.uk/europepmc/webservices/rest/PMC13321214/fullTextXML
+    licence: CC-BY-4.0
+    licence_evidence: "PubMed get_copyright_status 2026-10-15: PMC licence CC BY 4.0; Europe PMC fullTextXML <license> agrees"
+    discipline: epidemiology
+    title: "Serotype skewing and immune imprinting shape response to the tetravalent dengue virus Qdenga vaccine."
+    year: 2026
+    permitted_use: [ci_eval, train_experimental]
+    notes: "medRxiv preprint in PMC via the NIH Preprint Pilot; PMID 42396290; doi:10.64898/2026.06.15.26355542; not peer reviewed. Europe PMC fullTextXML has a body (16,069 words, 2026-10-15); replaces an abstract-only record"
+  - id: pmcpreprint-PMC13345497
+    kind: preprint
+    source: europepmc
+    format: jats
+    url: https://www.ebi.ac.uk/europepmc/webservices/rest/PMC13345497/fullTextXML
+    licence: CC0-1.0
+    licence_evidence: "PubMed get_copyright_status 2026-10-15: PMC licence CC0 1.0 (https://creativecommons.org/publicdomain/zero/1.0/); Europe PMC fullTextXML <license> agrees"
+    discipline: clinical-medicine
+    title: "Shared trans-ancestry architecture of HLA-mediated disease risk in the All of Us Research Program."
+    year: 2026
+    permitted_use: [ci_eval, train_experimental]
+    notes: "medRxiv preprint in PMC via the NIH Preprint Pilot; PMID 42428073; doi:10.64898/2026.06.26.26356709; not peer reviewed. Europe PMC fullTextXML has a body (6,835 words, 2026-10-15); replaces an abstract-only record"
+  - id: pmcpreprint-PMC13320931
+    kind: preprint
+    source: europepmc
+    format: jats
+    url: https://www.ebi.ac.uk/europepmc/webservices/rest/PMC13320931/fullTextXML
+    licence: CC-BY-4.0
+    licence_evidence: "PubMed get_copyright_status 2026-10-15: PMC licence CC BY 4.0; Europe PMC fullTextXML <license> agrees"
+    discipline: clinical-medicine
+    title: "Type 2 diabetes genetics in 125,000 admixed adults from Mexico City."
+    year: 2026
+    permitted_use: [ci_eval, train_experimental]
+    notes: "medRxiv preprint in PMC via the NIH Preprint Pilot; PMID 42396271; doi:10.64898/2026.06.23.26356360; not peer reviewed. Europe PMC fullTextXML has a body (8,799 words, 2026-10-15); replaces an abstract-only record"
+  - id: pmcpreprint-PMC13321007
+    kind: preprint
+    source: europepmc
+    format: jats
+    url: https://www.ebi.ac.uk/europepmc/webservices/rest/PMC13321007/fullTextXML
+    licence: CC-BY-4.0
+    licence_evidence: "PubMed get_copyright_status 2026-10-15: PMC licence CC BY 4.0; Europe PMC fullTextXML <license> agrees"
+    discipline: molecular-biology
+    title: "Early Immune Hypoactivation and Persistent Innate Reprogramming Characterize Chronic Chikungunya Disease."
+    year: 2026
+    permitted_use: [ci_eval, train_experimental]
+    notes: "bioRxiv preprint in PMC via the NIH Preprint Pilot; PMID 42395536; doi:10.64898/2026.06.22.733701; not peer reviewed. Europe PMC fullTextXML has a body (10,910 words, 2026-10-15); replaces an abstract-only record"
   # ---- LaTeX manuscripts hosted on GitHub (arXiv licences could not be verified - see SOURCES.md): 18 ----
   - id: gh-jalemkul-gmx_tutorials_livecoms
     kind: preprint

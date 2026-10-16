@@ -84,8 +84,11 @@ python bench.py --url http://localhost:8080      # or --in-process
 | `RESEARCHLY_LT_URL` | unset | LanguageTool server, e.g. `http://localhost:8010`; unset = local JVM |
 | `RESEARCHLY_GRAMMAR` | `on` | `off` = this deployment runs no grammar (health says `disabled`, not degraded) |
 | `RESEARCHLY_MAX_BODY_BYTES` | `8388608` | request body cap (8 MiB; must admit 1M four-byte characters) |
-| `RESEARCHLY_RATE_LIMIT_PER_MIN` | `30` | per client IP, per instance; `0` disables |
-| `RESEARCHLY_LIVE_RATE_LIMIT_PER_MIN` | `120` | the live check (`/v1/check-paragraphs`), per client IP, per instance, counted apart from the rest; `0` disables |
+| `RESEARCHLY_RATE_LIMIT_PER_MIN` | `30` | anonymous callers, per client IP, per instance (also the per-IP budget for tokens that fail verification); `0` disables |
+| `RESEARCHLY_LIVE_RATE_LIMIT_PER_MIN` | `120` | the live check (`/v1/check-paragraphs`), anonymous, per client IP, per instance, counted apart from the rest; `0` disables |
+| `RESEARCHLY_USER_RATE_LIMIT_PER_MIN` | `30` | signed in: `/v1/analyze` and `/v1/analyze-word`, per user (the verified token's `sub`), per instance; `0` disables |
+| `RESEARCHLY_USER_LIVE_RATE_LIMIT_PER_MIN` | `120` | signed in: the live check, per user, per instance; `0` disables |
+| `RESEARCHLY_USER_UPLOAD_RATE_LIMIT_PER_MIN` | `10` | signed in: `/v1/analyze-file`, per user, per instance; `0` disables |
 | `RESEARCHLY_TRUSTED_PROXY_HOPS` | `0` | X-Forwarded-For entries added by trusted proxies (Cloud Run: `1`) |
 | `RESEARCHLY_WARMUP` | `on` | warm spaCy, rules and LanguageTool before opening the port |
 
@@ -134,8 +137,18 @@ The rate limit is in memory, per instance: with `maxScale: 2` a client can
 get up to 2× the configured rate. The live check counts against its own
 limit (`RESEARCHLY_LIVE_RATE_LIMIT_PER_MIN`, 120), so typing never uses up
 the budget for a full check. It takes the same lock: a live check waits for
-a long analysis on the same instance (or Cloud Run sends it to another). Accounts (S2) replace it with per-user
-limits.
+a long analysis on the same instance (or Cloud Run sends it to another).
+
+Signed in (PLAN #12), a caller is limited per user, not per address: the
+middleware verifies the token before the body is read and keys the limit on
+its `sub`, so people behind one university address never share a budget,
+and anonymous use from that address leaves theirs alone. Full checks, the
+live check and uploads have separate per-user budgets. A token that fails
+verification is charged to its IP (beyond `RESEARCHLY_RATE_LIMIT_PER_MIN`
+the answer is 429). A token naming a key id the engine has not seen makes
+it fetch Supabase's keys again at most once a minute, whoever asks; inside
+that minute such a token gets 503 `auth_unavailable` ("try again in a
+minute"), never 401, so a writer is not signed out during a key rotation.
 
 ## Measured (dev machine, 2026-10-03)
 

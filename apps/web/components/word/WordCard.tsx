@@ -1,10 +1,11 @@
 "use client";
 
-import { createContext, memo, useContext, type ButtonHTMLAttributes, type MouseEvent } from "react";
-import type { WordSuggestion } from "@researchly/contract";
+import { createContext, memo, useContext, useState, type ButtonHTMLAttributes, type MouseEvent } from "react";
+import type { WordLocation, WordSuggestion } from "@researchly/contract";
 import { categoryMeta, sectionLabel } from "@/lib/categories";
 import { dictionaryCandidate, isRuleId } from "@/lib/settings";
 import { CategoryBadge } from "../CategoryIcon";
+import { PlacesNav } from "../PlacesNav";
 import { REASONING_LABEL } from "../SuggestionCard";
 import { TableEvidence } from "../TableEvidence";
 
@@ -31,6 +32,8 @@ interface Props {
   stale?: boolean;
   note: CardNote | null;
   onSelect: (s: WordSuggestion) => void;
+  /** A grouped question (Codex review #10): select one place of the word in the document. */
+  onSelectAt?: ((s: WordSuggestion, at: WordLocation) => void) | null;
   onApply: (s: WordSuggestion) => void;
   /** Signed in only. Absent signed out: the card has no account actions. */
   actions: WordCardActions | null;
@@ -85,6 +88,7 @@ export const WordCard = memo(function WordCard({
   stale = false,
   note,
   onSelect,
+  onSelectAt = null,
   onApply,
   actions,
   underlined = false,
@@ -94,6 +98,10 @@ export const WordCard = memo(function WordCard({
   const section = sectionLabel(s.section);
   const msgId = `wmsg-${s.id}`;
   const word = actions && s.tier === "spelling" ? dictionaryCandidate(s.text) : null;
+  const busy = useContext(WordBusyContext);
+  // One card for every use of a word (Codex review #10): "Show where" selects each in turn.
+  const places = s.occurrence_locations && s.occurrence_locations.length > 1 ? s.occurrence_locations : null;
+  const [place, setPlace] = useState<number | null>(null);
   const mutable = Boolean(actions) && isRuleId(s.rule_id);
   const hasFix = s.replacement !== null && s.replacement !== undefined;
   const plain = s.plain.trim() || s.why.trim();
@@ -141,6 +149,19 @@ export const WordCard = memo(function WordCard({
           <q>{quote(s.text)}</q>
         </p>
       ) : null}
+      {places && onSelectAt ? (
+        <PlacesNav
+          count={places.length}
+          at={place}
+          busy={busy}
+          word={s.text.trim()}
+          describedBy={msgId}
+          onGo={(i) => {
+            setPlace(i);
+            onSelectAt(s, places[i]!);
+          }}
+        />
+      ) : null}
       {s.table_evidence ? <TableEvidence evidence={s.table_evidence} /> : null}
       {hasFix ? (
         <p className="card-repl">
@@ -172,14 +193,16 @@ export const WordCard = memo(function WordCard({
       ) : null}
 
       <div className="wcard-actions">
-        <BusyButton
-          className="btn btn-quiet btn-compact"
-          aria-describedby={msgId}
-          onPress={() => onSelect(s)}
-          data-testid="select-in-document"
-        >
-          Show in document
-        </BusyButton>
+        {places && onSelectAt ? null : (
+          <BusyButton
+            className="btn btn-quiet btn-compact"
+            aria-describedby={msgId}
+            onPress={() => onSelect(s)}
+            data-testid="select-in-document"
+          >
+            Show in document
+          </BusyButton>
+        )}
         {hasFix && !applied && !stale ? (
           <BusyButton
             className="btn btn-secondary btn-compact"

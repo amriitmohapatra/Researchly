@@ -102,8 +102,10 @@ The commodity layer (integrated open source, still no LLM):
 
 - **S001 spelling** — SymSpell (symspellpy, MIT) with scientific-vocabulary
   guards: a shipped lexicon (seroprevalence, covariates, nowcasting, Aedes
-  aegypti…), UK/US variants, morphology, proper-noun/acronym skips, and
-  terms you use 3+ times are treated as yours. Teach it your words:
+  aegypti…), UK/US variants, morphology and proper-noun/acronym skips. A
+  word used 3+ times is flagged at every use only when it is a known kind
+  of slip next to a common word; any other is asked about once (S003, a
+  Convention: "is this a term?"). Teach it your words:
   `researchly dict add <word>` (stored locally).
 - **LT001 grammar** (optional) — agreement, verb forms, a/an, word
   confusions via a LOCAL LanguageTool server (open source, non-AI):

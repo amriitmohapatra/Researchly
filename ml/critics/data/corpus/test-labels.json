@@ -1,0 +1,1814 @@
+{
+ "version": 1,
+ "labels": [
+  {
+   "paragraph": 285,
+   "rule_id": "F601",
+   "category": "convention",
+   "section": "results",
+   "verdict": "wrong",
+   "attempt": "corpe0285",
+   "flag": 0
+  },
+  {
+   "paragraph": 285,
+   "rule_id": "G101",
+   "category": "improvement",
+   "section": "results",
+   "verdict": "wrong",
+   "attempt": "corpe0285",
+   "flag": 1
+  },
+  {
+   "paragraph": 285,
+   "rule_id": "G106",
+   "category": "improvement",
+   "section": "results",
+   "verdict": "useful",
+   "attempt": "corpe0285",
+   "flag": 2
+  },
+  {
+   "paragraph": 285,
+   "rule_id": "G101",
+   "category": "improvement",
+   "section": "results",
+   "verdict": "unsure",
+   "attempt": "corpe0285",
+   "flag": 3
+  },
+  {
+   "paragraph": 285,
+   "rule_id": "G106",
+   "category": "improvement",
+   "section": "results",
+   "verdict": "useful",
+   "attempt": "corpe0285",
+   "flag": 4
+  },
+  {
+   "paragraph": 285,
+   "rule_id": "G101",
+   "category": "improvement",
+   "section": "results",
+   "verdict": "unsure",
+   "attempt": "corpe0285",
+   "flag": 5
+  },
+  {
+   "paragraph": 286,
+   "rule_id": "D902",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "unsure",
+   "attempt": "corpe0286",
+   "flag": 0
+  },
+  {
+   "paragraph": 286,
+   "rule_id": "G106",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "useful",
+   "attempt": "corpe0286",
+   "flag": 1
+  },
+  {
+   "paragraph": 286,
+   "rule_id": "G101",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "wrong",
+   "attempt": "corpe0286",
+   "flag": 2
+  },
+  {
+   "paragraph": 286,
+   "rule_id": "F601",
+   "category": "convention",
+   "section": "introduction",
+   "verdict": "wrong",
+   "attempt": "corpe0286",
+   "flag": 3
+  },
+  {
+   "paragraph": 286,
+   "rule_id": "G106",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "useful",
+   "attempt": "corpe0286",
+   "flag": 4
+  },
+  {
+   "paragraph": 287,
+   "rule_id": "F601",
+   "category": "convention",
+   "section": "results",
+   "verdict": "wrong",
+   "attempt": "corpe0287",
+   "flag": 0
+  },
+  {
+   "paragraph": 287,
+   "rule_id": "G106",
+   "category": "improvement",
+   "section": "results",
+   "verdict": "unsure",
+   "attempt": "corpe0287",
+   "flag": 1
+  },
+  {
+   "paragraph": 288,
+   "rule_id": "D902",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "wrong",
+   "attempt": "corpe0288",
+   "flag": 0
+  },
+  {
+   "paragraph": 288,
+   "rule_id": "F601",
+   "category": "convention",
+   "section": "introduction",
+   "verdict": "wrong",
+   "attempt": "corpe0288",
+   "flag": 1
+  },
+  {
+   "paragraph": 288,
+   "rule_id": "E704",
+   "category": "convention",
+   "section": "introduction",
+   "verdict": "wrong",
+   "attempt": "corpe0288",
+   "flag": 2
+  },
+  {
+   "paragraph": 289,
+   "rule_id": "D902",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "wrong",
+   "attempt": "corpe0289",
+   "flag": 0
+  },
+  {
+   "paragraph": 290,
+   "rule_id": "W202",
+   "category": "improvement",
+   "section": "results",
+   "verdict": "useful",
+   "attempt": "corpe0290",
+   "flag": 0
+  },
+  {
+   "paragraph": 290,
+   "rule_id": "G107",
+   "category": "improvement",
+   "section": "results",
+   "verdict": "wrong",
+   "attempt": "corpe0290",
+   "flag": 1
+  },
+  {
+   "paragraph": 291,
+   "rule_id": "G103",
+   "category": "improvement",
+   "section": "results",
+   "verdict": "wrong",
+   "attempt": "corpe0291",
+   "flag": 0
+  },
+  {
+   "paragraph": 291,
+   "rule_id": "W202",
+   "category": "improvement",
+   "section": "results",
+   "verdict": "useful",
+   "attempt": "corpe0291",
+   "flag": 1
+  },
+  {
+   "paragraph": 292,
+   "rule_id": "G103",
+   "category": "improvement",
+   "section": "discussion",
+   "verdict": "unsure",
+   "attempt": "corpe0292",
+   "flag": 1
+  },
+  {
+   "paragraph": 293,
+   "rule_id": "D902",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "wrong",
+   "attempt": "corpe0293",
+   "flag": 0
+  },
+  {
+   "paragraph": 294,
+   "rule_id": "G103",
+   "category": "improvement",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0294",
+   "flag": 0
+  },
+  {
+   "paragraph": 295,
+   "rule_id": "D902",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "wrong",
+   "attempt": "corpe0295",
+   "flag": 0
+  },
+  {
+   "paragraph": 295,
+   "rule_id": "W202",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "useful",
+   "attempt": "corpe0295",
+   "flag": 1
+  },
+  {
+   "paragraph": 296,
+   "rule_id": "D902",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "wrong",
+   "attempt": "corpe0296",
+   "flag": 0
+  },
+  {
+   "paragraph": 296,
+   "rule_id": "F601",
+   "category": "convention",
+   "section": "introduction",
+   "verdict": "wrong",
+   "attempt": "corpe0296",
+   "flag": 1
+  },
+  {
+   "paragraph": 296,
+   "rule_id": "E704",
+   "category": "convention",
+   "section": "introduction",
+   "verdict": "unsure",
+   "attempt": "corpe0296",
+   "flag": 2
+  },
+  {
+   "paragraph": 297,
+   "rule_id": "D902",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "wrong",
+   "attempt": "corpe0297",
+   "flag": 0
+  },
+  {
+   "paragraph": 297,
+   "rule_id": "G103",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "wrong",
+   "attempt": "corpe0297",
+   "flag": 1
+  },
+  {
+   "paragraph": 297,
+   "rule_id": "W203",
+   "category": "convention",
+   "section": "introduction",
+   "verdict": "useful",
+   "attempt": "corpe0297",
+   "flag": 2
+  },
+  {
+   "paragraph": 298,
+   "rule_id": "S001",
+   "category": "correction",
+   "section": "introduction",
+   "verdict": "wrong",
+   "attempt": "corpe0298",
+   "flag": 1
+  },
+  {
+   "paragraph": 298,
+   "rule_id": "G103",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "wrong",
+   "attempt": "corpe0298",
+   "flag": 2
+  },
+  {
+   "paragraph": 298,
+   "rule_id": "W203",
+   "category": "convention",
+   "section": "introduction",
+   "verdict": "useful",
+   "attempt": "corpe0298",
+   "flag": 3
+  },
+  {
+   "paragraph": 299,
+   "rule_id": "G101",
+   "category": "improvement",
+   "section": "results",
+   "verdict": "wrong",
+   "attempt": "corpe0299",
+   "flag": 0
+  },
+  {
+   "paragraph": 299,
+   "rule_id": "G101",
+   "category": "improvement",
+   "section": "results",
+   "verdict": "wrong",
+   "attempt": "corpe0299",
+   "flag": 1
+  },
+  {
+   "paragraph": 300,
+   "rule_id": "G107",
+   "category": "improvement",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0300",
+   "flag": 0
+  },
+  {
+   "paragraph": 300,
+   "rule_id": "C303",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0300",
+   "flag": 1
+  },
+  {
+   "paragraph": 301,
+   "rule_id": "F601",
+   "category": "convention",
+   "section": "methods",
+   "verdict": "wrong",
+   "attempt": "corpe0301",
+   "flag": 0
+  },
+  {
+   "paragraph": 301,
+   "rule_id": "G103",
+   "category": "improvement",
+   "section": "methods",
+   "verdict": "wrong",
+   "attempt": "corpe0301",
+   "flag": 1
+  },
+  {
+   "paragraph": 301,
+   "rule_id": "G103",
+   "category": "improvement",
+   "section": "methods",
+   "verdict": "wrong",
+   "attempt": "corpe0301",
+   "flag": 2
+  },
+  {
+   "paragraph": 302,
+   "rule_id": "S001",
+   "category": "correction",
+   "section": "results",
+   "verdict": "wrong",
+   "attempt": "corpe0302",
+   "flag": 0
+  },
+  {
+   "paragraph": 303,
+   "rule_id": "G105",
+   "category": "improvement",
+   "section": "discussion",
+   "verdict": "useful",
+   "attempt": "corpe0303",
+   "flag": 0
+  },
+  {
+   "paragraph": 303,
+   "rule_id": "S001",
+   "category": "correction",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0303",
+   "flag": 1
+  },
+  {
+   "paragraph": 303,
+   "rule_id": "LT001",
+   "category": "correction",
+   "section": "discussion",
+   "verdict": "useful",
+   "attempt": "corpe0303",
+   "flag": 2
+  },
+  {
+   "paragraph": 303,
+   "rule_id": "S001",
+   "category": "correction",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0303",
+   "flag": 3
+  },
+  {
+   "paragraph": 304,
+   "rule_id": "C304",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "useful",
+   "attempt": "corpe0304",
+   "flag": 0
+  },
+  {
+   "paragraph": 304,
+   "rule_id": "F601",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0304",
+   "flag": 1
+  },
+  {
+   "paragraph": 304,
+   "rule_id": "F601",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0304",
+   "flag": 2
+  },
+  {
+   "paragraph": 305,
+   "rule_id": "F601",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0305",
+   "flag": 0
+  },
+  {
+   "paragraph": 305,
+   "rule_id": "C304",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "unsure",
+   "attempt": "corpe0305",
+   "flag": 1
+  },
+  {
+   "paragraph": 305,
+   "rule_id": "S003",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0305",
+   "flag": 2
+  },
+  {
+   "paragraph": 305,
+   "rule_id": "C303",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0305",
+   "flag": 3
+  },
+  {
+   "paragraph": 305,
+   "rule_id": "G103",
+   "category": "improvement",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0305",
+   "flag": 4
+  },
+  {
+   "paragraph": 305,
+   "rule_id": "W201",
+   "category": "improvement",
+   "section": "discussion",
+   "verdict": "useful",
+   "attempt": "corpe0305",
+   "flag": 5
+  },
+  {
+   "paragraph": 305,
+   "rule_id": "F601",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0305",
+   "flag": 6
+  },
+  {
+   "paragraph": 306,
+   "rule_id": "D902",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "unsure",
+   "attempt": "corpe0306",
+   "flag": 0
+  },
+  {
+   "paragraph": 306,
+   "rule_id": "G101",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "wrong",
+   "attempt": "corpe0306",
+   "flag": 1
+  },
+  {
+   "paragraph": 306,
+   "rule_id": "G106",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "useful",
+   "attempt": "corpe0306",
+   "flag": 2
+  },
+  {
+   "paragraph": 306,
+   "rule_id": "LT001",
+   "category": "correction",
+   "section": "introduction",
+   "verdict": "wrong",
+   "attempt": "corpe0306",
+   "flag": 3
+  },
+  {
+   "paragraph": 307,
+   "rule_id": "D902",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "unsure",
+   "attempt": "corpe0307",
+   "flag": 0
+  },
+  {
+   "paragraph": 307,
+   "rule_id": "G105",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "useful",
+   "attempt": "corpe0307",
+   "flag": 1
+  },
+  {
+   "paragraph": 307,
+   "rule_id": "G104",
+   "category": "convention",
+   "section": "introduction",
+   "verdict": "wrong",
+   "attempt": "corpe0307",
+   "flag": 2
+  },
+  {
+   "paragraph": 307,
+   "rule_id": "W201",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "unsure",
+   "attempt": "corpe0307",
+   "flag": 3
+  },
+  {
+   "paragraph": 308,
+   "rule_id": "G104",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0308",
+   "flag": 1
+  },
+  {
+   "paragraph": 309,
+   "rule_id": "LT001",
+   "category": "correction",
+   "section": "results",
+   "verdict": "useful",
+   "attempt": "corpe0309",
+   "flag": 1
+  },
+  {
+   "paragraph": 310,
+   "rule_id": "G103",
+   "category": "improvement",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0310",
+   "flag": 0
+  },
+  {
+   "paragraph": 310,
+   "rule_id": "F601",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0310",
+   "flag": 1
+  },
+  {
+   "paragraph": 310,
+   "rule_id": "F601",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "unsure",
+   "attempt": "corpe0310",
+   "flag": 2
+  },
+  {
+   "paragraph": 310,
+   "rule_id": "C303",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0310",
+   "flag": 4
+  },
+  {
+   "paragraph": 311,
+   "rule_id": "S001",
+   "category": "correction",
+   "section": "introduction",
+   "verdict": "wrong",
+   "attempt": "corpe0311",
+   "flag": 1
+  },
+  {
+   "paragraph": 312,
+   "rule_id": "S001",
+   "category": "correction",
+   "section": "methods",
+   "verdict": "wrong",
+   "attempt": "corpe0312",
+   "flag": 0
+  },
+  {
+   "paragraph": 312,
+   "rule_id": "S001",
+   "category": "correction",
+   "section": "methods",
+   "verdict": "wrong",
+   "attempt": "corpe0312",
+   "flag": 1
+  },
+  {
+   "paragraph": 313,
+   "rule_id": "S001",
+   "category": "correction",
+   "section": "methods",
+   "verdict": "wrong",
+   "attempt": "corpe0313",
+   "flag": 0
+  },
+  {
+   "paragraph": 314,
+   "rule_id": "G103",
+   "category": "improvement",
+   "section": "methods",
+   "verdict": "wrong",
+   "attempt": "corpe0314",
+   "flag": 0
+  },
+  {
+   "paragraph": 314,
+   "rule_id": "F601",
+   "category": "convention",
+   "section": "methods",
+   "verdict": "wrong",
+   "attempt": "corpe0314",
+   "flag": 1
+  },
+  {
+   "paragraph": 315,
+   "rule_id": "D902",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "wrong",
+   "attempt": "corpe0315",
+   "flag": 0
+  },
+  {
+   "paragraph": 315,
+   "rule_id": "W202",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "useful",
+   "attempt": "corpe0315",
+   "flag": 1
+  },
+  {
+   "paragraph": 315,
+   "rule_id": "LT001",
+   "category": "correction",
+   "section": "introduction",
+   "verdict": "wrong",
+   "attempt": "corpe0315",
+   "flag": 2
+  },
+  {
+   "paragraph": 316,
+   "rule_id": "G105",
+   "category": "improvement",
+   "section": "results",
+   "verdict": "unsure",
+   "attempt": "corpe0316",
+   "flag": 0
+  },
+  {
+   "paragraph": 317,
+   "rule_id": "E706",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "unsure",
+   "attempt": "corpe0317",
+   "flag": 0
+  },
+  {
+   "paragraph": 317,
+   "rule_id": "G103",
+   "category": "improvement",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0317",
+   "flag": 1
+  },
+  {
+   "paragraph": 317,
+   "rule_id": "G101",
+   "category": "improvement",
+   "section": "discussion",
+   "verdict": "unsure",
+   "attempt": "corpe0317",
+   "flag": 2
+  },
+  {
+   "paragraph": 318,
+   "rule_id": "G103",
+   "category": "improvement",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0318",
+   "flag": 0
+  },
+  {
+   "paragraph": 318,
+   "rule_id": "G104",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0318",
+   "flag": 1
+  },
+  {
+   "paragraph": 319,
+   "rule_id": "C305",
+   "category": "convention",
+   "section": "results",
+   "verdict": "wrong",
+   "attempt": "corpe0319",
+   "flag": 0
+  },
+  {
+   "paragraph": 320,
+   "rule_id": "C304",
+   "category": "convention",
+   "section": "results",
+   "verdict": "unsure",
+   "attempt": "corpe0320",
+   "flag": 2
+  },
+  {
+   "paragraph": 320,
+   "rule_id": "W202",
+   "category": "improvement",
+   "section": "results",
+   "verdict": "useful",
+   "attempt": "corpe0320",
+   "flag": 3
+  },
+  {
+   "paragraph": 320,
+   "rule_id": "G104",
+   "category": "convention",
+   "section": "results",
+   "verdict": "wrong",
+   "attempt": "corpe0320",
+   "flag": 5
+  },
+  {
+   "paragraph": 321,
+   "rule_id": "G106",
+   "category": "improvement",
+   "section": "methods",
+   "verdict": "useful",
+   "attempt": "corpe0321",
+   "flag": 0
+  },
+  {
+   "paragraph": 321,
+   "rule_id": "G101",
+   "category": "improvement",
+   "section": "methods",
+   "verdict": "unsure",
+   "attempt": "corpe0321",
+   "flag": 1
+  },
+  {
+   "paragraph": 321,
+   "rule_id": "F601",
+   "category": "convention",
+   "section": "methods",
+   "verdict": "wrong",
+   "attempt": "corpe0321",
+   "flag": 2
+  },
+  {
+   "paragraph": 321,
+   "rule_id": "F601",
+   "category": "convention",
+   "section": "methods",
+   "verdict": "useful",
+   "attempt": "corpe0321",
+   "flag": 3
+  },
+  {
+   "paragraph": 322,
+   "rule_id": "N102",
+   "category": "convention",
+   "section": "methods",
+   "verdict": "useful",
+   "attempt": "corpe0322",
+   "flag": 2
+  },
+  {
+   "paragraph": 322,
+   "rule_id": "G106",
+   "category": "improvement",
+   "section": "methods",
+   "verdict": "useful",
+   "attempt": "corpe0322",
+   "flag": 3
+  },
+  {
+   "paragraph": 323,
+   "rule_id": "S001",
+   "category": "correction",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0323",
+   "flag": 0
+  },
+  {
+   "paragraph": 323,
+   "rule_id": "F601",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0323",
+   "flag": 1
+  },
+  {
+   "paragraph": 323,
+   "rule_id": "F601",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0323",
+   "flag": 2
+  },
+  {
+   "paragraph": 324,
+   "rule_id": "G101",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "useful",
+   "attempt": "corpe0324",
+   "flag": 0
+  },
+  {
+   "paragraph": 325,
+   "rule_id": "C304",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "useful",
+   "attempt": "corpe0325",
+   "flag": 0
+  },
+  {
+   "paragraph": 325,
+   "rule_id": "E703",
+   "category": "improvement",
+   "section": "discussion",
+   "verdict": "useful",
+   "attempt": "corpe0325",
+   "flag": 1
+  },
+  {
+   "paragraph": 325,
+   "rule_id": "C303",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0325",
+   "flag": 2
+  },
+  {
+   "paragraph": 326,
+   "rule_id": "G102",
+   "category": "improvement",
+   "section": "methods",
+   "verdict": "unsure",
+   "attempt": "corpe0326",
+   "flag": 0
+  },
+  {
+   "paragraph": 326,
+   "rule_id": "W202",
+   "category": "improvement",
+   "section": "methods",
+   "verdict": "useful",
+   "attempt": "corpe0326",
+   "flag": 1
+  },
+  {
+   "paragraph": 327,
+   "rule_id": "LT001",
+   "category": "correction",
+   "section": "methods",
+   "verdict": "useful",
+   "attempt": "corpe0327",
+   "flag": 0
+  },
+  {
+   "paragraph": 327,
+   "rule_id": "W205",
+   "category": "improvement",
+   "section": "methods",
+   "verdict": "useful",
+   "attempt": "corpe0327",
+   "flag": 1
+  },
+  {
+   "paragraph": 327,
+   "rule_id": "W202",
+   "category": "improvement",
+   "section": "methods",
+   "verdict": "useful",
+   "attempt": "corpe0327",
+   "flag": 2
+  },
+  {
+   "paragraph": 327,
+   "rule_id": "W202",
+   "category": "improvement",
+   "section": "methods",
+   "verdict": "useful",
+   "attempt": "corpe0327",
+   "flag": 3
+  },
+  {
+   "paragraph": 328,
+   "rule_id": "D902",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "wrong",
+   "attempt": "corpe0328",
+   "flag": 0
+  },
+  {
+   "paragraph": 328,
+   "rule_id": "F601",
+   "category": "convention",
+   "section": "introduction",
+   "verdict": "useful",
+   "attempt": "corpe0328",
+   "flag": 1
+  },
+  {
+   "paragraph": 328,
+   "rule_id": "F601",
+   "category": "convention",
+   "section": "introduction",
+   "verdict": "useful",
+   "attempt": "corpe0328",
+   "flag": 2
+  },
+  {
+   "paragraph": 329,
+   "rule_id": "G101",
+   "category": "improvement",
+   "section": "methods",
+   "verdict": "useful",
+   "attempt": "corpe0329",
+   "flag": 0
+  },
+  {
+   "paragraph": 329,
+   "rule_id": "GN207",
+   "category": "convention",
+   "section": "methods",
+   "verdict": "useful",
+   "attempt": "corpe0329",
+   "flag": 2
+  },
+  {
+   "paragraph": 330,
+   "rule_id": "LT001",
+   "category": "correction",
+   "section": "results",
+   "verdict": "useful",
+   "attempt": "corpe0330",
+   "flag": 0
+  },
+  {
+   "paragraph": 330,
+   "rule_id": "LT001",
+   "category": "correction",
+   "section": "results",
+   "verdict": "useful",
+   "attempt": "corpe0330",
+   "flag": 3
+  },
+  {
+   "paragraph": 331,
+   "rule_id": "C302",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0331",
+   "flag": 0
+  },
+  {
+   "paragraph": 331,
+   "rule_id": "G101",
+   "category": "improvement",
+   "section": "discussion",
+   "verdict": "useful",
+   "attempt": "corpe0331",
+   "flag": 1
+  },
+  {
+   "paragraph": 332,
+   "rule_id": "C303",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0332",
+   "flag": 0
+  },
+  {
+   "paragraph": 332,
+   "rule_id": "C303",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "unsure",
+   "attempt": "corpe0332",
+   "flag": 1
+  },
+  {
+   "paragraph": 333,
+   "rule_id": "W202",
+   "category": "improvement",
+   "section": "discussion",
+   "verdict": "useful",
+   "attempt": "corpe0333",
+   "flag": 0
+  },
+  {
+   "paragraph": 334,
+   "rule_id": "G102",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "unsure",
+   "attempt": "corpe0334",
+   "flag": 1
+  },
+  {
+   "paragraph": 335,
+   "rule_id": "D902",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "wrong",
+   "attempt": "corpe0335",
+   "flag": 0
+  },
+  {
+   "paragraph": 336,
+   "rule_id": "C304",
+   "category": "convention",
+   "section": "results",
+   "verdict": "unsure",
+   "attempt": "corpe0336",
+   "flag": 1
+  },
+  {
+   "paragraph": 337,
+   "rule_id": "S001",
+   "category": "correction",
+   "section": "methods",
+   "verdict": "wrong",
+   "attempt": "corpe0337",
+   "flag": 0
+  },
+  {
+   "paragraph": 337,
+   "rule_id": "G106",
+   "category": "improvement",
+   "section": "methods",
+   "verdict": "unsure",
+   "attempt": "corpe0337",
+   "flag": 1
+  },
+  {
+   "paragraph": 337,
+   "rule_id": "S001",
+   "category": "correction",
+   "section": "methods",
+   "verdict": "wrong",
+   "attempt": "corpe0337",
+   "flag": 2
+  },
+  {
+   "paragraph": 338,
+   "rule_id": "S001",
+   "category": "correction",
+   "section": "methods",
+   "verdict": "wrong",
+   "attempt": "corpe0338",
+   "flag": 1
+  },
+  {
+   "paragraph": 338,
+   "rule_id": "S001",
+   "category": "correction",
+   "section": "methods",
+   "verdict": "wrong",
+   "attempt": "corpe0338",
+   "flag": 2
+  },
+  {
+   "paragraph": 339,
+   "rule_id": "LT001",
+   "category": "correction",
+   "section": "results",
+   "verdict": "wrong",
+   "attempt": "corpe0339",
+   "flag": 0
+  },
+  {
+   "paragraph": 340,
+   "rule_id": "LT001",
+   "category": "correction",
+   "section": "results",
+   "verdict": "wrong",
+   "attempt": "corpe0340",
+   "flag": 0
+  },
+  {
+   "paragraph": 340,
+   "rule_id": "F601",
+   "category": "convention",
+   "section": "results",
+   "verdict": "useful",
+   "attempt": "corpe0340",
+   "flag": 1
+  },
+  {
+   "paragraph": 340,
+   "rule_id": "G107",
+   "category": "improvement",
+   "section": "results",
+   "verdict": "wrong",
+   "attempt": "corpe0340",
+   "flag": 2
+  },
+  {
+   "paragraph": 341,
+   "rule_id": "C305",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "unsure",
+   "attempt": "corpe0341",
+   "flag": 0
+  },
+  {
+   "paragraph": 341,
+   "rule_id": "C303",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0341",
+   "flag": 1
+  },
+  {
+   "paragraph": 341,
+   "rule_id": "C301",
+   "category": "improvement",
+   "section": "discussion",
+   "verdict": "useful",
+   "attempt": "corpe0341",
+   "flag": 2
+  },
+  {
+   "paragraph": 341,
+   "rule_id": "G101",
+   "category": "improvement",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0341",
+   "flag": 3
+  },
+  {
+   "paragraph": 342,
+   "rule_id": "W203",
+   "category": "convention",
+   "section": "methods",
+   "verdict": "wrong",
+   "attempt": "corpe0342",
+   "flag": 1
+  },
+  {
+   "paragraph": 342,
+   "rule_id": "G107",
+   "category": "improvement",
+   "section": "methods",
+   "verdict": "wrong",
+   "attempt": "corpe0342",
+   "flag": 3
+  },
+  {
+   "paragraph": 342,
+   "rule_id": "W203",
+   "category": "convention",
+   "section": "methods",
+   "verdict": "wrong",
+   "attempt": "corpe0342",
+   "flag": 4
+  },
+  {
+   "paragraph": 343,
+   "rule_id": "W201",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "unsure",
+   "attempt": "corpe0343",
+   "flag": 1
+  },
+  {
+   "paragraph": 344,
+   "rule_id": "G107",
+   "category": "improvement",
+   "section": "methods",
+   "verdict": "unsure",
+   "attempt": "corpe0344",
+   "flag": 0
+  },
+  {
+   "paragraph": 344,
+   "rule_id": "LT001",
+   "category": "correction",
+   "section": "methods",
+   "verdict": "useful",
+   "attempt": "corpe0344",
+   "flag": 1
+  },
+  {
+   "paragraph": 345,
+   "rule_id": "G104",
+   "category": "convention",
+   "section": "results",
+   "verdict": "unsure",
+   "attempt": "corpe0345",
+   "flag": 0
+  },
+  {
+   "paragraph": 345,
+   "rule_id": "G101",
+   "category": "improvement",
+   "section": "results",
+   "verdict": "wrong",
+   "attempt": "corpe0345",
+   "flag": 2
+  },
+  {
+   "paragraph": 346,
+   "rule_id": "G106",
+   "category": "improvement",
+   "section": "discussion",
+   "verdict": "useful",
+   "attempt": "corpe0346",
+   "flag": 0
+  },
+  {
+   "paragraph": 346,
+   "rule_id": "LT001",
+   "category": "correction",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0346",
+   "flag": 1
+  },
+  {
+   "paragraph": 347,
+   "rule_id": "G102",
+   "category": "improvement",
+   "section": "methods",
+   "verdict": "unsure",
+   "attempt": "corpe0347",
+   "flag": 0
+  },
+  {
+   "paragraph": 347,
+   "rule_id": "F601",
+   "category": "convention",
+   "section": "methods",
+   "verdict": "wrong",
+   "attempt": "corpe0347",
+   "flag": 1
+  },
+  {
+   "paragraph": 348,
+   "rule_id": "C303",
+   "category": "convention",
+   "section": "results",
+   "verdict": "wrong",
+   "attempt": "corpe0348",
+   "flag": 0
+  },
+  {
+   "paragraph": 349,
+   "rule_id": "G101",
+   "category": "improvement",
+   "section": "discussion",
+   "verdict": "useful",
+   "attempt": "corpe0349",
+   "flag": 0
+  },
+  {
+   "paragraph": 350,
+   "rule_id": "D902",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "wrong",
+   "attempt": "corpe0350",
+   "flag": 0
+  },
+  {
+   "paragraph": 351,
+   "rule_id": "F601",
+   "category": "convention",
+   "section": "results",
+   "verdict": "useful",
+   "attempt": "corpe0351",
+   "flag": 0
+  },
+  {
+   "paragraph": 351,
+   "rule_id": "G102",
+   "category": "improvement",
+   "section": "results",
+   "verdict": "unsure",
+   "attempt": "corpe0351",
+   "flag": 1
+  },
+  {
+   "paragraph": 352,
+   "rule_id": "LT001",
+   "category": "correction",
+   "section": "results",
+   "verdict": "useful",
+   "attempt": "corpe0352",
+   "flag": 1
+  },
+  {
+   "paragraph": 352,
+   "rule_id": "G101",
+   "category": "improvement",
+   "section": "results",
+   "verdict": "wrong",
+   "attempt": "corpe0352",
+   "flag": 3
+  },
+  {
+   "paragraph": 353,
+   "rule_id": "D902",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "wrong",
+   "attempt": "corpe0353",
+   "flag": 0
+  },
+  {
+   "paragraph": 353,
+   "rule_id": "F601",
+   "category": "convention",
+   "section": "introduction",
+   "verdict": "wrong",
+   "attempt": "corpe0353",
+   "flag": 1
+  },
+  {
+   "paragraph": 353,
+   "rule_id": "G107",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "wrong",
+   "attempt": "corpe0353",
+   "flag": 2
+  },
+  {
+   "paragraph": 354,
+   "rule_id": "C304",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "unsure",
+   "attempt": "corpe0354",
+   "flag": 2
+  },
+  {
+   "paragraph": 355,
+   "rule_id": "G103",
+   "category": "improvement",
+   "section": "methods",
+   "verdict": "wrong",
+   "attempt": "corpe0355",
+   "flag": 0
+  },
+  {
+   "paragraph": 355,
+   "rule_id": "F601",
+   "category": "convention",
+   "section": "methods",
+   "verdict": "wrong",
+   "attempt": "corpe0355",
+   "flag": 1
+  },
+  {
+   "paragraph": 355,
+   "rule_id": "G106",
+   "category": "improvement",
+   "section": "methods",
+   "verdict": "useful",
+   "attempt": "corpe0355",
+   "flag": 2
+  },
+  {
+   "paragraph": 355,
+   "rule_id": "G103",
+   "category": "improvement",
+   "section": "methods",
+   "verdict": "wrong",
+   "attempt": "corpe0355",
+   "flag": 3
+  },
+  {
+   "paragraph": 356,
+   "rule_id": "S001",
+   "category": "correction",
+   "section": "introduction",
+   "verdict": "wrong",
+   "attempt": "corpe0356",
+   "flag": 1
+  },
+  {
+   "paragraph": 356,
+   "rule_id": "G103",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "wrong",
+   "attempt": "corpe0356",
+   "flag": 2
+  },
+  {
+   "paragraph": 357,
+   "rule_id": "G107",
+   "category": "improvement",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0357",
+   "flag": 1
+  },
+  {
+   "paragraph": 357,
+   "rule_id": "C303",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0357",
+   "flag": 2
+  },
+  {
+   "paragraph": 358,
+   "rule_id": "G101",
+   "category": "improvement",
+   "section": "results",
+   "verdict": "useful",
+   "attempt": "corpe0358",
+   "flag": 0
+  },
+  {
+   "paragraph": 359,
+   "rule_id": "E703",
+   "category": "improvement",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0359",
+   "flag": 0
+  },
+  {
+   "paragraph": 360,
+   "rule_id": "G101",
+   "category": "improvement",
+   "section": "discussion",
+   "verdict": "useful",
+   "attempt": "corpe0360",
+   "flag": 0
+  },
+  {
+   "paragraph": 361,
+   "rule_id": "G101",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "unsure",
+   "attempt": "corpe0361",
+   "flag": 1
+  },
+  {
+   "paragraph": 362,
+   "rule_id": "F601",
+   "category": "convention",
+   "section": "results",
+   "verdict": "wrong",
+   "attempt": "corpe0362",
+   "flag": 0
+  },
+  {
+   "paragraph": 362,
+   "rule_id": "F601",
+   "category": "convention",
+   "section": "results",
+   "verdict": "wrong",
+   "attempt": "corpe0362",
+   "flag": 1
+  },
+  {
+   "paragraph": 362,
+   "rule_id": "S001",
+   "category": "correction",
+   "section": "results",
+   "verdict": "wrong",
+   "attempt": "corpe0362",
+   "flag": 3
+  },
+  {
+   "paragraph": 362,
+   "rule_id": "LT001",
+   "category": "correction",
+   "section": "results",
+   "verdict": "unsure",
+   "attempt": "corpe0362",
+   "flag": 7
+  },
+  {
+   "paragraph": 363,
+   "rule_id": "F601",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0363",
+   "flag": 0
+  },
+  {
+   "paragraph": 363,
+   "rule_id": "F601",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0363",
+   "flag": 1
+  },
+  {
+   "paragraph": 363,
+   "rule_id": "W202",
+   "category": "improvement",
+   "section": "discussion",
+   "verdict": "useful",
+   "attempt": "corpe0363",
+   "flag": 2
+  },
+  {
+   "paragraph": 363,
+   "rule_id": "W201",
+   "category": "improvement",
+   "section": "discussion",
+   "verdict": "useful",
+   "attempt": "corpe0363",
+   "flag": 3
+  },
+  {
+   "paragraph": 363,
+   "rule_id": "G101",
+   "category": "improvement",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0363",
+   "flag": 5
+  },
+  {
+   "paragraph": 363,
+   "rule_id": "G106",
+   "category": "improvement",
+   "section": "discussion",
+   "verdict": "useful",
+   "attempt": "corpe0363",
+   "flag": 6
+  },
+  {
+   "paragraph": 364,
+   "rule_id": "S001",
+   "category": "correction",
+   "section": "methods",
+   "verdict": "wrong",
+   "attempt": "corpe0364",
+   "flag": 0
+  },
+  {
+   "paragraph": 365,
+   "rule_id": "G103",
+   "category": "improvement",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0365",
+   "flag": 0
+  },
+  {
+   "paragraph": 365,
+   "rule_id": "G105",
+   "category": "improvement",
+   "section": "discussion",
+   "verdict": "useful",
+   "attempt": "corpe0365",
+   "flag": 1
+  },
+  {
+   "paragraph": 365,
+   "rule_id": "W202",
+   "category": "improvement",
+   "section": "discussion",
+   "verdict": "useful",
+   "attempt": "corpe0365",
+   "flag": 2
+  },
+  {
+   "paragraph": 366,
+   "rule_id": "G103",
+   "category": "improvement",
+   "section": "discussion",
+   "verdict": "unsure",
+   "attempt": "corpe0366",
+   "flag": 0
+  },
+  {
+   "paragraph": 366,
+   "rule_id": "C304",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "unsure",
+   "attempt": "corpe0366",
+   "flag": 1
+  },
+  {
+   "paragraph": 367,
+   "rule_id": "D902",
+   "category": "improvement",
+   "section": "introduction",
+   "verdict": "wrong",
+   "attempt": "corpe0367",
+   "flag": 0
+  },
+  {
+   "paragraph": 368,
+   "rule_id": "G101",
+   "category": "improvement",
+   "section": "results",
+   "verdict": "wrong",
+   "attempt": "corpe0368",
+   "flag": 0
+  },
+  {
+   "paragraph": 369,
+   "rule_id": "C303",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0369",
+   "flag": 0
+  },
+  {
+   "paragraph": 369,
+   "rule_id": "F601",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0369",
+   "flag": 1
+  },
+  {
+   "paragraph": 369,
+   "rule_id": "F601",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0369",
+   "flag": 2
+  },
+  {
+   "paragraph": 370,
+   "rule_id": "G106",
+   "category": "improvement",
+   "section": "methods",
+   "verdict": "useful",
+   "attempt": "corpe0370",
+   "flag": 0
+  },
+  {
+   "paragraph": 371,
+   "rule_id": "C303",
+   "category": "convention",
+   "section": "discussion",
+   "verdict": "wrong",
+   "attempt": "corpe0371",
+   "flag": 0
+  },
+  {
+   "paragraph": 372,
+   "rule_id": "C304",
+   "category": "convention",
+   "section": "results",
+   "verdict": "wrong",
+   "attempt": "corpe0372",
+   "flag": 1
+  },
+  {
+   "paragraph": 373,
+   "rule_id": "G103",
+   "category": "improvement",
+   "section": "methods",
+   "verdict": "wrong",
+   "attempt": "corpe0373",
+   "flag": 0
+  },
+  {
+   "paragraph": 373,
+   "rule_id": "G103",
+   "category": "improvement",
+   "section": "methods",
+   "verdict": "wrong",
+   "attempt": "corpe0373",
+   "flag": 1
+  },
+  {
+   "paragraph": 373,
+   "rule_id": "S001",
+   "category": "correction",
+   "section": "methods",
+   "verdict": "wrong",
+   "attempt": "corpe0373",
+   "flag": 2
+  },
+  {
+   "paragraph": 373,
+   "rule_id": "S001",
+   "category": "correction",
+   "section": "methods",
+   "verdict": "wrong",
+   "attempt": "corpe0373",
+   "flag": 3
+  },
+  {
+   "paragraph": 374,
+   "rule_id": "G101",
+   "category": "improvement",
+   "section": "results",
+   "verdict": "wrong",
+   "attempt": "corpe0374",
+   "flag": 0
+  }
+ ]
+}

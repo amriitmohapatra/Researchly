@@ -63,7 +63,7 @@
 # github.com / raw.githubusercontent.com and the PubMed connector worked.
 
 schema_version: 1
-updated: "2026-10-03"
+updated: "2026-10-15"
 
 datasets:
 
@@ -1078,14 +1078,15 @@ datasets:
     source: "Europe PMC fullTextXML for PMC records of NIH Preprint Pilot preprints (https://www.ebi.ac.uk/europepmc/webservices/rest/{PMCID}/fullTextXML)"
     location: "ml/realdocs/manifest.yaml"
     in_git: false
-    licence: "per item: CC-BY-4.0 (10), CC0-1.0 (1)"
+    licence: "per item: CC-BY-4.0 (9), CC0-1.0 (2)"
     licence_verified: true
     licence_evidence: >-
-      PubMed get_copyright_status, 2026-10-04: PMC licence 'CC BY 4.0' or
-      https://creativecommons.org/publicdomain/zero/1.0/ per item. Found with
+      PubMed get_copyright_status, 2026-10-04 (3 items kept) and 2026-10-15
+      (8 replacements): PMC licence 'CC BY 4.0' or
+      https://creativecommons.org/publicdomain/zero/1.0/ per item, and the
+      <license> element of each Europe PMC fullTextXML agrees. Found with
       PubMed search preprint[pt] AND (transmission OR epidemiolog*) AND free
-      full text AND (medRxiv OR bioRxiv) from 2022; 40 checked, the 11 CC BY /
-      CC0 ones kept, NC/ND/unlicensed left out.
+      full text AND (medRxiv OR bioRxiv); NC/ND/unlicensed left out.
     commercial_ok: true
     permitted_use: [ci_eval, train_experimental]
     current_use: "real-document test bench (P30)"
@@ -1093,8 +1094,12 @@ datasets:
     sha256: null
     items: "ml/realdocs/manifest.yaml — ids pmcpreprint-*"
     notes: >-
-      Not peer-reviewed. 4 medRxiv (epidemiology), 7 bioRxiv (1 within-host
-      transmission model, 6 biology). medRxiv and bioRxiv refuse automated
+      Not peer-reviewed. 8 medRxiv (6 epidemiology, 2 clinical genetics),
+      3 bioRxiv (a within-host transmission model, chronic chikungunya
+      immunology, a neuroscience paper). 2026-10-15: the 8 items whose Europe
+      PMC record held the abstract only (a 29-word stub body; Europe PMC
+      fills bodies weeks after deposit) were replaced by preprints whose
+      fullTextXML has a body of 3,227-16,069 words, checked before adding. medRxiv and bioRxiv refuse automated
       downloads (11 of the 14 realdocs-medrxiv-biorxiv items, P29), so these
       come through PMC like the other articles.
 
@@ -1176,6 +1181,104 @@ datasets:
       test is the ~1.8 MB LaTeX chapter in realdocs-github-latex
       (cysouw/diathesis).
 
+  # ───────────────────────── S5a open-access training corpus (2026-10-15) ─────────────────────────
+  # Spec: ml/corpus/SPEC.md. Per-article rows (licence, evidence, use, split,
+  # hashes; no text) in ml/corpus/manifest.jsonl. Full texts and weak labels
+  # live in a cache outside the repo (~/.researchly/corpus by default).
+
+  - id: s5a-oa-corpus-cc-by
+    name: "S5a open-access corpus — CC BY / CC0 articles (use: train)"
+    kind: corpus
+    source: "https://www.ebi.ac.uk/europepmc/webservices/rest/search + /{PMCID}/fullTextXML"
+    location: "ml/corpus/manifest.jsonl (rows with use: train)"
+    in_git: false
+    licence: "per article: CC-BY-4.0, CC-BY-3.0, CC-BY-unversioned or CC0-1.0, read from each article's own <permissions>"
+    licence_verified: true
+    licence_evidence: >-
+      ml/corpus/harvest.py read every article's JATS <permissions> block on
+      2026-10-15 (common.licence_of) and recorded what it saw per row
+      (licence_evidence: the licence URL, CC0 dedication, or the statement's
+      wording). The Europe PMC search licence field was not used to decide.
+      PLOS's unversioned statement is CC BY 4.0 per
+      https://journals.plos.org/plosone/s/content-license; the CC0 waiver
+      Springer Nature/BMC attach to the data is ignored (the article text is
+      CC BY).
+    commercial_ok: true
+    permitted_use: [private_eval, ci_eval, train_experimental, ship_model]
+    current_use: "S5 Task B weak labels (structured-abstract sentence roles) and section roles; Laya zero-shot spike 2026-10-15"
+    shipped_today: false
+    sha256: null
+    items: "ml/corpus/manifest.jsonl — use: train"
+    notes: >-
+      ship_model: weights trained on CC BY/CC0 text may ship; the model card
+      names this registry id, and the attribution list is the manifest
+      (DOI/PMCID per article). ship_text deliberately not granted: no
+      sentence from these articles may appear in a shipped artefact until an
+      attribution plan for exemplars exists. Ten disciplines; per-article
+      split (test/dev/train) by a stable hash of the PMCID.
+
+  - id: s5a-oa-corpus-nc-eval
+    name: "S5a open-access corpus — CC BY-NC/-ND/-SA articles (use: eval)"
+    kind: eval_set
+    source: "https://www.ebi.ac.uk/europepmc/webservices/rest/search + /{PMCID}/fullTextXML"
+    location: "ml/corpus/manifest.jsonl (rows with use: eval)"
+    in_git: false
+    licence: "per article: CC-BY-NC-4.0, CC-BY-NC-ND-3.0/4.0 (others possible: -NC-SA, -ND, -SA), read from each article's own <permissions>"
+    licence_verified: true
+    licence_evidence: "as s5a-oa-corpus-cc-by: each row's licence_evidence, read 2026-10-15 from the article's own JATS"
+    commercial_ok: false
+    permitted_use: [private_eval, ci_eval]
+    current_use: "held-out evaluation only (D2: NC data never trains a shipped model)"
+    shipped_today: false
+    sha256: null
+    items: "ml/corpus/manifest.jsonl — use: eval"
+    notes: >-
+      finetune.py drops every eval row from training files; weak_labels.py
+      keeps their use so an evaluation can include or exclude them.
+
+  - id: s5-synthetic-drafts
+    name: "S5 synthetic draft paragraphs and flag judgments (written for Researchly)"
+    kind: labels
+    source: "written by Claude at build time for Researchly, 2026-10-16 (owner: \"generate those paragraphs for me … so that I simply run the program that trains laya\")"
+    location: "ml/critics/data/synthetic/"
+    in_git: true
+    licence: "Researchly's own (MIT, with the repository)"
+    licence_verified: true
+    licence_evidence: >-
+      Original paragraphs written for Researchly in the style of research
+      drafts; not copied or paraphrased from any article, thesis, book or
+      course (the writers were told not to open those sources), checked by
+      ml/tools/check_third_party.py. Flag judgments (useful / wrong / unsure)
+      follow docs/labelling-guide.md.
+    commercial_ok: true
+    permitted_use: [private_eval, ci_eval, train_experimental, ship_model, ship_text]
+    current_use: "S5 Task A (is this flag useful?) training and development data"
+    shipped_today: false
+    sha256: null
+    items: "part-a/b/c paragraphs, labels and notes"
+    notes: >-
+      The judgments are Claude's, so a model trained on them learns Claude's
+      sense of a useful flag. It is never evaluated only on this data: the
+      owner's own labelled paragraphs are the final, independent test
+      (ADR-06 amendment, 2026-10-16).
+
+  - id: s5-corpus-flag-judgments
+    name: "S5 flag judgments on CC BY / CC0 corpus paragraphs (labels only)"
+    kind: labels
+    source: "Researchly run on paragraphs of s5a-oa-corpus-cc-by articles; flags judged by Claude at build time, 2026-10-16"
+    location: "ml/critics/data/corpus/ (labels, paragraph index with hashes, notes); paragraph text rebuilt locally by rebuild.py"
+    in_git: true
+    licence: "labels: Researchly's own; underlying text: per article CC BY / CC0 (see s5a-oa-corpus-cc-by)"
+    licence_verified: true
+    licence_evidence: "only rows with use: train or test from s5a-oa-corpus-cc-by; no NC/ND article; no article text committed"
+    commercial_ok: true
+    permitted_use: [private_eval, ci_eval, train_experimental, ship_model]
+    current_use: "S5 Task A training (train split) and held-out evaluation (test split)"
+    shipped_today: false
+    sha256: null
+    items: "train-labels.json, test-labels.json, paragraph-index.json"
+    notes: "Attribution for the underlying articles: the DOIs and licences in ml/corpus/manifest.jsonl."
+
   # ───────────────────────── Base models for the S5 bake-off ─────────────────────────
 
   - id: laya
@@ -1186,22 +1289,35 @@ datasets:
     in_git: false
     licence: "Apache-2.0"
     licence_verified: true
-    licence_evidence: "https://raw.githubusercontent.com/NandhaKishorM/laya/main/LICENSE (Apache License 2.0); README '## License — Apache 2.0. Developed by Convai Innovations.' The Hugging Face model-card licence field was NOT checked (huggingface.co blocked)."
+    licence_evidence: >-
+      Re-checked first-hand 2026-10-15 (S5): https://raw.githubusercontent.com/NandhaKishorM/laya/main/LICENSE
+      (Apache License 2.0); the Hugging Face model card's own licence field,
+      https://huggingface.co/api/models/convaiinnovations/laya (cardData.license
+      "apache-2.0", tag license:apache-2.0) and README front matter
+      "license: apache-2.0"; PyPI package laya 0.4.8 (license "Apache-2.0",
+      author Convai Innovations). Details and links: docs/s5-laya.md.
     commercial_ok: true
     permitted_use: [private_eval, ci_eval, train_experimental]
-    current_use: "planned (D8: S5 bake-off only — Task A flag re-ranker, Task B sentence role; never zero-shot)"
+    current_use: "S5 (owner 2026-10-15: Laya only): zero-shot spike on Task B run 2026-10-15 (docs/s5-laya.md); fine-tuning harness in ml/critics/laya/. Not shipped."
     shipped_today: false
-    sha256: null
+    sha256: "891102d372688fc2a094dac56a384bc537b87c63f21f9f3dac0be2b7cbc8d86c"
     notes: >-
+      Pinned revision 7b928d828b7b0e022f929d9bd2e44165aa270148 (Hub commit,
+      last modified 2026-10-03); sha256 above is model.safetensors at that
+      revision (842,609,210 bytes; the Hub's LFS oid). "laya-evals" names two
+      things: the CLI inside the laya package (laya.evals), and an unrelated
+      community package on PyPI (laya-evals 0.1.0, github.com/Gjusev/laya-evals,
+      Apache-2.0); the harness uses neither as a dependency.
       English checkpoint = ModernBERT-large (~421M) + decision head, 512
       tokens; typed-decisions variant 1024 tokens; multilingual = mmBERT-base.
       Non-generative, abstains. ship_model withheld until (a) it wins the S5
       bake-off and passes the ADR-06 promotion gate, and (b) its training mix
       is checked: the README lists AG News and BoolQ as "in training mix" and
       does not document the full data provenance (AG's corpus is commonly
-      distributed for non-commercial research — verify). Pin the exact
-      revision and ONNX SHA-256 here when downloaded. ~2 weeks old, one
-      maintainer (ADR-06).
+      distributed for non-commercial research — verify). A promoted model's
+      ONNX SHA-256 is pinned in its critic.json and model card
+      (ml/critics/laya/MODEL_CARD.md). ~4 weeks old (created 2026-09-18),
+      one maintainer (ADR-06).
 
   - id: modernbert-large
     name: "ModernBERT-large (Answer.AI / LightOn) — plain-classifier baseline"
@@ -1214,7 +1330,7 @@ datasets:
     licence_evidence: "https://raw.githubusercontent.com/AnswerDotAI/ModernBERT/main/LICENSE (Apache License 2.0). The Hugging Face model-card licence field was NOT checked (huggingface.co blocked)."
     commercial_ok: true
     permitted_use: [private_eval, ci_eval, train_experimental, ship_model]
-    current_use: "planned (S5 bake-off baseline against Laya; ADR-06 decision 1 swap target)"
+    current_use: "set aside 2026-10-15 (owner: S5 sticks to Laya); was the planned S5 bake-off baseline against Laya. Laya is itself ModernBERT-large plus a head, so these base weights would arrive inside any Laya fine-tune."
     shipped_today: false
     sha256: null
     notes: >-

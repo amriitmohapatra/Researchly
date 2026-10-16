@@ -66,10 +66,14 @@ def test_proper_nouns_and_acronyms_skipped():
     assert flags(t) == []
 
 
-def test_repeated_terms_are_learned():
+def test_repeated_terms_are_asked_about_once():
+    # Codex review #10: a term used three times is no longer silently
+    # learned; it gets one grouped question (S003) and no per-use flags.
     t = ("The frobulation index rose. Frobulation was highest in cities. "
          "We report frobulation trends over time.")
-    assert flags(t) == []           # 3 uses → author's term
+    assert flags(t) == []
+    asked = flags(t, rule="S003")
+    assert len(asked) == 1 and len(asked[0].occurrences) == 3
 
 
 def test_single_unknown_word_is_flagged(tmp_path, monkeypatch):

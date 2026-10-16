@@ -101,7 +101,7 @@ def resolve_sections(headings: list["Heading"]) -> None:
     for h in sorted(headings, key=lambda h: h.start):
         if not h.keyword:
             h.keyword = h.section
-        own, named = h.keyword, is_section_name(h.text)
+        own, named = h.inferred or h.keyword, is_section_name(h.text)
         if h.level is None:
             stack = []
             h.section = own
@@ -149,12 +149,20 @@ class Heading:
     # The heading's own classification; `section` is the effective one
     # after resolve_sections().
     keyword: str = ""
+    # For a topical heading ("Experiment 1: the baseline SEIR"), the section
+    # its own wording reads as ("methods", "results"), set by
+    # profiles.infer_topical_sections; "" otherwise. It stands in for the
+    # keyword the heading lacks (Codex review #4).
+    inferred: str = ""
 
 
 @dataclass
 class Segment:
     """`Document.original[start:end]` came from `path` at `source_start`
-    (docs/s2-design.md §4). A single-file document has one segment."""
+    (docs/s2-design.md §4). A single-file document has one segment. One
+    exception: the end of line TeX adds after an `\\input` file that lacks
+    one is a one-character "\\n" segment at that file's end
+    (`source_start == len(file)`; ingest/latex_project.py)."""
     path: str
     start: int
     end: int
@@ -233,6 +241,12 @@ class Document:
     # cross-references, code, URLs, Word equations. Formatting (\emph{,
     # **, a heading) is masked too but stands for nothing, so it is not here.
     atoms: list[tuple[int, int]] = field(default_factory=list)
+    # Text read where it stands but not part of the sentence around it: the
+    # inside of a LaTeX footnote. The parser sees "every district Counts
+    # were taken..." where the source says "every district\footnote{Counts
+    # were taken...}", so a finding whose evidence straddles an aside's edge
+    # is about the splice, not the writing (engine.check drops it).
+    asides: list[tuple[int, int]] = field(default_factory=list)
     # The article-type profile's section for prose with no IMRaD heading
     # over it (S4): a commentary's body is argued like a Discussion, a
     # pasted abstract is an abstract. None keeps "unknown"/"front"/"other".
@@ -240,6 +254,18 @@ class Document:
     # What was set aside while reading, by kind: {"code": 3, ...}
     # (reading.py; the coverage summary reports it).
     read: dict = field(default_factory=dict)
+    # Parts of the file that were not read at all, by kind (the file
+    # adapters fill it: footnotes, text boxes, headers and footers of a
+    # .docx; included .tex files that could not be read), and parts read
+    # where they stand ({"footnotes": 3} for LaTeX). Counts only (Codex
+    # review #5, the coverage summary).
+    not_checked: dict = field(default_factory=dict)
+    included: dict = field(default_factory=dict)
+    # An Overleaf project: the main .tex file read, and every file that
+    # could have been it when there was more than one (the writer may
+    # choose another; empty when there was no choice to make).
+    main_file: Optional[str] = None
+    main_candidates: list[str] = field(default_factory=list)
     _line_starts: list[int] = field(default_factory=list, repr=False)
 
     # -- construction -------------------------------------------------------
@@ -333,6 +359,10 @@ class Document:
         doc = cls(original=text, masked=masked, kind=kind, headings=headings,
                   structure=structure, warnings=warnings, atoms=atoms)
         doc.read = read
+        if kind == "latex" and res.footnotes:
+            doc.included = {"footnotes": res.footnotes}
+        if kind == "latex":
+            doc.asides = sorted(res.asides)
         doc._line_starts = [0] + [m.end() for m in re.finditer(r"\n", text)]
         return doc
 
@@ -463,6 +493,25 @@ class Document:
         """1-based (line, col) for a character offset in the original text."""
         line_idx = bisect_right(self._line_starts, offset) - 1
         return line_idx + 1, offset - self._line_starts[line_idx] + 1
+
+    def crosses_aside(self, start: int, end: int) -> bool:
+        """True if [start, end) reads across one edge of an aside (a
+        footnote's text): prose inside it and prose on one side of it only.
+        A span holding a whole footnote with the sentence on both sides
+        (a long sentence that carries a footnote) is about that sentence
+        and is kept."""
+        m = self.masked
+        for a, b in self.asides:
+            if a >= end:
+                break
+            if b <= start or (start >= a and end <= b):
+                continue
+            inside = m[max(a, start):min(b, end)].strip()
+            left = m[start:a].strip() if start < a else ""
+            right = m[b:end].strip() if end > b else ""
+            if inside and bool(left) != bool(right):
+                return True
+        return False
 
     def masked_content(self, start: int, end: int) -> bool:
         """True if [start, end) overlaps an atom: masked material that stood

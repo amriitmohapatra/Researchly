@@ -207,15 +207,16 @@ at the top of that file.
 Things a future agent will otherwise get wrong:
 
 - **The noise floor is just above target.** With every tier on, accepted
-  theses get **11.74 flags/1000w** (P41 baseline, after the SPECIALIST
-  lexicon cut S001; 11.86 at P40, when W210 learned 9k VarCon pairs; 11.67 at P33, 12.65 after S2b
-  added its consistency rules, 14.51 before the Q3 tune). Q3's target is ≤ 11.
+  theses get **11.54 flags/1000w** (P48, 2026-10-15: the corpus was re-extracted
+  with a deterministic repair pass for PDF line-end hyphens, page breaks and
+  reference lists, `ml/dogfood/extract_clean.py`; 12.07 just before on the old
+  extraction after the grammar notes and the repeated-word rules added true
+  flags; 11.74 at P41, 14.51 before the Q3 tune). Q3's target is ≤ 11.
   Measure with `api.get_nlp()`, never a bare `spacy.load()`: the shared
   pipeline ends a sentence at a blank line (unless the next line carries
-  on in lower case), and a runner without it measures a different engine. About 90% of the remaining S001 flags are PDF
-  extraction artefacts (words joined or split at line breaks), so part of
-  the gap is the measurement: see PLAN's Q3 item before re-extracting the
-  corpus. Don't hide good advice (G106 long sentences, W202 wordiness) to
+  on in lower case), and a runner without it measures a different engine. The line-break
+  artefacts are now repaired at extraction; most remaining S001 flags are table
+  and figure text mixed across columns, which re-extraction cannot fix. Don't hide good advice (G106 long sentences, W202 wordiness) to
   reach the number — remove wrong flags. The
   corpus is plain text, so it cannot see LaTeX masking bugs; the owner's
   real `.tex` upload (P28) found those. The gate

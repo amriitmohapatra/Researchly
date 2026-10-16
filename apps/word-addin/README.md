@@ -190,6 +190,14 @@ For text that must not leave your Mac (ADR-02 local mode):
 3. If it says "Researchly is not running on this computer", the server is
    not started (or not on port 3517).
 
+Under **This computer**, Settings then shows the server's own account of
+itself (from its `/v1/health`): which checks run (writing rules, spelling,
+grammar, whole-document checks, the reviewer's brief and the map), which are
+off and why, and "It sends nothing over the network" (or what it contacts).
+`python3.10 -m researchly doctor` (in `packages/core`) checks the
+installation, including whether this server is running. What every local
+route runs and contacts: `docs/local-mode.md`.
+
 The same server is the desktop overlays' "This computer" engine
 (`apps/desktop-overlay-mac`, `apps/desktop-overlay-win`): since 2026-10-15
 it also answers their live check, `POST /v1/check-paragraphs`, with the

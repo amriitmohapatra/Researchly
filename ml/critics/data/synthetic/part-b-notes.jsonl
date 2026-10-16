@@ -1,0 +1,306 @@
+{"paragraph": 1, "flag": 0, "rule_id": "S001", "verdict": "useful", "reason": "misspelling of environment", "words": "enviroment"}
+{"paragraph": 1, "flag": 1, "rule_id": "C305", "verdict": "useful", "reason": "unsupported booster 'it is clear that' in an introduction claim", "words": "it is clear that"}
+{"paragraph": 1, "flag": 2, "rule_id": "E703", "verdict": "useful", "reason": "'This' after a two-clause sentence has no clear referent", "words": "This has"}
+{"paragraph": 1, "flag": 3, "rule_id": "D903", "verdict": "unsure", "reason": "stakes of the sediment gap are only implied; question is fair but optional", "words": "little attention has"}
+{"paragraph": 1, "flag": 4, "rule_id": "W202", "verdict": "useful", "reason": "'Due to the fact that' -> 'Because' is a real tightening", "words": "Due to the fact that"}
+{"paragraph": 2, "flag": 0, "rule_id": "D902", "verdict": "wrong", "reason": "gap is stated ('most field studies measure only one'); paragraph-level rule misses it", "words": "Introduction"}
+{"paragraph": 2, "flag": 1, "rule_id": "S001", "verdict": "wrong", "reason": "Bombus terrestris is a species name, not a misspelling", "words": "terrestris"}
+{"paragraph": 2, "flag": 2, "rule_id": "G107", "verdict": "wrong", "reason": "'diversity predicts' is subject + verb, not a noun stack (mis-parse)", "words": "diversity predicts colony growth"}
+{"paragraph": 2, "flag": 3, "rule_id": "S001", "verdict": "wrong", "reason": "'agri-environment' is a standard compound", "words": "agri"}
+{"paragraph": 3, "flag": 0, "rule_id": "G106", "verdict": "useful", "reason": "82-word sentence buries the claim; splitting helps", "words": "Glacier mass balance in High … rain, are unable to capture."}
+{"paragraph": 3, "flag": 1, "rule_id": "G103", "verdict": "wrong", "reason": "'mass balance', 'irrigation', 'resolution' are terms, not hidden verbs", "words": "balance in High Mountain Asi … lly run at coarse resolution"}
+{"paragraph": 3, "flag": 2, "rule_id": "C301", "verdict": "useful", "reason": "'may possibly' is a double hedge", "words": "may possibly"}
+{"paragraph": 3, "flag": 3, "rule_id": "C301", "verdict": "useful", "reason": "'could perhaps' is a double hedge", "words": "could perhaps"}
+{"paragraph": 3, "flag": 4, "rule_id": "F601", "verdict": "useful", "reason": "GCM is never spelled out", "words": "GCM"}
+{"paragraph": 3, "flag": 5, "rule_id": "G101", "verdict": "useful", "reason": "subject and verb separated by a long relative clause inside an already long sentence", "words": "projections, which are typic … lve the complex terrain, are"}
+{"paragraph": 4, "flag": 0, "rule_id": "S001", "verdict": "useful", "reason": "misspelling of stability", "words": "stabilty"}
+{"paragraph": 4, "flag": 1, "rule_id": "S001", "verdict": "useful", "reason": "same misspelling repeated", "words": "stabilty"}
+{"paragraph": 4, "flag": 2, "rule_id": "LT001", "verdict": "useful", "reason": "'A encapsulation' needs 'An'", "words": "A"}
+{"paragraph": 5, "flag": 0, "rule_id": "D902", "verdict": "wrong", "reason": "gap is explicit (sensitivity analyses rarely reported)", "words": "Introduction"}
+{"paragraph": 5, "flag": 1, "rule_id": "S001", "verdict": "useful", "reason": "misspelling of assumption", "words": "asumption"}
+{"paragraph": 6, "flag": 0, "rule_id": "C305", "verdict": "useful", "reason": "'clearly rivals' is an unsupported booster", "words": "clearly"}
+{"paragraph": 6, "flag": 1, "rule_id": "C302", "verdict": "useful", "reason": "'proves' overclaims from a predictive accuracy result", "words": "proves"}
+{"paragraph": 6, "flag": 2, "rule_id": "E703", "verdict": "useful", "reason": "'This is especially true' has no clear referent", "words": "This is"}
+{"paragraph": 6, "flag": 3, "rule_id": "E705", "verdict": "useful", "reason": "flat claim of a gap needs 'to our knowledge' and a citation", "words": "has not been addressed"}
+{"paragraph": 7, "flag": 0, "rule_id": "D902", "verdict": "wrong", "reason": "gap is stated (fat-tailed kernels limited by cost)", "words": "Introduction"}
+{"paragraph": 7, "flag": 1, "rule_id": "W202", "verdict": "useful", "reason": "'in order to' -> 'to'", "words": "in order to"}
+{"paragraph": 7, "flag": 2, "rule_id": "W205", "verdict": "useful", "reason": "empty preamble", "words": "It is important to note that"}
+{"paragraph": 7, "flag": 3, "rule_id": "W202", "verdict": "useful", "reason": "'the majority of' -> 'most'", "words": "the majority of"}
+{"paragraph": 7, "flag": 4, "rule_id": "G102", "verdict": "useful", "reason": "nominalisation 'carry out an evaluation of' -> 'evaluate'", "words": "carry out an evaluation of"}
+{"paragraph": 7, "flag": 5, "rule_id": "S001", "verdict": "wrong", "reason": "Impatiens glandulifera is a species name", "words": "glandulifera"}
+{"paragraph": 8, "flag": 0, "rule_id": "F601", "verdict": "unsure", "reason": "LHY is a gene symbol; plant papers often but not always spell gene names out", "words": "LHY"}
+{"paragraph": 8, "flag": 1, "rule_id": "S001", "verdict": "wrong", "reason": "Arabidopsis thaliana is a species name", "words": "thaliana"}
+{"paragraph": 9, "flag": 0, "rule_id": "D902", "verdict": "wrong", "reason": "gap stated ('are not well understood')", "words": "Introduction"}
+{"paragraph": 10, "flag": 0, "rule_id": "D902", "verdict": "wrong", "reason": "gap stated ('neither performs well on its own when injection is reduced')", "words": "Introduction"}
+{"paragraph": 11, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "AML never defined", "words": "AML"}
+{"paragraph": 11, "flag": 1, "rule_id": "F601", "verdict": "useful", "reason": "HSC never defined", "words": "HSCs"}
+{"paragraph": 12, "flag": 0, "rule_id": "E703", "verdict": "useful", "reason": "'This has led' refers loosely to the whole previous sentence", "words": "This has"}
+{"paragraph": 12, "flag": 1, "rule_id": "C301", "verdict": "useful", "reason": "'might potentially' is a double hedge", "words": "might potentially"}
+{"paragraph": 12, "flag": 2, "rule_id": "G105", "verdict": "useful", "reason": "'There is a need for' delays the real subject", "words": "There is"}
+{"paragraph": 13, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "AE never defined", "words": "AE"}
+{"paragraph": 13, "flag": 1, "rule_id": "G101", "verdict": "wrong", "reason": "'classifier' is not the subject of 'is needed'; the clauses are coordinated (mis-parse)", "words": "classifier trained on labora … mum sensor density is needed"}
+{"paragraph": 14, "flag": 0, "rule_id": "C305", "verdict": "useful", "reason": "'very clearly' is an empty booster", "words": "clearly"}
+{"paragraph": 14, "flag": 1, "rule_id": "G106", "verdict": "useful", "reason": "74-word sentence; split helps", "words": "Elaborate ornaments such as  … xual selection in the field."}
+{"paragraph": 14, "flag": 2, "rule_id": "E704", "verdict": "useful", "reason": "'are thought to' with no citation in an introduction claim", "words": "are thought to"}
+{"paragraph": 14, "flag": 3, "rule_id": "G101", "verdict": "useful", "reason": "long interruption between 'costs' and 'are measured'", "words": "costs of these traits, which …  scarce, are rarely measured"}
+{"paragraph": 14, "flag": 4, "rule_id": "G103", "verdict": "wrong", "reason": "'performance', 'natural/sexual selection' are terms, not disguised verbs", "words": "performance and higher energ … ion opposes sexual selection"}
+{"paragraph": 15, "flag": 0, "rule_id": "D902", "verdict": "wrong", "reason": "gap stated with 'However, it is difficult to separate'", "words": "Introduction"}
+{"paragraph": 15, "flag": 1, "rule_id": "S001", "verdict": "useful", "reason": "misspelling of occurrence", "words": "occurence"}
+{"paragraph": 15, "flag": 2, "rule_id": "S001", "verdict": "wrong", "reason": "'landfalling' is standard atmospheric-science usage", "words": "landfalling"}
+{"paragraph": 15, "flag": 3, "rule_id": "S001", "verdict": "useful", "reason": "misspelling of separate", "words": "seperate"}
+{"paragraph": 16, "flag": 0, "rule_id": "D902", "verdict": "wrong", "reason": "gap stated (non-centred parameterisations solve some problems but not all)", "words": "Introduction"}
+{"paragraph": 17, "flag": 0, "rule_id": "D902", "verdict": "wrong", "reason": "gap stated ('However, this has proved difficult to test')", "words": "Introduction"}
+{"paragraph": 17, "flag": 1, "rule_id": "C302", "verdict": "useful", "reason": "'undoubtedly' overclaims", "words": "undoubtedly"}
+{"paragraph": 17, "flag": 2, "rule_id": "E703", "verdict": "unsure", "reason": "'This suggests' follows a single-claim sentence; referent is fairly clear", "words": "This suggests"}
+{"paragraph": 17, "flag": 3, "rule_id": "S001", "verdict": "wrong", "reason": "mitophagy is a standard biology term", "words": "mitophagy"}
+{"paragraph": 17, "flag": 4, "rule_id": "C301", "verdict": "useful", "reason": "'might perhaps' is a double hedge", "words": "might perhaps"}
+{"paragraph": 17, "flag": 5, "rule_id": "C302", "verdict": "wrong", "reason": "'has proved difficult' means 'turned out', not proof", "words": "proved"}
+{"paragraph": 17, "flag": 6, "rule_id": "S001", "verdict": "wrong", "reason": "mitophagy again, a standard term", "words": "mitophagy"}
+{"paragraph": 18, "flag": 0, "rule_id": "D902", "verdict": "wrong", "reason": "gap stated ('it is not known whether these maps hold')", "words": "Introduction"}
+{"paragraph": 19, "flag": 0, "rule_id": "W202", "verdict": "useful", "reason": "'In the majority of cases' -> 'In most cases'", "words": "the majority of"}
+{"paragraph": 20, "flag": 0, "rule_id": "S001", "verdict": "wrong", "reason": "peatlands is a standard word", "words": "peatlands"}
+{"paragraph": 20, "flag": 1, "rule_id": "F601", "verdict": "useful", "reason": "GWP never defined", "words": "GWP"}
+{"paragraph": 21, "flag": 0, "rule_id": "D902", "verdict": "wrong", "reason": "gap stated (most methods assume equal label distributions, rarely true)", "words": "Introduction"}
+{"paragraph": 22, "flag": 0, "rule_id": "D902", "verdict": "wrong", "reason": "gap stated ('few of these hits have been followed up')", "words": "Introduction"}
+{"paragraph": 22, "flag": 1, "rule_id": "W207", "verdict": "useful", "reason": "doubled 'have'", "words": "have have"}
+{"paragraph": 22, "flag": 2, "rule_id": "F601", "verdict": "wrong", "reason": "CRISPR is a universally known acronym in molecular biology", "words": "CRISPR"}
+{"paragraph": 23, "flag": 0, "rule_id": "D902", "verdict": "unsure", "reason": "uncertainty is named but the unknown is implicit; a sharper gap sentence is optional", "words": "Introduction"}
+{"paragraph": 24, "flag": 0, "rule_id": "E703", "verdict": "useful", "reason": "'This is clearly a complex problem' has no clear referent", "words": "This is"}
+{"paragraph": 24, "flag": 1, "rule_id": "C305", "verdict": "useful", "reason": "'clearly' adds nothing", "words": "clearly"}
+{"paragraph": 24, "flag": 2, "rule_id": "W202", "verdict": "useful", "reason": "'have the ability to' -> 'can'", "words": "have the ability to"}
+{"paragraph": 25, "flag": 0, "rule_id": "D902", "verdict": "wrong", "reason": "gap stated ('is often unclear', 'rarely possible')", "words": "Introduction"}
+{"paragraph": 26, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "IPW never defined", "words": "IPW"}
+{"paragraph": 26, "flag": 1, "rule_id": "C302", "verdict": "useful", "reason": "methods cannot 'prove' observational studies replace trials", "words": "proved"}
+{"paragraph": 27, "flag": 0, "rule_id": "W202", "verdict": "useful", "reason": "'far in excess of' -> 'far more than'", "words": "in excess of"}
+{"paragraph": 27, "flag": 1, "rule_id": "E703", "verdict": "useful", "reason": "'This is a serious concern' has no clear referent", "words": "This is"}
+{"paragraph": 28, "flag": 0, "rule_id": "D902", "verdict": "wrong", "reason": "gap stated outright ('What remains unknown is whether')", "words": "Introduction"}
+{"paragraph": 28, "flag": 1, "rule_id": "S001", "verdict": "wrong", "reason": "dlt is a bacterial gene symbol", "words": "dlt"}
+{"paragraph": 28, "flag": 2, "rule_id": "LT001", "verdict": "useful", "reason": "'resistance carry' agreement error", "words": "carry"}
+{"paragraph": 28, "flag": 3, "rule_id": "W202", "verdict": "unsure", "reason": "'in the absence of' is idiomatic in science; 'without' is a taste choice", "words": "in the absence of"}
+{"paragraph": 29, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "ANN used without definition", "words": "ANNs"}
+{"paragraph": 29, "flag": 1, "rule_id": "S001", "verdict": "useful", "reason": "misspelling of accommodate", "words": "accomodate"}
+{"paragraph": 29, "flag": 2, "rule_id": "G107", "verdict": "unsure", "reason": "four-noun technical compound; rewording is optional", "words": "groundwater contaminant transport model"}
+{"paragraph": 30, "flag": 0, "rule_id": "D902", "verdict": "wrong", "reason": "gap stated (most studies focus on birds; little known about invertebrates)", "words": "Introduction"}
+{"paragraph": 30, "flag": 1, "rule_id": "GN201", "verdict": "useful", "reason": "'The number ... are' agreement", "words": "are"}
+{"paragraph": 30, "flag": 2, "rule_id": "E706", "verdict": "unsure", "reason": "'relatively little' is idiomatic; naming a comparison is pedantic here", "words": "relatively"}
+{"paragraph": 30, "flag": 3, "rule_id": "E704", "verdict": "useful", "reason": "'are known to' needs a citation", "words": "are known to"}
+{"paragraph": 31, "flag": 0, "rule_id": "G107", "verdict": "wrong", "reason": "'on-column DNase digestion step' is a standard protocol phrase, mis-segmented", "words": "column DNase digestion step"}
+{"paragraph": 34, "flag": 0, "rule_id": "G106", "verdict": "useful", "reason": "84-word sentence strings five steps together", "words": "In order to assess the mecha … dentify the mode of failure."}
+{"paragraph": 34, "flag": 1, "rule_id": "W202", "verdict": "useful", "reason": "'In order to' -> 'To'", "words": "In order to"}
+{"paragraph": 34, "flag": 2, "rule_id": "W202", "verdict": "useful", "reason": "'by means of' -> 'with'", "words": "by means of"}
+{"paragraph": 34, "flag": 3, "rule_id": "W202", "verdict": "useful", "reason": "'prior to the commencement of' -> 'before'", "words": "prior to"}
+{"paragraph": 34, "flag": 4, "rule_id": "W202", "verdict": "useful", "reason": "second 'in order to' -> 'to'", "words": "in order to"}
+{"paragraph": 36, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "CNN not defined at first use in a thesis Methods", "words": "CNN"}
+{"paragraph": 36, "flag": 1, "rule_id": "F601", "verdict": "useful", "reason": "LR is a non-standard abbreviation for learning rate", "words": "LR"}
+{"paragraph": 36, "flag": 2, "rule_id": "LT001", "verdict": "useful", "reason": "'All experiments was' agreement", "words": "was"}
+{"paragraph": 36, "flag": 3, "rule_id": "F601", "verdict": "wrong", "reason": "GPU is universally known and needs no expansion", "words": "GPU"}
+{"paragraph": 37, "flag": 0, "rule_id": "G106", "verdict": "unsure", "reason": "61-word sentence carries an equation in words; it is long but ordered", "words": "The rate of change of temper … ders of magnitude within it."}
+{"paragraph": 38, "flag": 0, "rule_id": "S001", "verdict": "useful", "reason": "misspelling of supernatant", "words": "supernatent"}
+{"paragraph": 38, "flag": 1, "rule_id": "S001", "verdict": "useful", "reason": "same misspelling repeated", "words": "supernatent"}
+{"paragraph": 38, "flag": 2, "rule_id": "F601", "verdict": "wrong", "reason": "SDS-PAGE is one standard technique name, not two undefined abbreviations", "words": "SDS"}
+{"paragraph": 38, "flag": 3, "rule_id": "F601", "verdict": "wrong", "reason": "same: PAGE is part of SDS-PAGE", "words": "PAGE"}
+{"paragraph": 39, "flag": 0, "rule_id": "W202", "verdict": "useful", "reason": "'Due to the fact that' -> 'Because'", "words": "Due to the fact that"}
+{"paragraph": 39, "flag": 1, "rule_id": "W202", "verdict": "useful", "reason": "'prior to the fitting of' -> 'before fitting'", "words": "prior to"}
+{"paragraph": 39, "flag": 2, "rule_id": "W202", "verdict": "useful", "reason": "'prior to the analysis' -> 'before analysing'", "words": "prior to"}
+{"paragraph": 39, "flag": 3, "rule_id": "W202", "verdict": "useful", "reason": "'in order to' -> 'to'", "words": "in order to"}
+{"paragraph": 39, "flag": 4, "rule_id": "G102", "verdict": "useful", "reason": "'make an assessment of' -> 'assess'", "words": "make an assessment of"}
+{"paragraph": 41, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "FE never spelled out", "words": "FE"}
+{"paragraph": 42, "flag": 0, "rule_id": "S001", "verdict": "wrong", "reason": "Daphnia magna is a species name", "words": "magna"}
+{"paragraph": 42, "flag": 1, "rule_id": "S001", "verdict": "wrong", "reason": "Chlamydomonas reinhardtii is a species name", "words": "reinhardtii"}
+{"paragraph": 42, "flag": 2, "rule_id": "G101", "verdict": "wrong", "reason": "the 14 words are a compound subject list, not an interruption", "words": "length at maturity, age at f … e first clutch were recorded"}
+{"paragraph": 43, "flag": 0, "rule_id": "G106", "verdict": "useful", "reason": "89-word run-on sentence", "words": "Hyperparameters were basical … n used at any earlier stage."}
+{"paragraph": 44, "flag": 0, "rule_id": "F601", "verdict": "wrong", "reason": "CRISPR is universally known", "words": "CRISPR"}
+{"paragraph": 44, "flag": 1, "rule_id": "W202", "verdict": "useful", "reason": "'in order to minimize' -> 'to minimize'", "words": "in order to"}
+{"paragraph": 47, "flag": 0, "rule_id": "F601", "verdict": "unsure", "reason": "RF (radio-frequency) sputtering is a standard name; spelling it out is optional", "words": "RF"}
+{"paragraph": 47, "flag": 1, "rule_id": "S001", "verdict": "useful", "reason": "misspelling of received", "words": "recieved"}
+{"paragraph": 47, "flag": 2, "rule_id": "S001", "verdict": "useful", "reason": "misspelling of annealed", "words": "anealed"}
+{"paragraph": 48, "flag": 0, "rule_id": "S001", "verdict": "useful", "reason": "'atleast' should be two words", "words": "atleast"}
+{"paragraph": 49, "flag": 0, "rule_id": "W201", "verdict": "useful", "reason": "'utilises' -> 'uses'", "words": "utilises"}
+{"paragraph": 49, "flag": 1, "rule_id": "W201", "verdict": "useful", "reason": "'utilised' -> 'used'", "words": "utilised"}
+{"paragraph": 49, "flag": 2, "rule_id": "W201", "verdict": "useful", "reason": "'utilised' -> 'used'", "words": "utilised"}
+{"paragraph": 49, "flag": 3, "rule_id": "W202", "verdict": "useful", "reason": "'by means of' -> 'by'", "words": "by means of"}
+{"paragraph": 50, "flag": 0, "rule_id": "F601", "verdict": "unsure", "reason": "LB broth is the standard medium name; expansion optional", "words": "LB"}
+{"paragraph": 50, "flag": 1, "rule_id": "F601", "verdict": "useful", "reason": "MIC is used without being tied to its expansion in the previous sentence", "words": "MIC"}
+{"paragraph": 51, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "REML not defined", "words": "REML"}
+{"paragraph": 51, "flag": 1, "rule_id": "F601", "verdict": "useful", "reason": "ACF not defined", "words": "ACF"}
+{"paragraph": 52, "flag": 0, "rule_id": "G101", "verdict": "wrong", "reason": "span runs across two sentences ('...40 m. Local magnitudes'); sentence split failed after the unit 'm.'", "words": "correlation, which reduced m … l magnitudes were calibrated"}
+{"paragraph": 54, "flag": 0, "rule_id": "S001", "verdict": "wrong", "reason": "'tokenised' is a standard NLP term", "words": "tokenised"}
+{"paragraph": 54, "flag": 1, "rule_id": "S001", "verdict": "wrong", "reason": "'whitespace' is the standard computing term", "words": "whitespace"}
+{"paragraph": 54, "flag": 2, "rule_id": "G107", "verdict": "wrong", "reason": "part of the standard name 'term frequency–inverse document frequency weights'", "words": "inverse document frequency weights"}
+{"paragraph": 55, "flag": 0, "rule_id": "S001", "verdict": "useful", "reason": "misspelling of committee", "words": "comittee"}
+{"paragraph": 56, "flag": 0, "rule_id": "S001", "verdict": "wrong", "reason": "roguing is the standard plant-pathology term for removing infected plants", "words": "roguing"}
+{"paragraph": 57, "flag": 0, "rule_id": "W205", "verdict": "useful", "reason": "empty preamble 'It should be noted that'", "words": "It should be noted that"}
+{"paragraph": 57, "flag": 1, "rule_id": "W202", "verdict": "useful", "reason": "'period of time' -> 'period'", "words": "period of time"}
+{"paragraph": 57, "flag": 2, "rule_id": "W202", "verdict": "useful", "reason": "'by means of' -> 'by'", "words": "by means of"}
+{"paragraph": 57, "flag": 3, "rule_id": "G105", "verdict": "useful", "reason": "'It is possible that ... may' stacks hedges and delays the subject", "words": "It is possible that"}
+{"paragraph": 57, "flag": 4, "rule_id": "W202", "verdict": "useful", "reason": "same span as previous card; advice ('may') is the right fix", "words": "It is possible that"}
+{"paragraph": 59, "flag": 0, "rule_id": "S001", "verdict": "useful", "reason": "misspelling of assessed", "words": "assesed"}
+{"paragraph": 59, "flag": 1, "rule_id": "F601", "verdict": "useful", "reason": "FDR should be defined at first use", "words": "FDR"}
+{"paragraph": 60, "flag": 0, "rule_id": "G106", "verdict": "useful", "reason": "88-word sentence with four chained steps", "words": "Rock samples were crushed an … geomagnetic field over time."}
+{"paragraph": 61, "flag": 0, "rule_id": "LT001", "verdict": "useful", "reason": "'from 2000–2015' mixes 'from' with a dash; 'from 2000 to 2015' or '2000–2015'", "words": "from 2000–2015"}
+{"paragraph": 63, "flag": 0, "rule_id": "S001", "verdict": "useful", "reason": "misspelling of attached", "words": "attatched"}
+{"paragraph": 64, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "ABM never defined", "words": "ABM"}
+{"paragraph": 67, "flag": 0, "rule_id": "C303", "verdict": "wrong", "reason": "manipulative experiment: 'reduced' by the treatment is a supported causal claim", "words": "reduced"}
+{"paragraph": 67, "flag": 1, "rule_id": "C302", "verdict": "useful", "reason": "'proves' overclaims from one interaction test", "words": "proves"}
+{"paragraph": 67, "flag": 2, "rule_id": "C304", "verdict": "unsure", "reason": "clearly statistical with p given; adding the estimate is a fair but optional request", "words": "significant"}
+{"paragraph": 68, "flag": 0, "rule_id": "C304", "verdict": "unsure", "reason": "statistical sense is clear from the p-value; the missing estimate is the only real gap", "words": "significantly"}
+{"paragraph": 70, "flag": 0, "rule_id": "C305", "verdict": "useful", "reason": "'clearly demonstrates the superiority' is unsupported", "words": "clearly"}
+{"paragraph": 71, "flag": 0, "rule_id": "C304", "verdict": "wrong", "reason": "'significant' is plainly statistical and the 5% level is stated in the previous sentence", "words": "significant"}
+{"paragraph": 72, "flag": 0, "rule_id": "N101", "verdict": "useful", "reason": "'2.1 %' and '3.5%' use different spacing", "words": "3.5%"}
+{"paragraph": 72, "flag": 1, "rule_id": "C303", "verdict": "wrong", "reason": "laser power was set by design, so causal 'reduced' is supported", "words": "Increasing"}
+{"paragraph": 73, "flag": 0, "rule_id": "C301", "verdict": "useful", "reason": "'may possibly suggest' double hedge", "words": "may possibly"}
+{"paragraph": 75, "flag": 0, "rule_id": "C303", "verdict": "wrong", "reason": "controlled model comparison; 'resulted in' is a fair causal statement", "words": "resulted in"}
+{"paragraph": 75, "flag": 1, "rule_id": "W205", "verdict": "useful", "reason": "empty preamble 'It is interesting to note that'", "words": "It is interesting to note that"}
+{"paragraph": 76, "flag": 0, "rule_id": "C303", "verdict": "wrong", "reason": "sampler comparison under control; 'raised' is causal by design", "words": "raised"}
+{"paragraph": 77, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "KO never defined and alternates with 'knockout'", "words": "KO"}
+{"paragraph": 77, "flag": 1, "rule_id": "F601", "verdict": "useful", "reason": "TMRM dye name should be spelled out once", "words": "TMRM"}
+{"paragraph": 77, "flag": 2, "rule_id": "C303", "verdict": "wrong", "reason": "knockout is an intervention; causal 'reduced' is supported", "words": "reduced"}
+{"paragraph": 77, "flag": 3, "rule_id": "N101", "verdict": "useful", "reason": "'92 %' vs '35%' spacing inconsistent", "words": "35%"}
+{"paragraph": 78, "flag": 0, "rule_id": "S001", "verdict": "wrong", "reason": "Daphnia magna is a species name", "words": "magna"}
+{"paragraph": 78, "flag": 1, "rule_id": "G101", "verdict": "wrong", "reason": "mis-parse: the real verb 'fall' sits right after 'reproduction'; the span runs into the next clause", "words": "age at first reproduction fa … body length at maturity fell"}
+{"paragraph": 78, "flag": 2, "rule_id": "C304", "verdict": "unsure", "reason": "interaction clearly statistical; asking for estimate and test is optional", "words": "significant"}
+{"paragraph": 78, "flag": 3, "rule_id": "LT001", "verdict": "wrong", "reason": "'covariate' is a standard noun", "words": "a covariate"}
+{"paragraph": 79, "flag": 0, "rule_id": "G106", "verdict": "useful", "reason": "91-word sentence", "words": "The classifier trained on la … remained below one per hour."}
+{"paragraph": 80, "flag": 0, "rule_id": "S001", "verdict": "wrong", "reason": "'landfalling' is standard atmospheric-science usage", "words": "landfalling"}
+{"paragraph": 80, "flag": 1, "rule_id": "C304", "verdict": "unsure", "reason": "statistical sense is clear; test not named but 'no significant trend' is unambiguous", "words": "significant"}
+{"paragraph": 81, "flag": 0, "rule_id": "W207", "verdict": "useful", "reason": "doubled 'the'", "words": "the the"}
+{"paragraph": 81, "flag": 1, "rule_id": "E703", "verdict": "useful", "reason": "'This is not the case' has no clear referent", "words": "This is"}
+{"paragraph": 82, "flag": 0, "rule_id": "C303", "verdict": "wrong", "reason": "'raised' means reared here, not a causal increase", "words": "raised"}
+{"paragraph": 83, "flag": 0, "rule_id": "G105", "verdict": "useful", "reason": "'There was a significant increase in MIC' -> 'MIC increased'", "words": "There was"}
+{"paragraph": 83, "flag": 1, "rule_id": "S001", "verdict": "useful", "reason": "misspelling of significant", "words": "signficant"}
+{"paragraph": 83, "flag": 2, "rule_id": "F601", "verdict": "useful", "reason": "MIC not defined in this text", "words": "MIC"}
+{"paragraph": 83, "flag": 3, "rule_id": "S001", "verdict": "useful", "reason": "same misspelling repeated", "words": "signficant"}
+{"paragraph": 84, "flag": 0, "rule_id": "F601", "verdict": "wrong", "reason": "NE is a compass direction, standard everywhere", "words": "NE"}
+{"paragraph": 85, "flag": 0, "rule_id": "C305", "verdict": "useful", "reason": "'clearly the method of choice' overclaims", "words": "clearly"}
+{"paragraph": 86, "flag": 0, "rule_id": "W202", "verdict": "useful", "reason": "'A large number of' -> 'Many'", "words": "A large number of"}
+{"paragraph": 86, "flag": 1, "rule_id": "W202", "verdict": "useful", "reason": "'in close proximity to' -> 'near'", "words": "in close proximity to"}
+{"paragraph": 86, "flag": 2, "rule_id": "W206", "verdict": "useful", "reason": "'close proximity' is redundant (overlaps previous card but correct)", "words": "close proximity"}
+{"paragraph": 88, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "RMSE should be defined once", "words": "RMSE"}
+{"paragraph": 88, "flag": 1, "rule_id": "E703", "verdict": "unsure", "reason": "'This is because' follows a single result; referent is reasonably clear", "words": "This is"}
+{"paragraph": 89, "flag": 0, "rule_id": "C304", "verdict": "wrong", "reason": "significance is tied to a stated false discovery rate", "words": "significantly"}
+{"paragraph": 89, "flag": 1, "rule_id": "F601", "verdict": "useful", "reason": "HRE never defined", "words": "HRE"}
+{"paragraph": 90, "flag": 0, "rule_id": "W211", "verdict": "useful", "reason": "'heatwave' and 'heat wave' both used", "words": "heat wave"}
+{"paragraph": 90, "flag": 1, "rule_id": "N101", "verdict": "useful", "reason": "'2°C' vs '1.5 °C' spacing inconsistent", "words": "2°C"}
+{"paragraph": 92, "flag": 0, "rule_id": "C302", "verdict": "useful", "reason": "p = 0.06 does not prove no effect", "words": "proved"}
+{"paragraph": 92, "flag": 1, "rule_id": "C304", "verdict": "useful", "reason": "'highly significant' with no estimate or interval", "words": "significant"}
+{"paragraph": 93, "flag": 0, "rule_id": "S001", "verdict": "useful", "reason": "misspelling of existence", "words": "existance"}
+{"paragraph": 93, "flag": 1, "rule_id": "G103", "verdict": "wrong", "reason": "'abundance', 'variation' are measured quantities, not disguised verbs", "words": "existance of deep pools appe … e, explaining more variation"}
+{"paragraph": 94, "flag": 0, "rule_id": "C304", "verdict": "wrong", "reason": "significance is defined by the stated 95% interval in the same sentence", "words": "significant"}
+{"paragraph": 95, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "ABC not defined in this text", "words": "ABC"}
+{"paragraph": 95, "flag": 1, "rule_id": "E703", "verdict": "unsure", "reason": "'This indicates' follows one contrast sentence; referent fairly clear", "words": "This indicates"}
+{"paragraph": 95, "flag": 2, "rule_id": "G106", "verdict": "useful", "reason": "67-word sentence with nested clauses", "words": "Simulations from the posteri … , which is very significant."}
+{"paragraph": 95, "flag": 3, "rule_id": "G101", "verdict": "useful", "reason": "long relative clause separates 'model' from 'could not explain'", "words": "model, which assumes a singl … sted wood, could not explain"}
+{"paragraph": 95, "flag": 4, "rule_id": "C304", "verdict": "useful", "reason": "'very significant' means 'important' here, not statistical", "words": "significant"}
+{"paragraph": 97, "flag": 0, "rule_id": "C305", "verdict": "useful", "reason": "'Of course' waves away a real limitation; deleting it is right", "words": "Of course"}
+{"paragraph": 98, "flag": 0, "rule_id": "C301", "verdict": "useful", "reason": "'would appear ... may suggest ... possibly' hedge stack", "words": "may suggest"}
+{"paragraph": 98, "flag": 1, "rule_id": "E706", "verdict": "useful", "reason": "'relatively' adds a further hedge to the pile", "words": "relatively"}
+{"paragraph": 98, "flag": 2, "rule_id": "C301", "verdict": "useful", "reason": "'might perhaps' double hedge", "words": "might perhaps"}
+{"paragraph": 98, "flag": 3, "rule_id": "C301", "verdict": "useful", "reason": "'could potentially' double hedge", "words": "could potentially"}
+{"paragraph": 99, "flag": 0, "rule_id": "E703", "verdict": "unsure", "reason": "'This has a practical implication' points back to one main finding; referent mostly clear", "words": "This has"}
+{"paragraph": 100, "flag": 0, "rule_id": "G106", "verdict": "useful", "reason": "85-word sentence", "words": "The migration of seismicity  … n pressure diffusion itself."}
+{"paragraph": 100, "flag": 1, "rule_id": "G103", "verdict": "wrong", "reason": "migration, diffusion, injection are physical processes named as terms", "words": "migration of seismicity at a … role than pressure diffusion"}
+{"paragraph": 100, "flag": 2, "rule_id": "C302", "verdict": "useful", "reason": "'proves' overclaims causation from a rate match", "words": "proves"}
+{"paragraph": 100, "flag": 3, "rule_id": "S001", "verdict": "wrong", "reason": "poroelastic is a standard geomechanics term", "words": "poroelastic"}
+{"paragraph": 100, "flag": 4, "rule_id": "E704", "verdict": "useful", "reason": "'are thought to' needs a citation in a Discussion", "words": "are thought to"}
+{"paragraph": 102, "flag": 0, "rule_id": "C303", "verdict": "wrong", "reason": "barrier vs no barrier was tested; 'did not fully prevent' is supported", "words": "prevent"}
+{"paragraph": 103, "flag": 0, "rule_id": "G103", "verdict": "wrong", "reason": "maturation, predation, reproduction are life-history terms", "words": "maturation of Daphnia expose … ividuals favors reproduction"}
+{"paragraph": 104, "flag": 0, "rule_id": "W202", "verdict": "useful", "reason": "'Despite the fact that' -> 'Although'", "words": "Despite the fact that"}
+{"paragraph": 104, "flag": 1, "rule_id": "F601", "verdict": "useful", "reason": "GNN not defined", "words": "GNN"}
+{"paragraph": 104, "flag": 2, "rule_id": "F601", "verdict": "useful", "reason": "MAE not defined", "words": "MAE"}
+{"paragraph": 104, "flag": 3, "rule_id": "E703", "verdict": "useful", "reason": "'This is comparable to DFT' has a vague referent", "words": "This is"}
+{"paragraph": 104, "flag": 4, "rule_id": "F601", "verdict": "useful", "reason": "DFT not defined at first use in this text", "words": "DFT"}
+{"paragraph": 104, "flag": 5, "rule_id": "E706", "verdict": "useful", "reason": "'relatively small' should give the size", "words": "relatively"}
+{"paragraph": 104, "flag": 6, "rule_id": "W202", "verdict": "useful", "reason": "'in order to' -> 'to'", "words": "in order to"}
+{"paragraph": 107, "flag": 0, "rule_id": "E703", "verdict": "useful", "reason": "'This would reverse' lacks its noun ('This advantage')", "words": "This would"}
+{"paragraph": 108, "flag": 0, "rule_id": "G103", "verdict": "wrong", "reason": "'gene expression', 'localisation' are terms; nothing to verb-ify", "words": "localisation of the transcri … n regulating gene expression"}
+{"paragraph": 108, "flag": 1, "rule_id": "S001", "verdict": "useful", "reason": "misspelling of address", "words": "adress"}
+{"paragraph": 109, "flag": 0, "rule_id": "G101", "verdict": "wrong", "reason": "10-word subject phrase is short and reads naturally", "words": "drop in recall when moving f … boratory to the bridge shows"}
+{"paragraph": 110, "flag": 0, "rule_id": "E701", "verdict": "useful", "reason": "'shed light on' is a cliche; say what was shown", "words": "shed light on"}
+{"paragraph": 110, "flag": 1, "rule_id": "G106", "verdict": "useful", "reason": "76-word sentence", "words": "The fact that hatchlings rai … difference that we observed."}
+{"paragraph": 110, "flag": 2, "rule_id": "G101", "verdict": "useful", "reason": "'The fact that ... indicates' puts 17 words before the verb", "words": "fact that hatchlings raised  … e seen in the wild indicates"}
+{"paragraph": 110, "flag": 3, "rule_id": "G101", "verdict": "useful", "reason": "long relative clause separates 'effects' from 'could have contributed'", "words": "effects, which we were unabl … lves, could have contributed"}
+{"paragraph": 111, "flag": 0, "rule_id": "C303", "verdict": "wrong", "reason": "'injection rates were reduced' describes operations, not a causal claim", "words": "reduced"}
+{"paragraph": 112, "flag": 0, "rule_id": "C305", "verdict": "useful", "reason": "'obviously' is unsupported", "words": "obviously"}
+{"paragraph": 112, "flag": 1, "rule_id": "F601", "verdict": "useful", "reason": "MC dropout: Monte Carlo not spelled out", "words": "MC"}
+{"paragraph": 112, "flag": 2, "rule_id": "E703", "verdict": "useful", "reason": "'This could be reduced' with two costs in the previous sentence", "words": "This could"}
+{"paragraph": 113, "flag": 0, "rule_id": "G107", "verdict": "wrong", "reason": "'tracking' is a verb here; no noun stack", "words": "study tracking egg production"}
+{"paragraph": 114, "flag": 0, "rule_id": "F601", "verdict": "useful", "reason": "HRE not defined", "words": "HREs"}
+{"paragraph": 114, "flag": 1, "rule_id": "F601", "verdict": "useful", "reason": "HIF undefined and used in three forms", "words": "HIF"}
+{"paragraph": 115, "flag": 0, "rule_id": "C305", "verdict": "useful", "reason": "'clearly shows' overclaims attribution", "words": "clearly"}
+{"paragraph": 116, "flag": 0, "rule_id": "C301", "verdict": "wrong", "reason": "'may be less likely' is a comparison, not a stacked hedge", "words": "may be less likely"}
+{"paragraph": 116, "flag": 1, "rule_id": "C301", "verdict": "useful", "reason": "'perhaps possibly' double hedge", "words": "perhaps possibly"}
+{"paragraph": 117, "flag": 0, "rule_id": "G106", "verdict": "useful", "reason": "76-word sentence", "words": "With respect to the porosity … elow about 1 mm in diameter."}
+{"paragraph": 117, "flag": 1, "rule_id": "C303", "verdict": "wrong", "reason": "'raises the local temperature' is a physical mechanism, not a claim from data", "words": "raises"}
+{"paragraph": 117, "flag": 2, "rule_id": "G101", "verdict": "useful", "reason": "long relative clause between 'windows' and 'are'", "words": "windows that have been estab … ly carried out on cubes, are"}
+{"paragraph": 119, "flag": 0, "rule_id": "S001", "verdict": "useful", "reason": "misspelling of accuracy", "words": "accuarcy"}
+{"paragraph": 119, "flag": 1, "rule_id": "S001", "verdict": "useful", "reason": "same misspelling repeated", "words": "accuarcy"}
+{"paragraph": 120, "flag": 0, "rule_id": "S001", "verdict": "wrong", "reason": "mitophagy is a standard term", "words": "mitophagy"}
+{"paragraph": 121, "flag": 0, "rule_id": "W202", "verdict": "useful", "reason": "'in spite of the fact that' -> 'although'", "words": "in spite of the fact that"}
+{"paragraph": 122, "flag": 0, "rule_id": "C302", "verdict": "useful", "reason": "'proves' overclaims from a timing match", "words": "proves"}
+{"paragraph": 122, "flag": 1, "rule_id": "F601", "verdict": "useful", "reason": "YD (Younger Dryas) never spelled out", "words": "YD"}
+{"paragraph": 122, "flag": 2, "rule_id": "C301", "verdict": "wrong", "reason": "'appear older' is literal, not a hedge", "words": "could make some boulders appear"}
+{"paragraph": 123, "flag": 0, "rule_id": "G104", "verdict": "wrong", "reason": "passive keeps 'the earlier stall' as the topic; active would not improve it", "words": "is best explained by the lam … el method does not represent"}
+{"paragraph": 123, "flag": 1, "rule_id": "C303", "verdict": "wrong", "reason": "mechanism is supported by the trip-strip experiment in the same paragraph", "words": "causing"}
+{"paragraph": 124, "flag": 0, "rule_id": "C302", "verdict": "useful", "reason": "'undoubtedly' overclaims", "words": "undoubtedly"}
+{"paragraph": 124, "flag": 1, "rule_id": "C301", "verdict": "useful", "reason": "'may perhaps' double hedge", "words": "may perhaps"}
+{"paragraph": 124, "flag": 2, "rule_id": "LT001", "verdict": "useful", "reason": "'dependant' should be 'dependent'", "words": "dependant"}
+{"paragraph": 124, "flag": 3, "rule_id": "C303", "verdict": "unsure", "reason": "station gaps plausibly caused worse forecasts but this was not tested", "words": "led to"}
+{"paragraph": 124, "flag": 4, "rule_id": "LT001", "verdict": "useful", "reason": "same error repeated", "words": "dependant"}
+{"paragraph": 126, "flag": 0, "rule_id": "G105", "verdict": "useful", "reason": "'It is clear that' delays the subject", "words": "It is clear that"}
+{"paragraph": 126, "flag": 1, "rule_id": "C305", "verdict": "useful", "reason": "'It is clear that' is an unsupported booster (same span as previous card)", "words": "It is clear that"}
+{"paragraph": 126, "flag": 2, "rule_id": "G108", "verdict": "unsure", "reason": "ending on the evidence is a style choice here", "words": ", as shown by the impaired glucose tolerance at 12 weeks"}
+{"paragraph": 126, "flag": 3, "rule_id": "G106", "verdict": "useful", "reason": "78-word sentence", "words": "However, the diet also incre … that of the control animals."}
+{"paragraph": 126, "flag": 4, "rule_id": "C303", "verdict": "wrong", "reason": "diet was randomly assigned; 'increased body weight' is supported", "words": "increased"}
+{"paragraph": 126, "flag": 5, "rule_id": "C303", "verdict": "wrong", "reason": "the sentence itself questions causation; nothing to soften", "words": "caused"}
+{"paragraph": 127, "flag": 0, "rule_id": "G106", "verdict": "useful", "reason": "61-word merged sentence; splitting at 'and this distinction' helps", "words": "Bias correction narrowed the …  more certain than they are."}
+{"paragraph": 127, "flag": 1, "rule_id": "G101", "verdict": "wrong", "reason": "'matters' is not a subject; the span crosses a since-clause (mis-parse)", "words": "matters for adaptation plann … -corrected output may assume"}
+{"paragraph": 129, "flag": 0, "rule_id": "W205", "verdict": "useful", "reason": "'Needless to say' is an empty preamble", "words": "Needless to say"}
+{"paragraph": 129, "flag": 1, "rule_id": "F601", "verdict": "useful", "reason": "FE not defined in this text", "words": "FE"}
+{"paragraph": 131, "flag": 0, "rule_id": "AB802", "verdict": "wrong", "reason": "all five 'missing' moves are present (gap 'not well understood', methods 'We measured', findings, significance)", "words": "Temperature and light both e … ined is not well understood."}
+{"paragraph": 131, "flag": 1, "rule_id": "S001", "verdict": "wrong", "reason": "Arabidopsis thaliana is a species name", "words": "thaliana"}
+{"paragraph": 132, "flag": 0, "rule_id": "AB802", "verdict": "unsure", "reason": "gap and aim really are missing, but methods and findings are present", "words": "AMR is a major threat to global health."}
+{"paragraph": 132, "flag": 1, "rule_id": "F601", "verdict": "useful", "reason": "AMR not defined", "words": "AMR"}
+{"paragraph": 132, "flag": 2, "rule_id": "F601", "verdict": "useful", "reason": "WWTP not defined", "words": "WWTPs"}
+{"paragraph": 132, "flag": 3, "rule_id": "F601", "verdict": "useful", "reason": "ARG not defined", "words": "ARGs"}
+{"paragraph": 132, "flag": 4, "rule_id": "C302", "verdict": "useful", "reason": "'proves' overclaims from an upstream/downstream contrast", "words": "proves"}
+{"paragraph": 133, "flag": 0, "rule_id": "AB802", "verdict": "wrong", "reason": "gap ('rarely performed'), aim ('We present'), methods, findings and significance are all present", "words": "Sensitivity analyses for MNA … mended but rarely performed."}
+{"paragraph": 133, "flag": 1, "rule_id": "F601", "verdict": "useful", "reason": "MNAR never defined", "words": "MNAR"}
+{"paragraph": 134, "flag": 0, "rule_id": "AB802", "verdict": "unsure", "reason": "background and gap truly absent, but significance is present", "words": "In this study we investigate … ing route to stable devices."}
+{"paragraph": 134, "flag": 1, "rule_id": "G106", "verdict": "useful", "reason": "73-word single-sentence abstract", "words": "In this study we investigate … ing route to stable devices."}
+{"paragraph": 134, "flag": 2, "rule_id": "C303", "verdict": "wrong", "reason": "'whether barriers improve' is the tested question of an experiment", "words": "improve"}
+{"paragraph": 135, "flag": 0, "rule_id": "AB802", "verdict": "wrong", "reason": "gap ('poorly known'), methods ('We compared'), findings and significance are present", "words": "Artificial light at night al …  predators are poorly known."}
+{"paragraph": 136, "flag": 0, "rule_id": "AB802", "verdict": "wrong", "reason": "gap ('not clear whether'), aim/methods, findings and significance are present", "words": "Deep learning weather models … to represent extreme events."}
+{"paragraph": 136, "flag": 1, "rule_id": "C301", "verdict": "useful", "reason": "'might potentially' double hedge", "words": "might potentially"}
+{"paragraph": 136, "flag": 2, "rule_id": "W202", "verdict": "useful", "reason": "'whether or not' -> 'whether'", "words": "whether or not"}
+{"paragraph": 136, "flag": 3, "rule_id": "G102", "verdict": "useful", "reason": "'carried out an evaluation of' -> 'evaluated'", "words": "carried out an evaluation of"}
+{"paragraph": 136, "flag": 4, "rule_id": "C301", "verdict": "useful", "reason": "'could perhaps' double hedge", "words": "could perhaps"}
+{"paragraph": 137, "flag": 0, "rule_id": "AB802", "verdict": "unsure", "reason": "gap is genuinely absent, but significance is present", "words": "Forecasting how induced seis … for managing seismic hazard."}
+{"paragraph": 137, "flag": 1, "rule_id": "C303", "verdict": "wrong", "reason": "hybrid vs component comparison; 'reducing the error' is a measured difference", "words": "reducing"}
+{"paragraph": 138, "flag": 0, "rule_id": "AB802", "verdict": "wrong", "reason": "aim ('to examine') and findings (debris, 0.3 m w.e.) are present; only the gap is missing", "words": "Glaciers in High Mountain As … eral hundred million people."}
+{"paragraph": 138, "flag": 1, "rule_id": "C303", "verdict": "wrong", "reason": "modelled sensitivity experiment; causal wording fits the model design", "words": "reduced"}
+{"paragraph": 138, "flag": 2, "rule_id": "S001", "verdict": "useful", "reason": "misspelling of glaciers", "words": "glacers"}
+{"paragraph": 139, "flag": 0, "rule_id": "AB802", "verdict": "wrong", "reason": "every move is present in this abstract", "words": "Machine-learned models of fo … tween families of compounds."}
+{"paragraph": 139, "flag": 1, "rule_id": "C303", "verdict": "wrong", "reason": "fine-tuning is the intervention; 'reduced the error' is supported", "words": "reduced"}
+{"paragraph": 140, "flag": 0, "rule_id": "AB802", "verdict": "wrong", "reason": "aim, methods, findings and significance are present; only a gap is missing", "words": "Mitochondrial dysfunction is … ture of Parkinson's disease."}
+{"paragraph": 140, "flag": 1, "rule_id": "W202", "verdict": "useful", "reason": "'in order to' -> 'to'", "words": "in order to"}
+{"paragraph": 140, "flag": 2, "rule_id": "W203", "verdict": "useful", "reason": "'novel' is hype; say what is new", "words": "novel"}
+{"paragraph": 140, "flag": 3, "rule_id": "S001", "verdict": "wrong", "reason": "mitophagy is a standard term", "words": "mitophagy"}
+{"paragraph": 140, "flag": 4, "rule_id": "C305", "verdict": "useful", "reason": "'clearly demonstrates the huge potential' overclaims from one cell model", "words": "clearly"}
+{"paragraph": 140, "flag": 5, "rule_id": "S001", "verdict": "wrong", "reason": "mitophagy again", "words": "mitophagy"}
+{"paragraph": 141, "flag": 0, "rule_id": "C303", "verdict": "wrong", "reason": "combined stressors were applied experimentally; 'affect' is fair", "words": "affect"}
+{"paragraph": 141, "flag": 1, "rule_id": "S001", "verdict": "wrong", "reason": "'Agri-environment' is a standard compound", "words": "Agri"}
+{"paragraph": 142, "flag": 0, "rule_id": "G105", "verdict": "useful", "reason": "'There are a number of limitations' -> start with the limitations", "words": "There are"}
+{"paragraph": 142, "flag": 1, "rule_id": "E706", "verdict": "useful", "reason": "'relatively small' should give the sample size", "words": "relatively"}
+{"paragraph": 142, "flag": 2, "rule_id": "C301", "verdict": "useful", "reason": "'may possibly' double hedge", "words": "may possibly"}
+{"paragraph": 142, "flag": 3, "rule_id": "C301", "verdict": "useful", "reason": "'may perhaps' double hedge", "words": "may perhaps"}
+{"paragraph": 144, "flag": 0, "rule_id": "E703", "verdict": "useful", "reason": "'This will transform' has no clear referent and overclaims", "words": "This will"}
+{"paragraph": 145, "flag": 0, "rule_id": "G103", "verdict": "wrong", "reason": "'In addition' is a connective and 'calibration' a technical noun", "words": "addition, the production-rat … atitude; a local calibration"}
+{"paragraph": 146, "flag": 0, "rule_id": "G106", "verdict": "useful", "reason": "81-word conclusion sentence", "words": "Overall, the results of this …  include a transition model."}
+{"paragraph": 146, "flag": 1, "rule_id": "F601", "verdict": "useful", "reason": "LSB never defined", "words": "LSB"}
+{"paragraph": 146, "flag": 2, "rule_id": "F601", "verdict": "useful", "reason": "HAWT never defined", "words": "HAWTs"}
+{"paragraph": 147, "flag": 0, "rule_id": "LT001", "verdict": "useful", "reason": "'limits that points' agreement", "words": "points"}
+{"paragraph": 148, "flag": 0, "rule_id": "S001", "verdict": "useful", "reason": "misspelling of separate", "words": "seperate"}
+{"paragraph": 148, "flag": 1, "rule_id": "W207", "verdict": "useful", "reason": "doubled 'have'", "words": "have have"}
+{"paragraph": 148, "flag": 2, "rule_id": "W207", "verdict": "useful", "reason": "doubled 'the'", "words": "the the"}
+{"paragraph": 150, "flag": 0, "rule_id": "C304", "verdict": "useful", "reason": "'very significant contribution' means importance; say what it adds", "words": "significant"}
+{"paragraph": 150, "flag": 1, "rule_id": "C305", "verdict": "useful", "reason": "'clearly superior' is unsupported", "words": "clearly"}

@@ -148,7 +148,7 @@ own "Whole document" group so they are never lost. The chooser starts at
 ## Progress (S4, opt-in)
 
 - Off by default: "Keep my progress" in Settings, with "Delete my
-  progress" behind a confirmation; "Delete my data" removes progress too.
+  progress" behind a confirmation; "Delete my account" removes progress too.
   Only rule ids and counts are kept, never text.
 - `/progress`: one row per rule, a 132×36 sparkline in the accent with a
   hairline zero baseline and a ringed end dot, each line on its own scale
@@ -248,8 +248,18 @@ own "Whole document" group so they are never lost. The chooser starts at
   keyboard focus to Undo, which brings the card back and focuses it.
 - The results header then says "N dismissed · Show"; Show brings every
   dismissed suggestion back. Counts and chips leave dismissed ones out.
-- Muting a rule (signed in) removes its cards at once, then re-checks as
-  before; dismissal is the light action, muting the deliberate one.
+- Muting a rule (signed in) removes its cards at once, before the account
+  answers (a failed save brings them back and says why); dismissal is the
+  light action, muting the deliberate one. Pasted text is then checked
+  again. An uploaded file is **not** sent again: its results are filtered in
+  the page, and the next check of the file applies the account's mutes in
+  the engine as always.
+- The mute's quiet notice reads "Muted “Rule name”. It stays muted wherever
+  you sign in. Undo · Change this in Settings", and keyboard focus moves to
+  Undo, as after a dismissal. Undo unmutes in the account; on a file's
+  results its cards come back at once with no request to the engine, and
+  pasted text is checked again. The notice then reads "Unmuted “Rule
+  name”." and keeps focus.
 
 ## Revision queue (review proposal 1)
 
@@ -323,6 +333,52 @@ own "Whole document" group so they are never lost. The chooser starts at
   alone). Nothing is checked until Check. The same row links the Word and
   Overleaf versions for download. The example-draft button in the key stays.
 
+## Evidence in the text and the scope line (Codex review #3, #4; 2026-10-15)
+
+- **Every sentence the brief or the map rests on can be shown.** Under a
+  question of the brief, each placed sentence has its kind in small sans
+  ("A causal claim", "The gap"), the writer's sentence quoted in the serif
+  with a solid left rule, and a quiet **Show in text** link. A claim sits
+  beside its proposed evidence, two columns that stack on a phone: "Its
+  evidence (found nearby)" with that sentence (dashed rule), or "Its
+  evidence (not detected)" with one plain line saying what was not found.
+  Nothing is ever linked by guess: a sentence the engine could not place,
+  or one outside the checked text, is quoted without a link. A multi-file
+  project names the file and line ("sections/discussion.tex, line 3")
+  before the link. The bare quotes of an older engine still show as before.
+  On the map, a present move's sentence (behind "Show the sentence") and a
+  missing link's sentences carry the same link.
+- **On the website** Show in text switches to the Suggestions tab, outlines
+  the sentence in the text (a solid focus-blue outline, never a tint: it
+  is evidence, not a finding) and moves focus to it. One quiet line above
+  the text says where it came from, "Outlined in the text: a sentence from
+  the reviewer’s brief.", with **Back to the reviewer’s brief**; that link,
+  or choosing the outlined sentence, returns to the tab with focus on the
+  link the writer used. With no suggestions the text still appears under
+  the empty state while a sentence is shown. **In Word** the link selects
+  the sentence in the document, as a card does; an approximate or failed
+  selection is said in one line above the brief.
+- **The scope line**: how much of the document the check took the text to
+  be, separate from the article type. Inferred, never asked up front (the
+  composer row already has its controls): one muted line at the top of the
+  brief and of the map says what was assumed and what it changes ("Read as
+  an excerpt (its only section is Methods): sections that are not in it are
+  not asked for."), with a small **Read as** select (Auto (excerpt), Whole
+  document, Chapter, Excerpt) that checks again. The choice lasts the
+  session and is never stored; Auto is not sent. The same line prints, without
+  the select.
+- **Topical headings** read from their wording are named in one more quiet
+  line under the profile line ("Topical heading read from the wording under
+  it: “Experiment 1: the baseline SEIR” as Methods."), so the writer can see
+  why passive voice was not flagged there.
+- **Genre units on the map.** A policy brief organised by Context,
+  Evidence, Options and Recommendations gets one strip per unit with its
+  own moves, and the note names a unit the headings do not show (whole
+  documents only). A response to reviewers opens with "Comments and
+  replies": each comment beside the reply under it, labelled "Reviewer 1,
+  comment 2", with "No reply was recognised under this comment." where none
+  was; no status words, no judgement.
+
 ## The table cell on an X401 card (2026-10-14)
 
 When a sentence names a row and a column of a table and quotes a number
@@ -337,6 +393,36 @@ focus there; choosing the outlined cell returns to the card; **Show in
 text** drops the outline. The Word card shows the same box without the
 jump.
 
+## A word used again and again (Codex review #10, 2026-10-15)
+
+A word no dictionary knows, used three or more times, that is not a known
+kind of slip (the engine judges that) is **one card, never one per use**:
+a Convention, so it reads as a question and never as an error. The
+message is the engine's: "‘numpyro’ appears 3 times and isn’t in the
+dictionary. If it’s a term, add it to your dictionary; otherwise check its
+spelling." No suggested revision. A repeated typo is still a Correction at
+every use, and the revision queue groups those as one issue with Previous
+and Next as before.
+
+- **Every use is underlined** in the text in the Convention style, each
+  mark standing for the one card: choosing any of them leads to it, and
+  all of them light up while the card is active.
+- **Show where** takes the place of "Show in text": it brings the first use
+  into view and focuses it, then **Previous** and **Next** walk the others,
+  held at either end and said to be unavailable there (as the queue's
+  buttons are), with "Place 2 of 3" in a polite live region. The buttons
+  never vanish from under the keyboard.
+- **Add “numpyro” to dictionary** (signed in) adds the word once; the check
+  runs again and every use clears together. Signed out with accounts on,
+  one quiet help line says where a dictionary is kept ("Sign in to keep a
+  dictionary: a word you add is never questioned again, here or in Word.").
+  A build without accounts says nothing; the local Word add-in offers the
+  same Add to dictionary, kept on the computer.
+- **Word**: the same card; Show where selects each use in the document in
+  turn (Previous / Next, "Place n of N"), in place of "Show in document".
+- Draft holds the question back with the other whole-document checks; the
+  word is not flagged meanwhile.
+
 ## What was read (2026-10-14)
 
 - One quiet line under the results heading, after the profile line:
@@ -344,6 +430,28 @@ jump.
   English." in the engine's own words (singular for one). Only the word
   count when nothing was set aside; nothing from an engine without it. The
   same line in the Word pane's results. Warnings stay where they were.
+- The coverage summary (2026-10-15) extends the same line, never a second
+  one: "Checked 4,210 words, including 3 footnotes." (LaTeX footnotes, read
+  where they are cited); "Not checked: 3 footnotes · 1 text box · 2 headers
+  or footers." (what a .docx upload leaves out; an Overleaf project's
+  included files that could not be read); "Researchly checks English
+  only." when a paragraph was set aside as another language. In Word the
+  pane adds what Word itself counts without reading it (footnotes and
+  endnotes, comments, text boxes, where the host's API can count them).
+  Counts and fixed labels only.
+- **Main file** (2026-10-15): an Overleaf project with more than one file
+  that starts a document gets a "Main file" select in the file panel,
+  below the warnings, set to the file that was read, with one help line
+  ("This project has 2 files that each start a document. Researchly
+  checked main.tex; choose another to check it instead."). Choosing one
+  re-checks the same upload with that root; later re-checks keep it. No
+  select when there was no choice to make.
+- **"This computer" in Word's Settings** (2026-10-15): under the engine
+  choice, one help line from the local server's own health says what it
+  checks and what it contacts ("This computer checks writing rules,
+  spelling, grammar and whole-document checks, and builds the reviewer’s
+  brief and the map. It sends nothing over the network."), naming a check
+  that is off and why. Only when This computer is chosen and answering.
 
 ## The printable report (S4)
 
@@ -508,21 +616,74 @@ sign-in, no upload, no settings route.
   card adds a mono "file, line N" line under its head.
 - **Card actions (signed in)** sit after the source, as quiet links: "Mute
   this rule", and on spelling cards "Add “word” to dictionary". Each confirms in
-  a quiet notice with a link to Settings, then re-checks.
+  a quiet notice with a link to Settings, then re-checks; muting on an
+  uploaded file filters in the page instead (Dismissal, above).
+- **Upload in local development** (`NEXT_PUBLIC_RESEARCHLY_DEV_UPLOAD=1`,
+  `next dev` without Supabase only): the same row and drop zone, with the
+  help line saying it is a development upload with no account. A
+  production build never shows it.
 - **Settings** is one column of panels: Muted rules (name, code, one-line
   why, Unmute), How suggestions are shown (switch, spelling locale),
-  Your dictionary (add with inline limits, tiles with Remove), Delete. Every
-  change saves at once and is announced; a failed save moves the control
-  back and says why. Delete asks first, with focus on "Keep them".
+  Your dictionary (add with inline limits, tiles with Remove, "Clear my
+  dictionary…"), Your progress, Your account. Every change saves at once
+  and is announced; a failed save moves the control back and says why.
+  Every destructive action asks first, with focus on the safe choice
+  ("Keep them", "Keep my account").
+- **Your account** (PLAN #12) holds two actions, each with a sentence saying
+  exactly what it does, never one combined "Delete my data":
+  - **Reset preferences…** unmutes every rule, hides preferences and puts
+    grammar checks, spelling, Draft or Revise and the article type back to
+    their defaults; the dictionary, recorded progress and the "Keep my
+    progress" switch stay (the dialog says so). Words have their own "Clear
+    my dictionary…", progress its own "Delete my progress…": three scoped
+    actions instead of the old "Delete my data", so a writer never loses
+    more than they meant to.
+  - **Delete my account…** deletes the sign-in and everything kept with it,
+    says it can't be undone and signs this browser out. Two steps: the
+    dialog, then typing "delete" (any case). The confirm button is never
+    disabled: pressed early it says what to type and focuses the field. A
+    failure keeps the dialog open and says nothing was deleted. Done, the
+    page shows "Your account was deleted" (heading focused) with "Back to
+    the checker".
 - **Dialogs** are native `<dialog>` (focus contained, Escape closes, focus
   returns to the opener).
+
+## The installable app (S6, P5)
+
+The website installs as an app window: "Install Researchly" in Chrome or
+Edge's menu on a computer, "Add to Home Screen" on a phone. Nothing about
+the page changes inside the window; there is no install banner or prompt
+of our own (the browser offers it, quietly).
+
+- **Icons** are the brand mark (`app/icon.svg`), drawn by
+  `scripts/make-pwa-icons.mjs`: the rounded navy square at 192 and 512
+  ("any"); a full-bleed navy square with the letter inside the 80% safe
+  circle for maskable icons (192, 512); a full-bleed 180px Apple touch icon
+  that iOS rounds itself. No other artwork.
+- **Colours** from the tokens: the title bar and the splash screen are the
+  paper page colour (`surface.page`); in dark mode the theme-color meta
+  tags give the dark page colour, so the title bar always matches the page.
+- **The offline page** (`public/offline.html`, shown by the service worker
+  when a page cannot be reached): the header's brand line, one heading
+  ("Researchly needs a connection to check your writing"), a sentence on
+  why, "Try again" as the one primary button (a link to the checker, 44px
+  high), then two quiet lines: nothing written is kept on this device, and
+  local mode (the command-line tool, the VS Code extension) checks without a
+  network. The reading measure, the page's neutrals and accent, light and
+  dark; no script, no inline style.
+- **The service worker keeps no text.** It stores only this site's code
+  (`/_next/static`), icons and the offline page. Pages are network only;
+  the engine, Supabase and every POST are never touched. Never registered by
+  `next dev` or on `/word`.
 
 ## Word taskpane (`/word`, S3)
 
 The same coach inside Word's sidebar, which is 320 to 400px wide. One
 column, the site's tokens, cards and notices; nothing new to learn.
 
-- **Order**: header (brand, the status mark (S4d R4), Sign in or the email), then one panel with the
+- **Order**: header in two rows (row 1: brand, then the status mark (S4d R4) at the right, with the
+  right 40px kept clear because Word on the Mac draws its own "i" button over the pane's top-right
+  corner; row 2: "Signed in as …" shortened with an ellipsis, or Sign in), then one panel with the
   Draft / Revise choice (a two-part segmented control, 8px radius, under it
   exactly "Draft: check what you’ve written so far. Revise: check the
   finished manuscript."), **Check document** (the only primary button) beside
@@ -532,6 +693,10 @@ column, the site's tokens, cards and notices; nothing new to learn.
   next), with document-wide suggestions under "Whole document" and a note
   saying how many are elsewhere, with "Show the whole document". Then health, errors, results,
   and a closed **Settings** disclosure (engine, show preferences, live underlines, account).
+  The account part links to the website's Settings ("To reset your preferences or delete
+  your account, use Settings on the website", a new window) rather than repeating those
+  actions: they are rare, destructive and need room for their confirmations, and one
+  place to keep correct is safer than two (PLAN #12).
   The footer holds "Report a problem" (mailto, never with document text).
 - **Results**: "N suggestions", then quiet grey notes: what Draft held back
   (with "Switch to Revise"), hidden preferences (with "Show them"), and what
@@ -623,8 +788,9 @@ when they appear and what they mean (docs/inline-review-design.md).
 - **Before any Check document**, the live cards are listed under "N
   suggestions in the text" with one line saying Check document adds the
   whole-document checks, the brief and the map.
-- **States in the header**: the status mark sits between the brand and
-  the account control: checking while a live or full check runs, the
+- **States in the header**: the status mark sits at the right of the
+  brand's row, the account on the row below (never side by side: at 320px
+  they overlapped): checking while a live or full check runs, the
   count, nothing to suggest, checked in part (with the tier that was off),
   can't check right now (retrying after 2, 4, 8, 16, 30 s, back by itself).
   Nothing is drawn before the first check; "Paused" (to a screen reader)
@@ -728,6 +894,11 @@ file refused by the engine (unsupported, unreadable, too large), file
 warnings, card action saved or failed; settings signed out, loading, load
 failed, nothing muted, empty dictionary, saved, save failed, delete
 confirm.
+
+PLAN #12 adds: clear the dictionary (confirm), reset preferences (confirm,
+not yet available), delete the account (dialog, word missing or wrong,
+deleting, failed with the dialog kept open, not yet available, deleted and
+signed out), and the Word pane's link to the website's Settings.
 
 S4c adds: a lesson open on a card or a move, a checklist with found,
 partly-there, needs-your-check, confirmed and not-applicable items (N1:

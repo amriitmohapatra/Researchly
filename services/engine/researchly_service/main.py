@@ -8,7 +8,8 @@ Layers, outermost first:
     CORSMiddleware            browser origins (RESEARCHLY_ALLOWED_ORIGINS);
                               a request without an Origin header (a native
                               client) passes untouched
-    RequestContextMiddleware  request id · rate limits · 413 before parsing ·
+    RequestContextMiddleware  request id · token check + rate limits (per user
+                              when signed in, else per IP) · 413 before parsing ·
                               500 error net · one JSON access-log line
     FastAPI                   422/400/404/405 → ErrorResponse (errors.py)
     routes                    → engine_adapter → researchly.api.analyze()
@@ -34,7 +35,7 @@ from . import _core  # noqa: F401  (import path + tenant isolation first)
 from . import __version__, accounts, engine_adapter, errors, logging_setup
 from . import settings as settings_mod
 from .errors import ApiError
-from .middleware import RateLimiter, RequestContextMiddleware
+from .middleware import Limiters, RequestContextMiddleware
 from researchly import ingest, rules_grammar  # noqa: E402  (after _core)
 from .schemas import (AnalyzeFileResponse, AnalyzeOptions, AnalyzeRequest,
                       AnalyzeWordRequest, AnalyzeWordResponse,
@@ -75,18 +76,22 @@ def _account(request: Request, authorization: Optional[str]) -> dict:
     """Resolve the caller: kwargs for engine_adapter.run_analysis.
 
     With accounts off (no Supabase configured) a token is ignored and the
-    engine behaves as in S1. Raises ApiError for a bad token.
+    engine behaves as in S1. The middleware has normally verified the token
+    already (it rate-limits per user); this verifies only when it has not.
+    Raises ApiError for a bad token.
     """
     accts: Optional[accounts.Accounts] = request.app.state.accounts
     if accts is None:
         return {"signed_in": False}
-    try:
-        token = accounts.bearer_token(authorization)
-        if token is None:
-            return {"signed_in": False}
-        caller = accts.verify(token)
-    except accounts.AuthError as e:
-        raise ApiError(e.status, e.code, e.message) from None
+    caller = getattr(request.state, "caller", None)
+    if caller is None:
+        try:
+            token = accounts.bearer_token(authorization)
+            if token is None:
+                return {"signed_in": False}
+            caller = accts.verify(token)
+        except accounts.AuthError as e:
+            raise ApiError(e.status, e.code, e.message) from None
     request.state.signed_in = True
     try:
         return {"signed_in": True, "account": accts.load_settings(caller)}
@@ -278,7 +283,7 @@ def _analyze_file(request: Request, name: str, data: bytes,
                   options: AnalyzeOptions, grammar_enabled: bool,
                   who: dict) -> AnalyzeFileResponse:
     try:
-        doc = ingest.load_bytes(name, data)
+        doc = ingest.load_bytes(name, data, options.main_file)
     except ingest.IngestError as e:
         raise ApiError(INGEST_STATUS.get(e.code, 422), e.code, e.message) from None
     del data
@@ -297,7 +302,8 @@ def _analyze_file(request: Request, name: str, data: bytes,
         structure=[StructureItem(kind=i.kind, start=i.start, end=i.end,
                                  label=i.label) for i in doc.structure
                    if i.kind in PUBLIC_STRUCTURE],
-        warnings=list(doc.warnings))
+        warnings=list(doc.warnings),
+        main_file=doc.main_file, main_candidates=list(doc.main_candidates))
     resp = engine_adapter.run_analysis(
         doc, doc.kind, options, grammar_enabled=grammar_enabled,
         response_cls=AnalyzeFileResponse, document=info, **who)
@@ -309,10 +315,11 @@ def _analyze_file(request: Request, name: str, data: bytes,
             tags=["meta"])
 def health(request: Request) -> HealthResponse:
     """Per-tier status. A degraded tier is reported, never hidden."""
-    tiers = engine_adapter.health_tiers(_settings(request).grammar_enabled)
+    tiers, caps = engine_adapter.health_and_capabilities(
+        _settings(request).grammar_enabled)
     return HealthResponse(
         status="degraded" if engine_adapter.is_degraded(tiers) else "ok",
-        tiers=tiers, engine=engine_adapter.engine_info())
+        tiers=tiers, engine=engine_adapter.engine_info(), capabilities=caps)
 
 
 @router.get("/v1/rules", response_model=RulesResponse, operation_id="listRules",
@@ -354,6 +361,9 @@ async def lifespan(app: FastAPI):
         "allowed_origins": s.allowed_origins,
         "rate_limit_per_min": s.rate_limit_per_min,
         "live_rate_limit_per_min": s.live_rate_limit_per_min,
+        "user_rate_limit_per_min": s.user_rate_limit_per_min,
+        "user_live_rate_limit_per_min": s.user_live_rate_limit_per_min,
+        "user_upload_rate_limit_per_min": s.user_upload_rate_limit_per_min,
         "lt_url_set": bool(rules_grammar.remote_url()),
         "accounts": s.accounts_enabled,
         "anon_max_words": s.anon_max_words,
@@ -379,10 +389,9 @@ def create_app(settings: Optional[settings_mod.Settings] = None) -> FastAPI:
         lifespan=lifespan,
     )
     app.state.settings = s
-    app.state.limiter = RateLimiter(s.rate_limit_per_min)
-    # The live check runs after every typing pause: its own, larger budget,
-    # so typing never uses up the budget for a full check (and vice versa).
-    app.state.live_limiter = RateLimiter(s.live_rate_limit_per_min)
+    # Per IP for anonymous callers, per user when signed in; the live check
+    # and uploads have budgets of their own (middleware.Limiters).
+    app.state.limiters = Limiters(s)
     app.state.accounts = (accounts.Accounts(s.supabase_url,
                                             s.supabase_publishable_key)
                           if s.accounts_enabled else None)
@@ -395,8 +404,7 @@ def create_app(settings: Optional[settings_mod.Settings] = None) -> FastAPI:
     # outside the request middleware so 413/429/500 replies still carry CORS
     # headers and the browser can read the error body.
     app.add_middleware(RequestContextMiddleware, settings=s,
-                       limiter=app.state.limiter,
-                       live_limiter=app.state.live_limiter)
+                       limiters=app.state.limiters)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=s.allowed_origins,

@@ -382,6 +382,52 @@ def test_token_and_user_id_never_logged(make_client, capture):
         assert secret not in r2.text
 
 
+def test_rate_limits_and_key_cooldown_log_no_text_token_or_user(make_client,
+                                                                capture):
+    """PLAN #12: per-user limits, the bad-token budget and the key re-fetch
+    cooldown refuse requests before the body is read. Their log lines and
+    replies carry no text, no token and no user id (the limiter keys on
+    the user id in memory only)."""
+    import test_accounts as ta
+    c = make_client(supabase_url=ta.URL, supabase_publishable_key=ta.PUBLISHABLE,
+                    rate_limit_per_min=1, user_rate_limit_per_min=1,
+                    user_live_rate_limit_per_min=1)
+    c.app.state.accounts = ta.accounts.Accounts(
+        ta.URL, ta.PUBLISHABLE, jwks_client=ta.InMemoryJWKS(),
+        fetch=ta.FakeSupabase({}))
+    good = ta.token(email=f"{CANARY}@example.org")
+    forged = ta.token(key=ta.STRANGER_KEY, email=f"{CANARY}@example.org")
+    unknown = [ta.token(kid=f"{CANARY}-{i}") for i in range(2)]
+    auth = lambda t: {"authorization": f"Bearer {t}"}  # noqa: E731
+    live = {"revision": 1, "paragraphs": [{"id": "p", "text": LIVE_TEXT}]}
+    replies = [
+        c.post("/v1/analyze", json={"content": DOC}, headers=auth(good)),
+        c.post("/v1/analyze", json={"content": DOC}, headers=auth(good)),
+        c.post("/v1/check-paragraphs", json=live, headers=auth(good)),
+        c.post("/v1/check-paragraphs", json=live, headers=auth(good)),
+        c.post("/v1/analyze", json={"content": DOC}, headers=auth(forged)),
+        c.post("/v1/analyze", json={"content": DOC}, headers=auth(forged)),
+        c.post("/v1/analyze", json={"content": DOC}, headers=auth(unknown[0])),
+        c.post("/v1/analyze", json={"content": DOC}, headers=auth(unknown[1])),
+    ]
+    assert [r.status_code for r in replies] == [200, 429, 200, 429,
+                                                401, 429, 429, 429]
+    rec = assert_logged_request(capture, 429)
+    assert rec.code == "rate_limited"
+    for secret in (good, forged, *unknown, ta.USER, CANARY):
+        for x in capture.records():
+            if x.name.split(".")[0] in CLIENT_SIDE:
+                continue
+            for s in _record_strings(x):
+                assert secret not in s, f"{secret[:12]}… in a log record"
+        assert secret not in capture.json_lines()
+        assert secret not in capture.fds()
+        for r in replies[1:]:
+            if r.status_code >= 400:
+                assert secret not in r.text
+    assert_no_canary_anywhere(capture, *replies[1:])
+
+
 def test_upload_warnings_never_logged(client, capture):
     """Adapter warnings can quote document text (an \\input target's name):
     returned to the caller, never logged."""

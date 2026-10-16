@@ -1,5 +1,29 @@
 import { describe, expect, it } from "vitest";
-import { normaliseSupabaseKey, normaliseSupabaseUrl, supabaseConfig } from "@/lib/config";
+import { DEV_UPLOAD, devUploadEnabled, normaliseSupabaseKey, normaliseSupabaseUrl, supabaseConfig } from "@/lib/config";
+
+describe("upload without accounts in development (NEXT_PUBLIC_RESEARCHLY_DEV_UPLOAD)", () => {
+  it("is on only for the development server, with the flag exactly 1 and no accounts", () => {
+    expect(devUploadEnabled("1", "development", false)).toBe(true);
+    expect(devUploadEnabled(" 1 ", "development", false)).toBe(true);
+  });
+  it("is ignored by a production build, whatever the flag says", () => {
+    expect(devUploadEnabled("1", "production", false)).toBe(false);
+    expect(devUploadEnabled("1", "test", false)).toBe(false);
+    expect(devUploadEnabled("1", undefined, false)).toBe(false);
+  });
+  it("is ignored when accounts are configured: uploads then need sign-in", () => {
+    expect(devUploadEnabled("1", "development", true)).toBe(false);
+  });
+  it("is off unless asked for", () => {
+    expect(devUploadEnabled(undefined, "development", false)).toBe(false);
+    expect(devUploadEnabled("", "development", false)).toBe(false);
+    expect(devUploadEnabled("true", "development", false)).toBe(false);
+    expect(devUploadEnabled("0", "development", false)).toBe(false);
+  });
+  it("is off in this test run (NODE_ENV is test)", () => {
+    expect(DEV_UPLOAD).toBe(false);
+  });
+});
 
 // Assembled at run time, like the fake secrets below, so secret scanners do
 // not take the fixture for a credential.

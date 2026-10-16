@@ -3,7 +3,7 @@
 `manifest.yaml` lists **219 openly licensed documents** for the CI harness to fetch at run
 time: 178 research documents and 41 Word robustness test files. The texts are never
 committed; only metadata is. Every item's licence was checked one by one (2026-10-03;
-the 11 PMC-mirrored preprints 2026-10-04),
+the 11 PMC-mirrored preprints 2026-10-04, 8 of them replaced 2026-10-15),
 and each row in `manifest.yaml` records where the licence was seen. The registry entries
 are the seven `realdocs-*` ids in `ml/datasets.yaml`.
 
@@ -25,8 +25,9 @@ are the seven `realdocs-*` ids in `ml/datasets.yaml`.
 | humanities | – | – | – | 2 | 2 |
 | **Total** | **115** | **20** | **14** | **18** | **167** |
 
-Plus 11 medRxiv/bioRxiv preprints mirrored in PMC (P30): 5 epidemiology, 4 molecular
-biology, 2 neuroscience (ids `pmcpreprint-*`; see below).
+Plus 11 medRxiv/bioRxiv preprints mirrored in PMC (P30; 8 replaced 2026-10-15): 7
+epidemiology, 2 clinical medicine, 1 molecular biology, 1 neuroscience (ids
+`pmcpreprint-*`; see below).
 
 **By licence**
 
@@ -82,6 +83,16 @@ text AND (medRxiv[journal] OR bioRxiv[journal])` from 2022, read the PMC licence
 40 newest with `get_copyright_status`, and kept the 10 CC BY 4.0 and 1 CC0 ones (5
 infectious-disease epidemiology, 6 biology). None of the original 14 had a PMC copy
 (`convert_article_ids`), so they stay in the manifest as a weekly check on the servers.
+
+**Abstract-only records replaced (2026-10-15).** The first CI run fetched all 11, but 7
+(8 by 2026-10-15) returned only the abstract: their Europe PMC `fullTextXML` has a
+29-word stub `<body>`, because Europe PMC adds the body some weeks after deposit. They
+were replaced by preprints whose `fullTextXML` was fetched first and has a real body
+(3,227-16,069 words): the same PubMed search limited to 2024-2026/06, PMCIDs from
+`convert_article_ids`, the body counted from the XML, and the licence read with
+`get_copyright_status` (7 CC BY 4.0, 1 CC0) and checked against the XML's `<license>`.
+Kept: the three that already had a body (VRE in intensive care, SARS-CoV-2 within-host
+model, tunicate cholinergic system).
 
 **LaTeX.** I used GitHub repository search (`license:cc-by-4.0 language:TeX paper`,
 `... manuscript`, `license:cc0-1.0 language:TeX paper`). For each repository I took a

@@ -265,8 +265,15 @@ export interface components {
              * @description Rule ids to mute for this request, e.g. ["G101"]. For a signed-in caller these are added to the rules muted in their account settings.
              */
             disabled_rules?: string[];
+            /** @description How much of the document the text is: whole, chapter or excerpt. Omitted or `auto`: inferred from the headings (`profile.scope` says what was assumed). An excerpt is asked for no missing sections; a chapter for no abstract. A choice about this check only, never stored. */
+            document_scope?: components["schemas"]["DocumentScope"] | null;
             /** @description The article type to check as. Omitted: the caller's saved setting, else auto. */
             document_type?: components["schemas"]["DocumentType"] | null;
+            /**
+             * Main File
+             * @description /v1/analyze-file with an Overleaf .zip: the project's main .tex file, by its path in the .zip (one of `document.main_candidates`). Omitted: Researchly chooses. Ignored for other files and requests.
+             */
+            main_file?: string | null;
             /** @description Draft or Revise for this request. Omitted: the caller's saved setting, else revise. */
             mode?: components["schemas"]["Mode"] | null;
             /**
@@ -469,6 +476,55 @@ export interface components {
              * @description What was skipped or approximated while reading the text, e.g. LaTeX that could not be parsed and was read with a simpler method. May quote the caller's own text; never logged.
              */
             warnings?: string[];
+        };
+        /**
+         * Capabilities
+         * @description What this engine checks and what it contacts over the network (Codex
+         *     review #11): the local server's "This computer" promise, stated from
+         *     the same health and settings the checks run on.
+         */
+        Capabilities: {
+            /** Checks */
+            checks: components["schemas"]["CapabilityCheck"][];
+            /** Label */
+            label: string;
+            network: components["schemas"]["NetworkUse"];
+            /**
+             * Route
+             * @enum {string}
+             */
+            route: "local_server" | "overlay" | "lsp" | "cli" | "service";
+            /**
+             * Summary
+             * @description One plain line, for logs and the command line.
+             */
+            summary: string;
+            /**
+             * Where
+             * @enum {string}
+             */
+            where: "this_computer" | "service";
+        };
+        /** CapabilityCheck */
+        CapabilityCheck: {
+            /**
+             * Id
+             * @enum {string}
+             */
+            id: "rules" | "spelling" | "grammar" | "gec" | "document" | "brief";
+            /**
+             * Label
+             * @description Plain words: "writing rules", "whole-document checks".
+             */
+            label: string;
+            /**
+             * Note
+             * @description Why it is off, in plain words; empty when on.
+             * @default
+             */
+            note: string;
+            /** On */
+            on: boolean;
         };
         /**
          * Category
@@ -674,6 +730,14 @@ export interface components {
             table_paragraphs: number;
         };
         /**
+         * DocumentScope
+         * @description How much of a document the text is (Codex review #4), separate from
+         *     its article type: a whole manuscript, one chapter, or an excerpt.
+         *     `auto` infers it from the headings.
+         * @enum {string}
+         */
+        DocumentScope: "auto" | "whole" | "chapter" | "excerpt";
+        /**
          * DocumentType
          * @description Article-type profile (S4). `auto` guesses from the headings and is
          *     otherwise `general`; the others switch off the checks that do not
@@ -715,6 +779,92 @@ export interface components {
             error: components["schemas"]["ErrorBody"];
         };
         /**
+         * EvidenceLink
+         * @description One point of the brief, placed in the text: the sentence it rests on
+         *     (`claim`) and, for a claim, the evidence proposed beside it. A point
+         *     that cannot be placed has no link (it abstains).
+         */
+        EvidenceLink: {
+            claim: components["schemas"]["EvidenceSpan"];
+            /** @description The nearest sentence in the same section that reports a number, a citation or a finding, within two sentences; absent when none was detected or none is needed. */
+            evidence?: components["schemas"]["EvidenceSpan"] | null;
+            /**
+             * Evidence Note
+             * @description One line saying what the evidence is, or what was not detected.
+             * @default
+             */
+            evidence_note: string;
+            /**
+             * Evidence Status
+             * @description detected (evidence proposed beside the claim), not_detected (none was found nearby: not proof there is none), not_applicable (a statement that needs no evidence beside it).
+             * @default not_applicable
+             * @enum {string}
+             */
+            evidence_status: "detected" | "not_detected" | "not_applicable";
+            /**
+             * Kind
+             * @description What the sentence is, e.g. causal_claim, aim, gap, stranger, claim_without_grounds.
+             */
+            kind: string;
+            /**
+             * Label
+             * @description The kind, in plain words.
+             */
+            label: string;
+        };
+        /**
+         * EvidenceSpan
+         * @description Where in the text a statement of the brief or the map rests (Codex
+         *     review #3): code-point offsets into the checked text like `Span`, the
+         *     sentence quoted, and for clients that count in UTF-16 (Word, browsers)
+         *     `begin16`/`end16`. On the Word routes `location` finds it in Word as a
+         *     suggestion's does. Document text: never logged.
+         */
+        EvidenceSpan: {
+            /**
+             * Begin16
+             * @description `start` in UTF-16 code units.
+             */
+            begin16?: number | null;
+            /**
+             * Col
+             * @default 0
+             */
+            col: number;
+            /** End */
+            end: number;
+            /**
+             * End16
+             * @description `end` in UTF-16 code units.
+             */
+            end16?: number | null;
+            /**
+             * File
+             * @description For a project of several files (an Overleaf .zip): the file the sentence is in.
+             */
+            file?: string | null;
+            /**
+             * File Line
+             * @description The 1-based line in `file`.
+             */
+            file_line?: number | null;
+            /**
+             * Line
+             * @description 1-based line of `start`; 0 if unknown.
+             * @default 0
+             */
+            line: number;
+            /** @description Word routes only: the paragraph and snippet to select. */
+            location?: components["schemas"]["WordLocation"] | null;
+            /** Start */
+            start: number;
+            /**
+             * Text
+             * @description The sentence, quoted (one line, at most 180 characters).
+             */
+            text: string;
+        };
+        /**
          * FixSafety
          * @enum {string}
          */
@@ -734,6 +884,8 @@ export interface components {
         };
         /** HealthResponse */
         HealthResponse: {
+            /** @description What this engine checks and what it contacts. Missing from an older local server. */
+            capabilities?: components["schemas"]["Capabilities"] | null;
             engine: components["schemas"]["EngineInfo"];
             /**
              * Status
@@ -764,6 +916,21 @@ export interface components {
             section: string;
             /** Words */
             words: number;
+        };
+        /** Included */
+        Included: {
+            /** Count */
+            count: number;
+            /**
+             * Kind
+             * @constant
+             */
+            kind: "footnotes";
+            /**
+             * Label
+             * @description What it is, in plain words.
+             */
+            label: string;
         };
         /**
          * LearnCard
@@ -814,8 +981,15 @@ export interface components {
              * @description Rule ids to mute for this request, e.g. ["G101"]. For a signed-in caller these are added to the rules muted in their account settings.
              */
             disabled_rules?: string[];
+            /** @description How much of the document the text is: whole, chapter or excerpt. Omitted or `auto`: inferred from the headings (`profile.scope` says what was assumed). An excerpt is asked for no missing sections; a chapter for no abstract. A choice about this check only, never stored. */
+            document_scope?: components["schemas"]["DocumentScope"] | null;
             /** @description The article type to check as. Omitted: the caller's saved setting, else auto. */
             document_type?: components["schemas"]["DocumentType"] | null;
+            /**
+             * Main File
+             * @description /v1/analyze-file with an Overleaf .zip: the project's main .tex file, by its path in the .zip (one of `document.main_candidates`). Omitted: Researchly chooses. Ignored for other files and requests.
+             */
+            main_file?: string | null;
             /** @description Draft or Revise for this request. Omitted: the caller's saved setting, else revise. */
             mode?: components["schemas"]["Mode"] | null;
             /**
@@ -1025,6 +1199,11 @@ export interface components {
             section: string;
             /** Source */
             source: string;
+            /**
+             * Spans
+             * @description Where those sentences are in the text.
+             */
+            spans?: components["schemas"]["EvidenceSpan"][];
         };
         /**
          * Mode
@@ -1062,6 +1241,11 @@ export interface components {
             sections: components["schemas"]["NarrativeSection"][];
             /** Source */
             source: string;
+            /**
+             * Units
+             * @description For a response to reviewers: each comment beside its reply, in order.
+             */
+            units?: components["schemas"]["ReviewerUnit"][];
             /**
              * Unmapped
              * @description Sections found that have no expected moves (topical headings).
@@ -1107,6 +1291,8 @@ export interface components {
             question: string;
             /** Source */
             source: string;
+            /** @description Where `evidence` is in the text, when it can be placed. */
+            span?: components["schemas"]["EvidenceSpan"] | null;
             status: components["schemas"]["MoveStatus"];
         };
         /** NarrativeSection */
@@ -1125,6 +1311,54 @@ export interface components {
             sentences: number;
             /** Words */
             words: number;
+        };
+        /** NetworkContact */
+        NetworkContact: {
+            /**
+             * Leaves Computer
+             * @description Over the network (true), or to another program on the same computer (false)?
+             */
+            leaves_computer: boolean;
+            /**
+             * Sends Text
+             * @description Does the document's text go there?
+             */
+            sends_text: boolean;
+            /**
+             * What
+             * @description What is contacted, in plain words.
+             */
+            what: string;
+            /**
+             * When
+             * @default
+             */
+            when: string;
+        };
+        /** NetworkUse */
+        NetworkUse: {
+            /** Contacts */
+            contacts?: components["schemas"]["NetworkContact"][];
+            /**
+             * Sends Text
+             * @description True when any check sends the text off this computer (for the hosted engine: beyond the engine).
+             */
+            sends_text: boolean;
+        };
+        /** NotChecked */
+        NotChecked: {
+            /** Count */
+            count: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "footnotes" | "endnotes" | "comments" | "text_boxes" | "headers_footers" | "skipped_files";
+            /**
+             * Label
+             * @description What it is, in plain words.
+             */
+            label: string;
         };
         /**
          * NotCounted
@@ -1147,6 +1381,42 @@ export interface components {
              * @enum {string}
              */
             reason: "absent" | "future" | "prior";
+        };
+        /**
+         * Occurrence
+         * @description One place a grouped suggestion is about (S003, Codex review #10).
+         */
+        Occurrence: {
+            /**
+             * Begin16
+             * @description `start` in UTF-16 code units (see Suggestion.begin16).
+             */
+            begin16?: number | null;
+            /**
+             * Col
+             * @description 1-based column of `start`; 0 if unknown.
+             */
+            col: number;
+            /**
+             * End
+             * @description End offset, like Span.end.
+             */
+            end: number;
+            /**
+             * End16
+             * @description `end` in UTF-16 code units.
+             */
+            end16?: number | null;
+            /**
+             * Line
+             * @description 1-based line of `start`; 0 if unknown.
+             */
+            line: number;
+            /**
+             * Start
+             * @description Offset into `content` in code points, like Span.start.
+             */
+            start: number;
         };
         /** ProfileChoice */
         ProfileChoice: {
@@ -1186,6 +1456,13 @@ export interface components {
              * @description Rules not run for this type.
              */
             rules_off?: string[];
+            /** @description How much of the document the text was taken to be. Additive: older engines omit it. */
+            scope?: components["schemas"]["ScopeInfo"] | null;
+            /**
+             * Topical
+             * @description Topical headings ("Experiment 1: the baseline SEIR") read as a section from the wording under them, so the section-aware checks treat them as that section.
+             */
+            topical?: components["schemas"]["TopicalSection"][];
         };
         /**
          * ReadingSummary
@@ -1193,6 +1470,16 @@ export interface components {
          *     maths, layout, paragraphs in another language. Counts only.
          */
         ReadingSummary: {
+            /**
+             * Included
+             * @description Parts read where they stand that a writer might think were skipped (LaTeX footnotes).
+             */
+            included?: components["schemas"]["Included"][];
+            /**
+             * Not Checked
+             * @description Parts of an uploaded file the checks did not read: a .docx's footnotes, endnotes, comments, text boxes and headers or footers with words in them; files an Overleaf project includes that could not be read. Counted, never read as text.
+             */
+            not_checked?: components["schemas"]["NotChecked"][];
             /** Set Aside */
             set_aside?: components["schemas"]["SetAside"][];
             /** Words Checked */
@@ -1210,6 +1497,11 @@ export interface components {
              * @description A to E.
              */
             id: string;
+            /**
+             * Links
+             * @description The points that rest on a sentence, each placed in the text ("Show in text"). Additive.
+             */
+            links?: components["schemas"]["EvidenceLink"][];
             /** Points */
             points?: string[];
             /** Question */
@@ -1258,6 +1550,29 @@ export interface components {
             id: string;
             /** Short */
             short: string;
+        };
+        /**
+         * ReviewerUnit
+         * @description A response letter's unit (Codex review #4): a reviewer's comment and
+         *     the reply under it. Described, never judged.
+         */
+        ReviewerUnit: {
+            comment: components["schemas"]["EvidenceSpan"];
+            /**
+             * Kind
+             * @default reviewer_comment
+             * @constant
+             */
+            kind: "reviewer_comment";
+            /**
+             * Label
+             * @description e.g. "Reviewer 1, comment 2".
+             */
+            label: string;
+            /** Learn Ref */
+            learn_ref?: string | null;
+            /** @description Absent when no reply was recognised under the comment. */
+            reply?: components["schemas"]["EvidenceSpan"] | null;
         };
         /** RuleInfo */
         RuleInfo: {
@@ -1315,6 +1630,31 @@ export interface components {
          */
         Scope: "sentence" | "document";
         /**
+         * ScopeInfo
+         * @description How much of the document the check took the text to be (Codex
+         *     review #4), and why.
+         */
+        ScopeInfo: {
+            /**
+             * Guessed
+             * @description True when inferred (auto).
+             */
+            guessed: boolean;
+            /**
+             * Id
+             * @enum {string}
+             */
+            id: "whole" | "chapter" | "excerpt";
+            /** Label */
+            label: string;
+            /**
+             * Note
+             * @description One line saying what was assumed and what it changes, for the brief and the map.
+             * @default
+             */
+            note: string;
+        };
+        /**
          * Segment
          * @description A stretch of `document.text` that came from one source file.
          *     `text[start:end]` equals that file's `[source_start : source_start + (end - start)]`.
@@ -1364,6 +1704,16 @@ export interface components {
              */
             filename: string;
             format: components["schemas"]["SourceFormat"];
+            /**
+             * Main Candidates
+             * @description An Overleaf project with more than one file that starts a document (\documentclass): all of them, so the writer can choose another (options.main_file). Empty otherwise.
+             */
+            main_candidates?: string[];
+            /**
+             * Main File
+             * @description An Overleaf project: the main .tex file that was read (with every \input in it).
+             */
+            main_file?: string | null;
             /** Segments */
             segments: components["schemas"]["Segment"][];
             /** Structure */
@@ -1467,6 +1817,11 @@ export interface components {
              * @description One-line rationale, always shown.
              */
             message: string;
+            /**
+             * Occurrences
+             * @description A grouped suggestion only (S003: a word used three or more times that no dictionary knows): every place it appears, in reading order; `span` is one of them. Absent for a suggestion about one place. Additive: older engines omit it.
+             */
+            occurrences?: components["schemas"]["Occurrence"][] | null;
             /**
              * Plain
              * @description The explanation in everyday words, shown first; `why` is the fuller account.
@@ -1604,6 +1959,19 @@ export interface components {
              */
             tier: string;
         };
+        /**
+         * TopicalSection
+         * @description A topical heading read as Methods or Results from its own wording.
+         */
+        TopicalSection: {
+            /**
+             * Heading
+             * @description The heading as written (never logged).
+             */
+            heading: string;
+            /** Section */
+            section: string;
+        };
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -1727,6 +2095,16 @@ export interface components {
              * @description One-line rationale, always shown.
              */
             message: string;
+            /**
+             * Occurrence Locations
+             * @description With `occurrences`: where each one is in Word, in the same order, for "Show where".
+             */
+            occurrence_locations?: components["schemas"]["WordLocation"][] | null;
+            /**
+             * Occurrences
+             * @description A grouped suggestion only (S003: a word used three or more times that no dictionary knows): every place it appears, in reading order; `span` is one of them. Absent for a suggestion about one place. Additive: older engines omit it.
+             */
+            occurrences?: components["schemas"]["Occurrence"][] | null;
             /**
              * Plain
              * @description The explanation in everyday words, shown first; `why` is the fuller account.

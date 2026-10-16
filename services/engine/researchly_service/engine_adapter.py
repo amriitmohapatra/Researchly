@@ -24,10 +24,11 @@ from typing import List, Optional, Union
 
 from . import _core  # noqa: F401  (import path + isolation first)
 from . import __version__ as SERVICE_VERSION
-from .schemas import (AnalyzeOptions, AnalyzeResponse, Category, ChecklistChoiceInfo, ChecklistReport,
+from .schemas import (AnalyzeOptions, AnalyzeResponse, Capabilities, Category,
+                      ChecklistChoiceInfo, ChecklistReport,
                       CheckParagraphsResponse, Coverage, EngineInfo, FixSafety,
                       LearnCard, LiveParagraphResult, LiveState, Metrics, Mode,
-                      NarrativeMap, ProfileChoice, ProfileInfo, ReadingSummary,
+                      NarrativeMap, Occurrence, ProfileChoice, ProfileInfo, ReadingSummary,
                       ReviewReport, RuleInfo, Scope, Span,
                       Suggestion, TableEvidence, TierHealth, WordLocation,
                       WordSuggestion)
@@ -105,13 +106,17 @@ def to_profile(a) -> ProfileInfo:
     return ProfileInfo(**shapes.profile_info(a))
 
 
-def to_review(r: Optional[dict]) -> Optional[ReviewReport]:
-    shaped = shapes.review_report(r)
+def to_review(r: Optional[dict], index=None,
+              locate=None) -> Optional[ReviewReport]:
+    """`index` and `locate` place the brief's evidence for the caller:
+    UTF-16 offsets, and on the Word routes the paragraph to select."""
+    shaped = shapes.review_report(r, index, locate)
     return None if shaped is None else ReviewReport(**shaped)
 
 
-def to_narrative(n: Optional[dict]) -> Optional[NarrativeMap]:
-    shaped = shapes.narrative_map(n)
+def to_narrative(n: Optional[dict], index=None,
+                 locate=None) -> Optional[NarrativeMap]:
+    shaped = shapes.narrative_map(n, index, locate)
     return None if shaped is None else NarrativeMap(**shaped)
 
 
@@ -178,11 +183,38 @@ def to_suggestion(s, index=None) -> Suggestion:
         critical=s.category.value == "correction",
         begin16=index(start) if index is not None else None,
         end16=index(end) if index is not None else None,
+        occurrences=_occurrences(s, index),
     )
 
 
+def _occurrences(s, index) -> Optional[List[Occurrence]]:
+    occ = getattr(s, "occurrences", None)
+    if not occ:
+        return None
+    return [Occurrence(
+        start=max(0, o["start"]), end=max(0, o["end"]),
+        line=max(0, o.get("line", 0)), col=max(0, o.get("col", 0)),
+        begin16=index(max(0, o["start"])) if index is not None else None,
+        end16=index(max(0, o["end"])) if index is not None else None)
+        for o in occ]
+
+
+def _occurrence_locations(doc, paragraphs, s, indexes: dict
+                          ) -> Optional[List[WordLocation]]:
+    occ = getattr(s, "occurrences", None)
+    if not occ:
+        return None
+    return [_word_location_at(doc, paragraphs, o["start"], o["end"], indexes)
+            for o in occ]
+
+
 def _word_location(doc, paragraphs, s, indexes: dict) -> WordLocation:
-    loc = wordloc.locate(doc, paragraphs, s.start, s.end)
+    return _word_location_at(doc, paragraphs, s.start, s.end, indexes)
+
+
+def _word_location_at(doc, paragraphs, start: int, end: int,
+                      indexes: dict) -> WordLocation:
+    loc = wordloc.locate(doc, paragraphs, start, end)
     i = loc["paragraph"]
     if i not in indexes:
         text = (paragraphs[i].get("text") or "") if i < len(paragraphs) else ""
@@ -233,19 +265,26 @@ def run_analysis(source: Union[str, Document], fmt: str,
                         with_review=bool(options and options.review),
                         with_narrative=bool(options and options.narrative),
                         checklist=(options.checklist.value
-                                   if options and options.checklist else None))
+                                   if options and options.checklist else None),
+                        document_scope=(options.document_scope.value
+                                        if options and options.document_scope
+                                        else None))
     health = [to_tier(t) for t in a.health]
     if signed_in:
         health.append(account_tier(account_error))
     paragraphs = extra.pop("word_paragraphs", None)
     index = (Utf16Index(a.document.original)
              if a.document is not None else None)
+    locate = (wordloc.locator(a.document, paragraphs)
+              if paragraphs is not None and a.document is not None else None)
     if paragraphs is not None:
         doc = a.document
         indexes: dict = {}
         suggestions = [WordSuggestion(
             **to_suggestion(s, index).model_dump(),
-            location=_word_location(doc, paragraphs, s, indexes))
+            location=_word_location(doc, paragraphs, s, indexes),
+            occurrence_locations=_occurrence_locations(doc, paragraphs, s,
+                                                       indexes))
             for s in a.suggestions]
         extra["coverage"] = Coverage(**wordloc.coverage(paragraphs, doc))
     else:
@@ -254,8 +293,8 @@ def run_analysis(source: Union[str, Document], fmt: str,
         signed_in=signed_in,
         mode=Mode(a.config.mode),
         profile=to_profile(a),
-        review=to_review(a.review),
-        narrative=to_narrative(a.narrative),
+        review=to_review(a.review, index, locate),
+        narrative=to_narrative(a.narrative, index, locate),
         checklist=to_checklist(a.checklist),
         suggested_checklist=a.suggested_checklist,
         hidden_by_mode=a.hidden_by_mode,
@@ -323,10 +362,20 @@ _OPTIONAL_STATES = {"gec": {"missing", "disabled"}}
 def health_tiers(grammar_enabled: bool = True) -> List[TierHealth]:
     """Live tier status. Probes remote LanguageTool (cached a few seconds);
     loads nothing new — warm-up already did."""
+    return health_and_capabilities(grammar_enabled)[0]
+
+
+def health_and_capabilities(grammar_enabled: bool = True
+                            ) -> "tuple[List[TierHealth], Capabilities]":
+    """The tiers, and what they add up to (Codex review #11): the checks
+    this engine runs and what it contacts, from the same statuses."""
+    from researchly import capabilities
     from researchly.health import engine_status
     cfg = build_config(None, grammar_enabled)
     nlp = api._NLP                       # loaded by warm-up, or None
-    return [to_tier(t) for t in engine_status(cfg, nlp=nlp, probe=True)]
+    statuses = engine_status(cfg, nlp=nlp, probe=True)
+    return ([to_tier(t) for t in statuses],
+            Capabilities(**capabilities.describe(cfg, statuses, "service")))
 
 
 def is_degraded(tiers: List[TierHealth]) -> bool:
