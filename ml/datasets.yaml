@@ -1236,6 +1236,49 @@ datasets:
       finetune.py drops every eval row from training files; weak_labels.py
       keeps their use so an evaluation can include or exclude them.
 
+  - id: s5-synthetic-drafts
+    name: "S5 synthetic draft paragraphs and flag judgments (written for Researchly)"
+    kind: labels
+    source: "written by Claude at build time for Researchly, 2026-10-16 (owner: \"generate those paragraphs for me … so that I simply run the program that trains laya\")"
+    location: "ml/critics/data/synthetic/"
+    in_git: true
+    licence: "Researchly's own (MIT, with the repository)"
+    licence_verified: true
+    licence_evidence: >-
+      Original paragraphs written for Researchly in the style of research
+      drafts; not copied or paraphrased from any article, thesis, book or
+      course (the writers were told not to open those sources), checked by
+      ml/tools/check_third_party.py. Flag judgments (useful / wrong / unsure)
+      follow docs/labelling-guide.md.
+    commercial_ok: true
+    permitted_use: [private_eval, ci_eval, train_experimental, ship_model, ship_text]
+    current_use: "S5 Task A (is this flag useful?) training and development data"
+    shipped_today: false
+    sha256: null
+    items: "part-a/b/c paragraphs, labels and notes"
+    notes: >-
+      The judgments are Claude's, so a model trained on them learns Claude's
+      sense of a useful flag. It is never evaluated only on this data: the
+      owner's own labelled paragraphs are the final, independent test
+      (ADR-06 amendment, 2026-10-16).
+
+  - id: s5-corpus-flag-judgments
+    name: "S5 flag judgments on CC BY / CC0 corpus paragraphs (labels only)"
+    kind: labels
+    source: "Researchly run on paragraphs of s5a-oa-corpus-cc-by articles; flags judged by Claude at build time, 2026-10-16"
+    location: "ml/critics/data/corpus/ (labels, paragraph index with hashes, notes); paragraph text rebuilt locally by rebuild.py"
+    in_git: true
+    licence: "labels: Researchly's own; underlying text: per article CC BY / CC0 (see s5a-oa-corpus-cc-by)"
+    licence_verified: true
+    licence_evidence: "only rows with use: train or test from s5a-oa-corpus-cc-by; no NC/ND article; no article text committed"
+    commercial_ok: true
+    permitted_use: [private_eval, ci_eval, train_experimental, ship_model]
+    current_use: "S5 Task A training (train split) and held-out evaluation (test split)"
+    shipped_today: false
+    sha256: null
+    items: "train-labels.json, test-labels.json, paragraph-index.json"
+    notes: "Attribution for the underlying articles: the DOIs and licences in ml/corpus/manifest.jsonl."
+
   # ───────────────────────── Base models for the S5 bake-off ─────────────────────────
 
   - id: laya
