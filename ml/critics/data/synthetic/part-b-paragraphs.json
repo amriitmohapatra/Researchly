@@ -1,0 +1,756 @@
+{
+ "version": 1,
+ "note": "Part B (life sciences, ecology, physical and earth sciences, engineering, statistics/computational methods): 150 synthetic paragraphs written for Researchly's Laya critic on 2026-10-16. Original text, nobody's real writing; licence: ours.",
+ "paragraphs": [
+  {
+   "paragraph": 1,
+   "section": "introduction",
+   "text": "Antibiotic resistance in Escherichia coli is a growing problem in hospitals and in the wider enviroment. In recent years there has been a large amount of research into the mechanisms by which resistance genes move between strains, and it is clear that plasmids play a central role in this. This has obvious implications for how we monitor wastewater. However, most studies have focused on clinical isolates, and very little attention has been paid to the role that river sediments might play as a reservoir. Due to the fact that sediments accumulate both bacteria and antibiotic residues over long periods of time, they could plausibly act as hotspots for gene transfer. The aim of this thesis is to investigate this."
+  },
+  {
+   "paragraph": 2,
+   "section": "introduction",
+   "text": "Pollinator declines have been documented across much of Europe and North America, but the causes vary between regions and taxa. Habitat loss, pesticide exposure and pathogens are each implicated, and their effects are rarely independent. Wild bees in agricultural landscapes are a useful case because they face all three pressures at once, yet most field studies measure only one. In this chapter I ask whether the combined exposure of Bombus terrestris colonies to neonicotinoid residues and reduced floral diversity predicts colony growth better than either factor alone. Answering this question matters for agri-environment schemes, which currently fund flower strips without considering the residues those strips may carry."
+  },
+  {
+   "paragraph": 3,
+   "section": "introduction",
+   "text": "Glacier mass balance in High Mountain Asia may possibly be more sensitive to changes in monsoon timing than has previously been suggested, and because the region supplies meltwater to rivers on which several hundred million people depend for irrigation, drinking water and hydropower, even small shifts in the seasonal timing of melt could perhaps have consequences for downstream water security that existing GCM projections, which are typically run at coarse resolution and do not resolve the complex terrain, are unable to capture. Recent work using the ERA5 reanalysis has begun to address this gap. However, the role of debris cover remains poorly constrained."
+  },
+  {
+   "paragraph": 4,
+   "section": "introduction",
+   "text": "Perovskite solar cells has attracted considerable interest because their power conversion efficiency rose from under 4% to over 25% in roughly a decade. Despite this progress, the long-term stabilty of these devices remains a major barrier to commercialisation. Moisture, heat and ultraviolet light all degrade the perovskite layer, and stabilty under combined stresses is rarely reported. A encapsulation strategy that protect against all three has not yet been demonstrated at module scale. In this work we examine whether a thin alumina barrier deposited by atomic layer deposition can extend device lifetime under damp-heat testing."
+  },
+  {
+   "paragraph": 5,
+   "section": "introduction",
+   "text": "Missing data are common in longitudinal cohort studies, and the way they are handled can change the conclusions drawn. Multiple imputation is now the default approach in much of epidemiology, but it assumes that data are missing at random given the observed variables. When dropout depends on the unobserved outcome itself, this asumption fails and estimates can be biased in either direction. Sensitivity analyses based on delta adjustment offer one way to explore departures from missing at random, yet they are reported in fewer than a fifth of published cohort analyses. This chapter develops a practical workflow for delta-adjusted sensitivity analysis and applies it to repeated measures of lung function."
+  },
+  {
+   "paragraph": 6,
+   "section": "introduction",
+   "text": "Machine learning has completely transformed the field of materials discovery. Graph neural networks can now predict formation energies with an accuracy that clearly rivals density functional theory, and this proves that expensive simulations will soon be unnecessary. This is especially true for battery cathodes, where the search space is enormous. Nevertheless, models trained on one family of compounds often perform poorly on another, and this has not been addressed. In this thesis I develop a transfer learning approach which will definitely solve this problem for layered oxide cathodes."
+  },
+  {
+   "paragraph": 7,
+   "section": "introduction",
+   "text": "Agent-based models are increasingly used in order to study the spread of invasive plant species across fragmented landscapes. It is important to note that the majority of these models make the assumption that seed dispersal follows a simple exponential kernel. In reality, dispersal by birds and by water produces long-distance events that are much more frequent than an exponential kernel allows. The implementation of fat-tailed kernels in spatially explicit models has been limited by computational cost. The purpose of this chapter is to carry out an evaluation of whether a fat-tailed kernel changes predicted invasion speed for Impatiens glandulifera along river corridors."
+  },
+  {
+   "paragraph": 8,
+   "section": "introduction",
+   "text": "Circadian clocks coordinate physiology with the daily light–dark cycle in almost all organisms studied. In plants, the core oscillator comprises interlocking transcriptional feedback loops in which morning-expressed genes such as CCA1 and LHY repress evening-expressed genes, and vice versa. Temperature also entrains the clock, but how temperature and light signals are integrated remains unclear. Arabidopsis thaliana mutants lacking the evening complex lose rhythmicity at high temperature, which suggests that the complex acts as a thermal sensor. Here we test this idea by measuring clock gene expression in wild-type and elf3 mutant seedlings across a range of constant temperatures."
+  },
+  {
+   "paragraph": 9,
+   "section": "introduction",
+   "text": "Coral reefs are among the most diverse ecosystems on Earth, yet they were declining rapidly since the 1980s. Marine heatwaves cause bleaching, in which corals expelled their symbiotic algae. Some colonies recover, while others died within weeks. The factors that determine whether a bleached colony survives are not well understood. Previous studies focused on the symbionts, but the coral host's microbiome may also matter. In this study we investigate whether the bacterial community of bleached corals differs between recovering and dying colonies, and whether the microbial assemblage can be used to predict survival."
+  },
+  {
+   "paragraph": 10,
+   "section": "introduction",
+   "text": "Induced seismicity has increased sharply in several oil-producing regions since the widespread adoption of wastewater injection. Most induced earthquakes are small, but a handful have exceeded magnitude 5 and damaged buildings. Operators and regulators therefore need forecasts of how seismicity will respond to changes in injection rate. Physics-based models link pore pressure diffusion to fault failure, while statistical models extrapolate from recent earthquake rates; each approach has strengths, and neither performs well on its own when injection is reduced abruptly. This chapter combines the two in a hybrid forecasting model and tests it against a decade of seismicity in a well-instrumented basin."
+  },
+  {
+   "paragraph": 11,
+   "section": "introduction",
+   "text": "CRISPR-Cas9 screens have identified hundreds of genes required for proliferation of AML cells. However, many of these hits are also essential in normal HSCs, which limits their value as therapeutic targets. To date,only a small number of studies have compared dependencies between malignant and healthy cells directly. One recent screen in 12cell lines found that fewer than 5% of essential genes were specific to leukaemia. We propose to extend this approach using primary patient samples and a focused sgRNA library."
+  },
+  {
+   "paragraph": 12,
+   "section": "introduction",
+   "text": "Deep learning models for weather forecasting have improved rapidly over the past five years. These models are trained on decades of reanalysis data and can produce a ten-day forecast in seconds rather than hours. This has led some to argue that numerical weather prediction might potentially become obsolete. However, data-driven models tend to smooth out extreme values, which is a concern for forecasting things like heatwaves and heavy rainfall. There is a need for a systematic evaluation of how well these models represent extremes. This is what this chapter sets out to do."
+  },
+  {
+   "paragraph": 13,
+   "section": "introduction",
+   "text": "Fatigue cracking in welded steel bridges is usually detected by visual inspection, which is slow, subjective and limited to accessible surfaces. AE monitoring can detect crack growth as it happens, but the signals are contaminated by traffic noise and are difficult to localise in complex geometries. Several groups have proposed machine-learning classifiers to separate crack signals from noise, although most have been trained on laboratory specimens rather than on full-scale structures. This thesis evaluates whether a classifier trained on laboratory data transfers to a working railway bridge, and what minimum sensor density is needed to localise a growing crack to within 50 mm."
+  },
+  {
+   "paragraph": 14,
+   "section": "introduction",
+   "text": "Sexual selection is very clearly one of the most powerful forces shaping animal diversity. Elaborate ornaments such as the peacock's tail are thought to have evolved because females prefer to mate with males that display them, but the costs of these traits, which can include increased predation risk, reduced flight performance and higher energetic demands during the breeding season when food may already be scarce, are rarely measured directly in wild populations, and so it remains unclear how strongly natural selection opposes sexual selection in the field. Guppies offer a tractable system for addressing this question."
+  },
+  {
+   "paragraph": 15,
+   "section": "introduction",
+   "text": "Atmospheric rivers are long narrow bands of water vapour that deliver much of the winter precipitation on the west coast of North America. The occurence of extreme flooding in California is closely linked to landfalling atmospheric rivers, and a single event can produce more than a third of annual rainfall. Climate models projects that these events will become wetter as the atmosphere warms. However, it is difficult to seperate changes in frequency from changes in intensity, because the two are often detected using a same threshold. In this chapter we develop a detection method that treat the two separately."
+  },
+  {
+   "paragraph": 16,
+   "section": "introduction",
+   "text": "Bayesian hierarchical models are well suited to ecological data, which often come from many sites with small samples at each. Partial pooling allows sites with little data to borrow strength from the rest, giving more stable estimates than fitting each site separately. The cost is computational: Markov chain Monte Carlo can be slow for large hierarchical models, and divergent transitions in Hamiltonian Monte Carlo often signal geometry that the sampler cannot explore. Non-centred parameterisations solve some of these problems but not all. This chapter compares three parameterisations of a site-level occupancy model and recommends one for the national bird survey data analysed later in the thesis."
+  },
+  {
+   "paragraph": 17,
+   "section": "introduction",
+   "text": "It is well known that mitochondrial dysfunction contributes to neurodegeneration. Parkinson's disease is undoubtedly the clearest example, since mutations in PINK1 and Parkin impair the removal of damaged mitochondria. This suggests that boosting mitophagy might perhaps be protective. However, this has proved difficult to test in neurons, which are hard to manipulate genetically. Induced pluripotent stem cell (iPSC) derived dopaminergic neurons now make this possible. In this project, iPSC-derived neurons from patients will be used to test whether a small-molecule mitophagy activator restores mitochondrial membrane potential."
+  },
+  {
+   "paragraph": 18,
+   "section": "introduction",
+   "text": "Additive manufacturing allows metal parts to be built with internal geometries that cannot be machined, but printed parts often contain pores and residual stresses that reduce fatigue life. Hot isostatic pressing closes most porosity, yet it adds cost and time and can coarsen the microstructure. An alternative is to tune the laser parameters during printing so that fewer pores form in the first place. Previous studies have mapped porosity against laser power and scan speed for simple cubes, but it is not known whether these maps hold for thin-walled lattices, where heat accumulates differently. We address this question for Ti-6Al-4V lattices with strut diameters between 0.5 and 1.5 mm."
+  },
+  {
+   "paragraph": 19,
+   "section": "introduction",
+   "text": "A number of different numerical schemes have been proposed for the solution of the shallow water equations in the case of flows over complex topography. In the majority of cases, these schemes are tested on idealised benchmarks that do not include wetting and drying. It has been shown by a number of authors that wetting and drying fronts can produce spurious oscillations and negative depths. The development of a scheme that is both well-balanced and positivity-preserving is therefore a matter of considerable importance for the modelling of coastal flooding."
+  },
+  {
+   "paragraph": 20,
+   "section": "introduction",
+   "text": "Soil carbon stocks in peatlands are threatened by drainage and fire. When peat dries, it oxidises and releases CO2 to the atmosphere, and dried peat burned more readily. Restoration by rewetting aims to reverse this, but it can also increase CH4 emissions, which partly offsets the gains. The net GWP of rewetting therefore depends on the balance between these fluxes. Field measurements were scarce, particularly for tropical peat. In this thesis we measure fluxes at 3 rewetted and 3 drained sites over 2 years."
+  },
+  {
+   "paragraph": 21,
+   "section": "introduction",
+   "text": "Classifiers trained on one hospital's images often lose accuracy when applied at another, a problem known as dataset shift. The causes include differences in scanner manufacturer, acquisition protocol and patient population. Domain adaptation methods tried to align the feature distributions of source and target data, but most assume that the label distribution is the same in both, which is rarely true when disease prevalence differs between sites. This chapter examines label shift specifically. I ask how much of the accuracy lost across sites can be recovered by re-weighting predictions with an estimate of target prevalence, without retraining the model."
+  },
+  {
+   "paragraph": 22,
+   "section": "introduction",
+   "text": "Long non-coding RNAs were once dismissed as transcriptional noise, but a growing number have have been shown to regulate gene expression. Their mechanisms are diverse: some act as scaffolds for chromatin-modifying complexes, while others sequester microRNAs or alter the splicing of nearby genes. Because lncRNA sequences are poorly conserved, there function is difficult to predict from sequence alone. Loss-of-function screens using CRISPR interference have begun to identify lncRNAs required for cell growth, but few of these hits have been followed up mechanistically. This chapter characterises one such hit, a lncRNA that is upregulated in hypoxic breast cancer cells."
+  },
+  {
+   "paragraph": 23,
+   "section": "introduction",
+   "text": "Sea-level rise over the coming century will depend heavily on the response of the Antarctic Ice Sheet, which is the largest source of uncertainty in current projections. Much of this uncertainty arises from processes at the ice–ocean boundary, where warm ocean water melts the underside of floating ice shelves. Melt rates are difficult to observe directly and are usually parameterised in ice-sheet models using simple functions of ocean temperature. Different parameterisations produce sea-level contributions that differ by a factor of three by 2100. In this chapter I use an ensemble of ice-sheet simulations to quantify how much of the projection spread is attributable to the melt parameterisation alone."
+  },
+  {
+   "paragraph": 24,
+   "section": "introduction",
+   "text": "Lithium-ion batteries degrade with use, and this limits the lifetime of electric vehicles. The capacity of a cell fades through several mechanisms, including growth of the solid electrolyte interphase and loss of active material. This is clearly a complex problem. Physics-based models have the ability to describe these mechanisms, but they have many parameters that are hard to identify. Data-driven models are easier to fit, but they do not extrapolate well. This thesis is about combining these."
+  },
+  {
+   "paragraph": 25,
+   "section": "introduction",
+   "text": "Island populations often evolve rapidly after colonisation, and lizards on small Caribbean islands have provided some of the clearest examples. When a ground-dwelling predator is introduced, Anolis lizards shift to higher perches within months, and selection favours longer limbs that improve sprinting on broad surfaces. Whether such changes reflect genetic evolution or developmental plasticity is often unclear, because both can produce the same shift in morphology within a generation. Common-garden experiments can separate the two, but they are rarely possible for wild vertebrates. Here we raise hatchlings from experimental islands under identical conditions to estimate how much of the observed limb change is heritable."
+  },
+  {
+   "paragraph": 26,
+   "section": "introduction",
+   "text": "Causal inference from observational data has become a central topic in statistics. Methods such as IPW and g-computation allow researchers to estimate causal effects when randomisation is not possible. These methods proved that observational studies can replace randomised trials. However, they relied on the assumption of no unmeasured confounding, which can not be tested. In this thesis I will develop a sensitivity analysis for IPW which shows how strong an unmeasured confounder would need to be to explain away an observed effect."
+  },
+  {
+   "paragraph": 27,
+   "section": "introduction",
+   "text": "In this day and age, groundwater is relied upon by billions of people for drinking water and agriculture. In many arid regions, aquifers are being depleted at a rate that is far in excess of the rate of natural recharge. This is a serious concern. Satellite gravimetry has made it possible to monitor changes in total water storage from space, but the resolution is coarse, at around 300 km. This makes it difficult to attribute depletion to individual aquifers or to specific patterns of pumping."
+  },
+  {
+   "paragraph": 28,
+   "section": "introduction",
+   "text": "Antimicrobial peptides are short, usually cationic molecules that kill bacteria by disrupting their membranes. Because they act on membrane structure rather than on a single protein target, resistance to them was long thought to evolve slowly. Experimental evolution has challenged this view: Staphylococcus aureus populations exposed to increasing concentrations of some peptides become resistant within a few hundred generations, often through mutations in the mprF and dlt genes that alter surface charge. What remains unknown is whether such resistance carry a fitness cost in the absence of the peptide, which would determine whether it persists once treatment stops."
+  },
+  {
+   "paragraph": 29,
+   "section": "introduction",
+   "text": "Surrogate models can replace expensive simulations when many model runs are needed, for example in uncertainty quantification or design optimisation. Neural networks are a popular choice of surrogate because they are flexible and fast to evaluate. However, a neural net trained on a limited set of simulations may give confident predictions far from the training data. ANNs also struggle to accomodate physical constraints such as conservation of mass. Physics-informed approaches add these constraints to the loss function, and they have been applied to a range of fluid problems. We test whether a physics-informed ANN improves extrapolation for a groundwater contaminant transport model."
+  },
+  {
+   "paragraph": 30,
+   "section": "introduction",
+   "text": "Urbanisation is extremely rapidly changing the habitats available to wildlife. Some species are able to persist in cities, while others disappear entirely. The number of studies examining urban adaptation are increasing, but most focus on birds. This means that we know relatively little about invertebrates, which make up the bulk of urban biodiversity. Spiders are a good candidate group, because they are abundant, easy to sample, and are known to respond to artificial light. This study examines whether orb-weaving spiders in urban sites build webs closer to street lights than spiders in rural sites."
+  },
+  {
+   "paragraph": 31,
+   "section": "methods",
+   "text": "Total RNA was extracted from frozen leaf tissue using a column-based kit according to the manufacturer's instructions, with an on-column DNase digestion step. RNA integrity was assessed on an automated electrophoresis system, and only samples with an RNA integrity number above 7 were retained. Complementary DNA was synthesised from 1 µg of RNA using random hexamer primers. Quantitative PCR was performed in triplicate 10 µL reactions, and expression was normalised to the geometric mean of two reference genes, ACT2 and UBQ10, whose stability across treatments had been confirmed beforehand."
+  },
+  {
+   "paragraph": 32,
+   "section": "methods",
+   "text": "Sediment cores were collected from 8 lakes in July 2023 using a gravity corer. Each core is sectioned at 1 cm intervals in the field and the slices were stored at 4 degrees until analysis. Water content was determined by drying a subsample at 105 for 24 hours. Organic matter content was estimated by loss on ignition at 550°C for 4h. Radiometric dating was carried out on 15 cores, and age models are constructed using the constant rate of supply model."
+  },
+  {
+   "paragraph": 33,
+   "section": "methods",
+   "text": "We modelled the number of seedlings in plot i, y_i, as a negative binomial random variable with mean μ_i and dispersion φ. The logarithm of μ_i was a linear function of canopy openness and soil moisture, with a random intercept for each of the 24 transects. Weakly informative priors were placed on all coefficients: normal with mean zero and standard deviation 1 on the log scale. The model was fitted in Stan with four chains of 2,000 iterations each, the first half discarded as warm-up. Convergence was judged by R-hat values below 1.01 and the absence of divergent transitions."
+  },
+  {
+   "paragraph": 34,
+   "section": "methods",
+   "text": "In order to assess the mechanical properties of the printed specimens, tensile tests were carried out on a universal testing machine at a constant crosshead speed of 1 mm/min, with strain being measured by means of a clip-on extensometer that was attached to the gauge section of each specimen prior to the commencement of loading, and the tests were continued until fracture occurred, after which the fracture surfaces were examined using scanning electron microscopy in order to identify the mode of failure."
+  },
+  {
+   "paragraph": 35,
+   "section": "methods",
+   "text": "Bird surveys were conducted at 60 point-count stations spaced at least 250 m apart. Each station was visited three times between late May and early July, with visits beginning within 30 minutes of sunrise and ending by 10:00. At each visit, an observer recorded all birds seen or heard during a 10-minute count and estimated the distance to each individual in bands. Counts were not conducted in rain or in winds above 20km/h. Observers rotated among stations so that no station was always surveyed by the same person."
+  },
+  {
+   "paragraph": 36,
+   "section": "methods",
+   "text": "The dataset was split into training, validation and test sets in ratio of 70:15:15. We trained a CNN with five convolutional layers and two fully connected layers. Batch normalisation and dropout were used after each layer. This helped with overfitting. The model was optimised with Adam with an initial LR of 0.001, which was reduced by factor of ten when validation loss plateaued. Early stopping was applied with patience of 10 epochs. All experiments was run on a single GPU."
+  },
+  {
+   "paragraph": 37,
+   "section": "methods",
+   "text": "The ocean temperature field was simulated with a one-dimensional vertical diffusion model. The rate of change of temperature at depth z equals the vertical derivative of the diffusive heat flux, plus a source term representing absorption of shortwave radiation, which decays exponentially with depth with an e-folding scale of 20 m. The diffusivity was set to 10⁻⁵ m² s⁻¹ below the mixed layer and increased by two orders of magnitude within it. The equations were discretised on a 1 m grid to a depth of 500 m and integrated with an implicit scheme and a time step of one hour."
+  },
+  {
+   "paragraph": 38,
+   "section": "methods",
+   "text": "Cells were harvested at mid-log phase by centrifugation at 4,000 g for 10 min and the supernatent was discarded. Pellets were resuspended in lysis buffer and sonicated on ice. Lysates were then cleared by a second centrifugation and the supernatent was transferred to a fresh tube. Protein concentration was determined using a Bradford assay. Samples was then mixed with loading buffer and boiled for 5 min before being loaded onto a 12% SDS-PAGE gel."
+  },
+  {
+   "paragraph": 39,
+   "section": "methods",
+   "text": "A total of 412 participants were included in the analysis. Due to the fact that the outcome variable was highly skewed, a log transformation was applied prior to the fitting of the regression models. The selection of covariates was carried out on the basis of a directed acyclic graph that was constructed prior to the analysis of the data. The examination of model residuals was performed in order to make an assessment of the assumptions of normality and homoscedasticity."
+  },
+  {
+   "paragraph": 40,
+   "section": "methods",
+   "text": "Daily precipitation and temperature data for 1981–2020 were obtained from 143 stations with less than 5% missing values. Gaps of up to three consecutive days were filled by linear interpolation; longer gaps were left missing. Extreme precipitation was defined as the annual maximum one-day total, and a generalized extreme value distribution were fitted to each station's series by maximum likelihood. To test for trends, the location parameter was allowed to vary linearly with global mean surface temperature, and the fit was compared with a stationary model using a likelihood-ratio test."
+  },
+  {
+   "paragraph": 41,
+   "section": "methods",
+   "text": "A three-dimensional FE model of the bracket was built in a commercial solver. The geometry is meshed with quadratic tetrahedral elements with a global size of 2mm, refined to 0.5mm near the fillet. Material behavior was modeled as linear elastic with a Young's modulus of 210 GPa and Poisson's ratio of 0.3. A mesh convergence study shows that peak stress changed by less than 2% when the element size is halved. Loads were applied as a distributed pressure on the upper face."
+  },
+  {
+   "paragraph": 42,
+   "section": "methods",
+   "text": "Daphnia magna clones were collected from three ponds and maintained in the laboratory for at least ten generations before the experiment, to reduce maternal effects. Neonates less than 24 h old were placed individually in 50 mL jars of artificial pond medium and fed daily with the green alga Chlamydomonas reinhardtii at a fixed carbon concentration. Half of the jars received a kairomone extract from fish-conditioned water. Body length at maturity, age at first reproduction and the size of the first clutch were recorded for each individual."
+  },
+  {
+   "paragraph": 43,
+   "section": "methods",
+   "text": "Hyperparameters were basically tuned using a random search over the learning rate, batch size, number of layers and dropout rate, and for each configuration we tried to train the model for up to 100 epochs, although in practice many runs were stopped earlier because the validation loss did not improve, and the configuration with the lowest validation loss was then selected and retrained on the combined training and validation data before being evaluated once on the held-out test set, which had not been used at any earlier stage."
+  },
+  {
+   "paragraph": 44,
+   "section": "methods",
+   "text": "Knockout lines were generated using CRISPR-Cas9 with two guide RNAs flanking exon 3 of the target gene. Guides were designed in order to minimize predicted off-target sites and were cloned into an expression vector carrying a puromycin resistance cassette. HEK293T cells were transfected, selected with puromycin for 48 h, and single-cell clones were isolated by limiting dilution. Deletions were confirmed by PCR across the targeted region and by Sanger sequencing, and loss of protein was verified by western blot. Two independent knockout clones were used in all subsequent experiments."
+  },
+  {
+   "paragraph": 45,
+   "section": "methods",
+   "text": "We used output from 18 climate models participating in CMIP6. For each model, the first ensemble member of the historical and SSP5-8.5 runs were downloaded. The data was regridded to a common 1° grid using bilinear interpolation. This may introduce errors near coastlines. Each simulation was then bias-corrected against observations using quantile mapping over 1985–2014, and the corrected experiments were used to calculate changes in heatwave frequency."
+  },
+  {
+   "paragraph": 46,
+   "section": "methods",
+   "text": "Let the observed survival time for individual i be the minimum of the event time and the censoring time. We assumed a proportional hazards model in which the hazard at time t equals a baseline hazard multiplied by the exponential of a linear predictor. The baseline hazard was modelled as piecewise constant over six intervals chosen so that each contained roughly equal numbers of events. Inference was carried out by maximising the partial likelihood, and the proportional hazards assumption was checked with scaled Schoenfeld residuals."
+  },
+  {
+   "paragraph": 47,
+   "section": "methods",
+   "text": "Thin films were deposited by RF magnetron sputtering onto silicon substrates that had recieved a standard cleaning procedure. The base pressure was below 5 × 10⁻⁶ Torr and the argon pressure during deposition was 3 mTorr. Deposition power was 100 and the substrate was held at room temperature. After deposition, films were anealed in air at 400, 500 and 600 °C for 1 h. Film thickness was measured by profilometry and was approximately 200nm for all samples."
+  },
+  {
+   "paragraph": 48,
+   "section": "methods",
+   "text": "Camera traps were deployed at 45 locations on a systematic grid with 1.5 km spacing across the reserve. Cameras were mounted 40 cm above the ground on trees facing game trails and were set to record a burst of three images per trigger with a 30-second delay between triggers. Each camera operated for atleast 60 days during the dry season. Images were classified to species by two independent observers, and disagreements were resolved by a third. Detections of the same species at the same camera within 30 minutes were treated as a single event."
+  },
+  {
+   "paragraph": 49,
+   "section": "methods",
+   "text": "The model was implemented in Python and utilises the NumPy and SciPy libraries for all numerical operations. In terms of the time integration, a fourth-order Runge-Kutta scheme was utilised with a fixed step size. With regard to the boundary conditions, periodic boundaries were utilised in both horizontal directions. The code is parallelised by means of domain decomposition and was run on 64 cores. For the purposes of reproducibility, all random seeds were fixed."
+  },
+  {
+   "paragraph": 50,
+   "section": "methods",
+   "text": "Escherichia coli K-12 MG1655 was grown in LB broth at 37 °C with shaking at 200 rpm. Minimum inhibitory concentrations of ciprofloxacin were determined by broth microdilution in 96-well plates, following the standard guidelines, with twofold dilutions from 0.002 to 4 µg/mL. Plates were incubated for 18 h and the MIC was recorded as the lowest concentration without visible growth. Each strain was tested in three biological replicates on separate days, and the modal value is reported."
+  },
+  {
+   "paragraph": 51,
+   "section": "methods",
+   "text": "A GAM was fitted to the daily counts with a smooth term for day of year and a linear term for temperature. The smoothing parameter was estimated by REML. Model selection was based on AIC. This seemed to work well. Overdispersion were handled by assuming a negative binomial error distribution. Autocorrelation in residuals was checked using the ACF, and an AR(1) term was added when needed."
+  },
+  {
+   "paragraph": 52,
+   "section": "methods",
+   "text": "Seismic data were recorded by a temporary network of 25 broadband stations deployed for 18 months around the injection site. Earthquakes are detected with a short-term to long-term average ratio trigger and located with a nonlinear probabilistic method using a one-dimensional velocity model derived from a nearby borehole. Relative relocations were then computed by double-difference using waveform cross-correlation, which reduced median horizontal uncertainties from about 300 m to 40 m. Local magnitudes were calibrated against a regional catalog for events recorded by both networks."
+  },
+  {
+   "paragraph": 53,
+   "section": "methods",
+   "text": "The wind tunnel was very carefully calibrated before each set of measurements. I measured the free-stream velocity with a Pitot tube connected to a differential pressure transducer. Turbulence intensity were below 0.5% at all speeds tested. The aerofoil model was mounted vertically between two endplates, and the angle of attack was set using a digital inclinometer that has an accuracy of 0.1 degrees. Surface pressures was measured at 48 taps distributed around the mid-span section."
+  },
+  {
+   "paragraph": 54,
+   "section": "methods",
+   "text": "Each document was converted to lower case, tokenised on whitespace and punctuation, and stripped of tokens that appeared in fewer than five documents. Term frequency–inverse document frequency weights were computed on the training set only and then applied unchanged to the validation and test sets, so that no information from held-out documents leaked into the features. A logistic regression classifier with an L2 penalty was trained, and the penalty strength was chosen by five-fold cross-validation on the training set. Performance is reported as macro-averaged F1 to account for unequal class sizes."
+  },
+  {
+   "paragraph": 55,
+   "section": "methods",
+   "text": "Mice were housed under a 12 h light/dark cycle with free access to food and water. At 8 weeks of age, animals were randomly assigned to a control or high-fat diet. Body weight is measured weekly. After 12 weeks it was collected from the liver and adipose tissue and snap frozen in liquid nitrogen. Glucose tolerance was assessed after a 6 h fast by injecting glucose (2 g/kg) intraperitoneally and measuring blood glucose at 0,15,30,60 and 120 min. All procedures were approved by the local ethics comittee."
+  },
+  {
+   "paragraph": 56,
+   "section": "methods",
+   "text": "The population was divided into susceptible, infected and recovered plant hosts. New infections arise at a rate proportional to the product of susceptible and infected densities, with a transmission coefficient that declines exponentially with distance between fields. Infected hosts are removed by roguing at a constant per-capita rate. We solved the system on a lattice of 100 by 100 fields using a stochastic simulation algorithm, so that each infection and removal event occurs at a random time drawn from the current total rate. Each scenario was simulated 500 times."
+  },
+  {
+   "paragraph": 57,
+   "section": "methods",
+   "text": "It should be noted that the sampling was carried out during a period of time when water levels were somewhat lower than average. Fish were captured by means of electrofishing along 100 m reaches. All individuals were identified to species level, measured for fork length, and released back into the river. It is possible that some smaller individuals may have been missed. Each reach was sampled on a single occasion only."
+  },
+  {
+   "paragraph": 58,
+   "section": "methods",
+   "text": "To quantify predictive uncertainty we used a deep ensemble of ten networks, each trained from a different random initialisation on the full training set. For a given input, the predictive mean is the average of the ten network outputs and the predictive variance is the average of the individual predicted variances plus the variance of the individual means. This separates noise in the data from disagreement between models. Calibration was assessed by comparing the nominal coverage of central prediction intervals with the observed coverage on the test set."
+  },
+  {
+   "paragraph": 59,
+   "section": "methods",
+   "text": "ChIP-seq was performed using an antibody against H3K27ac. Libraries were sequenced on an Illumina platform to a depth of approximately 30 million reads per sample. Reads were aligned to the hg38 genome using Bowtie2 and duplicates removed. Peaks were called with MACS2 using a q-value threshold of 0.01. The data shows strong enrichment at promoters. Differential binding was assesed with DiffBind, and regions with FDR below 0.05 were considered significant."
+  },
+  {
+   "paragraph": 60,
+   "section": "methods",
+   "text": "Rock samples were crushed and sieved to the 250–500 µm fraction, and quartz was isolated by repeated leaching in dilute hydrofluoric and nitric acids, after which beryllium was extracted by ion-exchange chromatography and the 10Be/9Be ratio was measured by accelerator mass spectrometry at a national facility, with the measured ratios normalised to a standard and corrected for a procedural blank of 3 × 10⁻¹⁵, and exposure ages were then calculated using a scaling scheme that accounts for latitude, altitude and changes in the geomagnetic field over time."
+  },
+  {
+   "paragraph": 61,
+   "section": "methods",
+   "text": "We evaluated three baselines alongside the proposed model: a persistence forecast, which repeats the last observed value; a seasonal climatology computed from the training years; and a gradient-boosted tree model using the same input features. All models were trained on data from 2000–2015, tuned on 2016–2018 and tested on 2019–2022. Skill was measured with the continuous ranked probability score for probabilistic forecasts and with mean absolute error for point forecasts. Differences between models were tested with a block bootstrap that resampled whole months to respect temporal dependence."
+  },
+  {
+   "paragraph": 62,
+   "section": "methods",
+   "text": "Plants were grown in a greenhouse under natural light supplemented to give a 16 h photoperiod. Five seeds were sown per pot and thinned to 1 seedling after emergence. Watering treatments start 3 weeks after sowing. Plants in the drought treatment receive 30% of field capacity, and control plants were kept at 80%. This continued for 6 weeks. At harvest, shoots and roots were separated, dried at 60 °C for 72 h and weighed."
+  },
+  {
+   "paragraph": 63,
+   "section": "methods",
+   "text": "Samples for transmission electron microscopy were prepared by focused ion beam milling. A protective platinum layer was first deposited over the region of interest, after which a lamella approximately 2 µm thick was cut, lifted out and attatched to a copper grid. The lamella was then thinned to below 100 nm using progressively lower beam currents, with a final polish at 5 kV to reduce amorphous damage. Imaging was carried out at 200 kV, and elemental maps were acquired by energy-dispersive X-ray spectroscopy."
+  },
+  {
+   "paragraph": 64,
+   "section": "methods",
+   "text": "The ABM was calibrated against the observed number of infested trees using approximate Bayesian computation. Ten thousand parameter sets was drawn from uniform priors, and the model were run once for each set. The 1% of coefficient sets with the smallest distance between simulated and observed data were retained as the approximate posterior. The distance metric were the sum of squared differences in annual counts, and the tolerance was chosen so that around one hundred sets were accepted."
+  },
+  {
+   "paragraph": 65,
+   "section": "methods",
+   "text": "Power was estimated by simulation. For each candidate sample size, 1,000 datasets were generated from the fitted mixed model with the treatment effect fixed at the smallest difference considered biologically meaningful, a 15% reduction in mean lesion area. Each simulated dataset was analysed with the same model as the real data, and power was taken as the proportion of simulations in which the treatment effect was significant at the 5% level. A sample of eight plants per treatment per block gave an estimated power of 0.82."
+  },
+  {
+   "paragraph": 66,
+   "section": "results",
+   "text": "Expression of CCA1 peaked around dawn in wild-type seedlings at all three temperatures, with a period close to 24 h (Figure 3a). In elf3 mutants, rhythmicity was maintained at 17 °C but was progressively damped at 22 °C and lost entirely at 27 °C, where expression remained at an intermediate level throughout the time course (Figure 3b). Fitting a damped cosine model confirmed this pattern: the estimated relative amplitude error rose from 0.21 at 17 °C to 0.68 at 27 °C in the mutant, compared with values below 0.25 in the wild type at every temperature."
+  },
+  {
+   "paragraph": 67,
+   "section": "results",
+   "text": "Colony growth was strongly reduced in the combined treatment (Figure 4). Colonies exposed to both neonicotinoid residues and low floral diversity gained 38% less mass than controls, while those exposed to either stressor alone showed reductions of 12% and 15% (Figure 2). This proves that the two stressors act synergistically. The interaction term in the mixed model was significant (p = 0.03). This was also seen in the number of queens produced (Figure 5)."
+  },
+  {
+   "paragraph": 68,
+   "section": "results",
+   "text": "The results showed that lung function declined significantly with age (p<0.001). The decline were steeper in smokers than in non-smokers. Under the missing at random assumption the estimated annual decline was 28 mL, whereas assuming that dropouts had 10 mL per year faster decline gave an estimate of 31. The conclusion that smokers decline faster was robust to all values of delta considered, which was very reassuring."
+  },
+  {
+   "paragraph": 69,
+   "section": "results",
+   "text": "We recorded 2,847 individual birds of 64 species across the three survey rounds. Detection probability declined with distance as expected, and the half-normal detection function was preferred over the hazard-rate model by AIC (difference of 4.2). Estimated densities of ground-nesting species were lower in grazed than in ungrazed plots for 9 of the 11 species with sufficient detections (Table 2). The largest difference was for the meadow pipit, whose density in grazed plots was about one third of that in ungrazed plots, although the 95% confidence intervals for two species overlapped zero."
+  },
+  {
+   "paragraph": 70,
+   "section": "results",
+   "text": "Our model achieved an accuracy of 94.2% on the test set, which is a huge improvement over the baseline. This clearly demonstrates the superiority of the proposed architecture. The F1 score was 0.91. This is much higher than all previous methods. Interestingly, the model performed slightly worse on images from the second hospital (accuracy 88.7%), but this was expected given the different scanner used there."
+  },
+  {
+   "paragraph": 71,
+   "section": "results",
+   "text": "Trends in annual maximum one-day precipitation were positive at 98 of the 143 stations, and at 31 of these the non-stationary model was preferred at the 5% level (Figure 2). Only four stations showed a significant negative trend, all of them in the rain shadow of the coastal range, which is very interesting. Averaged across stations, the location parameter increased by 6.1% per degree of global warming (95% interval 3.8–8.5%), which is close to the rate expected from the Clausius–Clapeyron relation. The scale and shape parameters showed no consistent change."
+  },
+  {
+   "paragraph": 72,
+   "section": "results",
+   "text": "The as-printed lattices contain between 0.4 and 2.1 % porosity, depending on scan speed. Porosity was highest in the thinnest struts, where it reaches 3.5%. Increasing laser power from 175 to 225 reduced porosity in the thick struts but increases it in the thin ones (Fig. 5). Pores in thin struts were mostly spherical, consistent with keyhole porosity, whereas pores in thick struts are irregular."
+  },
+  {
+   "paragraph": 73,
+   "section": "results",
+   "text": "Knockout of the lncRNA reduced cell proliferation under hypoxia by approximately 40% compared with control cells. This may possibly suggest that the lncRNA could be required for adaptation to low oxygen. Under normoxic conditions, there was no difference between knockout and control. RNA fluorescence in situ hybridisation showed that the transcript localises mainly to the nucleus, where it appears to perhaps associate with chromatin."
+  },
+  {
+   "paragraph": 74,
+   "section": "results",
+   "text": "The ensemble spread in sea-level contribution by 2100 under the high-emissions scenario ranged from 4 to 41 cm. Holding the climate forcing fixed and varying only the melt parameterization accounted for 58% of this variance, more than the ice-flow law and the basal friction law combined (Figure 4). The quadratic parameterization consistently produced the largest contributions, because it amplifies melt where ocean temperatures are highest. Simulations using the plume-based parameterization fell in the middle of the range and were least sensitive to grid resolution."
+  },
+  {
+   "paragraph": 75,
+   "section": "results",
+   "text": "It can be seen from Figure 6 that the fat-tailed kernel resulted in a much faster rate of spread when compared with the exponential kernel. The invasion front advanced at a rate of 4.3 km per year in the case of the fat-tailed kernel, as opposed to 1.1 km per year in the case of the exponential kernel. It is interesting to note that the difference between the two kernels was more pronounced in catchments with a higher degree of connectivity."
+  },
+  {
+   "paragraph": 76,
+   "section": "results",
+   "text": "All three parameterisations gave similar posterior means for the fixed effects, but they differed markedly in sampling efficiency. The centred model produced divergent transitions in all four chains and an effective sample size below 100 for the site-level standard deviation. The non-centred model removed the divergences entirely and raised the effective sample size to over 2,000. The partially centred model performed in between. Run times per effective sample were lowest for the non-centred version, which we therefore use for the remaining analyses."
+  },
+  {
+   "paragraph": 77,
+   "section": "results",
+   "text": "Western blot confirmed complete loss of protein in both KO clones. Mitochondrial membrane potential, measured by TMRM fluorescence, was reduced by 35% in knockout cells relative to wild type. Treatment of the mutant cells with the activator for 24h restored membrane potential to 92 % of wild type levels. Similar results was obtained in the second clone, although the recovery took longer and was more variable between replicate wells."
+  },
+  {
+   "paragraph": 78,
+   "section": "results",
+   "text": "Daphnia magna exposed to fish kairomones matured earlier and at a smaller size than unexposed individuals in all three clones. The mean age at first reproduction fall from 9.4 to 7.8 days, and body length at maturity fell from 2.6 to 2.2 mm. Clones differed in the magnitude of the response, producing a significant clone-by-treatment interaction for body length but not for age at maturity. First-clutch size did not differ between treatments once body length was included as a covariate."
+  },
+  {
+   "paragraph": 79,
+   "section": "results",
+   "text": "The classifier trained on laboratory data achieved a recall of 0.91 for crack signals in the laboratory test set but only 0.54 when applied to the bridge data, mainly because many crack signals on the bridge were misclassified as traffic noise during periods of heavy loading when the two types of signal overlap in both time and frequency, and when the classifier was retrained with approximately around 200 labelled bridge events added to the training set the recall recovered to 0.83 while the false-alarm rate remained below one per hour."
+  },
+  {
+   "paragraph": 80,
+   "section": "results",
+   "text": "Atmospheric rivers detected by the new method were 12% less frequent than those identified by the fixed-threshold method over 1980–2019, but their mean integrated vapour transport was 9% higher. Both differences arose mainly from weak, short-lived events that crossed the fixed threshold only because background humidity had risen. When frequency and intensity were analysed separately, landfalling events showed no significant trend in frequency, whereas the intensity of the strongest decile increased by about 4% per decade."
+  },
+  {
+   "paragraph": 81,
+   "section": "results",
+   "text": "Reweighting predictions using the estimated target prevalence recovered most of the lost accuracy. At the the external site, balanced accuracy rose from 0.71 to 0.79, compared with 0.82 at the source site. This is not the case for the third site, where the prevalence estimate was unstable. This happened because there were only 40 positive cases. The calibration also improves after reweighting (Table 4)."
+  },
+  {
+   "paragraph": 82,
+   "section": "results",
+   "text": "Hatchlings from islands where the predator had been introduced had relative hindlimb lengths 4.1% longer than those from control islands, even though all were raised under identical conditions. This difference is about two thirds of the difference observed in wild-caught adults, which implies that most of the shift in limb length has a genetic basis. Parent–offspring regression gave a heritability estimate of 0.46 (95% CI 0.21–0.70). Perch diameter during rearing had a small additional effect, consistent with a modest plastic component."
+  },
+  {
+   "paragraph": 83,
+   "section": "results",
+   "text": "There was a signficant increase in MIC after 300 generations of exposure in all six populations. Two populations reached resistance levels 16-fold higher than the ancestor. Whole-genome sequencing revealed mutations in mprF in four populations and in dltB in three. In competition assays without peptide, resistant clones had a relative fitness of 0.94, which was a signficant cost (p=0.02). The cost did not differ between the mprF and dltB mutants."
+  },
+  {
+   "paragraph": 84,
+   "section": "results",
+   "text": "The relocated catalogue shows a very clear migration of seismicity away from the injection well over time. Events in the first 3 months were concentrated within 1 km of the well, whereas by month 15 seismicity extended to 6 km along a NE-trending structure. The rate of migration is consistent with pore pressure diffusion with a hydraulic diffusivity of about 0.5 m2/s. The b-value decreased from 1.2 to 0.9 over the same period, which is a huge change."
+  },
+  {
+   "paragraph": 85,
+   "section": "results",
+   "text": "The deep ensemble was by far the best calibrated of the four methods and is clearly the method of choice. Its 90% prediction intervals contained 88.6% of test observations, compared with 71.2% for Monte Carlo dropout and 79.5% for a single network with a variance head. Coverage of the ensemble fell to 80.1% for inputs outside the convex hull of the training data, a smaller drop than for the other methods. The decomposition showed that model disagreement accounted for most of the predictive variance in these extrapolation regions but less than a fifth of it elsewhere."
+  },
+  {
+   "paragraph": 86,
+   "section": "results",
+   "text": "A large number of webs were found in close proximity to street lights at urban sites. Urban spiders showed a tendency to build their webs at a distance of less than 2 m from the nearest light source, whereas rural spiders showed no such tendency. The mean distance from webs to the nearest light was 1.4 m in urban sites in comparison to 5.8 m in rural sites. Prey capture rates were higher for webs located near lights."
+  },
+  {
+   "paragraph": 87,
+   "section": "results",
+   "text": "Damp-heat testing at 85 °C and 85% relative humidity revealed a clear benefit of the alumina barrier. Unencapsulated devices lost half their initial efficiency within 120 h, whereas devices with a 20 nm barrier retained 80% of their initial efficiency after 1,000 h. Thinner barriers of 5 and 10 nm gave intermediate lifetimes. X-ray diffraction of failed devices showed the lead iodide peak characteristic of perovskite decomposition, and this peak appeared much later in barrier-coated devices."
+  },
+  {
+   "paragraph": 88,
+   "section": "results",
+   "text": "The physics-informed network matched the full simulations perfectly within the training range. Outside this range, its RMSE was 40% lower than that of the standard network. This is because the conservation constraint stops the network from predicting negative concentrations. Training took around three times as long, mostly because the residual of the governing equation had to be evaluated at every collocation point. This is a small price to pay."
+  },
+  {
+   "paragraph": 89,
+   "section": "results",
+   "text": "Of the 15,400 regions with H3K27ac enrichment, 1,212 differed significantly between hypoxic and normoxic cells at a false discovery rate of 5%. Most of these regions (83%) gained acetylation under hypoxia, and they were concentrated in distal intergenic and intronic regions rather than at promoters. Motif analysis of the gained regions identified the HRE as the most enriched sequence, present in 41% of gained regions compared with 9% of background regions."
+  },
+  {
+   "paragraph": 90,
+   "section": "results",
+   "text": "Heatwave frequency increases in all 18 models by the end of the century. The multi-model mean shows 24 additional heat wave days per year in the Mediterranean, but the spread between models was large, from 9 to 47 days. Models with higher climate sensitivity projected larger increases. After bias correction, the inter-model spread decreases by roughly a quarter. Under 2°C of global warming the median increase was 11 days, compared with 4 days at 1.5 °C."
+  },
+  {
+   "paragraph": 91,
+   "section": "results",
+   "text": "Measured lift coefficients agreed with the panel-method predictions to within 3% for angles of attack up to 8°. Beyond this, the measured lift curve flattened earlier than predicted, and stall occurred at 12° rather than the predicted 14°. Surface pressure distributions showed a laminar separation bubble on the suction side between 15% and 30% of chord at moderate angles of attack, which moved towards the leading edge as the angle increased. The bubble disappeared when a trip strip was applied near the leading edge."
+  },
+  {
+   "paragraph": 92,
+   "section": "results",
+   "text": "The sensitivity analysis showed that an unmeasured confounder would need an odds ratio of at least 2.4 with both treatment and outcome to explain away the observed effect. The E-value for the confidence limit was 1.6. Because the p-value was 0.06, we proved that the treatment had no effect on mortality in the subgroup aged over 75. In contrast, the effect in younger patients was highly significant."
+  },
+  {
+   "paragraph": 93,
+   "section": "results",
+   "text": "Fish species richness were higher in restored reaches than in unrestored ones. On average, restored reaches contained 7.2 species compared with 5.1 in controls. Brown trout density did not differ between reach types, but juvenile salmon was more abundant in restored reaches. The existance of deep pools appeared to be the strongest predictor of salmon abundance, explaining more variation than substrate size or riparian cover."
+  },
+  {
+   "paragraph": 94,
+   "section": "results",
+   "text": "The proposed model outperformed all three baselines at lead times of one to seven days (Table 3). Its continuous ranked probability score was 18% lower than that of the gradient-boosted trees at a lead time of one day, and the advantage narrowed to 6% at seven days. Persistence was competitive at the shortest lead time but degraded quickly. The block bootstrap indicated that the improvement over gradient-boosted trees was significant at every lead time except the longest, where the 95% interval for the difference included zero."
+  },
+  {
+   "paragraph": 95,
+   "section": "results",
+   "text": "The ABC posterior for the dispersal parameter was narrow and centred on 380 m, but the posterior for the establishment probability was almost as wide as the prior. This indicates that the data contain little information about establishment. Simulations from the posterior reproduced the observed annual counts well in the first six years, but they underestimated the number of infested trees in the final two years, when a new cluster appeared about 4 km from the main infestation that the model, which assumes a single introduction point and does not allow for human-mediated transport of infested wood, could not explain, which is very significant."
+  },
+  {
+   "paragraph": 96,
+   "section": "discussion",
+   "text": "Our results suggest that the evening complex contributes to temperature sensing in the plant clock, but they do not show that it is the sensor. Loss of rhythmicity in elf3 mutants at warm temperatures is consistent with a thermal role for the complex, and it agrees with reports that ELF3 protein changes its physical state with temperature. However, other clock components are also temperature sensitive, and the mutant phenotype could arise because the remaining network cannot compensate for the missing input. Distinguishing these explanations will require temperature-insensitive versions of ELF3 that retain their other functions."
+  },
+  {
+   "paragraph": 97,
+   "section": "discussion",
+   "text": "Our findings definitely show that neonicotinoids and poor floral resources interact to harm bumblebee colonies. This has major implications for policy. This means that flower strips alone will never be enough to protect pollinators, and that pesticides must be banned completely. Of course, our study was conducted at only two farms, but we are confident that the results apply everywhere."
+  },
+  {
+   "paragraph": 98,
+   "section": "discussion",
+   "text": "It would appear that the results of the sensitivity analysis may suggest that the conclusions are possibly relatively robust to departures from the missing at random assumption. However, it could be argued that the range of delta values considered might perhaps have been somewhat too narrow. In future work, it might be useful to consider elicitation of plausible delta values from clinical experts, which could potentially provide a more principled basis for the choice of the range."
+  },
+  {
+   "paragraph": 99,
+   "section": "discussion",
+   "text": "The accuracy lost across sites was largely recovered by a simple prevalence correction, which suggests that much of the apparent dataset shift in this task is label shift rather than a change in image appearance. This has a practical implication: before investing in domain adaptation, a hospital deploying a model could first estimate local prevalence and adjust the model's outputs. The correction failed at the third site, however, where few positive cases made the prevalence estimate unstable. Methods that combine prevalence estimates across similar sites may help in such settings, and we are testing one such approach."
+  },
+  {
+   "paragraph": 100,
+   "section": "discussion",
+   "text": "The migration of seismicity at a rate consistent with pore pressure diffusion proves that the earthquakes were triggered by injection, and this is consistent with what has been observed at many other injection sites around the world, including sites with very different geological settings, where seismicity has also been observed to migrate away from wells over periods of months to years as the pressure front expands, although at some sites poroelastic stress changes are thought to have played a larger role than pressure diffusion itself."
+  },
+  {
+   "paragraph": 101,
+   "section": "discussion",
+   "text": "The fitness cost we measured was small, and this has two implications. First, it is likely to be the case that resistance to antimicrobial peptides will not disappear quickly once peptide exposure stops, because selection against resistant cells would be weak. Second, a small cost can be offset by compensatory mutations, as has been shown for resistance to conventional antibiotics. We did not test for compensation, and our competition assays were run in rich medium, where costs are often smaller than in nutrient-poor conditions. Measuring costs in an infection model would give a more realistic estimate."
+  },
+  {
+   "paragraph": 102,
+   "section": "discussion",
+   "text": "The alumina barrier extends device lifetime by slowing the ingress of water into the perovskite. The coating did not fully prevent degradation, however, and devices eventually fail through decomposition to lead iodide. One explanation was that the layer contains pinholes, which allow water to reach the perovskite locally. Another possibility is that degradation starts at the edges, where the barrier is thinner. Cross-sectional imaging of aged devices would distinguish these explanations."
+  },
+  {
+   "paragraph": 103,
+   "section": "discussion",
+   "text": "The smaller and earlier maturation of Daphnia exposed to fish cues is consistent with life-history theory, which predicts that size-selective predation on large individuals favors reproduction at a smaller size. What is less expected is the clonal variation in this response. If clones from the same pond differ in plasticity, then fish introduction could select among clones as well as triggering plastic responses, so that the population's average response shifts over a few seasons. Following clonal frequencies in ponds before and after stocking would test this prediction."
+  },
+  {
+   "paragraph": 104,
+   "section": "discussion",
+   "text": "The results show that our transfer learning approach solves the problem of poor generalisation across compound families. Despite the fact that the source and target datasets differed substantially, the fine-tuned GNN achieved an MAE of 0.04 eV/atom on layered oxides. This is comparable to DFT. However, we note that the target dataset was relatively small, and so further work is required in order to confirm the generality of the approach."
+  },
+  {
+   "paragraph": 105,
+   "section": "discussion",
+   "text": "The melt parameterisation emerges as the dominant source of spread in our projections, which agrees with several recent ensemble studies but contradicts others that found basal friction to be more important. One reason for the disagreement may be the choice of glaciers: friction matters most where ice flows over soft sediment, and our domain is dominated by glaciers grounded on hard bedrock. A second reason is that we varied the parameterisation's form rather than only its coefficients. Our results should therefore be read as an upper bound on the importance of melt in this region."
+  },
+  {
+   "paragraph": 106,
+   "section": "discussion",
+   "text": "This is a very important result. This shows that the choice of dispersal kernel matters for invasion predictions. This could explain why previous models underestimated the speed of spread of Himalayan balsam. This also has implications for management, because control efforts may need to cover a much wider area than currently planned, particularly along the larger rivers where flood events carry seed furthest."
+  },
+  {
+   "paragraph": 107,
+   "section": "discussion",
+   "text": "The non-centered parameterization worked best here because most sites had few observations, so the data did little to constrain each site's effect. In this regime the posterior geometry of the centered model forms a narrow funnel that Hamiltonian Monte Carlo cannot explore. This would reverse for sites with many observations, where the centered form is usually more efficient. For datasets that mix data-rich and data-poor sites, a partially centered model, or a model that centers sites individually according to their sample size, may be the better choice."
+  },
+  {
+   "paragraph": 108,
+   "section": "discussion",
+   "text": "Our data strongly suggest that the lncRNA may play an important role in hypoxic adaptation. The nuclear localisation of the transcript, together with its association with chromatin, are consistent with a role in regulating gene expression. However, we have not yet identified the genes it regulates. RNA-seq of knockout cells under hypoxia is currently underway and should help to adress this question. It is also possible that the transcript acts through a peptide it encodes, although the open reading frame is short and poorly conserved."
+  },
+  {
+   "paragraph": 109,
+   "section": "discussion",
+   "text": "The drop in recall when moving from the laboratory to the bridge shows that laboratory-trained classifiers should not be deployed on structures without local data. The main cause was overlap between crack signals and traffic noise during heavy loading, a condition that laboratory tests do not reproduce. Encouragingly, a few hundred labelled events from the bridge were enough to recover most of the lost performance. Since labelling requires an engineer to inspect each event, a practical deployment would begin with a short supervised period on each new structure, after which the classifier could run unattended."
+  },
+  {
+   "paragraph": 110,
+   "section": "discussion",
+   "text": "In conclusion, our findings shed light on the long-standing debate about the relative roles of plasticity and genetic change in rapid evolution. The fact that hatchlings raised in a common environment retained most of the limb difference seen in the wild indicates that the response to the introduced predator has, to a large extent, a genetic basis, although it should be borne in mind that maternal effects, which we were unable to control for because the eggs were laid by wild-caught females that had experienced the predator themselves, could have contributed to the difference that we observed."
+  },
+  {
+   "paragraph": 111,
+   "section": "discussion",
+   "text": "Our hybrid forecasting model outperformed both of its components when injection rates were reduced, because the physical component captured the delayed decline in seismicity that statistical models miss. During periods of steady injection, the statistical component alone performed nearly as well. This suggests that operators could rely on simpler statistical forecasts most of the time and switch to the hybrid model when planning changes to injection. The model was tested in one basin with dense monitoring; its performance where only a few regional stations are available remains to be shown."
+  },
+  {
+   "paragraph": 112,
+   "section": "discussion",
+   "text": "Our ensemble produced obviously better calibrated uncertainties than MC dropout. This is consistent with earlier benchmarks. The deep ensemble is however ten times more expensive to train than a single model, and the cost of running the ensembles at inference time is also higher. This could be reduced by distillation. For applications where the networks must run on small devices, the single network with variance head may be a reasonable compromise."
+  },
+  {
+   "paragraph": 113,
+   "section": "discussion",
+   "text": "Spiders in urban sites built their webs closer to street lights and captured more prey there, which suggests that artificial light creates a foraging opportunity for these predators. Whether this benefit translates into higher fitness is less clear. Insects attracted to lights may be depleted over time, and spiders near lights may themselves be more visible to birds. Our study measured prey capture over single nights, so it cannot address these longer-term costs. A season-long study tracking egg production of marked spiders at lit and unlit sites would answer this question."
+  },
+  {
+   "paragraph": 114,
+   "section": "discussion",
+   "text": "The enrichment of HREs in regions that gain acetylation under hypoxia indicates that HIF-1α drives much of the chromatin response. This agrees with previous work in other cell types. However, HIF1A knockdown only partly reduced acetylation at these regions, which suggests that other factors also contribute. One candidate is the histone demethylase family, whose activity depends on oxygen. Whether HIF and the demethylases act on the same regions remains to be tested."
+  },
+  {
+   "paragraph": 115,
+   "section": "discussion",
+   "text": "Our analysis clearly shows that climate change has made atmospheric rivers more intense. The strongest events have become wetter by 4% per decade, and this trend will continue throughout the century. Flood defences that were designed on the basis of historical records were therefore inadequate. Planners must immediately revise design standards for the entire west coast, starting with the largest reservoirs."
+  },
+  {
+   "paragraph": 116,
+   "section": "discussion",
+   "text": "The E-value analysis indicates that only a fairly strong unmeasured confounder could explain away the association between treatment and survival. Frailty is the most plausible candidate, since frail patients may be less likely to be offered treatment and more likely to die. Our data included several proxies for frailty, but none captured it fully. If frailty were associated with both treatment and death with risk ratios above 2.4, our estimate could be entirely due to confounding. Associations of that size have been reported in other cohorts, so the estimate should perhaps possibly be interpreted with caution."
+  },
+  {
+   "paragraph": 117,
+   "section": "discussion",
+   "text": "With respect to the porosity results, it seems that the thin struts may behave differently from the thick struts because heat accumulates in the thin struts to a greater degree, which raises the local temperature and promotes keyhole formation, so that the parameter windows that have been established for bulk material in previous studies, which were mostly carried out on cubes, are probably not directly applicable to lattices with struts below about 1 mm in diameter."
+  },
+  {
+   "paragraph": 118,
+   "section": "discussion",
+   "text": "Rewetting reduced CO2 emissions at all three sites, but CH4 emissions rose at two of them, offsetting about a third of the climate benefit over our two-year study. This offset may shrink with time. Methane emissions often peak soon after rewetting, when fresh plant material decomposes under newly anoxic conditions, and decline as the vegetation shifts towards Sphagnum mosses. Our measurements cover only the early phase, so they probably overstate the long-term methane penalty. Continued monitoring at these sites will show whether emissions follow this trajectory."
+  },
+  {
+   "paragraph": 119,
+   "section": "discussion",
+   "text": "The surrogate reproduced the simulator with high accuarcy inside the training range, and its accuarcy degraded more gracefully outside it than that of the unconstrained network. This makes it suitable for uncertainty quantification. However, the surrogate was trained on a single aquifer geometry with homogeneous conductivity. Whether this transfers to other geometries, or to aquifers with layered sediments, is unknown."
+  },
+  {
+   "paragraph": 120,
+   "section": "discussion",
+   "text": "Restoring mitochondrial membrane potential with a mitophagy activator in PINK1-deficient neurons supports the idea that impaired clearance of damaged mitochondria contributes to the cellular phenotype. It does not show that the same treatment would protect neurons in a patient. Our cultures lacked glial cells, which influences neuronal metabolism, and were studied for only two weeks, whereas neurodegeneration unfolds over decades. Testing the activator in co-cultures and in long-term organoid models would narrow this gap before any study in animals."
+  },
+  {
+   "paragraph": 121,
+   "section": "discussion",
+   "text": "It is worth mentioning that, in spite of the fact that the GAM provided a good fit to the data, the smooth term for day of year may have absorbed some of the effect of temperature, since the two variables are strongly correlated. As a consequence of this, the coefficient for temperature should be interpreted with a certain degree of caution. A possible way of dealing with this issue would be the inclusion of temperature anomalies rather than raw temperature."
+  },
+  {
+   "paragraph": 122,
+   "section": "discussion",
+   "text": "Our exposure ages indicate that the glacier retreated from the outer moraine at around 15.2 ka, which is consistent with the timing of warming recorded in Greenland ice cores. This proves that the glacier responded to northern hemisphere climate. The inner moraines were dated to 12.5ka, suggesting a readvance during the YD. However, inheritance of 10Be from previous exposure could make some boulders appear older than they are."
+  },
+  {
+   "paragraph": 123,
+   "section": "discussion",
+   "text": "The earlier stall we measured is best explained by the laminar separation bubble, which the panel method does not represent. As the angle of attack increases, the bubble moves forward and eventually bursts, causing the abrupt loss of lift we observed at 12°. This interpretation is supported by the trip-strip experiment: forcing transition removed the bubble and delayed stall by nearly two degrees. The result matters for small wind turbines, whose blades often operate at Reynolds numbers where such bubbles form, and whose performance may therefore be overestimated by design tools that assume attached flow."
+  },
+  {
+   "paragraph": 124,
+   "section": "discussion",
+   "text": "Our forecasts are undoubtedly more skilful than the baselines at short lead times, and they may perhaps be useful operationally. The skill is however strongly dependant on the quality of the input data, and gaps in the station network led to visibly worse forecasts in the north of the region. Because the model is dependant on reanalysis inputs that are released with a delay of several days, it cannot yet be run in real time."
+  },
+  {
+   "paragraph": 125,
+   "section": "discussion",
+   "text": "Restored reaches supported more species and more juvenile salmon than unrestored ones, but not more brown trout. A likely explanation is that trout are less dependent on deep pools, which were the main habitat feature that restoration created. This pattern cautions against judging restoration by species richness alone: a project that adds pools may favour some species while doing little for others. Because each reach was sampled once, in a summer of low flow, the differences we report may also be larger than in wetter years."
+  },
+  {
+   "paragraph": 126,
+   "section": "discussion",
+   "text": "It is clear that the high-fat diet induced insulin resistance in our mice, as shown by the impaired glucose tolerance at 12 weeks. However, the diet also increased body weight substantially, and it is therefore not possible to say whether the changes in hepatic gene expression that we observed were caused by the diet itself or by the increase in adiposity that accompanied it, a problem that is common to many studies of diet-induced obesity and that could be addressed in future by including a pair-fed control group whose weight gain is matched to that of the control animals."
+  },
+  {
+   "paragraph": 127,
+   "section": "discussion",
+   "text": "Bias correction narrowed the spread of projected heatwave changes but did not remove it, because much of the spread comes from differences in how models warm rather than from errors in their present-day climate, and this distinction matters for adaptation planning, since a planner who uses only bias-corrected output may assume that projections are more certain than they are. We recommend reporting both the corrected multi-model range and the range of global warming across models, so that users can see which part of the uncertainty bias correction can and cannot address."
+  },
+  {
+   "paragraph": 128,
+   "section": "discussion",
+   "text": "The simulation-based power analysis indicates that eight plants per block were sufficient. This was however based on the assumption that the variance components estimated from the pilot study are accurate. The pilot data suggests a block variance of 0.12, but this estimate was imprecise. If the true variance is larger, power will be lower than we estimated, and a follow-up experiment should use at least ten plants per block."
+  },
+  {
+   "paragraph": 129,
+   "section": "discussion",
+   "text": "Needless to say, the mesh convergence study is crucial for the reliability of the results. The FE model predicted a peak stress of 186 MPa at the fillet, which is extremely close to the strain gauge measurement of 179 MPa. This excellent agreement totally validates the model. The model can therefore be used with complete confidence to optimise the bracket geometry."
+  },
+  {
+   "paragraph": 130,
+   "section": "discussion",
+   "text": "The stochastic model reproduced the observed spread in early years but not the late cluster 4 km from the main infestation, which points to a missing process rather than a poorly estimated parameter. Long-distance movement of infested firewood is the most likely candidate, since the new cluster lies beside a campsite. Adding a low rate of human-mediated jumps would let the model represent such events, although the rate itself would be hard to estimate from a single cluster. Information from other outbreaks, entered as a prior, may be the most practical way forward."
+  },
+  {
+   "paragraph": 131,
+   "section": "abstract",
+   "text": "Temperature and light both entrain the plant circadian clock, but how the two signals are combined is not well understood. We measured the expression of clock genes in wild-type Arabidopsis thaliana and in mutants lacking ELF3, a component of the evening complex, at three constant temperatures. Wild-type plants kept robust rhythms at all temperatures, whereas elf3 mutants became arrhythmic at 27 °C. These results support a role for the evening complex in temperature sensing and identify a temperature range in which the clock depends on it."
+  },
+  {
+   "paragraph": 132,
+   "section": "abstract",
+   "text": "AMR is a major threat to global health. We sampled river sediments at 20 sites downstream of WWTPs and measured the abundance of ARGs by qPCR. ARG abundance was 10 times higher downstream than upstream. This proves that WWTPs are the main source of resistance in rivers. This has important implications for the way that rivers are monitored and for the design of future treatment plants."
+  },
+  {
+   "paragraph": 133,
+   "section": "abstract",
+   "text": "Sensitivity analyses for MNAR data are recommended but rarely performed. We present a workflow for delta-adjusted multiple imputation and apply it to a cohort of 2,310 adults with repeated measurements of lung function over 15 years. Under missing at random, smokers declined 9 mL per year faster than non-smokers. This difference persisted under all departures considered, including scenarios in which participants who dropped out declined twice as fast as those who remained. The workflow is implemented in open-source software and can be adapted to other longitudinal outcomes."
+  },
+  {
+   "paragraph": 134,
+   "section": "abstract",
+   "text": "In this study we investigate whether atomic layer deposited alumina barriers improve the stability of perovskite solar cells, and we found that devices with a 20nm barrier retained 80% of their initial efficiency after 1000 h of damp-heat testing at 85 °C and 85% relative humidity, whereas unencapsulated devices lost half of their efficiency within 120 h, which shows that thin inorganic barriers are a promising route to stable devices."
+  },
+  {
+   "paragraph": 135,
+   "section": "abstract",
+   "text": "Artificial light at night alters the behaviour of many animals, but its effects on invertebrate predators are poorly known. We compared web placement and prey capture of orb-weaving spiders at 12 urban and 12 rural sites. Urban spiders built webs closer to street lights than rural spiders, and webs near lights captured almost twice as many insects per night. Artificial light may therefore benefit some urban predators, at least in the short term, while adding to the pressure on the insects they eat."
+  },
+  {
+   "paragraph": 136,
+   "section": "abstract",
+   "text": "Deep learning weather models might potentially offer a faster alternative to numerical weather prediction, but it is not clear whether or not they are able to represent extreme events. In this study we carried out an evaluation of three data-driven models with regard to their ability to forecast heatwaves and heavy rainfall. All models seemed to somewhat underestimate the intensity of extremes. These results could perhaps suggest that data-driven models should be used with caution for the forecasting of extremes."
+  },
+  {
+   "paragraph": 137,
+   "section": "abstract",
+   "text": "Forecasting how induced seismicity responds to changes in injection is essential for managing seismic hazard. We developed a hybrid model that couples pore pressure diffusion with a statistical earthquake-rate model and tested it on ten years of seismicity in a densely monitored basin. The hybrid model forecast the decline in seismicity after injection cuts more accurately than either component alone, reducing the error in predicted event counts by 35%. During steady injection, the statistical model performed nearly as well, suggesting that the added complexity is most useful when operations change."
+  },
+  {
+   "paragraph": 138,
+   "section": "abstract",
+   "text": "Glaciers in High Mountain Asia provides water to several hundred million people. We used ERA5 data and a glacier mass balance model to examine the sensitivity of 120 glaciers to monsoon onset. Glaciers with extensive debris cover was less sensitive than clean-ice glaciers. A 10-day delay in monsoon onset reduced annual mass balance by 0.3 m w.e. on average, with the largest losses on south-facing glacers. These findings highlight the importance of monsoon timing for future water resources."
+  },
+  {
+   "paragraph": 139,
+   "section": "abstract",
+   "text": "Machine-learned models of formation energy transfer poorly between families of compounds. We pre-trained a graph neural network on 120,000 inorganic crystals and fine-tuned it on 2,400 layered oxides. Fine-tuning reduced the mean absolute error on held-out oxides from 0.11 to 0.04 eV per atom, while a model trained on the oxides alone reached 0.07. The benefit was largest when fewer than 500 target compounds were available. Transfer learning can therefore make accurate screening feasible for material families with little training data."
+  },
+  {
+   "paragraph": 140,
+   "section": "abstract",
+   "text": "Mitochondrial dysfunction is a key feature of Parkinson's disease. In this study we made use of iPSC-derived dopaminergic neurons from patients with PINK1 mutations in order to test a novel mitophagy activator. Treatment restored mitochondrial membrane potential to near-normal levels. This is a very exciting result which clearly demonstrates the huge therapeutic potential of mitophagy activators for patients with Parkinson's disease."
+  },
+  {
+   "paragraph": 141,
+   "section": "conclusion",
+   "text": "This thesis set out to understand how combined stressors affect bumblebee colonies in farmland. Three conclusions follow from the work. First, pesticide residues and reduced floral diversity together reduced colony growth more than either did alone. Second, the effect was strongest early in the season, when colonies are small and depend on few workers. Third, flower strips sown with seed from treated fields carried measurable residues. Agri-environment schemes would therefore benefit from guidance on where flower strips are placed and what seed is used, alongside the area they cover."
+  },
+  {
+   "paragraph": 142,
+   "section": "discussion",
+   "text": "There are a number of weaknesses in this work that should be acknowledged. Firstly, the sample size was relatively small, which may possibly have limited the statistical power to detect smaller effects. Secondly, the study was conducted in a single region, and therefore the results may perhaps not be generalisable to other regions. Thirdly, the follow-up period was quite short. Despite these limitations, the study provides some useful insights."
+  },
+  {
+   "paragraph": 143,
+   "section": "conclusion",
+   "text": "In summary, simple prevalence correction recovered most of the accuracy that the classifier lost when moved between hospitals, and it did so without retraining or access to new labels. The approach failed only where positive cases were too few to estimate prevalence reliably. For hospitals considering whether to adopt a model trained elsewhere, the practical message is to estimate local prevalence first and to treat the adjusted model with caution until that estimate rests on at least a few hundred cases."
+  },
+  {
+   "paragraph": 144,
+   "section": "conclusion",
+   "text": "In conclusion, this thesis has shown that physics-informed surrogates are superior to standard neural networks in every respect. This will transform how groundwater models are used. The methods developed here were applicable to any physical system, from rivers to the atmosphere. Future work will extend this to three dimensions and to problems with moving boundaries, such as the retreat of a coastline."
+  },
+  {
+   "paragraph": 145,
+   "section": "discussion",
+   "text": "Two limitations qualify these conclusions. The exposure ages rest on boulders from a single valley, and moraine boulders can give ages that are too old if they carry inherited nuclides or too young if they have rolled or been exhumed. We screened for both, but some scatter in the inner moraine ages remains unexplained. In addition, the production-rate calibration used here is based on sites at lower latitude; a local calibration would reduce the systematic uncertainty, which at present is larger than the analytical one."
+  },
+  {
+   "paragraph": 146,
+   "section": "conclusion",
+   "text": "Overall, the results of this thesis demonstrate that the LSB that forms on the suction side of the aerofoil at Re below 200,000 is responsible for the early stall observed in the experiments, and that this effect is not captured by the panel methods that are commonly used in the design of small HAWTs, which means that the performance of these turbines is likely to be overestimated at low wind speeds, and that future design tools should include a transition model."
+  },
+  {
+   "paragraph": 147,
+   "section": "discussion",
+   "text": "This work has limits that points to future research. The sensitivity analysis assumed a single binary unmeasured confounder, whereas frailty is better thought of as continuous and correlated with measured covariates. The cohort came from one health system, where treatment decisions may follow local practice. Finally, we studied mortality at one year only, and treatment effects may differ over longer follow-up. Extending the analysis to a continuous confounder and to a multi-center cohort would address the first two of these limits."
+  },
+  {
+   "paragraph": 148,
+   "section": "conclusion",
+   "text": "The main contribution of this thesis are a set of methods for detecting atmospheric rivers that seperate changes in frequency from changes in intensity. Applying these methods to forty years of reanalysis showed that the strongest events have have intensified, while their frequency has not changed. These findings could help water managers to plan for the the wettest years, when reservoirs must hold back the largest floods."
+  },
+  {
+   "paragraph": 149,
+   "section": "conclusion",
+   "text": "Taken together, the chapters of this thesis show that resistance to antimicrobial peptides can evolve quickly in Staphylococcus aureus, through a small number of mutations that alter the charge of the cell surface, and that this resistance carries only a small fitness cost. The work has limitations: all experiments used a single laboratory strain, and costs were measured in rich medium rather than in a host. Even so, the results argue for caution in the clinical development of peptides that share a mechanism with the host's own defences."
+  },
+  {
+   "paragraph": 150,
+   "section": "conclusion",
+   "text": "To conclude, this thesis makes a very significant contribution to the field of coastal flood modelling. A new numerical scheme was developed which is well-balanced and positivity-preserving. This was tested on a range of test cases, and the method performed extremely well in all of them. The new algorithm should be adopted by flood modellers, as the technique is clearly superior to existing approaches."
+  }
+ ]
+}
